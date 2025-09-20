@@ -109,7 +109,7 @@ class APIConfig:
     min_top_n: int = 1
 
     # データ期間オプション
-    available_periods: List[str] = None
+    available_periods: Optional[List[str]] = None
 
     def __post_init__(self):
         if self.available_periods is None:
@@ -222,6 +222,56 @@ class RealTimeConfig:
     # API設定
     data_source: str = "yahoo"  # yahoo, rakuten, sbi
     order_execution: str = "simulation"  # simulation, live
+    
+    # WebSocket設定
+    websocket_url: str = ""
+    websocket_timeout: int = 10
+    websocket_ping_interval: int = 30
+    websocket_ping_timeout: int = 10
+    max_reconnection_attempts: int = 5
+    reconnection_base_delay: float = 1.0
+    
+    # データ品質監視設定
+    enable_data_quality_monitoring: bool = True
+    max_price_spike_threshold: float = 0.1  # 10%の価格変動をスパイクとして検出
+    data_latency_warning_threshold: int = 300  # 5分以上遅延で警告
+    min_data_points_for_validation: int = 10
+    
+    # キャッシュ設定
+    enable_real_time_caching: bool = True
+    max_tick_history_per_symbol: int = 1000
+    max_order_book_history_per_symbol: int = 100
+    cache_cleanup_interval_hours: int = 24
+    tick_cache_ttl_seconds: int = 300  # 5分
+    order_book_cache_ttl_seconds: int = 60  # 1分
+    
+    # ログ設定
+    enable_detailed_logging: bool = True
+    log_websocket_messages: bool = False  # デバッグ用
+    log_data_quality_issues: bool = True
+    log_cache_operations: bool = False
+    performance_logging_interval: int = 300  # 5分間隔
+    
+    # 監視設定
+    enable_performance_monitoring: bool = True
+    enable_market_metrics_calculation: bool = True
+    metrics_calculation_interval: int = 60  # 1分間隔
+    alert_on_connection_loss: bool = True
+    alert_on_data_quality_degradation: bool = True
+    data_quality_alert_threshold: float = 0.95  # 品質95%を下回ったらアラート
+    
+    # サブスクリプション設定
+    default_tick_subscription: List[str] = field(default_factory=lambda: [])
+    default_order_book_subscription: List[str] = field(default_factory=lambda: [])
+    default_index_subscription: List[str] = field(default_factory=lambda: ["NIKKEI", "TOPIX"])
+    enable_news_subscription: bool = True
+    news_relevance_threshold: float = 0.7
+    
+    # 市場時間設定
+    market_open_time: str = "09:00"  # JST
+    market_close_time: str = "15:00"  # JST
+    market_timezone: str = "Asia/Tokyo"
+    enable_after_hours_trading: bool = False  # 時間外取引有効フラグ（True/False）
 
 
 # グローバル設定インスタンス

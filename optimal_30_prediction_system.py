@@ -10,13 +10,14 @@ import warnings
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
 import logging
+from utils.logger_config import setup_logger
+logger = setup_logger(__name__)
 
 warnings.filterwarnings("ignore")
 
 from data.stock_data import StockDataProvider
 from models.ml_models import UltraHighPerformancePredictor
 
-logging.basicConfig(level=logging.INFO)
 
 # 予測システム定数
 NEUTRAL_SCORE = 50.0

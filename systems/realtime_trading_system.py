@@ -15,6 +15,8 @@ import time
 import threading
 from datetime import datetime, timedelta
 import logging
+from utils.logger_config import setup_logger
+logger = setup_logger(__name__)
 from typing import Dict, List, Optional, Tuple
 
 from data.stock_data import StockDataProvider
@@ -23,7 +25,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 import json
 
-logging.basicConfig(level=logging.INFO)
 
 
 class RealTimeDataProvider:

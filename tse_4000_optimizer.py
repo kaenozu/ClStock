@@ -21,8 +21,9 @@ warnings.filterwarnings("ignore")
 
 from data.stock_data import StockDataProvider
 import logging
+from utils.logger_config import setup_logger
+logger = setup_logger(__name__)
 
-logging.basicConfig(level=logging.INFO)
 
 @dataclass
 class StockProfile:

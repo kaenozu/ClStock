@@ -16,7 +16,7 @@ import os
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from models.ml_models import Precision87BreakthroughSystem
+from models_new.precision.precision_87_system import Precision87BreakthroughSystem
 from data.stock_data import StockDataProvider
 
 class MediumTermPredictionSystem:

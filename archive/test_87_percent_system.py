@@ -14,6 +14,7 @@
 import sys
 import os
 import logging
+from utils.logger_config import setup_logger
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -23,7 +24,7 @@ warnings.filterwarnings('ignore')
 
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 class Test87PercentSystem:
     """87%精度突破システム検証"""

@@ -14,12 +14,13 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Any
 import logging
+from utils.logger_config import setup_logger
 import warnings
 warnings.filterwarnings('ignore')
 
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 class MAPEMeasurementSystem:
     """MAPE計測システム"""
