@@ -130,6 +130,49 @@ class LoggingConfig:
 
 
 @dataclass
+class ProcessConfig:
+    """プロセス管理設定"""
+
+    # プロセス制限設定
+    max_concurrent_processes: int = 10
+    max_memory_per_process_mb: int = 1000
+    max_cpu_percent_per_process: int = 50
+
+    # 自動再起動設定
+    auto_restart_failed: bool = True
+    max_restart_attempts: int = 3
+    restart_delay_seconds: int = 5
+
+    # 監視設定
+    health_check_interval_seconds: int = 5
+    process_timeout_seconds: int = 300
+    memory_warning_threshold_mb: int = 800
+    cpu_warning_threshold_percent: int = 80
+
+    # ログ設定
+    enable_process_logging: bool = True
+    log_process_output: bool = False  # デバッグ用
+    max_log_lines_per_process: int = 1000
+
+    # 優先度設定
+    process_priorities: Dict[str, int] = field(default_factory=lambda: {
+        "dashboard": 10,
+        "demo_trading": 5,
+        "investment_system": 8,
+        "deep_learning": 3,
+        "ensemble_test": 2,
+        "clstock_main": 7,
+        "optimized_system": 6,
+        "selective_system": 4
+    })
+
+    # ポート管理設定
+    port_range_start: int = 8000
+    port_range_end: int = 8100
+    auto_assign_ports: bool = True
+
+
+@dataclass
 class AppSettings:
     """アプリケーション全体設定"""
 
@@ -141,6 +184,7 @@ class AppSettings:
     api: APIConfig = field(default_factory=APIConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     realtime: "RealTimeConfig" = field(default_factory=lambda: RealTimeConfig())
+    process: ProcessConfig = field(default_factory=ProcessConfig)
 
     # 対象銘柄
     target_stocks: Dict[str, str] = field(default_factory=lambda: {
@@ -272,7 +316,6 @@ class RealTimeConfig:
     market_close_time: str = "15:00"  # JST
     market_timezone: str = "Asia/Tokyo"
     enable_after_hours_trading: bool = False  # 時間外取引有効フラグ（True/False）
-
 
 # グローバル設定インスタンス
 settings = AppSettings()
