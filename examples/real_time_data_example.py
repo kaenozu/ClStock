@@ -7,6 +7,7 @@
 
 import asyncio
 import logging
+from utils.logger_config import setup_logger
 from datetime import datetime
 from typing import List
 
@@ -23,7 +24,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class RealTimeDataMonitor:

@@ -4,6 +4,7 @@
 """
 
 import logging
+from utils.logger_config import setup_logger
 from models.ml_models import MLStockPredictor
 from data.stock_data import StockDataProvider
 
@@ -11,7 +12,7 @@ from data.stock_data import StockDataProvider
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 def main():

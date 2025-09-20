@@ -16,9 +16,10 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from scipy.optimize import minimize
 import logging
+from utils.logger_config import setup_logger
+logger = setup_logger(__name__)
 from datetime import datetime, timedelta
 
-logging.basicConfig(level=logging.INFO)
 
 
 class PortfolioOptimizer:

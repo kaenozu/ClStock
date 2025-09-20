@@ -9,6 +9,8 @@ import numpy as np
 from datetime import datetime
 from typing import List, Dict, Optional, Any
 import logging
+from utils.logger_config import setup_logger
+logger = setup_logger(__name__)
 
 # 実際のシステムコンポーネントをインポート
 try:
@@ -39,7 +41,6 @@ MOCK_PRICE_RANGE = 10000
 DEFAULT_DATA_PERIOD = "1y"
 BACKTEST_DATA_PERIOD = "2y"
 
-logging.basicConfig(level=logging.INFO)
 
 class Optimal30PredictionTDD:
     """TDD: 最適30銘柄予測システム"""

@@ -77,8 +77,20 @@ def start_demo_trading():
                     position_size = min(100000, portfolio["cash"] * 0.1)  # 最大10万円または資金の10%
 
                     if position_size > 10000 and portfolio["cash"] >= position_size:
-                        # 仮想取引実行
-                        current_price = prediction * 0.98  # 現在価格を予測価格の98%と仮定
+                        # 実際の現在価格を取得
+                        try:
+                            current_data = data_provider.get_stock_data(symbol, "1d")
+                            if not current_data.empty:
+                                current_price = float(current_data['Close'].iloc[-1])
+                            else:
+                                # データが取得できない場合のみ予測価格を使用
+                                current_price = prediction * 0.98
+                                print(f"  ⚠️  {symbol} の現在価格が取得できないため、予測価格を使用")
+                        except Exception as e:
+                            # エラーの場合は予測価格を使用
+                            current_price = prediction * 0.98
+                            print(f"  ⚠️  {symbol} の価格取得エラー: {str(e)} - 予測価格を使用")
+
                         shares = int(position_size / current_price)
 
                         portfolio["positions"][symbol] = {

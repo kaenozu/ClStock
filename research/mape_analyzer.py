@@ -8,12 +8,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Dict, List, Tuple
 import logging
+from utils.logger_config import setup_logger
 
 from data.stock_data import StockDataProvider
 
 # ログ設定
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class MAPEAnalyzer:

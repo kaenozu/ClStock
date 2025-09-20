@@ -13,6 +13,7 @@ ClStock 87%精度突破システムテスト
 import sys
 import os
 import logging
+from utils.logger_config import setup_logger
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -25,7 +26,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 class Precision87TestSystem:
     """87%精度システムテストフレームワーク"""

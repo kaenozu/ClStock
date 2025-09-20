@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple
 import logging
+from utils.logger_config import setup_logger
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -36,8 +37,7 @@ from sklearn.metrics import accuracy_score
 from data.stock_data import StockDataProvider
 
 # ログ設定
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class DeepLearningBreakthrough:

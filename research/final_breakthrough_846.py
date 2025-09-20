@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple
 import logging
+from utils.logger_config import setup_logger
 from sklearn.ensemble import (
     RandomForestClassifier,
     GradientBoostingClassifier,
@@ -22,8 +23,7 @@ warnings.filterwarnings("ignore")
 
 from data.stock_data import StockDataProvider
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class FinalBreakthrough846:

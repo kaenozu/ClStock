@@ -229,15 +229,21 @@ class RealTimeDataQualityMonitor(DataQualityMonitor):
             self.metrics['invalid_ticks'] += 1
             return False
 
-        # 価格スパイクチェック
-        if tick.symbol in self.price_history:
+        # 価格スパイク検出
+        if tick.symbol in self.price_history and self.price_history[tick.symbol]:
             last_price = self.price_history[tick.symbol][-1] if self.price_history[tick.symbol] else tick.price
-            price_change_ratio = abs(tick.price - last_price) / last_price
-
-            # 10%以上の急激な価格変動をスパイクとして検出
-            if price_change_ratio > 0.1:
-                logger.warning(f"Price spike detected for {tick.symbol}: "
-                             f"{last_price} -> {tick.price} ({price_change_ratio:.2%})")
+            
+            # ゼロ除算を防ぐためのチェック
+            if last_price > 0:
+                price_change_ratio = abs(tick.price - last_price) / last_price
+                
+                # 10%以上の急激な価格変動をスパイクとして検出
+                if price_change_ratio > 0.1:
+                    logger.warning(f"Price spike detected for {tick.symbol}: "
+                                 f"{last_price} -> {tick.price} ({price_change_ratio:.2%})")
+            else:
+                # last_priceが0以下の場合は警告を出力
+                logger.warning(f"Invalid last_price ({last_price}) for {tick.symbol}, skipping spike detection")
 
         # 価格履歴を更新
         if tick.symbol not in self.price_history:
@@ -273,14 +279,22 @@ class RealTimeDataQualityMonitor(DataQualityMonitor):
         if ask_prices != sorted(ask_prices):
             logger.warning(f"Ask prices not in correct order for {order_book.symbol}")
 
-        # スプレッドチェック
-        best_bid = order_book.bids[0][0] if order_book.bids else 0
-        best_ask = order_book.asks[0][0] if order_book.asks else float('inf')
-
-        if best_bid >= best_ask:
-            logger.warning(f"Invalid spread for {order_book.symbol}: "
-                         f"bid={best_bid}, ask={best_ask}")
-            return False
+        # スプレッドチェック（改善版）
+        if order_book.bids and order_book.asks:
+            best_bid = order_book.bids[0][0]
+            best_ask = order_book.asks[0][0]
+            
+            # 正常なスプレッドかチェック
+            if best_bid >= best_ask:
+                logger.warning(f"Invalid spread for {order_book.symbol}: "
+                             f"bid={best_bid}, ask={best_ask}")
+                return False
+        else:
+            # 片方が空の場合は警告を出すが無効ではない
+            if not order_book.bids:
+                logger.warning(f"No bids available for {order_book.symbol}")
+            if not order_book.asks:
+                logger.warning(f"No asks available for {order_book.symbol}")
 
         return True
 
@@ -310,12 +324,23 @@ class RealTimeDataQualityMonitor(DataQualityMonitor):
 class WebSocketRealTimeProvider(RealTimeDataProvider):
     """WebSocketベースのリアルタイムデータプロバイダー"""
 
-    def __init__(self):
+    def __init__(self, cache_manager=None, quality_monitor=None, data_normalizer=None, reconnection_manager=None):
+        """
+        WebSocketRealTimeProviderの初期化
+
+        Args:
+            cache_manager: キャッシュマネージャー（Noneの場合は新規作成）
+            quality_monitor: データ品質監視（Noneの場合は新規作成）
+            data_normalizer: データ正規化（Noneの場合は新規作成）
+            reconnection_manager: 再接続マネージャー（Noneの場合は新規作成）
+        """
         self.settings = get_settings()
-        self.cache_manager = AdvancedCacheManager(max_cache_size=5000, ttl_hours=1)
-        self.data_normalizer = DataNormalizer()
-        self.quality_monitor = RealTimeDataQualityMonitor()
-        self.reconnection_manager = ReconnectionManager()
+        
+        # 依存性注入または新規作成
+        self.cache_manager = cache_manager or AdvancedCacheManager(max_cache_size=5000, ttl_hours=1)
+        self.quality_monitor = quality_monitor or RealTimeDataQualityMonitor()
+        self.data_normalizer = data_normalizer or DataNormalizer()
+        self.reconnection_manager = reconnection_manager or ReconnectionManager()
 
         # WebSocket設定
         self.websocket = None

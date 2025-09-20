@@ -16,11 +16,8 @@ from typing import Dict, Any, Union
 import logging
 
 # ログ設定
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from utils.logger_config import setup_logger
+logger = setup_logger(__name__)
 
 def run_basic_prediction(symbol: str) -> Dict[str, Any]:
     """基本84.6%精度予測システム実行"""

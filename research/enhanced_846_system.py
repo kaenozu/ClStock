@@ -16,8 +16,9 @@ from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 import logging
+from utils.logger_config import setup_logger
+logger = setup_logger(__name__)
 
-logging.basicConfig(level=logging.INFO)
 
 
 class Enhanced846System:

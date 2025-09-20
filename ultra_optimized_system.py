@@ -16,8 +16,9 @@ from data.stock_data import StockDataProvider
 from sklearn.preprocessing import StandardScaler
 from super_selective_system import BaseInvestmentSystem, BACKTEST_PERIOD
 import logging
+from utils.logger_config import setup_logger
+logger = setup_logger(__name__)
 
-logging.basicConfig(level=logging.INFO)
 
 # ウルトラ最適化システム定数
 ULTRA_MIN_SCORE = 25.0

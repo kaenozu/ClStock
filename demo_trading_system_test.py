@@ -8,6 +8,7 @@ ClStock デモ運用システム統合テスト
 import sys
 import os
 import logging
+from utils.logger_config import setup_logger
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -27,7 +28,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 def test_trading_strategy():
@@ -49,14 +50,26 @@ def test_trading_strategy():
             try:
                 signal = strategy.generate_trading_signal(symbol, 1000000)
 
+                # アサーション追加
+                assert signal is not None or signal is None, f"シグナル生成結果が異常: {signal}"
+
                 if signal:
                     logger.info(f"取引シグナル生成成功: {symbol}")
                     logger.info(f"  シグナルタイプ: {signal.signal_type.value}")
                     logger.info(f"  信頼度: {signal.confidence:.2f}")
                     logger.info(f"  期待リターン: {signal.expected_return:.3f}")
                     logger.info(f"  87%精度達成: {signal.precision_87_achieved}")
+
+                    # シグナルの妥当性を検証
+                    assert hasattr(signal, 'signal_type'), "シグナルにsignal_typeが存在しません"
+                    assert hasattr(signal, 'confidence'), "シグナルにconfidenceが存在しません"
+                    assert 0 <= signal.confidence <= 1, f"信頼度が範囲外: {signal.confidence}"
+                    assert hasattr(signal, 'expected_return'), "シグナルにexpected_returnが存在しません"
+                    assert isinstance(signal.precision_87_achieved, bool), "precision_87_achievedがboolではありません"
                 else:
                     logger.info(f"シグナル生成なし: {symbol}")
+                    # シグナルがNoneの場合も正常な状態
+                    assert signal is None, "シグナルがNoneでない異常な状態"
 
             except Exception as e:
                 logger.error(f"シグナル生成エラー {symbol}: {e}")

@@ -271,7 +271,7 @@ class RealTimeConfig:
     market_open_time: str = "09:00"  # JST
     market_close_time: str = "15:00"  # JST
     market_timezone: str = "Asia/Tokyo"
-    enable_after_hours_trading: bool = False  # simulation, live
+    enable_after_hours_trading: bool = False  # 時間外取引有効フラグ（True/False）
 
 
 # グローバル設定インスタンス

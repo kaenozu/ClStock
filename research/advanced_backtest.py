@@ -10,14 +10,14 @@ import seaborn as sns
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 import logging
+from utils.logger_config import setup_logger
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from data.stock_data import StockDataProvider
 from models.predictor import StockPredictor
 
 # ログ設定
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class AdvancedBacktester:
