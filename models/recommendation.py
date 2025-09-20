@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
+
 class StockRecommendation(BaseModel):
     rank: int
     symbol: str
@@ -15,6 +16,7 @@ class StockRecommendation(BaseModel):
     score: float
     current_price: float
     recommendation_reason: str
+
 
 class RecommendationResponse(BaseModel):
     recommendations: List[StockRecommendation]

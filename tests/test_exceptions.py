@@ -16,7 +16,7 @@ from utils.exceptions import (
     APIError,
     ValidationError,
     NetworkError,
-    FileOperationError
+    FileOperationError,
 )
 
 
@@ -245,7 +245,7 @@ class TestExceptionInheritance:
             APIError("/api/test"),
             ValidationError("field", "value", "constraint"),
             NetworkError(),
-            FileOperationError("read", "/test")
+            FileOperationError("read", "/test"),
         ]
 
         for exc in exceptions:

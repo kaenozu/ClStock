@@ -1,0 +1,147 @@
+{
+  "test_timestamp": "2025-09-20T13:59:39.006307",
+  "total_symbols_tested": 5,
+  "successful_predictions": 5,
+  "precision_87_achieved_count": 2,
+  "precision_87_rate": 0.4,
+  "average_accuracy": 86.16630023087824,
+  "baseline_accuracy": 84.6,
+  "accuracy_improvement": 1.566300230878241,
+  "individual_results": {
+    "7203": {
+      "prediction": 55.731948834615295,
+      "confidence": 0.6522246229014356,
+      "accuracy": 85.81779698321148,
+      "precision_87_achieved": false,
+      "component_breakdown": {
+        "integrated_score": 54.81860109720668,
+        "integrated_confidence": 0.6522246229014356,
+        "component_scores": {
+          "base": 54.25691410611135,
+          "meta": 54.25691410611135,
+          "dqn": 62.00224107012032
+        },
+        "weights_used": {
+          "base_model": 0.6,
+          "meta_learning": 0.25,
+          "dqn_reinforcement": 0.1,
+          "sentiment_macro": 0.05
+        }
+      },
+      "tuning_details": {
+        "original_score": 54.81860109720668,
+        "tuned_score": 55.731948834615295,
+        "precision_boost": 0.9133477374086141,
+        "accuracy_boost": 1.2177969832114846
+      },
+      "status": "success"
+    },
+    "6758": {
+      "prediction": 64.43894451338565,
+      "confidence": 0.7846250632850221,
+      "accuracy": 87.0,
+      "precision_87_achieved": true,
+      "component_breakdown": {
+        "integrated_score": 61.59269388053542,
+        "integrated_confidence": 0.7846250632850221,
+        "component_scores": {
+          "base": 61.34814277145176,
+          "meta": 61.34814277145176,
+          "dqn": 69.46772524801425
+        },
+        "weights_used": {
+          "base_model": 0.6,
+          "meta_learning": 0.25,
+          "dqn_reinforcement": 0.1,
+          "sentiment_macro": 0.05
+        }
+      },
+      "tuning_details": {
+        "original_score": 61.59269388053542,
+        "tuned_score": 64.43894451338565,
+        "precision_boost": 2.8462506328502286,
+        "accuracy_boost": 2.277000506280177
+      },
+      "status": "success"
+    },
+    "9984": {
+      "prediction": 50.0,
+      "confidence": 0.5,
+      "accuracy": 84.6,
+      "precision_87_achieved": false,
+      "component_breakdown": {},
+      "tuning_details": {},
+      "status": "success"
+    },
+    "8306": {
+      "prediction": 62.37105663498806,
+      "confidence": 0.7267130213974595,
+      "accuracy": 86.41370417117967,
+      "precision_87_achieved": false,
+      "component_breakdown": {
+        "integrated_score": 60.10392642101346,
+        "integrated_confidence": 0.7267130213974595,
+        "component_scores": {
+          "base": 60.469084850362975,
+          "meta": 60.469084850362975,
+          "dqn": 62.052042982049336
+        },
+        "weights_used": {
+          "base_model": 0.6,
+          "meta_learning": 0.25,
+          "dqn_reinforcement": 0.1,
+          "sentiment_macro": 0.05
+        }
+      },
+      "tuning_details": {
+        "original_score": 60.10392642101346,
+        "tuned_score": 62.37105663498806,
+        "precision_boost": 2.267130213974596,
+        "accuracy_boost": 1.8137041711796762
+      },
+      "status": "success"
+    },
+    "6861": {
+      "prediction": 49.60726119702228,
+      "confidence": 0.7635334394255401,
+      "accuracy": 87.0,
+      "precision_87_achieved": true,
+      "component_breakdown": {
+        "integrated_score": 46.97192680276688,
+        "integrated_confidence": 0.7635334394255401,
+        "component_scores": {
+          "base": 43.04042236121779,
+          "meta": 43.04042236121779,
+          "dqn": 78.87567795731762
+        },
+        "weights_used": {
+          "base_model": 0.6,
+          "meta_learning": 0.25,
+          "dqn_reinforcement": 0.1,
+          "sentiment_macro": 0.05
+        }
+      },
+      "tuning_details": {
+        "original_score": 46.97192680276688,
+        "tuned_score": 49.60726119702228,
+        "precision_boost": 2.635334394255402,
+        "accuracy_boost": 2.1082675154043207
+      },
+      "status": "success"
+    }
+  },
+  "system_performance": {
+    "overall_score": 64.63125480996337,
+    "accuracy_score": 65.26250961992672,
+    "precision_score": 40.0,
+    "reliability_score": 100.0,
+    "grade": "A (標準以上)",
+    "achievement": "精度向上確認",
+    "target_87_achieved": false,
+    "recommendation": [
+      "DQN強化学習の学習率調整が推奨",
+      "アンサンブル重み配分の再調整が必要",
+      "特徴量エンジニアリングの強化を検討"
+    ]
+  }
+}

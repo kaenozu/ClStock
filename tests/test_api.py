@@ -53,9 +53,11 @@ class TestAPI:
     @pytest.mark.api
     def test_get_recommendations_endpoint(self, client, sample_recommendation):
         """推奨銘柄ランキングエンドポイントのテスト"""
-        with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("models.predictor.StockPredictor") as mock_predictor_class:
             mock_predictor = Mock()
-            mock_predictor.get_top_recommendations.return_value = [sample_recommendation]
+            mock_predictor.get_top_recommendations.return_value = [
+                sample_recommendation
+            ]
             mock_predictor_class.return_value = mock_predictor
 
             response = client.get("/api/v1/recommendations?top_n=1")
@@ -74,7 +76,7 @@ class TestAPI:
     @pytest.mark.api
     def test_get_recommendations_with_params(self, client, sample_recommendation):
         """パラメータ付き推奨銘柄エンドポイントのテスト"""
-        with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("models.predictor.StockPredictor") as mock_predictor_class:
             mock_predictor = Mock()
             recommendations = [sample_recommendation] * 3
             for i, rec in enumerate(recommendations):
@@ -102,8 +104,9 @@ class TestAPI:
     @pytest.mark.api
     def test_get_single_recommendation_endpoint(self, client, sample_recommendation):
         """特定銘柄推奨エンドポイントのテスト"""
-        with patch('models.predictor.StockPredictor') as mock_predictor_class, \
-             patch('data.stock_data.StockDataProvider') as mock_provider_class:
+        with patch("models.predictor.StockPredictor") as mock_predictor_class, patch(
+            "data.stock_data.StockDataProvider"
+        ) as mock_provider_class:
 
             mock_predictor = Mock()
             mock_predictor.generate_recommendation.return_value = sample_recommendation
@@ -123,7 +126,7 @@ class TestAPI:
     @pytest.mark.api
     def test_get_single_recommendation_not_found(self, client):
         """存在しない銘柄での推奨エンドポイントテスト"""
-        with patch('data.stock_data.StockDataProvider') as mock_provider_class:
+        with patch("data.stock_data.StockDataProvider") as mock_provider_class:
             mock_provider = Mock()
             mock_provider.get_all_stock_symbols.return_value = ["7203", "6758"]
             mock_provider_class.return_value = mock_provider
@@ -135,22 +138,22 @@ class TestAPI:
     @pytest.mark.api
     def test_get_stock_data_endpoint(self, client, mock_stock_data):
         """株価データエンドポイントのテスト"""
-        with patch('data.stock_data.StockDataProvider') as mock_provider_class:
+        with patch("data.stock_data.StockDataProvider") as mock_provider_class:
             mock_provider = Mock()
             mock_provider.get_all_stock_symbols.return_value = ["7203"]
             mock_provider.get_stock_data.return_value = mock_stock_data
 
             # 技術指標付きデータを準備
             tech_data = mock_stock_data.copy()
-            tech_data['SMA_20'] = tech_data['Close'].rolling(20).mean()
-            tech_data['SMA_50'] = tech_data['Close'].rolling(50).mean()
-            tech_data['RSI'] = 50.0
-            tech_data['MACD'] = 1.0
+            tech_data["SMA_20"] = tech_data["Close"].rolling(20).mean()
+            tech_data["SMA_50"] = tech_data["Close"].rolling(50).mean()
+            tech_data["RSI"] = 50.0
+            tech_data["MACD"] = 1.0
             mock_provider.calculate_technical_indicators.return_value = tech_data
 
             mock_provider.get_financial_metrics.return_value = {
-                'market_cap': 1000000000,
-                'pe_ratio': 15.0
+                "market_cap": 1000000000,
+                "pe_ratio": 15.0,
             }
             mock_provider.jp_stock_codes = {"7203": "トヨタ自動車"}
             mock_provider_class.return_value = mock_provider
@@ -168,7 +171,7 @@ class TestAPI:
     @pytest.mark.api
     def test_get_stock_data_not_found(self, client):
         """存在しない銘柄での株価データエンドポイントテスト"""
-        with patch('data.stock_data.StockDataProvider') as mock_provider_class:
+        with patch("data.stock_data.StockDataProvider") as mock_provider_class:
             mock_provider = Mock()
             mock_provider.get_all_stock_symbols.return_value = ["7203"]
             mock_provider_class.return_value = mock_provider
@@ -179,7 +182,7 @@ class TestAPI:
     @pytest.mark.api
     def test_get_stock_data_empty_data(self, client):
         """空データでの株価データエンドポイントテスト"""
-        with patch('data.stock_data.StockDataProvider') as mock_provider_class:
+        with patch("data.stock_data.StockDataProvider") as mock_provider_class:
             mock_provider = Mock()
             mock_provider.get_all_stock_symbols.return_value = ["7203"]
             mock_provider.get_stock_data.return_value = pd.DataFrame()  # 空のデータ
@@ -192,7 +195,7 @@ class TestAPI:
     @pytest.mark.api
     def test_api_error_handling(self, client):
         """API エラーハンドリングのテスト"""
-        with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("models.predictor.StockPredictor") as mock_predictor_class:
             mock_predictor = Mock()
             mock_predictor.get_top_recommendations.side_effect = Exception("Test error")
             mock_predictor_class.return_value = mock_predictor
@@ -204,20 +207,22 @@ class TestAPI:
     @pytest.mark.api
     def test_market_status_logic(self, client, sample_recommendation):
         """市場状況判定ロジックのテスト"""
-        with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("models.predictor.StockPredictor") as mock_predictor_class:
             mock_predictor = Mock()
-            mock_predictor.get_top_recommendations.return_value = [sample_recommendation]
+            mock_predictor.get_top_recommendations.return_value = [
+                sample_recommendation
+            ]
             mock_predictor_class.return_value = mock_predictor
 
             # 営業時間内をシミュレート (10時)
-            with patch('api.endpoints.datetime') as mock_datetime:
+            with patch("api.endpoints.datetime") as mock_datetime:
                 mock_datetime.now.return_value = datetime(2023, 1, 1, 10, 0, 0)
                 response = client.get("/api/v1/recommendations")
                 data = response.json()
                 assert "市場営業中" in data["market_status"]
 
             # 営業時間外をシミュレート (18時)
-            with patch('api.endpoints.datetime') as mock_datetime:
+            with patch("api.endpoints.datetime") as mock_datetime:
                 mock_datetime.now.return_value = datetime(2023, 1, 1, 18, 0, 0)
                 response = client.get("/api/v1/recommendations")
                 data = response.json()

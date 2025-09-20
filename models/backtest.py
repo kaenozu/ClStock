@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Trade:
     """取引記録"""
+
     symbol: str
     entry_date: datetime
     exit_date: Optional[datetime]
@@ -30,6 +31,7 @@ class Trade:
 @dataclass
 class BacktestResult:
     """バックテスト結果"""
+
     total_return: float
     annualized_return: float
     max_drawdown: float
@@ -60,7 +62,7 @@ class Backtester:
         stop_loss_pct: float = 0.05,
         take_profit_pct: float = 0.10,
         max_holding_days: int = 30,
-        score_threshold: float = 60  # 新しいパラメータ
+        score_threshold: float = 60,  # 新しいパラメータ
     ) -> BacktestResult:
         """バックテストを実行"""
 
@@ -100,39 +102,51 @@ class Backtester:
                 portfolio_value = cash
                 for symbol, quantity in positions.items():
                     if symbol in all_data:
-                        current_price = self._get_price_on_date(all_data[symbol], current_date)
+                        current_price = self._get_price_on_date(
+                            all_data[symbol], current_date
+                        )
                         if current_price is not None:
                             portfolio_value += quantity * current_price
 
-                portfolio_values.append({
-                    'date': current_date,
-                    'portfolio_value': portfolio_value,
-                    'cash': cash
-                })
+                portfolio_values.append(
+                    {
+                        "date": current_date,
+                        "portfolio_value": portfolio_value,
+                        "cash": cash,
+                    }
+                )
 
                 # 既存ポジションの管理（損切り、利確、保有期間チェック）
                 trades_to_close = []
                 for trade in trades:
                     if trade.exit_date is None and trade.symbol in all_data:
-                        current_price = self._get_price_on_date(all_data[trade.symbol], current_date)
+                        current_price = self._get_price_on_date(
+                            all_data[trade.symbol], current_date
+                        )
                         if current_price is None:
                             continue
 
                         # 保有日数チェック
-                        holding_days = (current_date.date() - trade.entry_date.date()).days
+                        holding_days = (
+                            current_date.date() - trade.entry_date.date()
+                        ).days
 
                         # 利確・損切り判定
-                        if trade.trade_type == 'buy':
-                            return_pct = (current_price - trade.entry_price) / trade.entry_price
+                        if trade.trade_type == "buy":
+                            return_pct = (
+                                current_price - trade.entry_price
+                            ) / trade.entry_price
 
                             should_close = (
-                                return_pct <= -stop_loss_pct or  # 損切り
-                                return_pct >= take_profit_pct or  # 利確
-                                holding_days >= max_holding_days  # 最大保有期間
+                                return_pct <= -stop_loss_pct  # 損切り
+                                or return_pct >= take_profit_pct  # 利確
+                                or holding_days >= max_holding_days  # 最大保有期間
                             )
 
                             if should_close:
-                                trades_to_close.append((trade, current_price, current_date))
+                                trades_to_close.append(
+                                    (trade, current_price, current_date)
+                                )
 
                 # ポジションクローズ
                 for trade, exit_price, exit_date in trades_to_close:
@@ -144,19 +158,37 @@ class Backtester:
 
                     trade.exit_date = exit_date
                     trade.exit_price = exit_price
-                    trade.return_pct = (exit_price - trade.entry_price) / trade.entry_price
-                    trade.holding_days = (exit_date.date() - trade.entry_date.date()).days
+                    trade.return_pct = (
+                        exit_price - trade.entry_price
+                    ) / trade.entry_price
+                    trade.holding_days = (
+                        exit_date.date() - trade.entry_date.date()
+                    ).days
 
                 # リバランス実行（指定頻度で）
-                if len(trading_days) > 0 and (current_date - trading_days[0]).days % rebalance_frequency == 0:
+                if (
+                    len(trading_days) > 0
+                    and (current_date - trading_days[0]).days % rebalance_frequency == 0
+                ):
                     new_trades = self._rebalance_portfolio(
-                        predictor, symbols, current_date, all_data, cash, top_n, score_threshold
+                        predictor,
+                        symbols,
+                        current_date,
+                        all_data,
+                        cash,
+                        top_n,
+                        score_threshold,
                     )
 
                     for trade in new_trades:
                         if trade.symbol in all_data:
-                            entry_price = self._get_price_on_date(all_data[trade.symbol], current_date)
-                            if entry_price is not None and cash >= trade.quantity * entry_price:
+                            entry_price = self._get_price_on_date(
+                                all_data[trade.symbol], current_date
+                            )
+                            if (
+                                entry_price is not None
+                                and cash >= trade.quantity * entry_price
+                            ):
                                 trade.entry_price = entry_price
                                 cash -= trade.quantity * entry_price
 
@@ -176,28 +208,36 @@ class Backtester:
         for trade in trades:
             if trade.exit_date is None:
                 if trade.symbol in all_data:
-                    final_price = self._get_price_on_date(all_data[trade.symbol], final_date)
+                    final_price = self._get_price_on_date(
+                        all_data[trade.symbol], final_date
+                    )
                     if final_price is not None:
                         trade.exit_date = final_date
                         trade.exit_price = final_price
-                        trade.return_pct = (final_price - trade.entry_price) / trade.entry_price
-                        trade.holding_days = (final_date.date() - trade.entry_date.date()).days
+                        trade.return_pct = (
+                            final_price - trade.entry_price
+                        ) / trade.entry_price
+                        trade.holding_days = (
+                            final_date.date() - trade.entry_date.date()
+                        ).days
 
         # バックテスト結果を計算
         return self._calculate_backtest_metrics(portfolio_values, trades)
 
-    def _get_price_on_date(self, data: pd.DataFrame, date: pd.Timestamp) -> Optional[float]:
+    def _get_price_on_date(
+        self, data: pd.DataFrame, date: pd.Timestamp
+    ) -> Optional[float]:
         """指定日の価格を取得"""
         try:
             # 完全一致を試行
             if date in data.index:
-                return float(data.loc[date, 'Close'])
+                return float(data.loc[date, "Close"])
 
             # 最も近い過去の日付を使用
             available_dates = data.index[data.index <= date]
             if len(available_dates) > 0:
                 closest_date = available_dates.max()
-                return float(data.loc[closest_date, 'Close'])
+                return float(data.loc[closest_date, "Close"])
 
             return None
         except Exception:
@@ -211,7 +251,7 @@ class Backtester:
         all_data: Dict[str, pd.DataFrame],
         available_cash: float,
         top_n: int,
-        score_threshold: float = 60  # 新しいパラメータ
+        score_threshold: float = 60,  # 新しいパラメータ
     ) -> List[Trade]:
         """ポートフォリオをリバランス"""
 
@@ -224,7 +264,9 @@ class Backtester:
                 try:
                     if isinstance(predictor, MLStockPredictor):
                         # 機械学習モデルの場合、歴史的データを使用
-                        historical_data = all_data[symbol][all_data[symbol].index <= current_date]
+                        historical_data = all_data[symbol][
+                            all_data[symbol].index <= current_date
+                        ]
                         if len(historical_data) >= 100:  # 十分なデータがある場合のみ
                             score = predictor.predict_score(symbol)
                         else:
@@ -248,7 +290,9 @@ class Backtester:
 
                 for symbol, score in top_symbols:
                     if score > score_threshold:  # 調整可能な閾値
-                        current_price = self._get_price_on_date(all_data[symbol], current_date)
+                        current_price = self._get_price_on_date(
+                            all_data[symbol], current_date
+                        )
                         if current_price is not None and current_price > 0:
                             quantity = int(cash_per_stock / current_price)
                             if quantity > 0:
@@ -259,8 +303,8 @@ class Backtester:
                                     entry_price=current_price,
                                     exit_price=None,
                                     quantity=quantity,
-                                    trade_type='buy',
-                                    score=score
+                                    trade_type="buy",
+                                    score=score,
                                 )
                                 new_trades.append(trade)
 
@@ -269,7 +313,9 @@ class Backtester:
 
         return new_trades
 
-    def _calculate_backtest_metrics(self, portfolio_values: List[Dict], trades: List[Trade]) -> BacktestResult:
+    def _calculate_backtest_metrics(
+        self, portfolio_values: List[Dict], trades: List[Trade]
+    ) -> BacktestResult:
         """バックテスト指標を計算"""
 
         if not portfolio_values or not trades:
@@ -283,15 +329,15 @@ class Backtester:
                 avg_holding_days=0.0,
                 best_trade=0.0,
                 worst_trade=0.0,
-                trades=[]
+                trades=[],
             )
 
         # ポートフォリオ価値の推移
         df_portfolio = pd.DataFrame(portfolio_values)
-        df_portfolio.set_index('date', inplace=True)
+        df_portfolio.set_index("date", inplace=True)
 
         # リターン計算
-        final_value = df_portfolio['portfolio_value'].iloc[-1]
+        final_value = df_portfolio["portfolio_value"].iloc[-1]
         total_return = (final_value - self.initial_capital) / self.initial_capital
 
         # 年率リターン
@@ -300,13 +346,13 @@ class Backtester:
         annualized_return = (1 + total_return) ** (1 / years) - 1 if years > 0 else 0
 
         # 最大ドローダウン
-        cumulative_returns = df_portfolio['portfolio_value'] / self.initial_capital
+        cumulative_returns = df_portfolio["portfolio_value"] / self.initial_capital
         rolling_max = cumulative_returns.expanding().max()
         drawdowns = (cumulative_returns - rolling_max) / rolling_max
         max_drawdown = abs(drawdowns.min())
 
         # 日次リターン
-        daily_returns = df_portfolio['portfolio_value'].pct_change().dropna()
+        daily_returns = df_portfolio["portfolio_value"].pct_change().dropna()
 
         # シャープレシオ
         if daily_returns.std() > 0:
@@ -315,12 +361,16 @@ class Backtester:
             sharpe_ratio = 0.0
 
         # 取引統計
-        completed_trades = [t for t in trades if t.exit_date is not None and t.return_pct is not None]
+        completed_trades = [
+            t for t in trades if t.exit_date is not None and t.return_pct is not None
+        ]
 
         if completed_trades:
             returns = [t.return_pct for t in completed_trades]
             win_rate = len([r for r in returns if r > 0]) / len(returns)
-            avg_holding_days = np.mean([t.holding_days for t in completed_trades if t.holding_days is not None])
+            avg_holding_days = np.mean(
+                [t.holding_days for t in completed_trades if t.holding_days is not None]
+            )
             best_trade = max(returns)
             worst_trade = min(returns)
         else:
@@ -339,7 +389,7 @@ class Backtester:
             avg_holding_days=avg_holding_days,
             best_trade=best_trade,
             worst_trade=worst_trade,
-            trades=completed_trades
+            trades=completed_trades,
         )
 
     def compare_models(
@@ -347,7 +397,7 @@ class Backtester:
         models: List[Tuple[str, object]],
         symbols: List[str],
         start_date: str,
-        end_date: str
+        end_date: str,
     ) -> Dict[str, BacktestResult]:
         """複数モデルの比較"""
 
@@ -360,7 +410,7 @@ class Backtester:
                     predictor=model,
                     symbols=symbols,
                     start_date=start_date,
-                    end_date=end_date
+                    end_date=end_date,
                 )
                 results[model_name] = result
 

@@ -28,13 +28,13 @@ class TestStockDataProvider:
         """株価データ取得のテスト（モック使用）"""
         provider = StockDataProvider()
 
-        with patch('yfinance.Ticker', return_value=mock_yfinance):
+        with patch("yfinance.Ticker", return_value=mock_yfinance):
             data = provider.get_stock_data("7203", "1mo")
 
             assert not data.empty
-            assert 'Symbol' in data.columns
-            assert 'CompanyName' in data.columns
-            assert data['Symbol'].iloc[0] == "7203"
+            assert "Symbol" in data.columns
+            assert "CompanyName" in data.columns
+            assert data["Symbol"].iloc[0] == "7203"
 
     @pytest.mark.unit
     def test_get_stock_data_invalid_symbol(self, mock_yfinance):
@@ -44,7 +44,7 @@ class TestStockDataProvider:
         # 空のDataFrameを返すようにモック設定
         mock_yfinance.history.return_value = pd.DataFrame()
 
-        with patch('yfinance.Ticker', return_value=mock_yfinance):
+        with patch("yfinance.Ticker", return_value=mock_yfinance):
             data = provider.get_stock_data("INVALID", "1mo")
             assert data.empty
 
@@ -56,11 +56,11 @@ class TestStockDataProvider:
         # テスト用データに技術指標を追加
         result = provider.calculate_technical_indicators(mock_stock_data)
 
-        assert 'SMA_20' in result.columns
-        assert 'SMA_50' in result.columns
-        assert 'RSI' in result.columns
-        assert 'MACD' in result.columns
-        assert 'ATR' in result.columns
+        assert "SMA_20" in result.columns
+        assert "SMA_50" in result.columns
+        assert "RSI" in result.columns
+        assert "MACD" in result.columns
+        assert "ATR" in result.columns
 
     @pytest.mark.unit
     def test_calculate_technical_indicators_empty_data(self):
@@ -76,21 +76,21 @@ class TestStockDataProvider:
         """財務指標取得のテスト（モック使用）"""
         provider = StockDataProvider()
 
-        with patch('yfinance.Ticker', return_value=mock_yfinance):
+        with patch("yfinance.Ticker", return_value=mock_yfinance):
             metrics = provider.get_financial_metrics("7203")
 
-            assert 'symbol' in metrics
-            assert 'company_name' in metrics
-            assert 'market_cap' in metrics
-            assert 'pe_ratio' in metrics
-            assert metrics['symbol'] == "7203"
+            assert "symbol" in metrics
+            assert "company_name" in metrics
+            assert "market_cap" in metrics
+            assert "pe_ratio" in metrics
+            assert metrics["symbol"] == "7203"
 
     @pytest.mark.unit
     def test_get_multiple_stocks(self, mock_yfinance):
         """複数銘柄データ取得のテスト"""
         provider = StockDataProvider()
 
-        with patch('yfinance.Ticker', return_value=mock_yfinance):
+        with patch("yfinance.Ticker", return_value=mock_yfinance):
             symbols = ["7203", "6758"]
             result = provider.get_multiple_stocks(symbols, "1mo")
 
@@ -104,11 +104,11 @@ class TestStockDataProvider:
         provider = StockDataProvider()
 
         # 日本株の場合は.Tが付加されることを確認
-        with patch('yfinance.Ticker') as mock_ticker:
+        with patch("yfinance.Ticker") as mock_ticker:
             mock_ticker_instance = Mock()
-            mock_ticker_instance.history.return_value = pd.DataFrame({
-                'Close': [100], 'Volume': [1000]
-            })
+            mock_ticker_instance.history.return_value = pd.DataFrame(
+                {"Close": [100], "Volume": [1000]}
+            )
             mock_ticker.return_value = mock_ticker_instance
 
             provider.get_stock_data("7203", "1d")
@@ -125,7 +125,7 @@ class TestStockDataProvider:
         try:
             data = provider.get_stock_data("7203", "5d")
             if not data.empty:
-                assert 'Close' in data.columns
-                assert 'Volume' in data.columns
+                assert "Close" in data.columns
+                assert "Volume" in data.columns
         except Exception:
             pytest.skip("Network connection required for integration test")
