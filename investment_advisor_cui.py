@@ -17,7 +17,7 @@ import argparse
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from models.ml_models import Precision87BreakthroughSystem
+from models_new.precision.precision_87_system import Precision87BreakthroughSystem
 from data.stock_data import StockDataProvider
 from data.sector_classification import SectorClassification
 from medium_term_prediction import MediumTermPredictionSystem
