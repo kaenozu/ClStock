@@ -5,7 +5,39 @@ ClStock 設定管理
 
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, List, Optional
+
+# プロジェクトルートパス
+PROJECT_ROOT = Path(__file__).parent.parent
+
+@dataclass
+class DatabaseConfig:
+    """データベース設定"""
+    # 絶対パスでデータベースファイルを指定
+    personal_portfolio_db: Path = field(default_factory=lambda: PROJECT_ROOT / "data" / "personal_portfolio.db")
+    prediction_history_db: Path = field(default_factory=lambda: PROJECT_ROOT / "data" / "prediction_history.db")
+    backtest_results_db: Path = field(default_factory=lambda: PROJECT_ROOT / "data" / "backtest_results.db")
+
+@dataclass
+class PredictionConfig:
+    """予測システム設定（命名統一）"""
+    # 精度設定
+    target_accuracy: float = 87.0  # 目標精度（%）
+    achieved_accuracy: float = 89.18  # 実際の達成精度（%）
+    baseline_accuracy: float = 84.6  # ベースライン精度（%）
+
+    # 予測制限設定
+    max_predicted_change_percent: float = 0.05  # 最大予測変動率（±5%）
+    min_confidence_threshold: float = 0.3  # 最小信頼度閾値
+    max_confidence_threshold: float = 0.95  # 最大信頼度閾値
+
+    # 技術指標設定
+    rsi_period: int = 14
+    rsi_oversold: int = 30
+    rsi_overbought: int = 70
+    bollinger_period: int = 20
+    bollinger_std: int = 2
 
 @dataclass
 class ModelConfig:
@@ -101,6 +133,8 @@ class LoggingConfig:
 class AppSettings:
     """アプリケーション全体設定"""
 
+    database: DatabaseConfig = field(default_factory=DatabaseConfig)
+    prediction: PredictionConfig = field(default_factory=PredictionConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     backtest: BacktestConfig = field(default_factory=BacktestConfig)
     trading: TradingConfig = field(default_factory=TradingConfig)
