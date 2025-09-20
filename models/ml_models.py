@@ -71,8 +71,10 @@ class MLStockPredictor:
         bb_std = data["Close"].rolling(20).std()
         bb_upper = bb_middle + (bb_std * 2)
         bb_lower = bb_middle - (bb_std * 2)
-        features["bb_position"] = (data["Close"] - bb_lower) / (bb_upper - bb_lower)
-        features["bb_squeeze"] = (bb_upper - bb_lower) / bb_middle
+        # ゼロ除算を防ぐ安全チェック
+        bb_range = bb_upper - bb_lower
+        features["bb_position"] = (data["Close"] - bb_lower) / bb_range.where(bb_range != 0, 1)
+        features["bb_squeeze"] = bb_range / bb_middle.where(bb_middle != 0, 1)
         features["bb_breakout_up"] = (data["Close"] > bb_upper).astype(int)
         features["bb_breakout_down"] = (data["Close"] < bb_lower).astype(int)
         # === ストキャスティクス ===

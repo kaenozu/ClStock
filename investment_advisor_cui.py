@@ -19,6 +19,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from models.ml_models import Precision87BreakthroughSystem
 from data.stock_data import StockDataProvider
+from data.sector_classification import SectorClassification
 from medium_term_prediction import MediumTermPredictionSystem
 
 class InvestmentAdvisorCUI:
@@ -347,46 +348,8 @@ class InvestmentAdvisorCUI:
             return "低リスク（保守的）"
 
     def _get_sector_risk(self, symbol: str) -> float:
-        """セクター別リスク係数"""
-        # 自動車・輸送機器（景気敏感）
-        auto_symbols = ['7203.T', '7267.T', '7201.T', '7269.T', '7211.T']
-        # 電機・精密機器（技術変化リスク）
-        tech_symbols = ['6758.T', '6861.T', '6954.T', '6981.T', '6503.T', '6702.T', '6752.T', '6971.T', '7751.T', '7832.T']
-        # 通信・IT（競争激化）
-        comm_symbols = ['9984.T', '9433.T', '9434.T', '6098.T', '4385.T']
-        # 金融（金利リスク）
-        finance_symbols = ['8306.T', '8316.T', '8411.T', '8604.T', '8473.T']
-        # 商社（資源価格リスク）
-        trading_symbols = ['8001.T', '8058.T', '8031.T', '8053.T', '8002.T']
-        # 医薬品・化学（規制リスク）
-        pharma_symbols = ['4502.T', '4507.T', '4503.T', '4005.T', '4063.T', '4183.T']
-        # 素材・エネルギー（商品価格リスク）
-        material_symbols = ['5401.T', '5713.T', '1605.T', '5020.T']
-        # 消費・小売（消費動向リスク）
-        consumer_symbols = ['7974.T', '8267.T', '9983.T', '3382.T', '2914.T']
-        # 不動産・建設（金利・景気リスク）
-        real_estate_symbols = ['8802.T', '8801.T', '1801.T', '6367.T']
-
-        if symbol in auto_symbols:
-            return 0.4  # 高リスク（景気敏感）
-        elif symbol in tech_symbols:
-            return 0.35  # 中高リスク（技術変化）
-        elif symbol in comm_symbols:
-            return 0.4   # 高リスク（競争激化）
-        elif symbol in finance_symbols:
-            return 0.3   # 中リスク（金利変動）
-        elif symbol in trading_symbols:
-            return 0.35  # 中高リスク（資源価格）
-        elif symbol in pharma_symbols:
-            return 0.25  # 低中リスク（安定需要）
-        elif symbol in material_symbols:
-            return 0.45  # 高リスク（商品価格）
-        elif symbol in consumer_symbols:
-            return 0.3   # 中リスク（消費動向）
-        elif symbol in real_estate_symbols:
-            return 0.35  # 中高リスク（金利・景気）
-        else:
-            return 0.3   # デフォルト中リスク
+        """セクター別リスク係数（Single Source of Truth）"""
+        return SectorClassification.get_sector_risk(symbol)
 
     def get_top_recommendations(self, limit: int = 10) -> List[Dict[str, Any]]:
         """トップ推奨銘柄取得"""

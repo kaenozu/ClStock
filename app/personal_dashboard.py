@@ -30,6 +30,16 @@ app = FastAPI(title="ClStock Personal Dashboard", version="1.0.0")
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# カスタムフィルター追加
+def format_number(value):
+    """数値をカンマ区切りでフォーマット"""
+    try:
+        return f"{int(value):,}"
+    except (ValueError, TypeError):
+        return value
+
+templates.env.filters['format_number'] = format_number
+
 class PersonalDashboard:
     def __init__(self):
         self.db_path = "../data/personal_portfolio.db"

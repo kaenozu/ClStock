@@ -177,7 +177,13 @@ class MediumTermPredictionSystem:
                 signals['reasoning'].append("出来高増加（下降トレンド確認）")
 
         # サポート・レジスタンスによるシグナル
-        price_position = (current_price - support) / (resistance - support)
+        # ゼロ除算を防ぐ安全チェック
+        resistance_support_diff = resistance - support
+        if resistance_support_diff != 0:
+            price_position = (current_price - support) / resistance_support_diff
+        else:
+            # レジスタンスとサポートが同じ場合（価格変動なし）
+            price_position = 0.5  # 中立ポジション
         if price_position < 0.2:
             signals['buy_signal_strength'] += 20
             signals['reasoning'].append("サポートライン付近（買い機会）")

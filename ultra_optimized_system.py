@@ -201,7 +201,9 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
         """ストキャスティクス計算"""
         lowest_low = low.rolling(k_period).min()
         highest_high = high.rolling(k_period).max()
-        k_percent = 100 * ((close - lowest_low) / (highest_high - lowest_low))
+        # ゼロ除算を防ぐ安全チェック
+        price_range = highest_high - lowest_low
+        k_percent = 100 * ((close - lowest_low) / price_range.where(price_range != 0, 1))
         d_percent = k_percent.rolling(d_period).mean()
         return k_percent, d_percent
     

@@ -221,7 +221,7 @@
                 </div>
                 <div>
                     <div class="label">平均精度</div>
-                    <div class="value">{{ "%.1f".format(system_info.average_accuracy) }}%</div>
+                    <div class="value">{{ system_info.average_accuracy | round(1) }}%</div>
                 </div>
                 <div>
                     <div class="label">達成状況</div>
@@ -240,24 +240,24 @@
                 <h2>💼 ポートフォリオサマリー</h2>
                 <div class="portfolio-stats">
                     <div class="stat-card">
-                        <div class="stat-value">¥{{ "{:,.0f}".format(portfolio.total_value) }}</div>
+                        <div class="stat-value">¥{{ portfolio.total_value | round(0) | int | format_number }}</div>
                         <div class="stat-label">総資産価値</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value {% if portfolio.total_gain_loss >= 0 %}positive{% else %}negative{% endif %}">
-                            ¥{{ "{:,.0f}".format(portfolio.total_gain_loss) }}
+                            ¥{{ portfolio.total_gain_loss | round(0) | int | format_number }}
                         </div>
                         <div class="stat-label">損益</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value {% if portfolio.gain_loss_percent >= 0 %}positive{% else %}negative{% endif %}">
-                            {{ "{:+.1f}".format(portfolio.gain_loss_percent) }}%
+                            {{ portfolio.gain_loss_percent | round(1) }}%
                         </div>
                         <div class="stat-label">損益率</div>
                     </div>
                     {% if portfolio.system_info %}
                     <div class="stat-card">
-                        <div class="stat-value">{{ "%.1f".format(portfolio.system_info.average_accuracy) }}%</div>
+                        <div class="stat-value">{{ portfolio.system_info.average_accuracy | round(1) }}%</div>
                         <div class="stat-label">予測精度</div>
                     </div>
                     {% endif %}
@@ -282,11 +282,11 @@
                         <tr>
                             <td><strong>{{ position.symbol }}</strong></td>
                             <td>{{ position.shares }}</td>
-                            <td>¥{{ "{:,.0f}".format(position.buy_price) }}</td>
-                            <td>¥{{ "{:,.0f}".format(position.current_price) }}</td>
+                            <td>¥{{ position.buy_price | round(0) | int | format_number }}</td>
+                            <td>¥{{ position.current_price | round(0) | int | format_number }}</td>
                             <td>
                                 {% if position.predicted_price %}
-                                ¥{{ "{:,.0f}".format(position.predicted_price) }}
+                                ¥{{ position.predicted_price | round(0) | int | format_number }}
                                 {% else %}
                                 -
                                 {% endif %}
@@ -294,7 +294,7 @@
                             <td>
                                 {% if position.prediction_accuracy %}
                                 <span class="prediction-badge {% if position.prediction_accuracy >= 89 %}accuracy-high{% elif position.prediction_accuracy >= 85 %}accuracy-good{% endif %}">
-                                    {{ "%.1f".format(position.prediction_accuracy) }}%
+                                    {{ position.prediction_accuracy | round(1) }}%
                                 </span>
                                 {% else %}
                                 -
@@ -303,14 +303,14 @@
                             <td>
                                 {% if position.price_change_forecast %}
                                 <span class="{% if position.price_change_forecast >= 0 %}positive{% else %}negative{% endif %}">
-                                    {{ "{:+.1f}".format(position.price_change_forecast) }}%
+                                    {{ position.price_change_forecast | round(1) }}%
                                 </span>
                                 {% else %}
                                 -
                                 {% endif %}
                             </td>
                             <td class="{% if (position.current_price - position.buy_price) * position.shares >= 0 %}positive{% else %}negative{% endif %}">
-                                ¥{{ "{:,.0f}".format((position.current_price - position.buy_price) * position.shares) }}
+                                ¥{{ ((position.current_price - position.buy_price) * position.shares) | round(0) | int | format_number }}
                             </td>
                         </tr>
                         {% endfor %}
@@ -340,12 +340,12 @@
                         {% for item in watchlist %}
                         <tr {% if item.alert_triggered %}class="alert-triggered"{% endif %}>
                             <td><strong>{{ item.symbol }}</strong></td>
-                            <td>¥{{ "{:,.0f}".format(item.current_price) if item.current_price else '-' }}</td>
-                            <td>¥{{ "{:,.0f}".format(item.predicted_price) if item.predicted_price else '-' }}</td>
+                            <td>¥{{ item.current_price | round(0) | int | format_number if item.current_price else '-' }}</td>
+                            <td>¥{{ item.predicted_price | round(0) | int | format_number if item.predicted_price else '-' }}</td>
                             <td>
                                 {% if item.price_change_forecast %}
                                 <span class="{% if item.price_change_forecast >= 0 %}positive{% else %}negative{% endif %}">
-                                    {{ "{:+.1f}".format(item.price_change_forecast) }}%
+                                    {{ item.price_change_forecast | round(1) }}%
                                 </span>
                                 {% else %}
                                 -
@@ -354,7 +354,7 @@
                             <td>
                                 {% if item.prediction_confidence %}
                                 <span class="prediction-badge confidence-high">
-                                    {{ "{:.1%}".format(item.prediction_confidence) }}
+                                    {{ (item.prediction_confidence * 100) | round(1) }}%
                                 </span>
                                 {% else %}
                                 -
@@ -396,11 +396,11 @@
                         <tr>
                             <td><strong>{{ pred.symbol }}</strong></td>
                             <td>{{ pred.prediction_date[:16] if pred.prediction_date else '-' }}</td>
-                            <td>{{ "%.1f".format(pred.predicted_price) if pred.predicted_price else '-' }}</td>
+                            <td>{{ pred.predicted_price | round(1) if pred.predicted_price else '-' }}</td>
                             <td>
                                 {% if pred.confidence %}
                                 <span class="prediction-badge confidence-high">
-                                    {{ "{:.1%}".format(pred.confidence) }}
+                                    {{ (pred.confidence * 100) | round(1) }}%
                                 </span>
                                 {% else %}
                                 -
@@ -409,7 +409,7 @@
                             <td>
                                 {% if pred.accuracy %}
                                 <span class="prediction-badge {% if pred.accuracy >= 89 %}accuracy-high{% elif pred.accuracy >= 85 %}accuracy-good{% endif %}">
-                                    {{ "%.1f".format(pred.accuracy) }}%
+                                    {{ pred.accuracy | round(1) }}%
                                 </span>
                                 {% else %}
                                 -
