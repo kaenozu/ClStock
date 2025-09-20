@@ -15,7 +15,7 @@ from utils.cache import (
     cache_dataframe,
     get_cache,
     clear_cache,
-    cleanup_cache
+    cleanup_cache,
 )
 
 

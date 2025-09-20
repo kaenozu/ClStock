@@ -1,0 +1,56 @@
+{
+  "timestamp": "2025-09-20T13:13:14.923586",
+  "system_info": {
+    "target_accuracy": 87.0,
+    "current_baseline": 84.6,
+    "improvement_needed": 2.4,
+    "test_symbols": [
+      "7203",
+      "6758",
+      "8306",
+      "6861",
+      "4661",
+      "9433",
+      "4519",
+      "6367",
+      "8035"
+    ]
+  },
+  "component_test": {
+    "component_results": {
+      "dqn": {
+        "status": "success",
+        "action": 2,
+        "confidence": 0.34829720854759216
+      },
+      "multimodal": {
+        "status": "success",
+        "prediction_score": 1.0628804477687885,
+        "confidence": 0.101889388038238
+      },
+      "meta_learning": {
+        "status": "success",
+        "adjusted_prediction": 70.0,
+        "confidence_boost": 0.0,
+        "adaptation_applied": false
+      },
+      "advanced_ensemble": {
+        "status": "success",
+        "ensemble_prediction": 71.86190931087141,
+        "ensemble_confidence": 0.847394233041834,
+        "total_weight": 0.847394233041834
+      },
+      "market_transformer": {
+        "status": "success",
+        "prediction_score": 100,
+        "confidence": NaN
+      }
+    },
+    "success_rate": 100.0,
+    "successful_components": 5,
+    "total_components": 5
+  },
+  "prediction_test": "{'prediction_results': {'7203': {'final_prediction': 50.0, 'final_confidence': 0, 'individual_predictions': {'trend_following': 75.0, 'dqn': 75.0, 'multimodal': np.float64(0.9890441557192055), 'meta': 75.0, 'transformer': 100}, 'accuracy_improvement': -34.599999999999994, 'model_contributions': {'trend_following': {'prediction': 75.0, 'confidence': 0.8, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'dqn': {'prediction': 75.0, 'confidence': 0.37408387660980225, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'multimodal': {'prediction': np.float64(0.9890441557192055), 'confidence': np.float64(0.10218634936488095), 'contribution_ratio': 0, 'weighted_impact': np.float64(0.0)}, 'meta': {'prediction': 75.0, 'confidence': 0.8, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'transformer': {'prediction': 100, 'confidence': np.float64(nan), 'contribution_ratio': 0, 'weighted_impact': 0}}}, '6758': {'final_prediction': 50.0, 'final_confidence': 0, 'individual_predictions': {'trend_following': 75.0, 'dqn': 50.0, 'multimodal': np.float64(0.997698699941237), 'meta': 75.0, 'transformer': 100}, 'accuracy_improvement': -34.599999999999994, 'model_contributions': {'trend_following': {'prediction': 75.0, 'confidence': 0.8, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'dqn': {'prediction': 50.0, 'confidence': 0.3665875494480133, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'multimodal': {'prediction': np.float64(0.997698699941237), 'confidence': np.float64(0.10215269088460688), 'contribution_ratio': 0, 'weighted_impact': np.float64(0.0)}, 'meta': {'prediction': 75.0, 'confidence': 0.8, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'transformer': {'prediction': 100, 'confidence': np.float64(nan), 'contribution_ratio': 0, 'weighted_impact': 0}}}, '8306': {'final_prediction': 50.0, 'final_confidence': 0, 'individual_predictions': {'trend_following': 75.0, 'dqn': 50.0, 'multimodal': np.float64(0.9999929531494133), 'meta': 75.0, 'transformer': 100}, 'accuracy_improvement': -34.599999999999994, 'model_contributions': {'trend_following': {'prediction': 75.0, 'confidence': 0.8, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'dqn': {'prediction': 50.0, 'confidence': 0.3646804392337799, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'multimodal': {'prediction': np.float64(0.9999929531494133), 'confidence': np.float64(0.10214371723585632), 'contribution_ratio': 0, 'weighted_impact': np.float64(0.0)}, 'meta': {'prediction': 75.0, 'confidence': 0.8, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'transformer': {'prediction': 100, 'confidence': np.float64(nan), 'contribution_ratio': 0, 'weighted_impact': 0}}}, '6861': {'final_prediction': 50.0, 'final_confidence': 0, 'individual_predictions': {'trend_following': 50.0, 'dqn': 75.0, 'multimodal': np.float64(0.987658402489546), 'meta': 50.0, 'transformer': 100}, 'accuracy_improvement': -34.599999999999994, 'model_contributions': {'trend_following': {'prediction': 50.0, 'confidence': 0.5, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'dqn': {'prediction': 75.0, 'confidence': 0.3523721694946289, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'multimodal': {'prediction': np.float64(0.987658402489546), 'confidence': np.float64(0.10219171045306813), 'contribution_ratio': 0, 'weighted_impact': np.float64(0.0)}, 'meta': {'prediction': 50.0, 'confidence': 0.5, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'transformer': {'prediction': 100, 'confidence': np.float64(nan), 'contribution_ratio': 0, 'weighted_impact': 0}}}, '4661': {'final_prediction': 50.0, 'final_confidence': 0, 'individual_predictions': {'trend_following': 75.0, 'dqn': 50.0, 'multimodal': np.float64(0.9823290078090104), 'meta': 75.0, 'transformer': 100}, 'accuracy_improvement': -34.599999999999994, 'model_contributions': {'trend_following': {'prediction': 75.0, 'confidence': 0.8, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'dqn': {'prediction': 50.0, 'confidence': 0.3503846824169159, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'multimodal': {'prediction': np.float64(0.9823290078090104), 'confidence': np.float64(0.10221225573030582), 'contribution_ratio': 0, 'weighted_impact': np.float64(0.0)}, 'meta': {'prediction': 75.0, 'confidence': 0.8, 'contribution_ratio': 0, 'weighted_impact': 0.0}, 'transformer': {'prediction': 100, 'confidence': np.float64(nan), 'contribution_ratio': 0, 'weighted_impact': 0}}}}, 'tested_symbols': ['7203', '6758', '8306', '6861', '4661'], 'successful_predictions': 5, 'average_estimated_accuracy': np.float64(84.6), 'max_estimated_accuracy': np.float64(84.6), 'min_estimated_accuracy': np.float64(84.6), 'target_87_achieved': np.False_}",
+  "batch_test": "{'processing_time': 0.409059, 'symbols_count': 3, 'average_improvement': np.float64(-34.599999999999994), 'expected_accuracy': np.float64(50.0), 'target_achieved': np.False_, 'throughput': 7.333905377952814}",
+  "overall_assessment": "{'individual_scores': {'component_stability': 100.0, 'accuracy_improvement': 0, 'performance_score': 0}, 'overall_score': 30.0, 'grade': 'D (要改善)', 'target_87_achieved': np.False_, 'estimated_final_accuracy': np.float64(84.6), 'accuracy_improvement': np.float64(0.0), 'recommendations': ['精度改善アルゴリズムの最適化が必要', 'バッチ処理性能の改善が必要', '追加の精度向上技術導入を推奨', 'ハイパーパラメータ最適化を実行']}"
+}

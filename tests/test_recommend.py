@@ -7,8 +7,12 @@ import json
 
 # recommend.pyから関数をインポート
 from recommend import (
-    format_currency, format_percentage, print_recommendation,
-    print_header, print_footer, main
+    format_currency,
+    format_percentage,
+    print_recommendation,
+    print_header,
+    print_footer,
+    main,
 )
 
 
@@ -65,12 +69,12 @@ class TestRecommendModule:
     @pytest.mark.unit
     def test_main_list_option(self, capsys):
         """--listオプションのテスト"""
-        with patch('sys.argv', ['recommend.py', '--list']):
-            with patch('data.stock_data.StockDataProvider') as mock_provider_class:
+        with patch("sys.argv", ["recommend.py", "--list"]):
+            with patch("data.stock_data.StockDataProvider") as mock_provider_class:
                 mock_provider = Mock()
                 mock_provider.jp_stock_codes = {
                     "7203": "トヨタ自動車",
-                    "6758": "ソニーグループ"
+                    "6758": "ソニーグループ",
                 }
                 mock_provider_class.return_value = mock_provider
 
@@ -84,10 +88,12 @@ class TestRecommendModule:
     @pytest.mark.unit
     def test_main_single_symbol(self, sample_recommendation, capsys):
         """--symbolオプションのテスト"""
-        with patch('sys.argv', ['recommend.py', '--symbol', '7203']):
-            with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("sys.argv", ["recommend.py", "--symbol", "7203"]):
+            with patch("models.predictor.StockPredictor") as mock_predictor_class:
                 mock_predictor = Mock()
-                mock_predictor.generate_recommendation.return_value = sample_recommendation
+                mock_predictor.generate_recommendation.return_value = (
+                    sample_recommendation
+                )
                 mock_predictor_class.return_value = mock_predictor
 
                 asyncio.run(main())
@@ -99,10 +105,12 @@ class TestRecommendModule:
     @pytest.mark.unit
     def test_main_json_output(self, sample_recommendation, capsys):
         """--jsonオプションのテスト"""
-        with patch('sys.argv', ['recommend.py', '--symbol', '7203', '--json']):
-            with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("sys.argv", ["recommend.py", "--symbol", "7203", "--json"]):
+            with patch("models.predictor.StockPredictor") as mock_predictor_class:
                 mock_predictor = Mock()
-                mock_predictor.generate_recommendation.return_value = sample_recommendation
+                mock_predictor.generate_recommendation.return_value = (
+                    sample_recommendation
+                )
                 mock_predictor_class.return_value = mock_predictor
 
                 asyncio.run(main())
@@ -119,10 +127,12 @@ class TestRecommendModule:
     @pytest.mark.unit
     def test_main_top_recommendations(self, sample_recommendation, capsys):
         """デフォルト（上位推奨）のテスト"""
-        with patch('sys.argv', ['recommend.py']):
-            with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("sys.argv", ["recommend.py"]):
+            with patch("models.predictor.StockPredictor") as mock_predictor_class:
                 mock_predictor = Mock()
-                mock_predictor.get_top_recommendations.return_value = [sample_recommendation]
+                mock_predictor.get_top_recommendations.return_value = [
+                    sample_recommendation
+                ]
                 mock_predictor_class.return_value = mock_predictor
 
                 asyncio.run(main())
@@ -134,8 +144,8 @@ class TestRecommendModule:
     @pytest.mark.unit
     def test_main_top_with_parameter(self, sample_recommendation, capsys):
         """--topパラメータのテスト"""
-        with patch('sys.argv', ['recommend.py', '--top', '3']):
-            with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("sys.argv", ["recommend.py", "--top", "3"]):
+            with patch("models.predictor.StockPredictor") as mock_predictor_class:
                 mock_predictor = Mock()
                 recommendations = [sample_recommendation] * 3
                 for i, rec in enumerate(recommendations):
@@ -154,10 +164,12 @@ class TestRecommendModule:
     @pytest.mark.unit
     def test_main_error_handling(self, capsys):
         """エラーハンドリングのテスト"""
-        with patch('sys.argv', ['recommend.py', '--symbol', 'INVALID']):
-            with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("sys.argv", ["recommend.py", "--symbol", "INVALID"]):
+            with patch("models.predictor.StockPredictor") as mock_predictor_class:
                 mock_predictor = Mock()
-                mock_predictor.generate_recommendation.side_effect = Exception("Test error")
+                mock_predictor.generate_recommendation.side_effect = Exception(
+                    "Test error"
+                )
                 mock_predictor_class.return_value = mock_predictor
 
                 asyncio.run(main())
@@ -169,8 +181,8 @@ class TestRecommendModule:
     @pytest.mark.unit
     def test_main_keyboard_interrupt(self, capsys):
         """キーボード割り込みのテスト"""
-        with patch('sys.argv', ['recommend.py']):
-            with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("sys.argv", ["recommend.py"]):
+            with patch("models.predictor.StockPredictor") as mock_predictor_class:
                 mock_predictor = Mock()
                 mock_predictor.get_top_recommendations.side_effect = KeyboardInterrupt()
                 mock_predictor_class.return_value = mock_predictor
@@ -184,8 +196,8 @@ class TestRecommendModule:
     @pytest.mark.unit
     def test_main_json_top_recommendations(self, sample_recommendation, capsys):
         """上位推奨のJSON出力テスト"""
-        with patch('sys.argv', ['recommend.py', '--top', '2', '--json']):
-            with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("sys.argv", ["recommend.py", "--top", "2", "--json"]):
+            with patch("models.predictor.StockPredictor") as mock_predictor_class:
                 mock_predictor = Mock()
                 recommendations = [sample_recommendation] * 2
                 mock_predictor.get_top_recommendations.return_value = recommendations
@@ -207,10 +219,12 @@ class TestRecommendModule:
     def test_unicode_output_handling(self, sample_recommendation, capsys):
         """Unicode出力処理のテスト"""
         # Windows環境でのUnicode出力が正常に動作するかテスト
-        with patch('sys.argv', ['recommend.py', '--symbol', '7203']):
-            with patch('models.predictor.StockPredictor') as mock_predictor_class:
+        with patch("sys.argv", ["recommend.py", "--symbol", "7203"]):
+            with patch("models.predictor.StockPredictor") as mock_predictor_class:
                 mock_predictor = Mock()
-                mock_predictor.generate_recommendation.return_value = sample_recommendation
+                mock_predictor.generate_recommendation.return_value = (
+                    sample_recommendation
+                )
                 mock_predictor_class.return_value = mock_predictor
 
                 try:

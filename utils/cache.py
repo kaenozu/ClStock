@@ -45,16 +45,16 @@ class DataCache:
             return None
 
         try:
-            with open(cache_path, 'rb') as f:
+            with open(cache_path, "rb") as f:
                 cache_data = pickle.load(f)
 
             # TTLチェック
-            if time.time() > cache_data['expires_at']:
+            if time.time() > cache_data["expires_at"]:
                 cache_path.unlink()  # 期限切れファイルを削除
                 return None
 
             logger.debug(f"Cache hit: {cache_key}")
-            return cache_data['value']
+            return cache_data["value"]
 
         except Exception as e:
             logger.warning(f"Cache read error for {cache_key}: {e}")
@@ -69,15 +69,15 @@ class DataCache:
             ttl = self.default_ttl
 
         cache_data = {
-            'value': value,
-            'expires_at': time.time() + ttl,
-            'created_at': time.time()
+            "value": value,
+            "expires_at": time.time() + ttl,
+            "created_at": time.time(),
         }
 
         cache_path = self._get_cache_path(cache_key)
 
         try:
-            with open(cache_path, 'wb') as f:
+            with open(cache_path, "wb") as f:
                 pickle.dump(cache_data, f)
             logger.debug(f"Cache set: {cache_key} (TTL: {ttl}s)")
         except Exception as e:
@@ -103,10 +103,10 @@ class DataCache:
 
         for cache_file in self.cache_dir.glob("*.cache"):
             try:
-                with open(cache_file, 'rb') as f:
+                with open(cache_file, "rb") as f:
                     cache_data = pickle.load(f)
 
-                if current_time > cache_data['expires_at']:
+                if current_time > cache_data["expires_at"]:
                     cache_file.unlink()
                     deleted_count += 1
 
@@ -133,6 +133,7 @@ def cached(ttl: Optional[int] = None, cache_instance: Optional[DataCache] = None
         ttl: TTL（秒）
         cache_instance: 使用するキャッシュインスタンス
     """
+
     def decorator(func: Callable) -> Callable:
         cache = cache_instance or _cache
 
@@ -154,6 +155,7 @@ def cached(ttl: Optional[int] = None, cache_instance: Optional[DataCache] = None
             return result
 
         return wrapper
+
     return decorator
 
 

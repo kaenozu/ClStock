@@ -23,18 +23,27 @@ class TestStockPredictor:
 
         # 技術指標を含むテストデータを作成
         test_data = mock_stock_data.copy()
-        test_data['SMA_20'] = test_data['Close'].rolling(20).mean()
-        test_data['SMA_50'] = test_data['Close'].rolling(50).mean()
-        test_data['RSI'] = 50.0  # 固定値
-        test_data['MACD'] = 1.0  # 固定値
-        test_data['ATR'] = 2.0   # 固定値
+        test_data["SMA_20"] = test_data["Close"].rolling(20).mean()
+        test_data["SMA_50"] = test_data["Close"].rolling(50).mean()
+        test_data["RSI"] = 50.0  # 固定値
+        test_data["MACD"] = 1.0  # 固定値
+        test_data["ATR"] = 2.0  # 固定値
 
         features = predictor.prepare_features(test_data)
 
         expected_columns = [
-            'price_change', 'volume_change', 'high_low_ratio', 'close_open_ratio',
-            'sma_20_ratio', 'sma_50_ratio', 'rsi', 'macd', 'atr_ratio',
-            'price_lag_1', 'price_lag_5', 'volume_lag_1'
+            "price_change",
+            "volume_change",
+            "high_low_ratio",
+            "close_open_ratio",
+            "sma_20_ratio",
+            "sma_50_ratio",
+            "rsi",
+            "macd",
+            "atr_ratio",
+            "price_lag_1",
+            "price_lag_5",
+            "volume_lag_1",
         ]
 
         for col in expected_columns:
@@ -55,14 +64,17 @@ class TestStockPredictor:
         predictor = StockPredictor()
 
         # データプロバイダーをモック
-        with patch.object(predictor.data_provider, 'get_stock_data', return_value=mock_stock_data), \
-             patch.object(predictor.data_provider, 'calculate_technical_indicators') as mock_calc:
+        with patch.object(
+            predictor.data_provider, "get_stock_data", return_value=mock_stock_data
+        ), patch.object(
+            predictor.data_provider, "calculate_technical_indicators"
+        ) as mock_calc:
 
             # 技術指標付きデータを返すようにモック設定
             enriched_data = mock_stock_data.copy()
-            enriched_data['SMA_20'] = enriched_data['Close'] * 0.98
-            enriched_data['SMA_50'] = enriched_data['Close'] * 0.95
-            enriched_data['RSI'] = 55.0
+            enriched_data["SMA_20"] = enriched_data["Close"] * 0.98
+            enriched_data["SMA_50"] = enriched_data["Close"] * 0.95
+            enriched_data["RSI"] = 55.0
             mock_calc.return_value = enriched_data
 
             score = predictor.calculate_score("7203")
@@ -75,7 +87,9 @@ class TestStockPredictor:
         """空データでのスコア計算テスト"""
         predictor = StockPredictor()
 
-        with patch.object(predictor.data_provider, 'get_stock_data', return_value=pd.DataFrame()):
+        with patch.object(
+            predictor.data_provider, "get_stock_data", return_value=pd.DataFrame()
+        ):
             score = predictor.calculate_score("INVALID")
             assert score == 0
 
@@ -86,14 +100,21 @@ class TestStockPredictor:
 
         # 技術指標付きデータを準備
         enriched_data = mock_stock_data.copy()
-        enriched_data['SMA_20'] = enriched_data['Close'] * 0.98
-        enriched_data['SMA_50'] = enriched_data['Close'] * 0.95
-        enriched_data['RSI'] = 55.0
+        enriched_data["SMA_20"] = enriched_data["Close"] * 0.98
+        enriched_data["SMA_50"] = enriched_data["Close"] * 0.95
+        enriched_data["RSI"] = 55.0
 
-        with patch.object(predictor.data_provider, 'get_stock_data', return_value=mock_stock_data), \
-             patch.object(predictor.data_provider, 'calculate_technical_indicators', return_value=enriched_data), \
-             patch.object(predictor.data_provider, 'get_financial_metrics', return_value={}), \
-             patch.object(predictor, 'calculate_score', return_value=85.0):
+        with patch.object(
+            predictor.data_provider, "get_stock_data", return_value=mock_stock_data
+        ), patch.object(
+            predictor.data_provider,
+            "calculate_technical_indicators",
+            return_value=enriched_data,
+        ), patch.object(
+            predictor.data_provider, "get_financial_metrics", return_value={}
+        ), patch.object(
+            predictor, "calculate_score", return_value=85.0
+        ):
 
             recommendation = predictor.generate_recommendation("7203")
 
@@ -113,16 +134,23 @@ class TestStockPredictor:
         predictor = StockPredictor()
 
         enriched_data = mock_stock_data.copy()
-        enriched_data['SMA_20'] = enriched_data['Close']
-        enriched_data['RSI'] = 50.0
+        enriched_data["SMA_20"] = enriched_data["Close"]
+        enriched_data["RSI"] = 50.0
 
         test_scores = [90, 70, 40]
 
         for score in test_scores:
-            with patch.object(predictor.data_provider, 'get_stock_data', return_value=mock_stock_data), \
-                 patch.object(predictor.data_provider, 'calculate_technical_indicators', return_value=enriched_data), \
-                 patch.object(predictor.data_provider, 'get_financial_metrics', return_value={}), \
-                 patch.object(predictor, 'calculate_score', return_value=score):
+            with patch.object(
+                predictor.data_provider, "get_stock_data", return_value=mock_stock_data
+            ), patch.object(
+                predictor.data_provider,
+                "calculate_technical_indicators",
+                return_value=enriched_data,
+            ), patch.object(
+                predictor.data_provider, "get_financial_metrics", return_value={}
+            ), patch.object(
+                predictor, "calculate_score", return_value=score
+            ):
 
                 recommendation = predictor.generate_recommendation("7203")
 
@@ -139,11 +167,14 @@ class TestStockPredictor:
         predictor = StockPredictor()
 
         enriched_data = mock_stock_data.copy()
-        enriched_data['SMA_20'] = enriched_data['Close']
-        enriched_data['RSI'] = 50.0
+        enriched_data["SMA_20"] = enriched_data["Close"]
+        enriched_data["RSI"] = 50.0
 
-        with patch.object(predictor.data_provider, 'get_all_stock_symbols', return_value=["7203", "6758", "9984"]), \
-             patch.object(predictor, 'generate_recommendation') as mock_generate:
+        with patch.object(
+            predictor.data_provider,
+            "get_all_stock_symbols",
+            return_value=["7203", "6758", "9984"],
+        ), patch.object(predictor, "generate_recommendation") as mock_generate:
 
             # 異なるスコアの推奨を返すようにモック設定
             mock_recommendations = []
@@ -160,7 +191,7 @@ class TestStockPredictor:
                     holding_period="1～2か月",
                     score=90 - i * 10,  # 90, 80, 70
                     current_price=95.0,
-                    recommendation_reason="Test reason"
+                    recommendation_reason="Test reason",
                 )
                 mock_recommendations.append(rec)
 
@@ -179,8 +210,11 @@ class TestStockPredictor:
         """エラーハンドリングを含む上位推奨取得テスト"""
         predictor = StockPredictor()
 
-        with patch.object(predictor.data_provider, 'get_all_stock_symbols', return_value=["7203", "INVALID", "6758"]), \
-             patch.object(predictor, 'generate_recommendation') as mock_generate:
+        with patch.object(
+            predictor.data_provider,
+            "get_all_stock_symbols",
+            return_value=["7203", "INVALID", "6758"],
+        ), patch.object(predictor, "generate_recommendation") as mock_generate:
 
             # 一部の銘柄でエラーが発生する設定
             def side_effect(symbol):
@@ -198,7 +232,7 @@ class TestStockPredictor:
                     holding_period="1～2か月",
                     score=85.0,
                     current_price=95.0,
-                    recommendation_reason="Test reason"
+                    recommendation_reason="Test reason",
                 )
 
             mock_generate.side_effect = side_effect
@@ -216,16 +250,21 @@ class TestStockPredictor:
         # 特定の条件でのスコア計算をテスト
         test_data = mock_stock_data.copy()
         current_price = 100.0
-        test_data.loc[test_data.index[-1], 'Close'] = current_price
+        test_data.loc[test_data.index[-1], "Close"] = current_price
 
         # 良好な条件でのテスト
-        test_data['SMA_20'] = current_price * 0.98  # 現在価格 > SMA20
-        test_data['SMA_50'] = current_price * 0.95  # SMA20 > SMA50
-        test_data['RSI'] = 50.0  # 適正範囲
-        test_data['Volume'] = [1000000] * len(test_data)
+        test_data["SMA_20"] = current_price * 0.98  # 現在価格 > SMA20
+        test_data["SMA_50"] = current_price * 0.95  # SMA20 > SMA50
+        test_data["RSI"] = 50.0  # 適正範囲
+        test_data["Volume"] = [1000000] * len(test_data)
 
-        with patch.object(predictor.data_provider, 'get_stock_data', return_value=test_data), \
-             patch.object(predictor.data_provider, 'calculate_technical_indicators', return_value=test_data):
+        with patch.object(
+            predictor.data_provider, "get_stock_data", return_value=test_data
+        ), patch.object(
+            predictor.data_provider,
+            "calculate_technical_indicators",
+            return_value=test_data,
+        ):
 
             score = predictor.calculate_score("7203")
 

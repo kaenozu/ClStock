@@ -1,0 +1,290 @@
+{
+  "system_info": {
+    "timestamp": "2025-09-20T13:17:23.797921",
+    "python_version": "3.11.0",
+    "platform": "Windows-10-10.0.26100-SP0",
+    "cpu_count": 12,
+    "memory_gb": 31.93,
+    "test_symbols": [
+      "7203",
+      "6758",
+      "9984",
+      "8306",
+      "6861",
+      "4661",
+      "9433",
+      "4519",
+      "6367",
+      "8035"
+    ],
+    "test_count": 10
+  },
+  "macro_data_test": {
+    "status": "success",
+    "data_sources": [
+      "boj_policy",
+      "global_rates",
+      "currency_strength",
+      "market_sentiment"
+    ],
+    "boj_policy_available": true,
+    "global_rates_available": true,
+    "currency_data_available": true,
+    "sentiment_indicators_available": true,
+    "data_completeness": 1.0
+  },
+  "sentiment_analysis_test": {
+    "individual_results": {
+      "7203": {
+        "sentiment_score": 0.0,
+        "confidence": 0.0,
+        "status": "success"
+      },
+      "6758": {
+        "sentiment_score": 0.0,
+        "confidence": 0.0,
+        "status": "success"
+      },
+      "9984": {
+        "sentiment_score": 0.0,
+        "confidence": 0.0,
+        "status": "success"
+      },
+      "8306": {
+        "sentiment_score": 0.0,
+        "confidence": 0.0,
+        "status": "success"
+      },
+      "6861": {
+        "sentiment_score": 0.0,
+        "confidence": 0.0,
+        "status": "success"
+      }
+    },
+    "success_rate": 0.0,
+    "bert_available": true,
+    "total_tested": 5
+  },
+  "deep_learning_test": {
+    "status": "error",
+    "error": "cannot import name 'BigDataDeepLearningSystem' from 'experiments.big_data_deep_learning' (C:\\gemini-desktop\\ClStock\\experiments\\big_data_deep_learning.py)"
+  },
+  "ensemble_prediction_test": {
+    "individual_results": {
+      "7203": {
+        "ensemble_prediction": 50.00000000000001,
+        "ensemble_confidence": 0.18260869565217389,
+        "high_confidence": false,
+        "individual_predictions": {
+          "trend_following": 50.0,
+          "lstm_deep": 50.0,
+          "sentiment_enhanced": 50.0,
+          "macro_enhanced": 50.0
+        },
+        "adjusted_weights": {
+          "trend_following": 0.34782608695652173,
+          "lstm_deep": 0.26086956521739124,
+          "transformer_deep": 0.21739130434782605,
+          "sentiment_enhanced": 0.08695652173913043,
+          "macro_enhanced": 0.08695652173913043
+        }
+      },
+      "6758": {
+        "ensemble_prediction": 50.00000000000001,
+        "ensemble_confidence": 0.18260869565217389,
+        "high_confidence": false,
+        "individual_predictions": {
+          "trend_following": 50.0,
+          "lstm_deep": 50.0,
+          "sentiment_enhanced": 50.0,
+          "macro_enhanced": 50.0
+        },
+        "adjusted_weights": {
+          "trend_following": 0.34782608695652173,
+          "lstm_deep": 0.26086956521739124,
+          "transformer_deep": 0.21739130434782605,
+          "sentiment_enhanced": 0.08695652173913043,
+          "macro_enhanced": 0.08695652173913043
+        }
+      },
+      "9984": {
+        "ensemble_prediction": 50.00000000000001,
+        "ensemble_confidence": 0.18260869565217389,
+        "high_confidence": false,
+        "individual_predictions": {
+          "trend_following": 50.0,
+          "lstm_deep": 50.0,
+          "sentiment_enhanced": 50.0,
+          "macro_enhanced": 50.0
+        },
+        "adjusted_weights": {
+          "trend_following": 0.34782608695652173,
+          "lstm_deep": 0.26086956521739124,
+          "transformer_deep": 0.21739130434782605,
+          "sentiment_enhanced": 0.08695652173913043,
+          "macro_enhanced": 0.08695652173913043
+        }
+      },
+      "8306": {
+        "ensemble_prediction": 50.00000000000001,
+        "ensemble_confidence": 0.18260869565217389,
+        "high_confidence": false,
+        "individual_predictions": {
+          "trend_following": 50.0,
+          "lstm_deep": 50.0,
+          "sentiment_enhanced": 50.0,
+          "macro_enhanced": 50.0
+        },
+        "adjusted_weights": {
+          "trend_following": 0.34782608695652173,
+          "lstm_deep": 0.26086956521739124,
+          "transformer_deep": 0.21739130434782605,
+          "sentiment_enhanced": 0.08695652173913043,
+          "macro_enhanced": 0.08695652173913043
+        }
+      },
+      "6861": {
+        "ensemble_prediction": 50.00000000000001,
+        "ensemble_confidence": 0.18260869565217389,
+        "high_confidence": false,
+        "individual_predictions": {
+          "trend_following": 50.0,
+          "lstm_deep": 50.0,
+          "sentiment_enhanced": 50.0,
+          "macro_enhanced": 50.0
+        },
+        "adjusted_weights": {
+          "trend_following": 0.34782608695652173,
+          "lstm_deep": 0.26086956521739124,
+          "transformer_deep": 0.21739130434782605,
+          "sentiment_enhanced": 0.08695652173913043,
+          "macro_enhanced": 0.08695652173913043
+        }
+      },
+      "4661": {
+        "ensemble_prediction": 50.00000000000001,
+        "ensemble_confidence": 0.18260869565217389,
+        "high_confidence": false,
+        "individual_predictions": {
+          "trend_following": 50.0,
+          "lstm_deep": 50.0,
+          "sentiment_enhanced": 50.0,
+          "macro_enhanced": 50.0
+        },
+        "adjusted_weights": {
+          "trend_following": 0.34782608695652173,
+          "lstm_deep": 0.26086956521739124,
+          "transformer_deep": 0.21739130434782605,
+          "sentiment_enhanced": 0.08695652173913043,
+          "macro_enhanced": 0.08695652173913043
+        }
+      },
+      "9433": {
+        "ensemble_prediction": 50.00000000000001,
+        "ensemble_confidence": 0.18260869565217389,
+        "high_confidence": false,
+        "individual_predictions": {
+          "trend_following": 50.0,
+          "lstm_deep": 50.0,
+          "sentiment_enhanced": 50.0,
+          "macro_enhanced": 50.0
+        },
+        "adjusted_weights": {
+          "trend_following": 0.34782608695652173,
+          "lstm_deep": 0.26086956521739124,
+          "transformer_deep": 0.21739130434782605,
+          "sentiment_enhanced": 0.08695652173913043,
+          "macro_enhanced": 0.08695652173913043
+        }
+      },
+      "4519": {
+        "ensemble_prediction": 50.00000000000001,
+        "ensemble_confidence": 0.18260869565217389,
+        "high_confidence": false,
+        "individual_predictions": {
+          "trend_following": 50.0,
+          "lstm_deep": 50.0,
+          "sentiment_enhanced": 50.0,
+          "macro_enhanced": 50.0
+        },
+        "adjusted_weights": {
+          "trend_following": 0.34782608695652173,
+          "lstm_deep": 0.26086956521739124,
+          "transformer_deep": 0.21739130434782605,
+          "sentiment_enhanced": 0.08695652173913043,
+          "macro_enhanced": 0.08695652173913043
+        }
+      },
+      "6367": {
+        "ensemble_prediction": 50.00000000000001,
+        "ensemble_confidence": 0.18260869565217389,
+        "high_confidence": false,
+        "individual_predictions": {
+          "trend_following": 50.0,
+          "lstm_deep": 50.0,
+          "sentiment_enhanced": 50.0,
+          "macro_enhanced": 50.0
+        },
+        "adjusted_weights": {
+          "trend_following": 0.34782608695652173,
+          "lstm_deep": 0.26086956521739124,
+          "transformer_deep": 0.21739130434782605,
+          "sentiment_enhanced": 0.08695652173913043,
+          "macro_enhanced": 0.08695652173913043
+        }
+      },
+      "8035": {
+        "ensemble_prediction": 50.00000000000001,
+        "ensemble_confidence": 0.18260869565217389,
+        "high_confidence": false,
+        "individual_predictions": {
+          "trend_following": 50.0,
+          "lstm_deep": 50.0,
+          "sentiment_enhanced": 50.0,
+          "macro_enhanced": 50.0
+        },
+        "adjusted_weights": {
+          "trend_following": 0.34782608695652173,
+          "lstm_deep": 0.26086956521739124,
+          "transformer_deep": 0.21739130434782605,
+          "sentiment_enhanced": 0.08695652173913043,
+          "macro_enhanced": 0.08695652173913043
+        }
+      }
+    },
+    "high_confidence_rate": 0.0,
+    "total_tested": 10,
+    "high_confidence_count": 0
+  },
+  "accuracy_benchmark": {
+    "ensemble_wins": 0,
+    "base_wins": 0,
+    "ties": 0,
+    "ensemble_win_rate": 0,
+    "average_improvement": NaN,
+    "individual_comparisons": {},
+    "total_comparisons": 0
+  },
+  "performance_summary": {
+    "individual_scores": {
+      "macro_integration": 100.0,
+      "sentiment_analysis": 0.0,
+      "deep_learning": 0,
+      "ensemble_prediction": 0.0,
+      "benchmark_performance": 0
+    },
+    "overall_score": 15.0,
+    "projected_accuracy": 73.6,
+    "baseline_accuracy": 84.6,
+    "accuracy_improvement": -11.0,
+    "grade": "C (要改善)",
+    "target_achieved": false,
+    "recommendation": [
+      "センチメント分析精度の向上が必要",
+      "深層学習モデルの最適化が必要",
+      "アンサンブル重み調整の改善が必要",
+      "追加の特徴量エンジニアリングを推奨",
+      "より長期間のバックテストが必要"
+    ]
+  }
+}

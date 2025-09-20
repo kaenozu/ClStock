@@ -4,13 +4,13 @@ ClStock 設定管理
 """
 
 import os
-from dataclasses import dataclass
-from typing import Dict, List
-
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
 @dataclass
 class ModelConfig:
     """機械学習モデル設定"""
+
     # XGBoost設定
     xgb_n_estimators: int = 200
     xgb_max_depth: int = 6
@@ -31,6 +31,7 @@ class ModelConfig:
 @dataclass
 class BacktestConfig:
     """バックテスト設定"""
+
     # デフォルト設定
     default_initial_capital: float = 1000000
     default_rebalance_frequency: int = 5
@@ -48,6 +49,7 @@ class BacktestConfig:
 @dataclass
 class TradingConfig:
     """取引設定"""
+
     # 市場時間
     market_open_hour: int = 9
     market_close_hour: int = 15
@@ -64,6 +66,7 @@ class TradingConfig:
 @dataclass
 class APIConfig:
     """API設定"""
+
     # FastAPI設定
     title: str = "ClStock API"
     description: str = "中期的な推奨銘柄予想システム"
@@ -84,6 +87,7 @@ class APIConfig:
 @dataclass
 class LoggingConfig:
     """ログ設定"""
+
     level: str = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
@@ -96,104 +100,91 @@ class LoggingConfig:
 @dataclass
 class AppSettings:
     """アプリケーション全体設定"""
-    model: ModelConfig = None
-    backtest: BacktestConfig = None
-    trading: TradingConfig = None
-    api: APIConfig = None
-    logging: LoggingConfig = None
-    realtime: 'RealTimeConfig' = None  # 前方参照で修正
+
+    model: ModelConfig = field(default_factory=ModelConfig)
+    backtest: BacktestConfig = field(default_factory=BacktestConfig)
+    trading: TradingConfig = field(default_factory=TradingConfig)
+    api: APIConfig = field(default_factory=APIConfig)
+    logging: LoggingConfig = field(default_factory=LoggingConfig)
+    realtime: "RealTimeConfig" = field(default_factory=lambda: RealTimeConfig())
 
     # 対象銘柄
-    target_stocks: Dict[str, str] = None
+    target_stocks: Dict[str, str] = field(default_factory=lambda: {
+        # 指定された50銘柄
+        "7203": "トヨタ自動車",
+        "6758": "ソニーグループ",
+        "9432": "NTT",
+        "9434": "ソフトバンク",
+        "6701": "日本電気",
+        "8316": "三井住友フィナンシャルグループ",
+        "8411": "みずほフィナンシャルグループ",
+        "8306": "三菱UFJフィナンシャル・グループ",
+        "8058": "三菱商事",
+        "8001": "伊藤忠商事",
+        "8002": "丸紅",
+        "8031": "三井物産",
+        "6902": "デンソー",
+        "7267": "ホンダ",
+        "6501": "日立製作所",
+        "6503": "三菱電機",
+        "7751": "キヤノン",
+        "8035": "東京エレクトロン",
+        "6770": "アルプスアルパイン",
+        "9433": "KDDI",
+        "6502": "東芝",
+        "6752": "パナソニックHD",
+        "6954": "ファナック",
+        "6861": "キーエンス",
+        "4523": "エーザイ",
+        "4578": "大塚HD",
+        "7201": "日産自動車",
+        "7261": "マツダ",
+        "7269": "スズキ",
+        "4901": "富士フイルムHD",
+        "4502": "武田薬品工業",
+        "4503": "アステラス製薬",
+        "6504": "富士電機",
+        "4011": "ヤフー",  # 代替
+        "2914": "日本たばこ産業",
+        "5020": "ENEOSホールディングス",
+        "1605": "INPEX",
+        "1332": "日本水産",
+        "5201": "AGC",
+        "5401": "日本製鉄",
+        "6098": "リクルートHD",
+        "3865": "北越コーポレーション",
+        "6724": "セイコーエプソン",
+        "6703": "沖電気",
+        "4063": "信越化学工業",
+        "4689": "ヤフー",
+        "9983": "ファーストリテイリング",
+        "4755": "楽天グループ",
+        "6367": "ダイキン工業",
+        "4519": "中外製薬",
+    })
 
-    def __post_init__(self):
-        if self.model is None:
-            self.model = ModelConfig()
-        if self.backtest is None:
-            self.backtest = BacktestConfig()
-        if self.trading is None:
-            self.trading = TradingConfig()
-        if self.api is None:
-            self.api = APIConfig()
-        if self.logging is None:
-            self.logging = LoggingConfig()
-        if self.realtime is None:
-            self.realtime = RealTimeConfig()
-        if self.target_stocks is None:
-            self.target_stocks = {
-                # 指定された50銘柄
-                "7203": "トヨタ自動車",
-                "6758": "ソニーグループ",
-                "9432": "NTT",
-                "9434": "ソフトバンク",
-                "6701": "日本電気",
-                "8316": "三井住友フィナンシャルグループ",
-                "8411": "みずほフィナンシャルグループ",
-                "8306": "三菱UFJフィナンシャル・グループ",
-                "8058": "三菱商事",
-                "8001": "伊藤忠商事",
-                "8002": "丸紅",
-                "8031": "三井物産",
-                "6902": "デンソー",
-                "7267": "ホンダ",
-                "6501": "日立製作所",
-                "6503": "三菱電機",
-                "7751": "キヤノン",
-                "8035": "東京エレクトロン",
-                "6770": "アルプスアルパイン",
-                "9433": "KDDI",
-                "6502": "東芝",
-                "6752": "パナソニックHD",
-                "6954": "ファナック",
-                "6861": "キーエンス",
-                "4523": "エーザイ",
-                "4578": "大塚HD",
-                "7201": "日産自動車",
-                "7261": "マツダ",
-                "7269": "スズキ",
-                "4901": "富士フイルムHD",
-                "4502": "武田薬品工業",
-                "4503": "アステラス製薬",
-                "6504": "富士電機",
-                "4011": "ヤフー",  # 代替
-                "2914": "日本たばこ産業",
-                "5020": "ENEOSホールディングス",
-                "1605": "INPEX",
-                "1332": "日本水産",
-                "5201": "AGC",
-                "5401": "日本製鉄",
-                "6098": "リクルートHD",
-                "3865": "北越コーポレーション",
-                "6724": "セイコーエプソン",
-                "6703": "沖電気",
-                "4063": "信越化学工業",
-                "4689": "ヤフー",
-                "9983": "ファーストリテイリング",
-                "4755": "楽天グループ",
-                "6367": "ダイキン工業",
-                "4519": "中外製薬"
-            }
 
 @dataclass
 class RealTimeConfig:
     """リアルタイム取引設定"""
+
     # データ更新頻度
     update_interval_seconds: int = 60  # 1分間隔
     market_hours_only: bool = True
-    
+
     # 84.6%パターン検出設定
     pattern_confidence_threshold: float = 0.846
     min_trend_days: int = 7
-    
+
     # 注文執行設定
     max_position_size_pct: float = 0.20  # 最大20%
     default_stop_loss_pct: float = 0.05  # 5%損切り
     default_take_profit_pct: float = 0.10  # 10%利確
-    
+
     # リスク管理
     max_daily_trades: int = 5
     max_total_exposure_pct: float = 0.80  # 最大80%投資
-    
+
     # API設定
     data_source: str = "yahoo"  # yahoo, rakuten, sbi
     order_execution: str = "simulation"  # simulation, live
@@ -208,22 +199,26 @@ def get_settings() -> AppSettings:
     return settings
 
 
-def load_from_env():
+def load_from_env() -> None:
     """環境変数から設定を読み込み"""
     # API設定
-    if os.getenv("CLSTOCK_API_TITLE"):
-        settings.api.title = os.getenv("CLSTOCK_API_TITLE")
+    api_title = os.getenv("CLSTOCK_API_TITLE")
+    if api_title:
+        settings.api.title = api_title
 
     # ログレベル
-    if os.getenv("CLSTOCK_LOG_LEVEL"):
-        settings.logging.level = os.getenv("CLSTOCK_LOG_LEVEL")
+    log_level = os.getenv("CLSTOCK_LOG_LEVEL")
+    if log_level:
+        settings.logging.level = log_level
 
     # バックテスト設定
-    if os.getenv("CLSTOCK_INITIAL_CAPITAL"):
-        settings.backtest.default_initial_capital = float(os.getenv("CLSTOCK_INITIAL_CAPITAL"))
+    initial_capital = os.getenv("CLSTOCK_INITIAL_CAPITAL")
+    if initial_capital:
+        settings.backtest.default_initial_capital = float(initial_capital)
 
-    if os.getenv("CLSTOCK_SCORE_THRESHOLD"):
-        settings.backtest.default_score_threshold = float(os.getenv("CLSTOCK_SCORE_THRESHOLD"))
+    score_threshold = os.getenv("CLSTOCK_SCORE_THRESHOLD")
+    if score_threshold:
+        settings.backtest.default_score_threshold = float(score_threshold)
 
 
 # 起動時に環境変数を読み込み

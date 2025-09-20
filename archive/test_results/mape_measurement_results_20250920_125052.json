@@ -1,0 +1,44 @@
+{
+  "timestamp": "2025-09-20T12:50:52.334744",
+  "total_symbols_tested": 10,
+  "successful_measurements": 0,
+  "success_rate": 0.0,
+  "average_mape": 0.0,
+  "median_mape": 0.0,
+  "min_mape": 0.0,
+  "max_mape": 0.0,
+  "std_mape": 0.0,
+  "individual_results": {
+    "7203": {
+      "error": "Insufficient predictions"
+    },
+    "6758": {
+      "error": "Insufficient predictions"
+    },
+    "9984": {
+      "error": "Insufficient predictions"
+    },
+    "8306": {
+      "error": "Insufficient predictions"
+    },
+    "6861": {
+      "error": "Insufficient predictions"
+    },
+    "4661": {
+      "error": "Insufficient predictions"
+    },
+    "9433": {
+      "error": "Insufficient predictions"
+    },
+    "4519": {
+      "error": "Insufficient predictions"
+    },
+    "6367": {
+      "error": "Insufficient predictions"
+    },
+    "8035": {
+      "error": "Insufficient predictions"
+    }
+  },
+  "mape_distribution": {}
+}
