@@ -23,6 +23,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.ml_models import Precision87BreakthroughSystem
 from data.stock_data import StockDataProvider
+from config.settings import get_settings
 
 app = FastAPI(title="ClStock Personal Dashboard", version="1.0.0")
 
@@ -42,7 +43,8 @@ templates.env.filters['format_number'] = format_number
 
 class PersonalDashboard:
     def __init__(self):
-        self.db_path = "../data/personal_portfolio.db"
+        self.settings = get_settings()
+        self.db_path = str(self.settings.database.personal_portfolio_db)
         self.precision_system = None
         self.data_provider = StockDataProvider()
         self.init_database()
@@ -163,7 +165,7 @@ class PersonalDashboard:
                 datetime.now(),
                 prediction_result.get('final_prediction', 0),
                 prediction_result.get('final_confidence', 0),
-                prediction_result.get('final_accuracy', 89.18),
+                prediction_result.get('final_accuracy', self.settings.prediction.achieved_accuracy),
                 "Precision89BreakthroughSystem"
             ))
             conn.commit()
@@ -173,11 +175,11 @@ class PersonalDashboard:
                 "symbol": symbol,
                 "prediction": prediction_result.get('final_prediction', 0),
                 "confidence": prediction_result.get('final_confidence', 0),
-                "accuracy": prediction_result.get('final_accuracy', 89.18),
+                "accuracy": prediction_result.get('final_accuracy', self.settings.prediction.achieved_accuracy),
                 "precision_89_achieved": prediction_result.get('precision_87_achieved', False),
                 "component_breakdown": prediction_result.get('component_breakdown', {}),
                 "timestamp": datetime.now().isoformat(),
-                "system_performance": "89.18% Average Accuracy"
+                "system_performance": f"{self.settings.prediction.achieved_accuracy}% Average Accuracy"
             }
             
         except Exception as e:
@@ -207,7 +209,7 @@ class PersonalDashboard:
                 position_with_prediction.update({
                     'predicted_price': predicted_price,
                     'prediction_confidence': prediction.get('confidence', 0.5),
-                    'prediction_accuracy': prediction.get('accuracy', 89.18),
+                    'prediction_accuracy': prediction.get('accuracy', self.settings.prediction.achieved_accuracy),
                     'price_change_forecast': ((predicted_price - current_price) / current_price * 100) if current_price > 0 else 0,
                     'precision_89_achieved': prediction.get('precision_89_achieved', False)
                 })
@@ -215,7 +217,7 @@ class PersonalDashboard:
             
             portfolio_summary['positions'] = enhanced_positions
             portfolio_summary['system_info'] = {
-                'average_accuracy': 89.18,
+                'average_accuracy': self.settings.prediction.achieved_accuracy,
                 'system_name': 'Precision89BreakthroughSystem',
                 'last_updated': datetime.now().isoformat()
             }
@@ -248,7 +250,7 @@ class PersonalDashboard:
                     'current_price': current_price,
                     'predicted_price': prediction.get('prediction', current_price),
                     'prediction_confidence': prediction.get('confidence', 0.5),
-                    'prediction_accuracy': prediction.get('accuracy', 89.18),
+                    'prediction_accuracy': prediction.get('accuracy', self.settings.prediction.achieved_accuracy),
                     'price_change_forecast': ((prediction.get('prediction', current_price) - current_price) / current_price * 100) if current_price > 0 else 0,
                     'precision_89_achieved': prediction.get('precision_89_achieved', False),
                     'alert_triggered': abs(((prediction.get('prediction', current_price) - current_price) / current_price * 100)) > item.get('alert_threshold', 5.0)
@@ -277,9 +279,9 @@ async def home(request: Request):
         "watchlist": watchlist,
         "current_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "system_info": {
-            "name": "ClStock 89%精度システム",
-            "average_accuracy": 89.18,
-            "last_achievement": "87%精度目標達成 (+2.18%)",
+            "name": self.settings.api.title,
+            "average_accuracy": self.settings.prediction.achieved_accuracy,
+            "last_achievement": f"{self.settings.prediction.target_accuracy}%精度目標達成 (+{self.settings.prediction.achieved_accuracy - self.settings.prediction.target_accuracy:.2f}%)",
             "status": "実用化レベル"
         }
     })
@@ -295,15 +297,15 @@ async def predict_symbol(symbol: str):
             "symbol": symbol,
             "prediction": prediction_result.get('prediction', 0),
             "confidence": prediction_result.get('confidence', 0),
-            "accuracy": prediction_result.get('accuracy', 89.18),
+            "accuracy": prediction_result.get('accuracy', self.settings.prediction.achieved_accuracy),
             "precision_89_achieved": prediction_result.get('precision_89_achieved', False),
-            "system_performance": prediction_result.get('system_performance', "89.18% Average Accuracy"),
+            "system_performance": prediction_result.get('system_performance', f"{self.settings.prediction.achieved_accuracy}% Average Accuracy"),
             "component_breakdown": prediction_result.get('component_breakdown', {}),
             "timestamp": prediction_result.get('timestamp', datetime.now().isoformat()),
             "enhancement_info": {
-                "system_name": "Precision89BreakthroughSystem",
+                "system_name": self.settings.api.title,
                 "baseline_improvement": "+4.58%",
-                "target_achievement": "87%精度目標達成"
+                "target_achievement": f"{self.settings.prediction.target_accuracy}%精度目標達成"
             }
         }
 
@@ -314,7 +316,7 @@ async def predict_symbol(symbol: str):
             "timestamp": datetime.now().isoformat(),
             "fallback_info": {
                 "system_name": "Fallback Mode",
-                "accuracy": 84.6
+                "accuracy": self.settings.prediction.baseline_accuracy
             }
         }
 
