@@ -32,6 +32,9 @@ class PredictionConfig:
     min_confidence_threshold: float = 0.3  # 最小信頼度閾値
     max_confidence_threshold: float = 0.95  # 最大信頼度閾値
 
+    # 予測履歴設定
+    max_prediction_history_size: int = 1000  # 予測履歴の最大保持数
+
     # 技術指標設定
     rsi_period: int = 14
     rsi_oversold: int = 30

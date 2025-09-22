@@ -145,7 +145,8 @@ class IntelligentPredictionCache:
     - 90%以上のキャッシュヒット率目標
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379):
+    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, 
+                 cleanup_interval: int = 300, max_cache_size: int = 1000):
         self.logger = logging.getLogger(__name__)
 
         # Redis接続（利用可能な場合）
@@ -185,13 +186,13 @@ class IntelligentPredictionCache:
         
         # 自動クリーンアップ設定
         self.auto_cleanup_enabled = True
-        self.cleanup_interval = 300  # 5分ごとにクリーンアップ
-        self.max_cache_size = 1000   # 最大キャッシュサイズ
+        self.cleanup_interval = cleanup_interval  # 5分ごとにクリーンアップ（デフォルト）
+        self.max_cache_size = max_cache_size   # 最大キャッシュサイズ
         self._shutdown_event = threading.Event()
         self.cleanup_thread = None
         self._start_cleanup_thread()
 
-        self.logger.info("IntelligentPredictionCache initialized")
+        self.logger.info(f"IntelligentPredictionCache initialized with cleanup_interval={cleanup_interval}s, max_cache_size={max_cache_size}")
 
     def _start_cleanup_thread(self):
         """自動クリーンアップスレッドを開始"""
@@ -237,6 +238,12 @@ class IntelligentPredictionCache:
         self.logger.info("Shutting down intelligent prediction cache")
         self._shutdown_event.set()
         
+        # クリーンアップスレッドの終了を待機
+        if self.cleanup_thread and self.cleanup_thread.is_alive():
+            self.cleanup_thread.join(timeout=5.0)  # 5秒でタイムアウト
+            if self.cleanup_thread.is_alive():
+                self.logger.warning("Cache cleanup thread did not terminate gracefully")
+        
         # Redisキャッシュをクリア
         if self.redis_client:
             try:
@@ -257,12 +264,15 @@ class IntelligentPredictionCache:
         
         # サイズ制限に合わせて削除
         items_to_remove = len(self.memory_cache) - self.max_cache_size
+        removed_count = 0
         for i in range(min(items_to_remove, len(sorted_items))):
             key_to_remove = sorted_items[i][0]
             self.memory_cache.pop(key_to_remove, None)
             self.cache_timestamps.pop(key_to_remove, None)
+            removed_count += 1
             
-        self.logger.info(f"Removed {min(items_to_remove, len(sorted_items))} oldest cache entries due to size limit")
+        self.logger.info(f"Removed {removed_count} oldest cache entries due to size limit")
+        return removed_count
 
     def get_cache_key(self, symbol: str, mode: PredictionMode, data_hash: str = None) -> str:
         """キャッシュキー生成"""
@@ -372,17 +382,23 @@ class IntelligentPredictionCache:
         """メモリキャッシュクリーンアップ"""
         current_time = time.time()
         expired_keys = []
-
+        
+        # 期限切れエントリを特定
         for cache_key, (cached_time, ttl) in self.cache_timestamps.items():
             if current_time - cached_time > ttl:
                 expired_keys.append(cache_key)
 
+        # 期限切れエントリを削除
+        removed_count = 0
         for key in expired_keys:
             self.memory_cache.pop(key, None)
             self.cache_timestamps.pop(key, None)
+            removed_count += 1
             
-        if expired_keys:
-            self.logger.debug(f"Cleaned up {len(expired_keys)} expired cache entries")
+        if removed_count > 0:
+            self.logger.debug(f"Cleaned up {removed_count} expired cache entries")
+            
+        return removed_count
 
     def _invalidate_symbol(self, symbol: str):
         """特定銘柄のキャッシュ無効化"""

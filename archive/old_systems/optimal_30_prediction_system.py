@@ -4,6 +4,11 @@
 TSE 4000最適化で発見した30銘柄での統合予測
 """
 
+import sys
+import os
+# アーカイブファイルからメインプロジェクトへのパスを追加
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
 import numpy as np
 import pandas as pd
 import warnings

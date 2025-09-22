@@ -18,16 +18,17 @@ import argparse
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+from models_new.hybrid.hybrid_predictor import HybridStockPredictor
+from models_new.hybrid.prediction_modes import PredictionMode
 from data.stock_data import StockDataProvider
 from data.sector_classification import SectorClassification
-from medium_term_prediction import MediumTermPredictionSystem
 
 class InvestmentAdvisorCUI:
     """ClStock投資アドバイザー CUI版"""
 
     def __init__(self):
         self.precision_system = Precision87BreakthroughSystem()
-        self.medium_system = MediumTermPredictionSystem()
+        self.hybrid_system = HybridStockPredictor()
         self.data_provider = StockDataProvider()
 
         # 推奨銘柄リスト（ブルーチップ中心45銘柄）

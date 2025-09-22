@@ -12,7 +12,7 @@ import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import random
 from dataclasses import dataclass
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 import time
 import json
 import csv

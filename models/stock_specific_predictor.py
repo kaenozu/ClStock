@@ -56,6 +56,8 @@ class StockSpecificPredictor:
             logger.info(f"分析完了: {symbol} - ボラティリティ: {characteristics['volatility']:.3f}")
             return characteristics
 
+        except InsufficientDataError:
+            raise
         except Exception as e:
             logger.error(f"銘柄特性分析エラー {symbol}: {e}")
             raise ModelTrainingError(f"SymbolAnalysis_{symbol}", str(e))

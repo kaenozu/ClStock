@@ -8,6 +8,7 @@ from sklearn.preprocessing import StandardScaler
 
 from data.stock_data import StockDataProvider
 from models.recommendation import StockRecommendation
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class StockPredictor:
             use_ultra_mode: 超高性能モード（深層学習+アンサンブル）
             prediction_days: 予測期間（日数、デフォルト5日）
         """
+        self.settings = get_settings()
         self.data_provider = StockDataProvider()
         self.use_ml_model = use_ml_model
         self.ml_model_type = ml_model_type
@@ -78,14 +80,14 @@ class StockPredictor:
 
         # ルールベースのスコア計算（フォールバック）
         try:
-            data = self.data_provider.get_stock_data(symbol, "6mo")
+            data = self.data_provider.get_stock_data(symbol, self.settings.trading.recommendation_data_period)
             if data.empty:
                 return 0
 
             data = self.data_provider.calculate_technical_indicators(data)
 
             # ベーススコア（中立）
-            score = 50.0
+            score = self.settings.trading.default_score
 
             current_price = data["Close"].iloc[-1]
             sma_20 = data["SMA_20"].iloc[-1]
@@ -193,7 +195,7 @@ class StockPredictor:
             elif macd < macd_signal:
                 score -= 4
 
-            return min(max(score, 0), 100)
+            return min(max(score, self.settings.trading.min_score), self.settings.trading.max_score)
 
         except Exception as e:
             logger.error(f"Error calculating score for {symbol}: {str(e)}")
@@ -204,7 +206,7 @@ class StockPredictor:
         try:
             # 短期予測に最適化されたデータ取得
             data = self.data_provider.get_stock_data(
-                symbol, "6mo"
+                symbol, self.settings.trading.recommendation_data_period
             )  # より長期データで精度向上
             if data.empty or len(data) < 50:
                 return 0.0

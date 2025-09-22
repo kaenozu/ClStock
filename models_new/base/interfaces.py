@@ -5,9 +5,10 @@ ClStockシステムの共通インターフェース
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Union
-from dataclasses import dataclass
+from typing import Dict, Any, List, Optional, Union, Tuple
+from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 import pandas as pd
 
 
