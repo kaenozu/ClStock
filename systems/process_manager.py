@@ -66,6 +66,8 @@ class ProcessManager:
         self.monitoring_active = False
         self.monitor_thread: Optional[threading.Thread] = None
         self._shutdown_event = threading.Event()
+        self._shutdown_lock = threading.Lock()  # シャットダウン処理の排他制御用
+        self._shutdown_thread: Optional[threading.Thread] = None  # シャットダウンスレッドの参照
 
         # デフォルトサービス定義
         self._define_default_services()
@@ -201,13 +203,13 @@ class ProcessManager:
                 else:
                     process_info.process.terminate()
 
-                # 停止待機
+                # 停止待機（タイムアウトをサービス定義のタイムアウト値に設定）
                 try:
-                    process_info.process.wait(timeout=10)
+                    process_info.process.wait(timeout=process_info.timeout)
                 except subprocess.TimeoutExpired:
                     logger.warning(f"タイムアウト、強制終了: {name}")
                     process_info.process.kill()
-                    process_info.process.wait()
+                    process_info.process.wait(timeout=10)  # 強制終了後もタイムアウトを設定
 
             process_info.status = ProcessStatus.STOPPED
             process_info.pid = None
@@ -255,9 +257,20 @@ class ProcessManager:
         self._shutdown_event.set()
 
         if self.monitor_thread and self.monitor_thread.is_alive():
-            self.monitor_thread.join(timeout=5)
+            # タイムアウト付きでスレッド終了を待機（30秒に延長）
+            self.monitor_thread.join(timeout=30)
+            if self.monitor_thread.is_alive():
+                logger.warning("監視スレッドの終了待機タイムアウト")
+                # デーモンスレッドなので強制終了は不要
 
         logger.info("プロセス監視停止")
+        
+    def wait_for_shutdown(self, timeout: int = 60):
+        """シャットダウン完了を待機"""
+        if self._shutdown_thread and self._shutdown_thread.is_alive():
+            self._shutdown_thread.join(timeout=timeout)
+            if self._shutdown_thread.is_alive():
+                logger.warning("シャットダウンスレッドの終了待機タイムアウト")
 
     def _monitor_processes(self):
         """プロセス監視メインループ"""
@@ -313,11 +326,25 @@ class ProcessManager:
         # 監視停止
         self.stop_monitoring()
 
-        # 全サービス停止
+        # 全サービス停止（エラーが発生しても他のサービスの停止を続行）
+        success_count = 0
+        failure_count = 0
+        
         for name in list(self.processes.keys()):
-            self.stop_service(name, force=force)
+            try:
+                if self.stop_service(name, force=force):
+                    success_count += 1
+                else:
+                    failure_count += 1
+            except Exception as e:
+                logger.error(f"サービス停止中にエラー発生 {name}: {e}")
+                failure_count += 1
 
-        logger.info("全サービス停止完了")
+        logger.info(f"全サービス停止完了 (成功: {success_count}, 失敗: {failure_count})")
+        
+        # シャットダウンイベントが設定されている場合、プロセス終了を待機
+        if self._shutdown_event.is_set():
+            logger.info("シャットダウンイベント検出、プロセス終了準備完了")
 
     def get_system_status(self) -> Dict:
         """システム全体の状態"""
@@ -335,8 +362,44 @@ class ProcessManager:
     def _signal_handler(self, signum, frame):
         """シグナルハンドラー"""
         logger.info(f"シグナル受信: {signum}")
-        self.stop_all_services(force=True)
-        sys.exit(0)
+        
+        # 排他制御で複数のシャットダウン処理を防止
+        if not self._shutdown_lock.acquire(blocking=False):
+            logger.info("シャットダウンは既に進行中")
+            return
+            
+        try:
+            # 既にシャットダウンが進行中の場合は何もしない
+            if self._shutdown_event.is_set():
+                logger.info("シャットダウンは既に進行中")
+                return
+                
+            # シャットダウンイベントを設定
+            self._shutdown_event.set()
+            
+            # 別スレッドで非同期シャットダウン処理を実行
+            self._shutdown_thread = threading.Thread(
+                target=self._graceful_shutdown, 
+                daemon=True, 
+                name="ShutdownThread"
+            )
+            self._shutdown_thread.start()
+        finally:
+            self._shutdown_lock.release()
+
+    def _graceful_shutdown(self):
+        """グレースフルシャットダウン処理"""
+        try:
+            logger.info("グレースフルシャットダウン開始")
+            self.stop_all_services(force=True)
+            logger.info("全サービス停止完了、プロセス終了")
+            # シャットダウンイベントをクリア
+            self._shutdown_event.clear()
+            # プロセス終了
+            os._exit(0)
+        except Exception as e:
+            logger.error(f"シャットダウン中にエラー発生: {e}")
+            os._exit(1)
 
 
 # グローバルインスタンス

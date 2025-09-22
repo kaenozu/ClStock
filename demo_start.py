@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 ClStock デモ運用 簡単スタート
 1週間のデモ取引を開始するための簡単なスクリプト
@@ -7,6 +8,10 @@ ClStock デモ運用 簡単スタート
 import sys
 import os
 from datetime import datetime, timedelta
+import io
+
+# 標準出力をUTF-8に設定
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))

@@ -5,11 +5,12 @@
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import pandas as pd
 from pathlib import Path
 import hashlib
 import json
+import threading
 from datetime import datetime, timedelta
 
 from ..base.interfaces import CacheManager
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 class AdvancedCacheManager(CacheManager):
     """高度なキャッシュ管理システム"""
 
-    def __init__(self, max_cache_size: int = 1000, ttl_hours: int = 24):
+    def __init__(self, max_cache_size: int = 1000, ttl_hours: int = 24, cleanup_interval: int = 1800):
         self.feature_cache = {}
         self.prediction_cache = {}
         self.max_cache_size = max_cache_size
@@ -33,6 +34,58 @@ class AdvancedCacheManager(CacheManager):
         }
         self.cache_file = Path("cache/advanced_cache.json")
         self.cache_file.parent.mkdir(exist_ok=True)
+        
+        # 自動クリーンアップ設定
+        self.auto_cleanup_enabled = True
+        self.cleanup_interval = cleanup_interval  # 30分ごとにクリーンアップ（デフォルト）
+        self._shutdown_event = threading.Event()
+        self.cleanup_thread = None
+        self._start_cleanup_thread()
+        
+        logger.info(f"AdvancedCacheManager initialized with cleanup_interval={cleanup_interval}s, max_cache_size={max_cache_size}")
+
+    def _start_cleanup_thread(self):
+        """自動クリーンアップスレッドを開始"""
+        if self.auto_cleanup_enabled and self.cleanup_thread is None:
+            self.cleanup_thread = threading.Thread(target=self._cleanup_worker, daemon=True)
+            self.cleanup_thread.start()
+            logger.info("Automatic cache cleanup thread started for AdvancedCacheManager")
+
+    def _cleanup_worker(self):
+        """クリーンアップワーカースレッド"""
+        while not self._shutdown_event.is_set():
+            try:
+                # クリーンアップ間隔待機
+                if self._shutdown_event.wait(self.cleanup_interval):
+                    break
+                    
+                # 自動クリーンアップ実行
+                self.cleanup_old_cache()
+                logger.debug(f"Periodic cache cleanup completed. Feature cache: {len(self.feature_cache)}, Prediction cache: {len(self.prediction_cache)}")
+                
+            except Exception as e:
+                logger.error(f"Cache cleanup worker error: {e}")
+                # エラーでも継続
+                
+        logger.info("Cache cleanup worker stopped for AdvancedCacheManager")
+
+    def shutdown(self):
+        """キャッシュマネージャーをシャットダウン"""
+        logger.info("Shutting down advanced cache manager")
+        self._shutdown_event.set()
+        
+        # クリーンアップスレッドの終了を待機
+        if self.cleanup_thread and self.cleanup_thread.is_alive():
+            self.cleanup_thread.join(timeout=5.0)  # 5秒でタイムアウト
+            if self.cleanup_thread.is_alive():
+                logger.warning("Cache cleanup thread did not terminate gracefully")
+        
+        # キャッシュをディスクに保存
+        try:
+            self.save_cache_to_disk()
+            logger.info("Cache saved to disk during shutdown")
+        except Exception as e:
+            logger.error(f"Error saving cache during shutdown: {e}")
 
     def get(self, key: str) -> Optional[Any]:
         """キャッシュ値取得（汎用インターフェース）"""
@@ -119,19 +172,27 @@ class AdvancedCacheManager(CacheManager):
     def cleanup_old_cache(self):
         """古いキャッシュをクリーンアップ"""
         # TTL期限切れエントリを削除
-        self._remove_expired_entries(self.feature_cache)
-        self._remove_expired_entries(self.prediction_cache)
+        removed_feature = self._remove_expired_entries(self.feature_cache)
+        removed_prediction = self._remove_expired_entries(self.prediction_cache)
 
         # サイズ制限によるLRU削除
+        feature_removed_lru = 0
+        prediction_removed_lru = 0
+        
         if len(self.feature_cache) > self.max_cache_size:
-            self._apply_lru_cleanup(self.feature_cache)
+            feature_removed_lru = self._apply_lru_cleanup(self.feature_cache)
 
         if len(self.prediction_cache) > self.max_cache_size:
-            self._apply_lru_cleanup(self.prediction_cache)
+            prediction_removed_lru = self._apply_lru_cleanup(self.prediction_cache)
 
-        self._update_cache_stats()
+        total_removed = removed_feature + removed_prediction + feature_removed_lru + prediction_removed_lru
+        if total_removed > 0:
+            self._update_cache_stats()
+            logger.debug(f"Cache cleanup completed. Removed {removed_feature} expired features, "
+                        f"{removed_prediction} expired predictions, {feature_removed_lru} LRU features, "
+                        f"{prediction_removed_lru} LRU predictions")
 
-    def _remove_expired_entries(self, cache: Dict):
+    def _remove_expired_entries(self, cache: Dict) -> int:
         """期限切れエントリを削除"""
         expired_keys = []
         for key, entry in cache.items():
@@ -140,8 +201,10 @@ class AdvancedCacheManager(CacheManager):
 
         for key in expired_keys:
             del cache[key]
+            
+        return len(expired_keys)
 
-    def _apply_lru_cleanup(self, cache: Dict):
+    def _apply_lru_cleanup(self, cache: Dict) -> int:
         """LRUアルゴリズムでキャッシュクリーンアップ"""
         # タイムスタンプでソートして古いものから削除
         sorted_items = sorted(
@@ -150,9 +213,13 @@ class AdvancedCacheManager(CacheManager):
         )
 
         items_to_remove = len(cache) - self.max_cache_size
-        for i in range(items_to_remove):
+        removed_count = 0
+        for i in range(min(items_to_remove, len(sorted_items))):
             key_to_remove = sorted_items[i][0]
             del cache[key_to_remove]
+            removed_count += 1
+            
+        return removed_count
 
     def _update_cache_stats(self):
         """キャッシュ統計を更新"""
@@ -249,7 +316,7 @@ class AdvancedCacheManager(CacheManager):
 class RealTimeCacheManager(AdvancedCacheManager):
     """リアルタイムデータ専用キャッシュマネージャー"""
 
-    def __init__(self, max_cache_size: int = 5000, ttl_hours: int = 1):
+    def __init__(self, max_cache_size: int = 5000, ttl_hours: int = 1, cleanup_interval: int = 600):
         super().__init__(max_cache_size, ttl_hours)
         
         # リアルタイムデータ専用キャッシュ
@@ -270,6 +337,53 @@ class RealTimeCacheManager(AdvancedCacheManager):
             "oldest_data_timestamp": None,
             "newest_data_timestamp": None
         }
+        
+        # 自動クリーンアップ設定（リアルタイム用）
+        self.realtime_cleanup_interval = cleanup_interval  # 10分ごとにクリーンアップ（デフォルト）
+        self._start_realtime_cleanup_thread()
+        
+        logger.info(f"RealTimeCacheManager initialized with cleanup_interval={cleanup_interval}s, max_cache_size={max_cache_size}")
+
+    def _start_realtime_cleanup_thread(self):
+        """リアルタイムキャッシュ用自動クリーンアップスレッドを開始"""
+        if self.auto_cleanup_enabled:
+            realtime_cleanup_thread = threading.Thread(target=self._realtime_cleanup_worker, daemon=True)
+            realtime_cleanup_thread.start()
+            logger.info("Automatic realtime cache cleanup thread started")
+
+    def _realtime_cleanup_worker(self):
+        """リアルタイムキャッシュクリーンアップワーカー"""
+        while not self._shutdown_event.is_set():
+            try:
+                # クリーンアップ間隔待機
+                if self._shutdown_event.wait(self.realtime_cleanup_interval):
+                    break
+                    
+                # リアルタイムキャッシュクリーンアップ実行
+                self.cleanup_real_time_cache(older_than_hours=2)  # 2時間以上古いデータをクリーンアップ
+                logger.debug(f"Realtime cache cleanup completed. Tick cache symbols: {len(self.tick_cache)}, Order book cache symbols: {len(self.order_book_cache)}")
+                
+            except Exception as e:
+                logger.error(f"Realtime cache cleanup worker error: {e}")
+                # エラーでも継続
+                
+        logger.info("Realtime cache cleanup worker stopped")
+
+    def shutdown(self):
+        """キャッシュマネージャーをシャットダウン"""
+        logger.info("Shutting down realtime cache manager")
+        self._shutdown_event.set()
+        
+        # クリーンアップスレッドの終了を待機
+        # Note: The realtime cleanup thread shares the same shutdown event
+        # We don't have a reference to it directly, but it will stop when the event is set
+        
+        # キャッシュをディスクに保存
+        try:
+            self.save_cache_to_disk()
+            logger.info("Cache saved to disk during shutdown")
+        except Exception as e:
+            logger.error(f"Error saving cache during shutdown: {e}")
 
     def cache_tick_data(self, tick_data, max_history: Optional[int] = None) -> None:
         """ティックデータを時系列キャッシュに保存"""
