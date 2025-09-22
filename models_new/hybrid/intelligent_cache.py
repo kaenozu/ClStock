@@ -272,6 +272,7 @@ class IntelligentPredictionCache:
             removed_count += 1
             
         self.logger.info(f"Removed {removed_count} oldest cache entries due to size limit")
+        return removed_count
 
     def get_cache_key(self, symbol: str, mode: PredictionMode, data_hash: str = None) -> str:
         """キャッシュキー生成"""

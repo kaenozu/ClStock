@@ -133,6 +133,9 @@ class ProcessManager:
             self.processes[process_info.name] = process_info
             logger.info(f"サービス登録: {process_info.name}")
             return True
+        except KeyError as e:
+            logger.error(f"サービス登録失敗 {process_info.name}: キーエラー - {e}")
+            return False
         except Exception as e:
             logger.error(f"サービス登録失敗 {process_info.name}: {e}")
             return False
@@ -175,10 +178,25 @@ class ProcessManager:
             logger.info(f"サービス開始完了: {name} (PID: {process_info.pid})")
             return True
 
+        except FileNotFoundError as e:
+            process_info.status = ProcessStatus.FAILED
+            process_info.last_error = f"実行ファイルが見つかりません: {e}"
+            logger.error(f"サービス開始失敗 {name}: 実行ファイルが見つかりません - {e}")
+            return False
+        except PermissionError as e:
+            process_info.status = ProcessStatus.FAILED
+            process_info.last_error = f"実行権限がありません: {e}"
+            logger.error(f"サービス開始失敗 {name}: 実行権限エラー - {e}")
+            return False
+        except subprocess.SubprocessError as e:
+            process_info.status = ProcessStatus.FAILED
+            process_info.last_error = str(e)
+            logger.error(f"サービス開始失敗 {name}: サブプロセスエラー - {e}")
+            return False
         except Exception as e:
             process_info.status = ProcessStatus.FAILED
             process_info.last_error = str(e)
-            logger.error(f"サービス開始失敗 {name}: {e}")
+            logger.error(f"サービス開始失敗 {name}: 予期しないエラー - {e}")
             return False
 
     def stop_service(self, name: str, force: bool = False) -> bool:
@@ -218,8 +236,17 @@ class ProcessManager:
             logger.info(f"サービス停止完了: {name}")
             return True
 
+        except ProcessLookupError as e:
+            logger.warning(f"プロセスが既に終了しています: {name} - {e}")
+            process_info.status = ProcessStatus.STOPPED
+            process_info.pid = None
+            process_info.process = None
+            return True
+        except subprocess.SubprocessError as e:
+            logger.error(f"サービス停止失敗 {name}: サブプロセスエラー - {e}")
+            return False
         except Exception as e:
-            logger.error(f"サービス停止失敗 {name}: {e}")
+            logger.error(f"サービス停止失敗 {name}: 予期しないエラー - {e}")
             return False
 
     def restart_service(self, name: str) -> bool:

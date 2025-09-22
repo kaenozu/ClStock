@@ -23,6 +23,7 @@ def run_basic_prediction(symbol: str) -> Dict[str, Any]:
     """基本84.6%精度予測システム実行"""
     try:
         from trend_following_predictor import TrendFollowingPredictor
+        from utils.exceptions import PredictionError, InvalidSymbolError
 
         predictor = TrendFollowingPredictor()
         result = predictor.predict_stock(symbol)
@@ -35,14 +36,18 @@ def run_basic_prediction(symbol: str) -> Dict[str, Any]:
 
         return result
 
-    except Exception as e:
+    except (PredictionError, InvalidSymbolError) as e:
         logger.error(f"基本予測エラー: {e}")
         return {"error": str(e)}
+    except Exception as e:
+        logger.error(f"予期しない基本予測エラー: {e}", exc_info=True)
+        return {"error": f"予期しないエラー: {str(e)}"}
 
 def run_advanced_prediction(symbol: str) -> Dict[str, Any]:
     """個別銘柄特化モデル実行"""
     try:
         from models.stock_specific_predictor import StockSpecificPredictor
+        from utils.exceptions import ModelTrainingError, PredictionError, InvalidSymbolError
 
         predictor = StockSpecificPredictor()
         result = predictor.predict_symbol(symbol)
@@ -54,14 +59,18 @@ def run_advanced_prediction(symbol: str) -> Dict[str, Any]:
 
         return result
 
-    except Exception as e:
+    except (ModelTrainingError, PredictionError, InvalidSymbolError) as e:
         logger.error(f"個別銘柄特化予測エラー: {e}")
         return {"error": str(e)}
+    except Exception as e:
+        logger.error(f"予期しない個別銘柄特化予測エラー: {e}", exc_info=True)
+        return {"error": f"予期しないエラー: {str(e)}"}
 
 def run_sentiment_analysis(symbol: str) -> Dict[str, Any]:
     """ニュースセンチメント分析実行"""
     try:
         from analysis.sentiment_analyzer import MarketSentimentAnalyzer
+        from utils.exceptions import DataFetchError
 
         analyzer = MarketSentimentAnalyzer()
         sentiment = analyzer.analyze_news_sentiment(symbol)
@@ -72,15 +81,19 @@ def run_sentiment_analysis(symbol: str) -> Dict[str, Any]:
 
         return sentiment
 
-    except Exception as e:
+    except DataFetchError as e:
         logger.error(f"センチメント分析エラー: {e}")
         return {"error": str(e)}
+    except Exception as e:
+        logger.error(f"予期しないセンチメント分析エラー: {e}", exc_info=True)
+        return {"error": f"予期しないエラー: {str(e)}"}
 
 def run_integrated_analysis(symbol: str) -> Dict[str, Any]:
     """統合分析 (技術分析 + センチメント)"""
     try:
         from trend_following_predictor import TrendFollowingPredictor
         from analysis.sentiment_analyzer import MarketSentimentAnalyzer
+        from utils.exceptions import PredictionError, DataFetchError
 
         # 技術分析
         tech_predictor = TrendFollowingPredictor()
@@ -106,14 +119,18 @@ def run_integrated_analysis(symbol: str) -> Dict[str, Any]:
             "integrated": integrated
         }
 
-    except Exception as e:
+    except (PredictionError, DataFetchError) as e:
         logger.error(f"統合分析エラー: {e}")
         return {"error": str(e)}
+    except Exception as e:
+        logger.error(f"予期しない統合分析エラー: {e}", exc_info=True)
+        return {"error": f"予期しないエラー: {str(e)}"}
 
 def run_portfolio_backtest() -> Dict[str, Any]:
     """ポートフォリオバックテスト実行"""
     try:
         from investment_system import main as run_investment_system
+        from utils.exceptions import BacktestError
 
         print(f"\n=== ポートフォリオバックテスト実行 ===")
         print("50銘柄投資システム (3.3%リターン実績)")
@@ -121,14 +138,18 @@ def run_portfolio_backtest() -> Dict[str, Any]:
         result = run_investment_system()
         return {"backtest": "completed", "result": result}
 
-    except Exception as e:
+    except BacktestError as e:
         logger.error(f"バックテストエラー: {e}")
         return {"error": str(e)}
+    except Exception as e:
+        logger.error(f"予期しないバックテストエラー: {e}", exc_info=True)
+        return {"error": f"予期しないエラー: {str(e)}"}
 
 def run_auto_retraining_status() -> Dict[str, Any]:
     """自動再学習システム状態確認"""
     try:
         from systems.auto_retraining_system import RetrainingOrchestrator
+        from utils.exceptions import ConfigurationError
 
         orchestrator = RetrainingOrchestrator()
         status = orchestrator.get_comprehensive_status()
@@ -138,9 +159,12 @@ def run_auto_retraining_status() -> Dict[str, Any]:
 
         return status
 
-    except Exception as e:
+    except ConfigurationError as e:
         logger.error(f"自動再学習状態確認エラー: {e}")
         return {"error": str(e)}
+    except Exception as e:
+        logger.error(f"予期しない自動再学習状態確認エラー: {e}", exc_info=True)
+        return {"error": f"予期しないエラー: {str(e)}"}
 
 def main():
     """メイン関数"""

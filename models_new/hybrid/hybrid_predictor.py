@@ -27,6 +27,7 @@ from .intelligent_cache import IntelligentPredictionCache
 from .adaptive_optimizer import AdaptivePerformanceOptimizer
 from .ultra_fast_streaming import UltraFastStreamingPredictor
 from .multi_gpu_processor import MultiGPUParallelPredictor
+from config.settings import get_settings
 
 class HybridStockPredictor(StockPredictor):
     """
@@ -42,11 +43,15 @@ class HybridStockPredictor(StockPredictor):
     def __init__(self, data_provider=None, default_mode: PredictionMode = PredictionMode.AUTO,
                  enable_streaming: bool = True, enable_multi_gpu: bool = True,
                  enable_real_time_learning: bool = True,
-                 max_prediction_history_size: int = 1000):
+                 enable_cache: bool = True, enable_adaptive_optimization: bool = True,
+                 max_prediction_history_size: Optional[int] = None):
         self.data_provider = data_provider or StockDataProvider()
         self.default_mode = default_mode
         self.logger = logging.getLogger(__name__)
-        self.max_prediction_history_size = max_prediction_history_size
+        
+        # 予測履歴サイズの設定（設定ファイルから取得または引数から指定）
+        settings = get_settings()
+        self.max_prediction_history_size = max_prediction_history_size or settings.prediction.max_prediction_history_size
 
         # サブシステム初期化
         self._initialize_subsystems()
@@ -217,6 +222,21 @@ class HybridStockPredictor(StockPredictor):
 
             # 最近の平均予測時間
             avg_time = np.mean([h['prediction_time'] for h in recent_history])
+            
+            # 時間ベースのモード選択
+            if avg_time <= self.performance_thresholds['ultra_speed_threshold']:
+                return PredictionMode.ULTRA_SPEED
+            elif avg_time <= self.performance_thresholds['speed_threshold']:
+                return PredictionMode.SPEED_PRIORITY
+            else:
+                # 精度ベースの判定
+                if self.prediction_history:
+                    recent_accuracy = np.mean([h['accuracy'] for h in recent_history[-5:]])
+                    if recent_accuracy >= self.performance_thresholds['accuracy_threshold']:
+                        return PredictionMode.ACCURACY_PRIORITY
+                        
+        # デフォルト: バランスモード
+        return PredictionMode.BALANCED
 
     def _execute_prediction(self, symbol: str, mode: PredictionMode) -> PredictionResult:
         """モード別予測実行（次世代モード対応）"""

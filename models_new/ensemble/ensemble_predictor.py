@@ -27,8 +27,43 @@ from data.stock_data import StockDataProvider
 from datetime import datetime
 
 
+# 分離されたクラスのインポート
+from .parallel_feature_calculator import ParallelFeatureCalculator
+from .memory_efficient_cache import MemoryEfficientCache
+from .multi_timeframe_integrator import MultiTimeframeIntegrator
+
 class EnsembleStockPredictor(StockPredictor):
     """複数モデルのアンサンブル予測器"""
+
+    # 予測重みの定数
+    BASE_PREDICTION_WEIGHT = 0.7
+    TIMEFRAME_PREDICTION_WEIGHT = 0.3
+    
+    # 信頼度調整の定数
+    MAX_CONFIDENCE_RATIO = 0.3
+    CONFIDENCE_MULTIPLIER = 10
+    
+    # 中性予測調整の定数
+    NEUTRAL_PREDICTION_VALUE = 50.0
+    HIGH_CONFIDENCE_NEUTRAL_WEIGHT = 0.1
+    LOW_CONFIDENCE_NEUTRAL_WEIGHT = 0.3
+    HIGH_CONFIDENCE_PREDICTION_WEIGHT = 0.9
+    LOW_CONFIDENCE_PREDICTION_WEIGHT = 0.7
+    
+    # キャッシュサイズの定数
+    FEATURE_CACHE_SIZE = 500
+    PREDICTION_CACHE_SIZE = 200
+    
+    # フォールバック予測の定数
+    TREND_THRESHOLD = 0.02  # 2%のトレンド閾値
+    BULLISH_PREDICTION = 65.0
+    BEARISH_PREDICTION = 35.0
+    FALLBACK_ACCURACY = 45.0
+    DEFAULT_CONFIDENCE = 0.1
+    
+    # 信頼度レベルの閾値
+    HIGH_CONFIDENCE_THRESHOLD = 0.7
+    MEDIUM_CONFIDENCE_THRESHOLD = 0.4
 
     def __init__(self, data_provider=None):
         self.models = {}
@@ -44,9 +79,9 @@ class EnsembleStockPredictor(StockPredictor):
         # 並列特徴量計算システム
         self.parallel_calculator = ParallelFeatureCalculator()
         
-        # メモリ効率キャッシュシステム
-        self.feature_cache = MemoryEfficientCache(max_size=500)
-        self.prediction_cache = MemoryEfficientCache(max_size=200)
+        # メモリ効率キャッシュシステム（定数使用）
+        self.feature_cache = MemoryEfficientCache(max_size=self.FEATURE_CACHE_SIZE)
+        self.prediction_cache = MemoryEfficientCache(max_size=self.PREDICTION_CACHE_SIZE)
         
         # マルチタイムフレーム統合システム
         self.timeframe_integrator = MultiTimeframeIntegrator()
@@ -296,7 +331,7 @@ class EnsembleStockPredictor(StockPredictor):
         if not self._validate_symbol(symbol):
             self.logger.error(f"Invalid symbol format: {symbol}")
             return PredictionResult(
-                prediction=50.0,
+                prediction=self.NEUTRAL_PREDICTION_VALUE,
                 confidence=0.0,
                 accuracy=0.0,
                 timestamp=datetime.now(),
@@ -309,7 +344,7 @@ class EnsembleStockPredictor(StockPredictor):
         if not all([deps['sklearn'], deps['numpy'], deps['pandas']]):
             self.logger.error("Critical dependencies missing")
             return PredictionResult(
-                prediction=50.0,
+                prediction=self.NEUTRAL_PREDICTION_VALUE,
                 confidence=0.0,
                 accuracy=0.0,
                 timestamp=datetime.now(),
@@ -327,7 +362,7 @@ class EnsembleStockPredictor(StockPredictor):
             prediction_value = self._safe_model_operation(
                 "predict_score",
                 lambda: self.predict_score(symbol),
-                fallback_value=50.0
+                fallback_value=self.NEUTRAL_PREDICTION_VALUE
             )
             
             confidence = self._safe_model_operation(
@@ -353,9 +388,18 @@ class EnsembleStockPredictor(StockPredictor):
                     'validated': True
                 }
             )
+        except ValueError as e:
+            self.logger.error(f"Data validation error for {symbol}: {str(e)}")
+            return self._fallback_prediction(symbol, error=f"データ検証エラー: {str(e)}")
+        except KeyError as e:
+            self.logger.error(f"Missing data key for {symbol}: {str(e)}")
+            return self._fallback_prediction(symbol, error=f"データキーエラー: {str(e)}")
+        except RuntimeError as e:
+            self.logger.error(f"Model execution error for {symbol}: {str(e)}")
+            return self._fallback_prediction(symbol, error=f"モデル実行エラー: {str(e)}")
         except Exception as e:
-            self.logger.error(f"Error in predict for {symbol}: {str(e)}")
-            return self._fallback_prediction(symbol, error=str(e))
+            self.logger.error(f"Unexpected error in predict for {symbol}: {str(e)}")
+            return self._fallback_prediction(symbol, error=f"予期しないエラー: {str(e)}")
 
     def _fallback_prediction(self, symbol: str, error: str = None) -> PredictionResult:
         """フォールバック予測（モデル利用不可時）"""
@@ -366,26 +410,26 @@ class EnsembleStockPredictor(StockPredictor):
                 recent_prices = data['Close'].tail(5)
                 trend = (recent_prices.iloc[-1] - recent_prices.iloc[0]) / recent_prices.iloc[0]
                 
-                if trend > 0.02:  # 2%以上上昇
-                    prediction = 65.0
-                elif trend < -0.02:  # 2%以上下落
-                    prediction = 35.0
+                if trend > self.TREND_THRESHOLD:  # 2%以上上昇
+                    prediction = self.BULLISH_PREDICTION
+                elif trend < -self.TREND_THRESHOLD:  # 2%以上下落
+                    prediction = self.BEARISH_PREDICTION
                 else:
-                    prediction = 50.0
+                    prediction = self.NEUTRAL_PREDICTION_VALUE
                     
-                confidence = min(0.3, abs(trend) * 10)  # 最大30%
+                confidence = min(self.MAX_CONFIDENCE_RATIO, abs(trend) * self.CONFIDENCE_MULTIPLIER)
             else:
-                prediction = 50.0
-                confidence = 0.1
+                prediction = self.NEUTRAL_PREDICTION_VALUE
+                confidence = self.DEFAULT_CONFIDENCE
                 
         except Exception:
-            prediction = 50.0
-            confidence = 0.1
+            prediction = self.NEUTRAL_PREDICTION_VALUE
+            confidence = self.DEFAULT_CONFIDENCE
             
         return PredictionResult(
             prediction=prediction,
             confidence=confidence,
-            accuracy=45.0,  # フォールバック精度は低め
+            accuracy=self.FALLBACK_ACCURACY,  # フォールバック精度は低め
             timestamp=datetime.now(),
             symbol=symbol,
             metadata={
@@ -475,7 +519,7 @@ class EnsembleStockPredictor(StockPredictor):
         if not self.is_trained:
             if not self.load_ensemble():
                 self.logger.error("No trained ensemble model available")
-                return 50.0
+                return self.NEUTRAL_PREDICTION_VALUE
 
         try:
             # キャッシュチェック
@@ -499,17 +543,19 @@ class EnsembleStockPredictor(StockPredictor):
             
             # 最終予測の計算（基本予測 + タイムフレーム統合）
             final_prediction = (
-                base_prediction * 0.7 +  # 基本予測70%
-                integrated_prediction * 0.3  # タイムフレーム統合30%
+                base_prediction * self.BASE_PREDICTION_WEIGHT +
+                integrated_prediction * self.TIMEFRAME_PREDICTION_WEIGHT
             )
             
-            # 信頼度による調整
-            if confidence_adjustment > 0.7:  # 高信頼度の場合
+            # 信頼度による調整（定数使用）
+            if confidence_adjustment > self.HIGH_CONFIDENCE_THRESHOLD:  # 高信頼度
                 final_prediction = final_prediction  # そのまま
-            elif confidence_adjustment > 0.4:  # 中信頼度の場合
-                final_prediction = final_prediction * 0.9 + 50.0 * 0.1  # 中性寄り
-            else:  # 低信頼度の場合
-                final_prediction = final_prediction * 0.7 + 50.0 * 0.3  # より中性寄り
+            elif confidence_adjustment > self.MEDIUM_CONFIDENCE_THRESHOLD:  # 中信頼度
+                final_prediction = (final_prediction * self.HIGH_CONFIDENCE_PREDICTION_WEIGHT + 
+                                  self.NEUTRAL_PREDICTION_VALUE * self.HIGH_CONFIDENCE_NEUTRAL_WEIGHT)
+            else:  # 低信頼度
+                final_prediction = (final_prediction * self.LOW_CONFIDENCE_PREDICTION_WEIGHT + 
+                                  self.NEUTRAL_PREDICTION_VALUE * self.LOW_CONFIDENCE_NEUTRAL_WEIGHT)
             
             result = max(0, min(100, float(final_prediction)))
             
@@ -523,9 +569,21 @@ class EnsembleStockPredictor(StockPredictor):
             
             return result
 
+        except ConnectionError as e:
+            self.logger.error(f"Data connection error for {symbol}: {str(e)}")
+            return self.NEUTRAL_PREDICTION_VALUE
+        except KeyError as e:
+            self.logger.error(f"Missing data key for {symbol}: {str(e)}")
+            return self.NEUTRAL_PREDICTION_VALUE
+        except ValueError as e:
+            self.logger.error(f"Data validation error for {symbol}: {str(e)}")
+            return self.NEUTRAL_PREDICTION_VALUE
+        except RuntimeError as e:
+            self.logger.error(f"Model execution error for {symbol}: {str(e)}")
+            return self.NEUTRAL_PREDICTION_VALUE
         except Exception as e:
-            self.logger.error(f"Error in enhanced ensemble prediction for {symbol}: {str(e)}")
-            return 50.0
+            self.logger.error(f"Unexpected error in enhanced ensemble prediction for {symbol}: {str(e)}")
+            return self.NEUTRAL_PREDICTION_VALUE
 
     def _get_base_ensemble_prediction(self, symbol: str) -> float:
         """基本のアンサンブル予測（従来の特徴量ベース）"""
@@ -650,381 +708,10 @@ class EnsembleStockPredictor(StockPredictor):
             self.logger.error(f"Error loading ensemble: {str(e)}")
             return False
 
-class ParallelFeatureCalculator:
-    """並列特徴量計算システム - 3-5倍の性能向上を実現"""
-    
-    def __init__(self, n_jobs=-1):
-        self.n_jobs = n_jobs if n_jobs != -1 else min(8, os.cpu_count())
-        self.logger = logging.getLogger(__name__)
-        
-    def calculate_features_parallel(self, symbols: List[str], data_provider) -> pd.DataFrame:
-        """複数銘柄の特徴量を並列計算"""
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        from functools import partial
-        
-        self.logger.info(f"Calculating features for {len(symbols)} symbols using {self.n_jobs} threads")
-        
-        # 並列処理関数の準備
-        calculate_single = partial(self._calculate_single_symbol_features, data_provider=data_provider)
-        
-        # 特徴量データを格納
-        all_features = []
-        
-        with ThreadPoolExecutor(max_workers=self.n_jobs) as executor:
-            # 全銘柄の処理を並列開始
-            future_to_symbol = {
-                executor.submit(calculate_single, symbol): symbol 
-                for symbol in symbols
-            }
-            
-            completed_count = 0
-            for future in as_completed(future_to_symbol):
-                symbol = future_to_symbol[future]
-                try:
-                    features = future.result(timeout=30)  # 30秒タイムアウト
-                    if features is not None and not features.empty:
-                        features['symbol'] = symbol
-                        all_features.append(features)
-                    
-                    completed_count += 1
-                    if completed_count % 10 == 0:
-                        self.logger.info(f"Processed {completed_count}/{len(symbols)} symbols")
-                        
-                except Exception as e:
-                    self.logger.error(f"Error processing {symbol}: {str(e)}")
-        
-        if not all_features:
-            return pd.DataFrame()
-            
-        # 全特徴量を結合
-        combined_features = pd.concat(all_features, ignore_index=True)
-        self.logger.info(f"Parallel feature calculation completed: {len(combined_features)} samples")
-        
-        return combined_features
-    
-    def _calculate_single_symbol_features(self, symbol: str, data_provider) -> pd.DataFrame:
-        """単一銘柄の特徴量計算（並列処理用）"""
-        try:
-            # データ取得
-            data = data_provider.get_stock_data(symbol, "1y")
-            if data.empty:
-                return pd.DataFrame()
-            
-            # 基本技術指標の並列計算
-            features = self._calculate_technical_indicators_fast(data)
-            
-            # 高度な特徴量の並列計算
-            advanced_features = self._calculate_advanced_features_fast(data)
-            
-            # 特徴量結合
-            if not advanced_features.empty:
-                features = pd.concat([features, advanced_features], axis=1)
-            
-            return features
-            
-        except Exception as e:
-            self.logger.error(f"Error calculating features for {symbol}: {str(e)}")
-            return pd.DataFrame()
-    
-    def _calculate_technical_indicators_fast(self, data: pd.DataFrame) -> pd.DataFrame:
-        """高速技術指標計算（ベクトル化処理）"""
-        features = pd.DataFrame(index=data.index)
-        
-        # 基本価格特徴量
-        features['close'] = data['Close']
-        features['volume'] = data['Volume']
-        features['high_low_ratio'] = data['High'] / data['Low']
-        features['close_open_ratio'] = data['Close'] / data['Open']
-        
-        # 移動平均（ベクトル化）
-        for period in [5, 10, 20, 50]:
-            ma = data['Close'].rolling(window=period, min_periods=1).mean()
-            features[f'ma_{period}'] = ma
-            features[f'close_ma_{period}_ratio'] = data['Close'] / ma
-        
-        # RSI（高速化版）
-        features['rsi_14'] = self._calculate_rsi_fast(data['Close'], 14)
-        
-        # MACD（高速化版）
-        macd_line, signal_line = self._calculate_macd_fast(data['Close'])
-        features['macd'] = macd_line
-        features['macd_signal'] = signal_line
-        features['macd_histogram'] = macd_line - signal_line
-        
-        # ボリンジャーバンド
-        bb_upper, bb_lower = self._calculate_bollinger_bands_fast(data['Close'], 20, 2)
-        features['bb_upper'] = bb_upper
-        features['bb_lower'] = bb_lower
-        features['bb_position'] = (data['Close'] - bb_lower) / (bb_upper - bb_lower)
-        
-        return features
-    
-    def _calculate_advanced_features_fast(self, data: pd.DataFrame) -> pd.DataFrame:
-        """高度な特徴量の高速計算"""
-        features = pd.DataFrame(index=data.index)
-        
-        # 価格モメンタム（複数期間）
-        for period in [1, 3, 5, 10]:
-            features[f'price_momentum_{period}'] = data['Close'].pct_change(period)
-        
-        # ボラティリティ（複数期間）
-        for period in [5, 10, 20]:
-            features[f'volatility_{period}'] = data['Close'].pct_change().rolling(period).std()
-        
-        # 出来高関連指標
-        features['volume_ma_ratio'] = data['Volume'] / data['Volume'].rolling(20).mean()
-        features['price_volume_correlation'] = data['Close'].rolling(20).corr(data['Volume'])
-        
-        # サポート・レジスタンス指標
-        features['high_20_ratio'] = data['Close'] / data['High'].rolling(20).max()
-        features['low_20_ratio'] = data['Close'] / data['Low'].rolling(20).min()
-        
-        return features
-    
-    def _calculate_rsi_fast(self, prices: pd.Series, period: int = 14) -> pd.Series:
-        """高速RSI計算（ベクトル化）"""
-        delta = prices.diff()
-        gain = delta.where(delta > 0, 0.0)
-        loss = -delta.where(delta < 0, 0.0)
-        
-        avg_gain = gain.rolling(window=period, min_periods=1).mean()
-        avg_loss = loss.rolling(window=period, min_periods=1).mean()
-        
-        rs = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
-    
-    def _calculate_macd_fast(self, prices: pd.Series, fast=12, slow=26, signal=9):
-        """高速MACD計算（ベクトル化）"""
-        ema_fast = prices.ewm(span=fast).mean()
-        ema_slow = prices.ewm(span=slow).mean()
-        macd_line = ema_fast - ema_slow
-        signal_line = macd_line.ewm(span=signal).mean()
-        return macd_line, signal_line
-    
-    def _calculate_bollinger_bands_fast(self, prices: pd.Series, period: int = 20, std_dev: int = 2):
-        """高速ボリンジャーバンド計算（ベクトル化）"""
-        ma = prices.rolling(window=period).mean()
-        std = prices.rolling(window=period).std()
-        upper = ma + (std * std_dev)
-        lower = ma - (std * std_dev)
-        return upper, lower
 
 
-class MemoryEfficientCache:
-    """メモリ効率的なキャッシュシステム - LRU + 圧縮"""
-    
-    def __init__(self, max_size: int = 1000, compression_enabled: bool = True):
-        self.max_size = max_size
-        self.compression_enabled = compression_enabled
-        self.cache = {}
-        self.access_order = []
-        self.logger = logging.getLogger(__name__)
-        
-    def get(self, key: str):
-        """キャッシュからデータ取得"""
-        if key in self.cache:
-            # LRU更新
-            self.access_order.remove(key)
-            self.access_order.append(key)
-            
-            data = self.cache[key]
-            if self.compression_enabled and isinstance(data, bytes):
-                return self._decompress(data)
-            return data
-        return None
-    
-    def put(self, key: str, value):
-        """キャッシュにデータ保存"""
-        # サイズ制限チェック
-        if len(self.cache) >= self.max_size and key not in self.cache:
-            self._evict_lru()
-        
-        # データ圧縮（DataFrameの場合）
-        if self.compression_enabled and isinstance(value, pd.DataFrame):
-            value = self._compress(value)
-        
-        self.cache[key] = value
-        
-        # アクセス順序更新
-        if key in self.access_order:
-            self.access_order.remove(key)
-        self.access_order.append(key)
-    
-    def _evict_lru(self):
-        """最も古いエントリを削除"""
-        if self.access_order:
-            oldest_key = self.access_order.pop(0)
-            del self.cache[oldest_key]
-    
-    def _compress(self, df: pd.DataFrame) -> bytes:
-        """DataFrameを圧縮"""
-        import pickle
-        import gzip
-        return gzip.compress(pickle.dumps(df))
-    
-    def _decompress(self, data: bytes) -> pd.DataFrame:
-        """圧縮データを展開"""
-        import pickle
-        import gzip
-        return pickle.loads(gzip.decompress(data))
-    
-    def clear(self):
-        """キャッシュクリア"""
-        self.cache.clear()
-        self.access_order.clear()
-    
-    def size(self) -> int:
-        """キャッシュサイズ取得"""
-        return len(self.cache)
 
 
-class MultiTimeframeIntegrator:
-    """マルチタイムフレーム統合システム - 複数時間軸の分析で精度向上"""
-    
-    def __init__(self):
-        self.timeframes = {
-            'short': '3mo',    # 短期：3ヶ月
-            'medium': '1y',    # 中期：1年
-            'long': '2y'       # 長期：2年
-        }
-        self.weights = {
-            'short': 0.5,      # 短期重視
-            'medium': 0.3,     # 中期
-            'long': 0.2        # 長期
-        }
-        self.logger = logging.getLogger(__name__)
-        
-    def integrate_predictions(self, symbol: str, data_provider) -> Dict[str, Any]:
-        """複数タイムフレームの予測を統合"""
-        timeframe_results = {}
-        
-        for timeframe_name, period in self.timeframes.items():
-            try:
-                # 各タイムフレームでデータ取得
-                data = data_provider.get_stock_data(symbol, period)
-                if data.empty:
-                    continue
-                
-                # タイムフレーム別分析
-                analysis = self._analyze_timeframe(data, timeframe_name)
-                timeframe_results[timeframe_name] = analysis
-                
-                self.logger.debug(f"Analyzed {timeframe_name} timeframe for {symbol}")
-                
-            except Exception as e:
-                self.logger.error(f"Error analyzing {timeframe_name} timeframe for {symbol}: {str(e)}")
-        
-        # 統合予測の計算
-        integrated_prediction = self._calculate_integrated_prediction(timeframe_results)
-        
-        return {
-            'integrated_prediction': integrated_prediction,
-            'timeframe_details': timeframe_results,
-            'confidence_adjustment': self._calculate_confidence_adjustment(timeframe_results)
-        }
-    
-    def _analyze_timeframe(self, data: pd.DataFrame, timeframe: str) -> Dict[str, float]:
-        """特定タイムフレームの分析"""
-        if data.empty or len(data) < 10:
-            return {'trend': 0.0, 'momentum': 0.0, 'volatility': 0.0, 'strength': 0.0}
-        
-        # トレンド分析
-        trend_score = self._calculate_trend_score(data)
-        
-        # モメンタム分析
-        momentum_score = self._calculate_momentum_score(data)
-        
-        # ボラティリティ分析
-        volatility_score = self._calculate_volatility_score(data)
-        
-        # 全体の強度スコア
-        strength_score = (trend_score + momentum_score - abs(volatility_score)) / 3
-        
-        return {
-            'trend': trend_score,
-            'momentum': momentum_score,
-            'volatility': volatility_score,
-            'strength': strength_score
-        }
-    
-    def _calculate_trend_score(self, data: pd.DataFrame) -> float:
-        """トレンドスコア計算"""
-        if len(data) < 20:
-            return 0.0
-        
-        # 短期・長期移動平均の関係
-        short_ma = data['Close'].rolling(window=10).mean().iloc[-1]
-        long_ma = data['Close'].rolling(window=20).mean().iloc[-1]
-        current_price = data['Close'].iloc[-1]
-        
-        # トレンド強度
-        if short_ma > long_ma and current_price > short_ma:
-            trend_strength = (current_price - long_ma) / long_ma
-            return min(100, max(-100, trend_strength * 100))
-        elif short_ma < long_ma and current_price < short_ma:
-            trend_strength = (current_price - long_ma) / long_ma
-            return min(100, max(-100, trend_strength * 100))
-        else:
-            return 0.0
-    
-    def _calculate_momentum_score(self, data: pd.DataFrame) -> float:
-        """モメンタムスコア計算"""
-        if len(data) < 5:
-            return 0.0
-        
-        # 価格変化率
-        price_changes = []
-        for period in [1, 3, 5]:
-            if len(data) > period:
-                change = (data['Close'].iloc[-1] - data['Close'].iloc[-1-period]) / data['Close'].iloc[-1-period]
-                price_changes.append(change)
-        
-        if price_changes:
-            momentum = np.mean(price_changes) * 100
-            return min(100, max(-100, momentum))
-        return 0.0
-    
-    def _calculate_volatility_score(self, data: pd.DataFrame) -> float:
-        """ボラティリティスコア計算"""
-        if len(data) < 10:
-            return 0.0
-        
-        # 価格変動率の標準偏差
-        returns = data['Close'].pct_change().dropna()
-        if len(returns) > 0:
-            volatility = returns.std() * np.sqrt(252) * 100  # 年率化
-            return min(100, volatility)
-        return 0.0
-    
-    def _calculate_integrated_prediction(self, timeframe_results: Dict) -> float:
-        """統合予測の計算"""
-        if not timeframe_results:
-            return 50.0
-        
-        weighted_score = 0.0
-        total_weight = 0.0
-        
-        for timeframe, weight in self.weights.items():
-            if timeframe in timeframe_results:
-                strength = timeframe_results[timeframe]['strength']
-                weighted_score += strength * weight * 50 + 50  # 0-100スケールに変換
-                total_weight += weight
-        
-        if total_weight > 0:
-            integrated = weighted_score / total_weight
-            return max(0, min(100, integrated))
-        return 50.0
-    
-    def _calculate_confidence_adjustment(self, timeframe_results: Dict) -> float:
-        """信頼度調整値の計算"""
-        if not timeframe_results:
-            return 0.0
-        
-        # 各タイムフレームの強度の一致度
-        strengths = [result['strength'] for result in timeframe_results.values()]
-        if len(strengths) > 1:
-            # 標準偏差が小さいほど一致度が高い
-            consistency = 1.0 - (np.std(strengths) / 100.0)
-            return max(0.0, min(1.0, consistency))
-        return 0.5
+
+
+

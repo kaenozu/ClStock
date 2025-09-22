@@ -197,6 +197,16 @@ def demo():
 @click.option('--symbol', '-s', default='7203', help='銘柄コード (デフォルト: 7203)')
 def predict(symbol: str):
     """予測システムの実行"""
+    # 入力バリデーション
+    if not symbol or not isinstance(symbol, str):
+        click.echo("[失敗] 無効な銘柄コード")
+        sys.exit(1)
+    
+    # 銘柄コードの形式チェック（数値のみ）
+    if not symbol.isdigit():
+        click.echo("[失敗] 銘柄コードは数値のみ有効です")
+        sys.exit(1)
+        
     click.echo(f"🔮 予測システム実行: {symbol}")
 
     try:
@@ -241,8 +251,20 @@ def data():
 @click.option('--period', '-p', default='1d', help='期間 (1d, 5d, 1mo, 3mo, 6mo, 1y)')
 def fetch(symbol, period):
     """株価データの取得"""
+    # 入力バリデーション
+    valid_periods = ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max']
+    if period not in valid_periods:
+        click.echo(f"[失敗] 無効な期間: {period}. 有効な期間: {', '.join(valid_periods)}")
+        sys.exit(1)
+        
     if not symbol:
         symbol = ['7203', '6758', '8306', '6861', '9984']  # デフォルト銘柄
+        
+    # 銘柄コードのバリデーション
+    for sym in symbol:
+        if not isinstance(sym, str) or not sym.isdigit():
+            click.echo(f"[失敗] 無効な銘柄コード: {sym}")
+            sys.exit(1)
 
     click.echo(f"📊 データ取得: {list(symbol)} (期間: {period})")
 

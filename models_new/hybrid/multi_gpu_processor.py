@@ -160,7 +160,7 @@ class GPUWorkerPool:
         else:
             self.device = torch.device('cpu')
 
-    async def process_chunk(self, symbols: List[str]) -> GPUWorkerResult:
+    async def process_chunk(self, symbols: List[str], predict_callback) -> GPUWorkerResult:
         """チャンク処理"""
         start_time = time.time()
 
@@ -169,7 +169,7 @@ class GPUWorkerPool:
             initial_memory = self._get_gpu_memory_usage()
 
             # 並列予測実行
-            results = await self._parallel_predict_on_gpu(symbols)
+            results = await self._parallel_predict_on_gpu(symbols, predict_callback)
 
             # 処理時間とメモリ使用量計算
             processing_time = time.time() - start_time
@@ -187,23 +187,20 @@ class GPUWorkerPool:
             self.logger.error(f"GPU {self.gpu_id} chunk processing failed: {str(e)}")
             return GPUWorkerResult(
                 gpu_id=self.gpu_id,
-                results=[],
+                results=[self._build_error_result(symbol, str(e)) for symbol in symbols],
                 processing_time=time.time() - start_time,
                 memory_usage=0.0,
                 error=str(e)
             )
 
-    async def _parallel_predict_on_gpu(self, symbols: List[str]) -> List[PredictionResult]:
+    async def _parallel_predict_on_gpu(self, symbols: List[str], predict_callback) -> List[PredictionResult]:
         """GPU並列予測"""
-        # 実際の実装では、事前訓練済みモデルをGPUにロードして並列予測
-        # ここでは高速化されたモック実装
-
         batch_size = min(len(symbols), 32)  # バッチサイズ制限
-        results = []
+        results: List[PredictionResult] = []
 
         for i in range(0, len(symbols), batch_size):
             batch_symbols = symbols[i:i + batch_size]
-            batch_results = await self._gpu_batch_predict(batch_symbols)
+            batch_results = await self._gpu_batch_predict(batch_symbols, predict_callback)
             results.extend(batch_results)
 
             # GPU メモリ管理
@@ -212,31 +209,27 @@ class GPUWorkerPool:
 
         return results
 
-    async def _gpu_batch_predict(self, batch_symbols: List[str]) -> List[PredictionResult]:
+    async def _gpu_batch_predict(self, batch_symbols: List[str], predict_callback) -> List[PredictionResult]:
         """GPUバッチ予測"""
-        # GPU最適化された予測処理のモック
-        await asyncio.sleep(0.001 * len(batch_symbols))  # GPU処理時間シミュレーション
+        if not callable(predict_callback):
+            raise ValueError("predict_callback must be callable")
 
-        results = []
-        for symbol in batch_symbols:
-            # 高性能GPU予測のシミュレーション
-            prediction = np.random.uniform(800, 5000)
-            confidence = np.random.uniform(0.7, 0.95)
+        # GPU処理の待機時間を最小限に抑えるため、スレッドで実行
+        prediction_tasks = [
+            asyncio.to_thread(self._run_predict_callback, predict_callback, symbol)
+            for symbol in batch_symbols
+        ]
 
-            result = PredictionResult(
-                prediction=prediction,
-                confidence=confidence,
-                accuracy=90.0,  # GPU最適化で高精度
-                timestamp=datetime.now(),
-                symbol=symbol,
-                metadata={
-                    'prediction_strategy': 'multi_gpu_parallel',
-                    'gpu_id': self.gpu_id,
-                    'device': str(self.device),
-                    'batch_processed': True
-                }
-            )
-            results.append(result)
+        raw_results = await asyncio.gather(*prediction_tasks, return_exceptions=True)
+
+        results: List[PredictionResult] = []
+        for symbol, outcome in zip(batch_symbols, raw_results):
+            if isinstance(outcome, Exception):
+                error_message = str(outcome)
+                self.logger.error(f"GPU worker prediction failed for {symbol}: {error_message}")
+                results.append(self._build_error_result(symbol, error_message))
+            else:
+                results.append(outcome)
 
         return results
 
@@ -248,6 +241,21 @@ class GPUWorkerPool:
             except Exception:
                 return 0.0
         return 0.0
+
+    def _build_error_result(self, symbol: str, error: str) -> PredictionResult:
+        """GPU処理失敗時のフォールバック結果を生成"""
+        return PredictionResult(
+            prediction=50.0,
+            confidence=0.0,
+            accuracy=0.0,
+            timestamp=datetime.now(),
+            symbol=symbol,
+            metadata={
+                'prediction_strategy': 'gpu_worker_error',
+                'error': error,
+                'gpu_id': self.gpu_id
+            }
+        )
 
 class MultiGPUParallelPredictor:
     """
