@@ -2,42 +2,42 @@
 # 84.6%精度達成の高品質投資システム
 
 # Core Data Processing
-pandas>=2.1.0,<3.0.0
-numpy>=1.24.0,<2.0.0  # TensorFlow互換性確保
+pandas>=1.5.0,<3.0.0  # Python 3.8+ compatibility
+numpy>=1.21.0,<2.0.0  # Python 3.8+ compatibility
 
 # Machine Learning
-scikit-learn>=1.3.0
-xgboost>=2.0.0
-lightgbm>=4.0.0
-joblib>=1.3.0
+scikit-learn>=1.1.0  # Python 3.8+ compatibility
+xgboost>=1.6.0  # Python 3.8+ compatibility
+lightgbm>=3.3.0  # Python 3.8+ compatibility
+joblib>=1.2.0  # Python 3.8+ compatibility
 
 # Financial Data
 yfinance>=0.2.0
 
 # Web Framework
-fastapi>=0.100.0
-uvicorn[standard]>=0.20.0
-pydantic>=2.5.0
-python-multipart>=0.0.6
+fastapi>=0.85.0  # Python 3.8+ compatibility
+uvicorn[standard]>=0.18.0  # Python 3.8+ compatibility
+pydantic>=1.10.0  # Python 3.8+ compatibility
+python-multipart>=0.0.5  # Python 3.8+ compatibility
 
 # Scientific Computing
-scipy>=1.10.0
+scipy>=1.9.0  # Python 3.8+ compatibility
 
 # Visualization
-matplotlib>=3.7.0
-seaborn>=0.12.0
+matplotlib>=3.5.0  # Python 3.8+ compatibility
+seaborn>=0.11.0  # Python 3.8+ compatibility
 
 # Utilities
-requests>=2.28.0
+requests>=2.25.0  # Python 3.8+ compatibility
 python-dateutil>=2.8.0
 feedparser>=6.0.0  # RSS解析（ニュースセンチメント分析）
 
 # Development Tools (品質向上済み)
-black>=23.0.0
-flake8>=6.0.0
-mypy>=1.5.0
-pytest>=7.0.0
-pytest-cov>=4.0.0
+black>=22.0.0  # Python 3.8+ compatibility
+flake8>=5.0.0  # Python 3.8+ compatibility
+mypy>=0.991  # Python 3.8+ compatibility
+pytest>=6.2.0  # Python 3.8+ compatibility
+pytest-cov>=3.0.0  # Python 3.8+ compatibility
 bandit>=1.7.0
 safety>=2.0.0
 
