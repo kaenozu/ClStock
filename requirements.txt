@@ -41,8 +41,7 @@ pytest-cov>=4.0.0
 bandit>=1.7.0
 safety>=2.0.0
 
-# Type Stubs (型注釈完全化)
-scipy-stubs>=1.16.0
+# Type Stubs (型注釈完全化) - Python 3.9+ compatibility
 types-requests>=2.32.0
 
 # Deep Learning (オプション - 84.6%を超えられず)
@@ -53,4 +52,4 @@ types-requests>=2.32.0
 # redis>=4.5.0  # 高速キャッシュ
 # line-bot-sdk>=3.0.0  # LINE通知
 # transformers>=4.30.0  # ニュースセンチメント分析
-torch>=2.0.0  # PyTorch
+# torch>=2.0.0  # PyTorch
