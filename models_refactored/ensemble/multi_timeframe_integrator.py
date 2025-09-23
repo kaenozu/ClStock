@@ -106,7 +106,9 @@ class MultiTimeframeIntegrator:
         price_changes = []
         for period in [1, 3, 5]:
             if len(data) > period:
-                change = (data['Close'].iloc[-1] - data['Close'].iloc[-1-period]) / data['Close'].iloc[-1-period]
+                denominator = data['Close'].iloc[-1-period]
+                if denominator != 0:
+                    change = (data['Close'].iloc[-1] - denominator) / denominator
                 price_changes.append(change)
 
         if price_changes:
