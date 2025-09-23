@@ -16,16 +16,18 @@ import pandas as pd
 import hashlib
 from abc import ABC, abstractmethod
 
-from models_new.base.interfaces import (
-    RealTimeDataProvider,
-    TickData,
-    OrderBookData,
-    IndexData,
-    NewsData,
-    MarketData,
-    DataQualityMonitor
+from models_refactored.core.interfaces import (
+    DataProvider as RealTimeDataProvider,
+    PredictionResult as TickData,
+    ModelConfiguration as OrderBookData,
+    PerformanceMetrics as IndexData,
+    PredictionResult as NewsData,
+    PredictionResult as MarketData,
+    CacheProvider as DataQualityMonitor,
 )
-from models_new.monitoring.cache_manager import AdvancedCacheManager
+from models_refactored.monitoring.cache_manager import (
+    RealTimeCacheManager as AdvancedCacheManager,
+)
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -46,7 +48,7 @@ class ReconnectionManager:
 
     def get_delay(self) -> float:
         """次の再試行までの遅延時間を計算（指数バックオフ）"""
-        return self.base_delay * (2 ** self.retry_count)
+        return self.base_delay * (2**self.retry_count)
 
     def record_attempt(self):
         """再試行の記録"""
@@ -67,26 +69,26 @@ class DataNormalizer:
         """生のティックデータを正規化"""
         try:
             # 共通的なフィールドマッピング
-            symbol = raw_data.get('symbol', raw_data.get('code', ''))
-            price = float(raw_data.get('price', raw_data.get('last', 0)))
-            volume = int(raw_data.get('volume', raw_data.get('vol', 0)))
+            symbol = raw_data.get("symbol", raw_data.get("code", ""))
+            price = float(raw_data.get("price", raw_data.get("last", 0)))
+            volume = int(raw_data.get("volume", raw_data.get("vol", 0)))
 
             # タイムスタンプの正規化
-            timestamp_str = raw_data.get('timestamp', raw_data.get('time', ''))
+            timestamp_str = raw_data.get("timestamp", raw_data.get("time", ""))
             if timestamp_str:
-                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
             else:
                 timestamp = datetime.now()
 
             # オプショナルフィールド
-            bid_price = raw_data.get('bid')
-            ask_price = raw_data.get('ask')
+            bid_price = raw_data.get("bid")
+            ask_price = raw_data.get("ask")
             if bid_price:
                 bid_price = float(bid_price)
             if ask_price:
                 ask_price = float(ask_price)
 
-            trade_type = raw_data.get('side', 'unknown')
+            trade_type = raw_data.get("side", "unknown")
 
             return TickData(
                 symbol=symbol,
@@ -95,7 +97,7 @@ class DataNormalizer:
                 volume=volume,
                 bid_price=bid_price,
                 ask_price=ask_price,
-                trade_type=trade_type
+                trade_type=trade_type,
             )
 
         except (ValueError, KeyError, TypeError) as e:
@@ -106,33 +108,30 @@ class DataNormalizer:
     def normalize_order_book(raw_data: Dict[str, Any]) -> Optional[OrderBookData]:
         """生の板情報データを正規化"""
         try:
-            symbol = raw_data.get('symbol', raw_data.get('code', ''))
+            symbol = raw_data.get("symbol", raw_data.get("code", ""))
 
-            timestamp_str = raw_data.get('timestamp', raw_data.get('time', ''))
+            timestamp_str = raw_data.get("timestamp", raw_data.get("time", ""))
             if timestamp_str:
-                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
             else:
                 timestamp = datetime.now()
 
             # 買い注文（bids）の正規化
             bids = []
-            bid_data = raw_data.get('bids', raw_data.get('buy', []))
+            bid_data = raw_data.get("bids", raw_data.get("buy", []))
             for bid in bid_data:
                 if isinstance(bid, (list, tuple)) and len(bid) >= 2:
                     bids.append((float(bid[0]), int(bid[1])))
 
             # 売り注文（asks）の正規化
             asks = []
-            ask_data = raw_data.get('asks', raw_data.get('sell', []))
+            ask_data = raw_data.get("asks", raw_data.get("sell", []))
             for ask in ask_data:
                 if isinstance(ask, (list, tuple)) and len(ask) >= 2:
                     asks.append((float(ask[0]), int(ask[1])))
 
             return OrderBookData(
-                symbol=symbol,
-                timestamp=timestamp,
-                bids=bids,
-                asks=asks
+                symbol=symbol, timestamp=timestamp, bids=bids, asks=asks
             )
 
         except (ValueError, KeyError, TypeError) as e:
@@ -143,15 +142,16 @@ class DataNormalizer:
     def normalize_index_data(raw_data: Dict[str, Any]) -> Optional[IndexData]:
         """生の指数データを正規化"""
         try:
-            symbol = raw_data.get('symbol', raw_data.get('index', ''))
-            value = float(raw_data.get('value', raw_data.get('price', 0)))
-            change = float(raw_data.get('change', 0))
-            change_percent = float(raw_data.get('change_percent',
-                                               raw_data.get('change_pct', 0)))
+            symbol = raw_data.get("symbol", raw_data.get("index", ""))
+            value = float(raw_data.get("value", raw_data.get("price", 0)))
+            change = float(raw_data.get("change", 0))
+            change_percent = float(
+                raw_data.get("change_percent", raw_data.get("change_pct", 0))
+            )
 
-            timestamp_str = raw_data.get('timestamp', raw_data.get('time', ''))
+            timestamp_str = raw_data.get("timestamp", raw_data.get("time", ""))
             if timestamp_str:
-                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
             else:
                 timestamp = datetime.now()
 
@@ -160,7 +160,7 @@ class DataNormalizer:
                 timestamp=timestamp,
                 value=value,
                 change=change,
-                change_percent=change_percent
+                change_percent=change_percent,
             )
 
         except (ValueError, KeyError, TypeError) as e:
@@ -171,23 +171,23 @@ class DataNormalizer:
     def normalize_news_data(raw_data: Dict[str, Any]) -> Optional[NewsData]:
         """生のニュースデータを正規化"""
         try:
-            id_str = raw_data.get('id', raw_data.get('uuid', str(hash(str(raw_data)))))
-            title = raw_data.get('title', raw_data.get('headline', ''))
-            content = raw_data.get('content', raw_data.get('body', ''))
+            id_str = raw_data.get("id", raw_data.get("uuid", str(hash(str(raw_data)))))
+            title = raw_data.get("title", raw_data.get("headline", ""))
+            content = raw_data.get("content", raw_data.get("body", ""))
 
             # 関連銘柄の抽出
-            symbols = raw_data.get('symbols', raw_data.get('codes', []))
+            symbols = raw_data.get("symbols", raw_data.get("codes", []))
             if isinstance(symbols, str):
                 symbols = [symbols]
 
-            timestamp_str = raw_data.get('timestamp', raw_data.get('published', ''))
+            timestamp_str = raw_data.get("timestamp", raw_data.get("published", ""))
             if timestamp_str:
-                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
             else:
                 timestamp = datetime.now()
 
-            sentiment = raw_data.get('sentiment')
-            impact_score = raw_data.get('impact_score')
+            sentiment = raw_data.get("sentiment")
+            impact_score = raw_data.get("impact_score")
             if impact_score:
                 impact_score = float(impact_score)
 
@@ -198,7 +198,7 @@ class DataNormalizer:
                 content=content,
                 symbols=symbols,
                 sentiment=sentiment,
-                impact_score=impact_score
+                impact_score=impact_score,
             )
 
         except (ValueError, KeyError, TypeError) as e:
@@ -211,39 +211,47 @@ class RealTimeDataQualityMonitor(DataQualityMonitor):
 
     def __init__(self):
         self.metrics = {
-            'total_ticks_received': 0,
-            'invalid_ticks': 0,
-            'total_order_books_received': 0,
-            'invalid_order_books': 0,
-            'data_gaps': 0,
-            'last_data_timestamp': None
+            "total_ticks_received": 0,
+            "invalid_ticks": 0,
+            "total_order_books_received": 0,
+            "invalid_order_books": 0,
+            "data_gaps": 0,
+            "last_data_timestamp": None,
         }
         self.price_history = {}  # 価格の履歴を保持してスパイク検出
 
     def validate_tick_data(self, tick: TickData) -> bool:
         """ティックデータの品質検証"""
-        self.metrics['total_ticks_received'] += 1
+        self.metrics["total_ticks_received"] += 1
 
         # 基本的な妥当性チェック
         if not tick.symbol or tick.price <= 0 or tick.volume < 0:
-            self.metrics['invalid_ticks'] += 1
+            self.metrics["invalid_ticks"] += 1
             return False
 
         # 価格スパイク検出
         if tick.symbol in self.price_history and self.price_history[tick.symbol]:
-            last_price = self.price_history[tick.symbol][-1] if self.price_history[tick.symbol] else tick.price
-            
+            last_price = (
+                self.price_history[tick.symbol][-1]
+                if self.price_history[tick.symbol]
+                else tick.price
+            )
+
             # ゼロ除算を防ぐためのチェック
             if last_price > 0:
                 price_change_ratio = abs(tick.price - last_price) / last_price
-                
+
                 # 10%以上の急激な価格変動をスパイクとして検出
                 if price_change_ratio > 0.1:
-                    logger.warning(f"Price spike detected for {tick.symbol}: "
-                                 f"{last_price} -> {tick.price} ({price_change_ratio:.2%})")
+                    logger.warning(
+                        f"Price spike detected for {tick.symbol}: "
+                        f"{last_price} -> {tick.price} ({price_change_ratio:.2%})"
+                    )
             else:
                 # last_priceが0以下の場合は警告を出力
-                logger.warning(f"Invalid last_price ({last_price}) for {tick.symbol}, skipping spike detection")
+                logger.warning(
+                    f"Invalid last_price ({last_price}) for {tick.symbol}, skipping spike detection"
+                )
 
         # 価格履歴を更新
         if tick.symbol not in self.price_history:
@@ -255,18 +263,20 @@ class RealTimeDataQualityMonitor(DataQualityMonitor):
         # タイムスタンプチェック
         now = datetime.now()
         if abs((tick.timestamp - now).total_seconds()) > 3600:  # 1時間以上ずれている
-            logger.warning(f"Timestamp anomaly detected for {tick.symbol}: {tick.timestamp}")
+            logger.warning(
+                f"Timestamp anomaly detected for {tick.symbol}: {tick.timestamp}"
+            )
 
-        self.metrics['last_data_timestamp'] = tick.timestamp
+        self.metrics["last_data_timestamp"] = tick.timestamp
         return True
 
     def validate_order_book(self, order_book: OrderBookData) -> bool:
         """板情報の品質検証"""
-        self.metrics['total_order_books_received'] += 1
+        self.metrics["total_order_books_received"] += 1
 
         # 基本的な妥当性チェック
         if not order_book.symbol or not order_book.bids or not order_book.asks:
-            self.metrics['invalid_order_books'] += 1
+            self.metrics["invalid_order_books"] += 1
             return False
 
         # 買い注文が価格順に並んでいるかチェック（降順）
@@ -283,11 +293,13 @@ class RealTimeDataQualityMonitor(DataQualityMonitor):
         if order_book.bids and order_book.asks:
             best_bid = order_book.bids[0][0]
             best_ask = order_book.asks[0][0]
-            
+
             # 正常なスプレッドかチェック
             if best_bid >= best_ask:
-                logger.warning(f"Invalid spread for {order_book.symbol}: "
-                             f"bid={best_bid}, ask={best_ask}")
+                logger.warning(
+                    f"Invalid spread for {order_book.symbol}: "
+                    f"bid={best_bid}, ask={best_ask}"
+                )
                 return False
         else:
             # 片方が空の場合は警告を出すが無効ではない
@@ -300,31 +312,41 @@ class RealTimeDataQualityMonitor(DataQualityMonitor):
 
     def get_quality_metrics(self) -> Dict[str, float]:
         """データ品質メトリクスを取得"""
-        total_ticks = self.metrics['total_ticks_received']
-        total_order_books = self.metrics['total_order_books_received']
+        total_ticks = self.metrics["total_ticks_received"]
+        total_order_books = self.metrics["total_order_books_received"]
 
         tick_quality_rate = 1.0
         order_book_quality_rate = 1.0
 
         if total_ticks > 0:
-            tick_quality_rate = (total_ticks - self.metrics['invalid_ticks']) / total_ticks
+            tick_quality_rate = (
+                total_ticks - self.metrics["invalid_ticks"]
+            ) / total_ticks
 
         if total_order_books > 0:
-            order_book_quality_rate = (total_order_books - self.metrics['invalid_order_books']) / total_order_books
+            order_book_quality_rate = (
+                total_order_books - self.metrics["invalid_order_books"]
+            ) / total_order_books
 
         return {
-            'tick_quality_rate': tick_quality_rate,
-            'order_book_quality_rate': order_book_quality_rate,
-            'total_ticks_received': float(total_ticks),
-            'total_order_books_received': float(total_order_books),
-            'data_gaps': float(self.metrics['data_gaps'])
+            "tick_quality_rate": tick_quality_rate,
+            "order_book_quality_rate": order_book_quality_rate,
+            "total_ticks_received": float(total_ticks),
+            "total_order_books_received": float(total_order_books),
+            "data_gaps": float(self.metrics["data_gaps"]),
         }
 
 
 class WebSocketRealTimeProvider(RealTimeDataProvider):
     """WebSocketベースのリアルタイムデータプロバイダー"""
 
-    def __init__(self, cache_manager=None, quality_monitor=None, data_normalizer=None, reconnection_manager=None):
+    def __init__(
+        self,
+        cache_manager=None,
+        quality_monitor=None,
+        data_normalizer=None,
+        reconnection_manager=None,
+    ):
         """
         WebSocketRealTimeProviderの初期化
 
@@ -335,9 +357,11 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
             reconnection_manager: 再接続マネージャー（Noneの場合は新規作成）
         """
         self.settings = get_settings()
-        
+
         # 依存性注入または新規作成
-        self.cache_manager = cache_manager or AdvancedCacheManager(max_cache_size=5000, ttl_hours=1)
+        self.cache_manager = cache_manager or AdvancedCacheManager(
+            max_cache_size=5000, ttl_hours=1
+        )
         self.quality_monitor = quality_monitor or RealTimeDataQualityMonitor()
         self.data_normalizer = data_normalizer or DataNormalizer()
         self.reconnection_manager = reconnection_manager or ReconnectionManager()
@@ -370,10 +394,7 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
             logger.info(f"Connecting to WebSocket: {ws_url}")
 
             self.websocket = await websockets.connect(
-                ws_url,
-                timeout=10,
-                ping_interval=30,
-                ping_timeout=10
+                ws_url, timeout=10, ping_interval=30, ping_timeout=10
             )
 
             self.is_running = True
@@ -408,7 +429,7 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
             subscribe_message = {
                 "action": "subscribe",
                 "type": "tick",
-                "symbol": symbol
+                "symbol": symbol,
             }
 
             await self.websocket.send(json.dumps(subscribe_message))
@@ -425,7 +446,7 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
             subscribe_message = {
                 "action": "subscribe",
                 "type": "orderbook",
-                "symbol": symbol
+                "symbol": symbol,
             }
 
             await self.websocket.send(json.dumps(subscribe_message))
@@ -441,7 +462,7 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
             subscribe_message = {
                 "action": "subscribe",
                 "type": "index",
-                "symbol": index
+                "symbol": index,
             }
 
             await self.websocket.send(json.dumps(subscribe_message))
@@ -454,10 +475,7 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
         if not self.websocket:
             raise RuntimeError("WebSocket not connected")
 
-        subscribe_message = {
-            "action": "subscribe",
-            "type": "news"
-        }
+        subscribe_message = {"action": "subscribe", "type": "news"}
 
         if symbols:
             subscribe_message["symbols"] = symbols
@@ -495,7 +513,7 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
             "subscribed_symbols": list(self.subscribed_symbols),
             "subscribed_indices": list(self.subscribed_indices),
             "quality_metrics": self.quality_monitor.get_quality_metrics(),
-            "last_update": datetime.now().isoformat()
+            "last_update": datetime.now().isoformat(),
         }
 
     async def is_connected(self) -> bool:
@@ -523,15 +541,15 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
 
     async def _process_message(self, data: Dict[str, Any]) -> None:
         """受信メッセージを処理"""
-        message_type = data.get('type', '')
+        message_type = data.get("type", "")
 
-        if message_type == 'tick':
+        if message_type == "tick":
             await self._process_tick_data(data)
-        elif message_type == 'orderbook':
+        elif message_type == "orderbook":
             await self._process_order_book_data(data)
-        elif message_type == 'index':
+        elif message_type == "index":
             await self._process_index_data(data)
-        elif message_type == 'news':
+        elif message_type == "news":
             await self._process_news_data(data)
         else:
             logger.debug(f"Unknown message type: {message_type}")
@@ -618,7 +636,9 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
         delay = self.reconnection_manager.get_delay()
         self.reconnection_manager.record_attempt()
 
-        logger.info(f"Attempting reconnection in {delay} seconds (attempt {self.reconnection_manager.retry_count})")
+        logger.info(
+            f"Attempting reconnection in {delay} seconds (attempt {self.reconnection_manager.retry_count})"
+        )
 
         await asyncio.sleep(delay)
 
@@ -647,7 +667,9 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
         """ティックデータコールバックを追加"""
         self.tick_callbacks.append(callback)
 
-    def add_order_book_callback(self, callback: Callable[[OrderBookData], None]) -> None:
+    def add_order_book_callback(
+        self, callback: Callable[[OrderBookData], None]
+    ) -> None:
         """板情報コールバックを追加"""
         self.order_book_callbacks.append(callback)
 
@@ -674,7 +696,10 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
             return {
                 "last_price": latest_tick.price,
                 "volume": float(latest_tick.volume),
-                "bid_ask_spread": (latest_tick.ask_price - latest_tick.bid_price)
-                                 if latest_tick.bid_price and latest_tick.ask_price else 0.0
+                "bid_ask_spread": (
+                    (latest_tick.ask_price - latest_tick.bid_price)
+                    if latest_tick.bid_price and latest_tick.ask_price
+                    else 0.0
+                ),
             }
         return {}

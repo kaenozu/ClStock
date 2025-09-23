@@ -8,6 +8,7 @@ from typing import Optional
 
 from typing import Optional, Any, List
 
+
 class ClStockException(Exception):
     """ClStock基底例外クラス"""
 

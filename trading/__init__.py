@@ -14,11 +14,11 @@ from .portfolio_manager import DemoPortfolioManager
 from .trade_recorder import TradeRecorder
 
 __all__ = [
-    'DemoTrader',
-    'BacktestEngine',
-    'PerformanceTracker',
-    'DemoRiskManager',
-    'TradingStrategy',
-    'DemoPortfolioManager',
-    'TradeRecorder'
+    "DemoTrader",
+    "BacktestEngine",
+    "PerformanceTracker",
+    "DemoRiskManager",
+    "TradingStrategy",
+    "DemoPortfolioManager",
+    "TradeRecorder",
 ]

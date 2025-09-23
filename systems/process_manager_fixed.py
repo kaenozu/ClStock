@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 class ProcessStatus(Enum):
     """プロセス状態"""
+
     STOPPED = "停止"
     STARTING = "開始中"
     RUNNING = "実行中"
@@ -37,6 +38,7 @@ class ProcessStatus(Enum):
 @dataclass
 class ProcessInfo:
     """プロセス情報"""
+
     name: str
     command: List[str]  # コマンドを文字列のリストとして保持（セキュリティ対策）
     working_dir: str
@@ -80,7 +82,7 @@ class OutputReader(threading.Thread):
 
                         # ログファイルに書き込み
                         if self.log_file:
-                            with open(self.log_file, 'a', encoding='utf-8') as f:
+                            with open(self.log_file, "a", encoding="utf-8") as f:
                                 f.write(f"[{self.pipe_name}] {line}")
                     else:
                         # パイプが閉じられた
@@ -119,8 +121,8 @@ class SecureProcessManager:
     def _validate_command(self, command: List[str]) -> bool:
         """コマンドの安全性を検証"""
         # 危険な文字やコマンドをチェック
-        dangerous_chars = [';', '&', '|', '>', '<', '`', '$', '(', ')', '{', '}']
-        dangerous_commands = ['rm', 'del', 'format', 'shutdown', 'reboot']
+        dangerous_chars = [";", "&", "|", ">", "<", "`", "$", "(", ")", "{", "}"]
+        dangerous_commands = ["rm", "del", "format", "shutdown", "reboot"]
 
         for part in command:
             # 危険な文字のチェック
@@ -142,10 +144,11 @@ class SecureProcessManager:
         """入力文字列をサニタイズ"""
         # 英数字、日本語、一部の記号のみを許可
         import re
+
         # 危険な文字を削除
-        sanitized = re.sub(r'[;&|><`$(){}]', '', input_str)
+        sanitized = re.sub(r"[;&|><`$(){}]", "", input_str)
         # 連続するスペースを単一スペースに
-        sanitized = re.sub(r'\s+', ' ', sanitized)
+        sanitized = re.sub(r"\s+", " ", sanitized)
         return sanitized.strip()
 
     def _setup_default_services(self):
@@ -155,19 +158,19 @@ class SecureProcessManager:
                 name="dashboard",
                 command=["python", "app/personal_dashboard.py"],
                 working_dir=str(Path.cwd()),
-                log_file="logs/dashboard.log"
+                log_file="logs/dashboard.log",
             ),
             "demo_trading": ProcessInfo(
                 name="demo_trading",
                 command=["python", "demo_trading.py"],
                 working_dir=str(Path.cwd()),
-                log_file="logs/demo_trading.log"
+                log_file="logs/demo_trading.log",
             ),
             "optimized_system": ProcessInfo(
                 name="optimized_system",
                 command=["python", "optimized_investment_system.py"],
                 working_dir=str(Path.cwd()),
-                log_file="logs/optimized_system.log"
+                log_file="logs/optimized_system.log",
             ),
         }
 
@@ -198,7 +201,8 @@ class SecureProcessManager:
                 sanitized_symbol = self._sanitize_input(symbol)
                 # 数字のみを許可（株式コードの場合）
                 import re
-                if re.match(r'^[0-9]+$', sanitized_symbol):
+
+                if re.match(r"^[0-9]+$", sanitized_symbol):
                     command.append(sanitized_symbol)
                 else:
                     logger.error(f"無効なシンボル: {symbol}")
@@ -227,19 +231,15 @@ class SecureProcessManager:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                shell=False  # シェルを使用しない（セキュリティ対策）
+                shell=False,  # シェルを使用しない（セキュリティ対策）
             )
 
             # 非同期出力リーダーを開始（デッドロック対策）
             stdout_reader = OutputReader(
-                process_info.process.stdout,
-                process_info.log_file,
-                "stdout"
+                process_info.process.stdout, process_info.log_file, "stdout"
             )
             stderr_reader = OutputReader(
-                process_info.process.stderr,
-                process_info.log_file,
-                "stderr"
+                process_info.process.stderr, process_info.log_file, "stderr"
             )
 
             stdout_reader.start()
@@ -307,7 +307,9 @@ class SecureProcessManager:
             logger.error(f"サービス停止失敗 {name}: {e}")
             return False
 
-    def execute_safe_command(self, command: List[str], timeout: int = 30) -> tuple[bool, str, str]:
+    def execute_safe_command(
+        self, command: List[str], timeout: int = 30
+    ) -> tuple[bool, str, str]:
         """安全なコマンド実行（同期的）"""
         try:
             # コマンドの検証
@@ -320,7 +322,7 @@ class SecureProcessManager:
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                shell=False  # シェルを使用しない
+                shell=False,  # シェルを使用しない
             )
 
             return result.returncode == 0, result.stdout, result.stderr
@@ -337,7 +339,8 @@ class SecureProcessManager:
 
         # 数字のみを許可
         import re
-        if not re.match(r'^[0-9]{4}$', sanitized_symbol):
+
+        if not re.match(r"^[0-9]{4}$", sanitized_symbol):
             logger.error(f"無効な銘柄コード: {symbol}")
             return None
 
@@ -347,7 +350,7 @@ class SecureProcessManager:
                 "python",
                 "models_new/precision/precision_87_system.py",
                 "--symbol",
-                sanitized_symbol
+                sanitized_symbol,
             ]
 
             success, stdout, stderr = self.execute_safe_command(command, timeout=60)
@@ -364,10 +367,12 @@ class SecureProcessManager:
 
     def get_system_status(self) -> Dict[str, Any]:
         """システム状態の取得"""
-        running = sum(1 for p in self.processes.values()
-                     if p.status == ProcessStatus.RUNNING)
-        failed = sum(1 for p in self.processes.values()
-                    if p.status == ProcessStatus.FAILED)
+        running = sum(
+            1 for p in self.processes.values() if p.status == ProcessStatus.RUNNING
+        )
+        failed = sum(
+            1 for p in self.processes.values() if p.status == ProcessStatus.FAILED
+        )
 
         return {
             "total_services": len(self.processes),
@@ -375,7 +380,7 @@ class SecureProcessManager:
             "stopped": len(self.processes) - running - failed,
             "failed": failed,
             "monitoring_active": self.monitoring_active,
-            "timestamp": datetime.now()
+            "timestamp": datetime.now(),
         }
 
     def _load_config(self):
@@ -383,7 +388,7 @@ class SecureProcessManager:
         config_path = Path(self.config_file)
         if config_path.exists():
             try:
-                with open(config_path, 'r', encoding='utf-8') as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     config = json.load(f)
                     # 設定を安全に適用
                     logger.info("設定ファイルを読み込みました")
@@ -399,13 +404,13 @@ class SecureProcessManager:
                         "command": info.command,
                         "working_dir": info.working_dir,
                         "auto_restart": info.auto_restart,
-                        "max_restarts": info.max_restarts
+                        "max_restarts": info.max_restarts,
                     }
                     for name, info in self.processes.items()
                 }
             }
 
-            with open(self.config_file, 'w', encoding='utf-8') as f:
+            with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
 
         except Exception as e:

@@ -24,11 +24,12 @@ settings = get_settings()
 
 
 @click.group()
-@click.option('--verbose', '-v', is_flag=True, help='詳細ログ出力')
+@click.option("--verbose", "-v", is_flag=True, help="詳細ログ出力")
 def cli(verbose):
     """ClStock 統合管理CLI"""
     if verbose:
         import logging
+
         logging.getLogger().setLevel(logging.DEBUG)
         logger.info("詳細モード有効")
 
@@ -40,7 +41,7 @@ def service():
 
 
 @service.command()
-@click.argument('name', required=False)
+@click.argument("name", required=False)
 def start(name: Optional[str]):
     """サービスの開始"""
     manager = get_process_manager()
@@ -56,13 +57,15 @@ def start(name: Optional[str]):
         # 利用可能なサービス表示
         click.echo("利用可能なサービス:")
         for service_info in manager.list_services():
-            status_emoji = "🟢" if service_info.status == ProcessStatus.RUNNING else "🔴"
+            status_emoji = (
+                "🟢" if service_info.status == ProcessStatus.RUNNING else "🔴"
+            )
             click.echo(f"  {status_emoji} {service_info.name}: {service_info.command}")
 
 
 @service.command()
-@click.argument('name', required=False)
-@click.option('--force', '-f', is_flag=True, help='強制停止')
+@click.argument("name", required=False)
+@click.option("--force", "-f", is_flag=True, help="強制停止")
 def stop(name: Optional[str], force: bool):
     """サービスの停止"""
     manager = get_process_manager()
@@ -75,13 +78,13 @@ def stop(name: Optional[str], force: bool):
             sys.exit(1)
     else:
         # 全サービス停止確認
-        if click.confirm('全サービスを停止しますか？'):
+        if click.confirm("全サービスを停止しますか？"):
             manager.stop_all_services(force=force)
             click.echo("[成功] 全サービス停止完了")
 
 
 @service.command()
-@click.argument('name')
+@click.argument("name")
 def restart(name: str):
     """サービスの再起動"""
     manager = get_process_manager()
@@ -94,7 +97,7 @@ def restart(name: str):
 
 
 @service.command()
-@click.option('--watch', '-w', is_flag=True, help='リアルタイム監視')
+@click.option("--watch", "-w", is_flag=True, help="リアルタイム監視")
 def status(watch: bool):
     """サービス状態の表示"""
     manager = get_process_manager()
@@ -109,8 +112,12 @@ def status(watch: bool):
         click.echo(f"[統計] サービス数: {system_status['total_services']}")
         click.echo(f"[実行中] 実行中: {system_status['running']}")
         click.echo(f"[失敗] 失敗: {system_status['failed']}")
-        click.echo(f"[監視] 監視: {'有効' if system_status['monitoring_active'] else '無効'}")
-        click.echo(f"[時刻] 時刻: {system_status['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}")
+        click.echo(
+            f"[監視] 監視: {'有効' if system_status['monitoring_active'] else '無効'}"
+        )
+        click.echo(
+            f"[時刻] 時刻: {system_status['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}"
+        )
         click.echo()
 
         click.echo("[詳細] サービス詳細:")
@@ -121,15 +128,19 @@ def status(watch: bool):
                 ProcessStatus.STARTING: "[開始中]",
                 ProcessStatus.STOPPING: "[停止中]",
                 ProcessStatus.FAILED: "[失敗]",
-                ProcessStatus.UNKNOWN: "[不明]"
+                ProcessStatus.UNKNOWN: "[不明]",
             }.get(service_info.status, "[不明]")
 
-            click.echo(f"  {status_emoji} {service_info.name:<20} {service_info.status.value}")
+            click.echo(
+                f"  {status_emoji} {service_info.name:<20} {service_info.status.value}"
+            )
 
             if service_info.pid:
                 click.echo(f"      PID: {service_info.pid}")
             if service_info.start_time:
-                uptime = (system_status['timestamp'] - service_info.start_time).total_seconds()
+                uptime = (
+                    system_status["timestamp"] - service_info.start_time
+                ).total_seconds()
                 click.echo(f"      稼働時間: {uptime/60:.1f}分")
             if service_info.last_error:
                 click.echo(f"      エラー: {service_info.last_error}")
@@ -194,24 +205,26 @@ def demo():
 
 
 @system.command()
-@click.option('--symbol', '-s', default='7203', help='銘柄コード (デフォルト: 7203)')
+@click.option("--symbol", "-s", default="7203", help="銘柄コード (デフォルト: 7203)")
 def predict(symbol: str):
     """予測システムの実行"""
     # 入力バリデーション
     if not symbol or not isinstance(symbol, str):
         click.echo("[失敗] 無効な銘柄コード")
         sys.exit(1)
-    
+
     # 銘柄コードの形式チェック（数値のみ）
     if not symbol.isdigit():
         click.echo("[失敗] 銘柄コードは数値のみ有効です")
         sys.exit(1)
-        
+
     click.echo(f"🔮 予測システム実行: {symbol}")
 
     try:
         # 直接予測システムを実行
-        from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+        from models_new.precision.precision_87_system import (
+            Precision87BreakthroughSystem,
+        )
 
         system = Precision87BreakthroughSystem()
         result = system.predict_with_87_precision(symbol)
@@ -220,7 +233,9 @@ def predict(symbol: str):
         click.echo(f"  価格予測: {result['final_prediction']:.1f}")
         click.echo(f"  信頼度: {result['final_confidence']:.1%}")
         click.echo(f"  推定精度: {result['final_accuracy']:.1f}%")
-        click.echo(f"  87%達成: {'[成功] YES' if result['precision_87_achieved'] else '[失敗] NO'}")
+        click.echo(
+            f"  87%達成: {'[成功] YES' if result['precision_87_achieved'] else '[失敗] NO'}"
+        )
 
     except Exception as e:
         click.echo(f"[失敗] 予測実行エラー: {e}")
@@ -247,19 +262,33 @@ def data():
 
 
 @data.command()
-@click.option('--symbol', '-s', multiple=True, help='銘柄コード（複数指定可能）')
-@click.option('--period', '-p', default='1d', help='期間 (1d, 5d, 1mo, 3mo, 6mo, 1y)')
+@click.option("--symbol", "-s", multiple=True, help="銘柄コード（複数指定可能）")
+@click.option("--period", "-p", default="1d", help="期間 (1d, 5d, 1mo, 3mo, 6mo, 1y)")
 def fetch(symbol, period):
     """株価データの取得"""
     # 入力バリデーション
-    valid_periods = ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max']
+    valid_periods = [
+        "1d",
+        "5d",
+        "1mo",
+        "3mo",
+        "6mo",
+        "1y",
+        "2y",
+        "5y",
+        "10y",
+        "ytd",
+        "max",
+    ]
     if period not in valid_periods:
-        click.echo(f"[失敗] 無効な期間: {period}. 有効な期間: {', '.join(valid_periods)}")
+        click.echo(
+            f"[失敗] 無効な期間: {period}. 有効な期間: {', '.join(valid_periods)}"
+        )
         sys.exit(1)
-        
+
     if not symbol:
-        symbol = ['7203', '6758', '8306', '6861', '9984']  # デフォルト銘柄
-        
+        symbol = ["7203", "6758", "8306", "6861", "9984"]  # デフォルト銘柄
+
     # 銘柄コードのバリデーション
     for sym in symbol:
         if not isinstance(sym, str) or not sym.isdigit():
@@ -278,7 +307,7 @@ def fetch(symbol, period):
             data = provider.get_stock_data(sym, period)
 
             if not data.empty:
-                latest_price = data['Close'].iloc[-1]
+                latest_price = data["Close"].iloc[-1]
                 click.echo(f"    最新価格: {latest_price:.1f}円")
             else:
                 click.echo(f"    [失敗] データ取得失敗")
@@ -299,7 +328,7 @@ def setup():
     dirs_to_create = [
         PROJECT_ROOT / "logs",
         PROJECT_ROOT / "data",
-        PROJECT_ROOT / "cache"
+        PROJECT_ROOT / "cache",
     ]
 
     for dir_path in dirs_to_create:
@@ -315,6 +344,7 @@ def setup():
         import yfinance
         import fastapi
         import jinja2
+
         click.echo("[成功] 必要なライブラリがインストール済み")
     except ImportError as e:
         click.echo(f"[失敗] 不足ライブラリ: {e}")
@@ -331,5 +361,5 @@ def version():
     click.echo("高精度株価予測システム")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()

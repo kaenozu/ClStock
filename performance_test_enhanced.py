@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # プロジェクトパスの追加
 sys.path.append(os.path.dirname(__file__))
 
+
 def test_enhanced_ensemble_performance():
     """機能拡張後のアンサンブル予測性能テスト"""
     print("=" * 80)
@@ -35,8 +36,16 @@ def test_enhanced_ensemble_performance():
 
         # テスト用銘柄（小規模テスト）
         test_symbols = [
-            "7203", "9984", "6758", "8306", "4523",
-            "1803", "5101", "9022", "8031", "4004"
+            "7203",
+            "9984",
+            "6758",
+            "8306",
+            "4523",
+            "1803",
+            "5101",
+            "9022",
+            "8031",
+            "4004",
         ]
 
         print(f"テスト対象銘柄数: {len(test_symbols)}")
@@ -62,6 +71,7 @@ def test_enhanced_ensemble_performance():
         traceback.print_exc()
         return None
 
+
 def run_performance_tests(predictor, symbols: List[str]) -> Dict[str, Any]:
     """各種パフォーマンステストの実行"""
     results = {}
@@ -70,33 +80,34 @@ def run_performance_tests(predictor, symbols: List[str]) -> Dict[str, Any]:
     print("1. 単一予測速度テスト")
     print("-" * 40)
     single_prediction_results = test_single_prediction_speed(predictor, symbols[:3])
-    results['single_prediction'] = single_prediction_results
+    results["single_prediction"] = single_prediction_results
 
     # 2. バッチ予測速度テスト
     print("\n2. バッチ予測速度テスト")
     print("-" * 40)
     batch_prediction_results = test_batch_prediction_speed(predictor, symbols)
-    results['batch_prediction'] = batch_prediction_results
+    results["batch_prediction"] = batch_prediction_results
 
     # 3. キャッシュ効果テスト
     print("\n3. キャッシュ効果テスト")
     print("-" * 40)
     cache_effectiveness_results = test_cache_effectiveness(predictor, symbols[:5])
-    results['cache_effectiveness'] = cache_effectiveness_results
+    results["cache_effectiveness"] = cache_effectiveness_results
 
     # 4. 並列処理効果テスト
     print("\n4. 並列処理効果テスト")
     print("-" * 40)
     parallel_processing_results = test_parallel_processing_effect(predictor, symbols)
-    results['parallel_processing'] = parallel_processing_results
+    results["parallel_processing"] = parallel_processing_results
 
     # 5. メモリ使用量テスト
     print("\n5. メモリ使用量テスト")
     print("-" * 40)
     memory_usage_results = test_memory_usage(predictor, symbols)
-    results['memory_usage'] = memory_usage_results
+    results["memory_usage"] = memory_usage_results
 
     return results
+
 
 def test_single_prediction_speed(predictor, symbols: List[str]) -> Dict[str, float]:
     """単一予測の速度テスト"""
@@ -113,20 +124,25 @@ def test_single_prediction_speed(predictor, symbols: List[str]) -> Dict[str, flo
             prediction_times.append(prediction_time)
             successful_predictions += 1
 
-            print(f"  {symbol}: {prediction_time:.3f}秒 (予測値: {result.prediction:.1f})")
+            print(
+                f"  {symbol}: {prediction_time:.3f}秒 (予測値: {result.prediction:.1f})"
+            )
 
         except Exception as e:
             print(f"  {symbol}: エラー - {str(e)}")
 
     avg_time = np.mean(prediction_times) if prediction_times else 0
     print(f"\n平均予測時間: {avg_time:.3f}秒")
-    print(f"成功率: {successful_predictions}/{len(symbols)} ({successful_predictions/len(symbols)*100:.1f}%)")
+    print(
+        f"成功率: {successful_predictions}/{len(symbols)} ({successful_predictions/len(symbols)*100:.1f}%)"
+    )
 
     return {
-        'average_time': avg_time,
-        'success_rate': successful_predictions / len(symbols),
-        'total_predictions': len(symbols)
+        "average_time": avg_time,
+        "success_rate": successful_predictions / len(symbols),
+        "total_predictions": len(symbols),
     }
+
 
 def test_batch_prediction_speed(predictor, symbols: List[str]) -> Dict[str, float]:
     """バッチ予測の速度テスト"""
@@ -146,15 +162,16 @@ def test_batch_prediction_speed(predictor, symbols: List[str]) -> Dict[str, floa
         print(f"  成功予測数: {success_count}/{len(symbols)}")
 
         return {
-            'total_time': total_time,
-            'per_symbol_time': per_symbol_time,
-            'success_count': success_count,
-            'throughput': len(symbols) / total_time if total_time > 0 else 0
+            "total_time": total_time,
+            "per_symbol_time": per_symbol_time,
+            "success_count": success_count,
+            "throughput": len(symbols) / total_time if total_time > 0 else 0,
         }
 
     except Exception as e:
         print(f"  バッチ予測エラー: {str(e)}")
-        return {'error': str(e)}
+        return {"error": str(e)}
+
 
 def test_cache_effectiveness(predictor, symbols: List[str]) -> Dict[str, Any]:
     """キャッシュ効果のテスト"""
@@ -192,19 +209,20 @@ def test_cache_effectiveness(predictor, symbols: List[str]) -> Dict[str, Any]:
         print(f"  キャッシュ効果: {improvement:.1f}%改善")
 
         return {
-            'first_run_avg': avg_first,
-            'second_run_avg': avg_second,
-            'improvement_percent': improvement
+            "first_run_avg": avg_first,
+            "second_run_avg": avg_second,
+            "improvement_percent": improvement,
         }
 
-    return {'error': 'キャッシュ効果を測定できませんでした'}
+    return {"error": "キャッシュ効果を測定できませんでした"}
+
 
 def test_parallel_processing_effect(predictor, symbols: List[str]) -> Dict[str, Any]:
     """並列処理効果のテスト"""
     print("並列処理効果測定")
 
     # 並列処理の設定確認
-    parallel_workers = getattr(predictor.parallel_calculator, 'n_jobs', 1)
+    parallel_workers = getattr(predictor.parallel_calculator, "n_jobs", 1)
     print(f"  並列ワーカー数: {parallel_workers}")
 
     # 特徴量計算時間の測定（少数のサンプルで）
@@ -227,12 +245,13 @@ def test_parallel_processing_effect(predictor, symbols: List[str]) -> Dict[str, 
         print(f"  平均特徴量計算時間: {avg_feature_time:.3f}秒")
 
         return {
-            'parallel_workers': parallel_workers,
-            'avg_feature_calc_time': avg_feature_time,
-            'samples_tested': len(feature_calc_times)
+            "parallel_workers": parallel_workers,
+            "avg_feature_calc_time": avg_feature_time,
+            "samples_tested": len(feature_calc_times),
         }
 
-    return {'error': '並列処理効果を測定できませんでした'}
+    return {"error": "並列処理効果を測定できませんでした"}
+
 
 def test_memory_usage(predictor, symbols: List[str]) -> Dict[str, Any]:
     """メモリ使用量のテスト"""
@@ -270,19 +289,20 @@ def test_memory_usage(predictor, symbols: List[str]) -> Dict[str, Any]:
         print(f"  予測キャッシュサイズ: {prediction_cache_size}")
 
         return {
-            'initial_memory_mb': initial_memory,
-            'final_memory_mb': final_memory,
-            'memory_increase_mb': memory_increase,
-            'feature_cache_size': feature_cache_size,
-            'prediction_cache_size': prediction_cache_size
+            "initial_memory_mb": initial_memory,
+            "final_memory_mb": final_memory,
+            "memory_increase_mb": memory_increase,
+            "feature_cache_size": feature_cache_size,
+            "prediction_cache_size": prediction_cache_size,
         }
 
     except ImportError:
         print("  psutilが利用できないため、メモリ測定をスキップ")
-        return {'error': 'psutil not available'}
+        return {"error": "psutil not available"}
     except Exception as e:
         print(f"  メモリ測定エラー: {str(e)}")
-        return {'error': str(e)}
+        return {"error": str(e)}
+
 
 def display_performance_results(results: Dict[str, Any]):
     """パフォーマンステスト結果の表示"""
@@ -291,46 +311,49 @@ def display_performance_results(results: Dict[str, Any]):
     print("=" * 80)
 
     # 単一予測性能
-    if 'single_prediction' in results:
-        single = results['single_prediction']
+    if "single_prediction" in results:
+        single = results["single_prediction"]
         print(f"単一予測性能:")
         print(f"  平均予測時間: {single.get('average_time', 0):.3f}秒")
         print(f"  成功率: {single.get('success_rate', 0)*100:.1f}%")
 
     # バッチ予測性能
-    if 'batch_prediction' in results:
-        batch = results['batch_prediction']
-        if 'error' not in batch:
+    if "batch_prediction" in results:
+        batch = results["batch_prediction"]
+        if "error" not in batch:
             print(f"\nバッチ予測性能:")
             print(f"  スループット: {batch.get('throughput', 0):.1f} 銘柄/秒")
             print(f"  銘柄あたり時間: {batch.get('per_symbol_time', 0):.3f}秒")
 
     # キャッシュ効果
-    if 'cache_effectiveness' in results:
-        cache = results['cache_effectiveness']
-        if 'error' not in cache:
+    if "cache_effectiveness" in results:
+        cache = results["cache_effectiveness"]
+        if "error" not in cache:
             print(f"\nキャッシュ効果:")
             print(f"  性能改善: {cache.get('improvement_percent', 0):.1f}%")
 
     # 並列処理効果
-    if 'parallel_processing' in results:
-        parallel = results['parallel_processing']
-        if 'error' not in parallel:
+    if "parallel_processing" in results:
+        parallel = results["parallel_processing"]
+        if "error" not in parallel:
             print(f"\n並列処理:")
             print(f"  ワーカー数: {parallel.get('parallel_workers', 1)}")
             print(f"  特徴量計算時間: {parallel.get('avg_feature_calc_time', 0):.3f}秒")
 
     # メモリ使用量
-    if 'memory_usage' in results:
-        memory = results['memory_usage']
-        if 'error' not in memory:
+    if "memory_usage" in results:
+        memory = results["memory_usage"]
+        if "error" not in memory:
             print(f"\nメモリ使用量:")
             print(f"  メモリ増加: {memory.get('memory_increase_mb', 0):.1f} MB")
-            print(f"  キャッシュエントリ数: {memory.get('feature_cache_size', 0) + memory.get('prediction_cache_size', 0)}")
+            print(
+                f"  キャッシュエントリ数: {memory.get('feature_cache_size', 0) + memory.get('prediction_cache_size', 0)}"
+            )
 
     print("\n" + "=" * 80)
     print("テスト完了")
     print("=" * 80)
+
 
 def main():
     """メイン実行関数"""
@@ -349,6 +372,7 @@ def main():
         print(f"\n[エラー] 予期しないエラー: {str(e)}")
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     main()

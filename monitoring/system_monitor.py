@@ -27,6 +27,7 @@ settings = get_settings()
 @dataclass
 class SystemMetrics:
     """システムメトリクス"""
+
     timestamp: datetime
     cpu_percent: float
     memory_percent: float
@@ -42,6 +43,7 @@ class SystemMetrics:
 @dataclass
 class ProcessMetrics:
     """プロセスメトリクス"""
+
     timestamp: datetime
     pid: int
     name: str
@@ -58,6 +60,7 @@ class ProcessMetrics:
 @dataclass
 class PerformanceAlert:
     """パフォーマンスアラート"""
+
     timestamp: datetime
     level: str  # INFO, WARNING, CRITICAL
     category: str  # CPU, MEMORY, DISK, PROCESS
@@ -71,7 +74,9 @@ class SystemMonitor:
     def __init__(self, max_history_points: int = 1000):
         self.max_history_points = max_history_points
         self.system_metrics_history: deque = deque(maxlen=max_history_points)
-        self.process_metrics_history: Dict[int, deque] = defaultdict(lambda: deque(maxlen=100))
+        self.process_metrics_history: Dict[int, deque] = defaultdict(
+            lambda: deque(maxlen=100)
+        )
         self.alerts: deque = deque(maxlen=500)
 
         self.monitoring_active = False
@@ -97,9 +102,7 @@ class SystemMonitor:
         self._shutdown_event.clear()
 
         self.monitor_thread = threading.Thread(
-            target=self._monitoring_loop,
-            args=(interval_seconds,),
-            daemon=True
+            target=self._monitoring_loop, args=(interval_seconds,), daemon=True
         )
         self.monitor_thread.start()
 
@@ -148,7 +151,7 @@ class SystemMonitor:
             memory_available_mb = memory.available / 1024 / 1024
 
             # ディスク情報
-            disk = psutil.disk_usage('/')
+            disk = psutil.disk_usage("/")
             disk_usage_percent = disk.percent
             disk_free_gb = disk.free / 1024 / 1024 / 1024
 
@@ -162,7 +165,7 @@ class SystemMonitor:
 
             # ロードアベレージ（Unix系のみ）
             load_average = None
-            if hasattr(os, 'getloadavg'):
+            if hasattr(os, "getloadavg"):
                 load_average = os.getloadavg()[0]
 
             return SystemMetrics(
@@ -175,7 +178,7 @@ class SystemMonitor:
                 network_sent_mb=network_sent_mb,
                 network_recv_mb=network_recv_mb,
                 active_processes=active_processes,
-                load_average=load_average
+                load_average=load_average,
             )
 
         except Exception as e:
@@ -187,24 +190,34 @@ class SystemMonitor:
         try:
             current_time = datetime.now()
 
-            for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent',
-                                           'memory_info', 'status', 'create_time', 'num_threads']):
+            for proc in psutil.process_iter(
+                [
+                    "pid",
+                    "name",
+                    "cpu_percent",
+                    "memory_percent",
+                    "memory_info",
+                    "status",
+                    "create_time",
+                    "num_threads",
+                ]
+            ):
                 try:
                     proc_info = proc.info
-                    pid = proc_info['pid']
+                    pid = proc_info["pid"]
 
                     # メモリ情報
-                    memory_info = proc_info['memory_info']
+                    memory_info = proc_info["memory_info"]
                     memory_rss_mb = memory_info.rss / 1024 / 1024
                     memory_vms_mb = memory_info.vms / 1024 / 1024
 
                     # 作成時間
-                    create_time = datetime.fromtimestamp(proc_info['create_time'])
+                    create_time = datetime.fromtimestamp(proc_info["create_time"])
 
                     # ファイルディスクリプタ数（Unix系のみ）
                     num_fds = None
                     try:
-                        if hasattr(proc, 'num_fds'):
+                        if hasattr(proc, "num_fds"):
                             num_fds = proc.num_fds()
                     except (psutil.AccessDenied, psutil.NoSuchProcess):
                         pass
@@ -212,20 +225,24 @@ class SystemMonitor:
                     metrics = ProcessMetrics(
                         timestamp=current_time,
                         pid=pid,
-                        name=proc_info['name'],
-                        cpu_percent=proc_info['cpu_percent'] or 0.0,
-                        memory_percent=proc_info['memory_percent'] or 0.0,
+                        name=proc_info["name"],
+                        cpu_percent=proc_info["cpu_percent"] or 0.0,
+                        memory_percent=proc_info["memory_percent"] or 0.0,
                         memory_rss_mb=memory_rss_mb,
                         memory_vms_mb=memory_vms_mb,
-                        status=proc_info['status'],
+                        status=proc_info["status"],
                         create_time=create_time,
-                        num_threads=proc_info['num_threads'],
-                        num_fds=num_fds
+                        num_threads=proc_info["num_threads"],
+                        num_fds=num_fds,
                     )
 
                     self.process_metrics_history[pid].append(metrics)
 
-                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                except (
+                    psutil.NoSuchProcess,
+                    psutil.AccessDenied,
+                    psutil.ZombieProcess,
+                ):
                     continue
 
         except Exception as e:
@@ -238,41 +255,47 @@ class SystemMonitor:
         # CPU使用率チェック
         if metrics.cpu_percent > self.cpu_warning_threshold:
             level = "CRITICAL" if metrics.cpu_percent > 90 else "WARNING"
-            alerts.append(PerformanceAlert(
-                timestamp=metrics.timestamp,
-                level=level,
-                category="CPU",
-                message=f"高CPU使用率: {metrics.cpu_percent:.1f}%",
-                details={"cpu_percent": metrics.cpu_percent}
-            ))
+            alerts.append(
+                PerformanceAlert(
+                    timestamp=metrics.timestamp,
+                    level=level,
+                    category="CPU",
+                    message=f"高CPU使用率: {metrics.cpu_percent:.1f}%",
+                    details={"cpu_percent": metrics.cpu_percent},
+                )
+            )
 
         # メモリ使用率チェック
         if metrics.memory_percent > 80:
             level = "CRITICAL" if metrics.memory_percent > 95 else "WARNING"
-            alerts.append(PerformanceAlert(
-                timestamp=metrics.timestamp,
-                level=level,
-                category="MEMORY",
-                message=f"高メモリ使用率: {metrics.memory_percent:.1f}%",
-                details={
-                    "memory_percent": metrics.memory_percent,
-                    "memory_available_mb": metrics.memory_available_mb
-                }
-            ))
+            alerts.append(
+                PerformanceAlert(
+                    timestamp=metrics.timestamp,
+                    level=level,
+                    category="MEMORY",
+                    message=f"高メモリ使用率: {metrics.memory_percent:.1f}%",
+                    details={
+                        "memory_percent": metrics.memory_percent,
+                        "memory_available_mb": metrics.memory_available_mb,
+                    },
+                )
+            )
 
         # ディスク使用率チェック
         if metrics.disk_usage_percent > self.disk_warning_threshold:
             level = "CRITICAL" if metrics.disk_usage_percent > 95 else "WARNING"
-            alerts.append(PerformanceAlert(
-                timestamp=metrics.timestamp,
-                level=level,
-                category="DISK",
-                message=f"高ディスク使用率: {metrics.disk_usage_percent:.1f}%",
-                details={
-                    "disk_usage_percent": metrics.disk_usage_percent,
-                    "disk_free_gb": metrics.disk_free_gb
-                }
-            ))
+            alerts.append(
+                PerformanceAlert(
+                    timestamp=metrics.timestamp,
+                    level=level,
+                    category="DISK",
+                    message=f"高ディスク使用率: {metrics.disk_usage_percent:.1f}%",
+                    details={
+                        "disk_usage_percent": metrics.disk_usage_percent,
+                        "disk_free_gb": metrics.disk_free_gb,
+                    },
+                )
+            )
 
         # アラート登録
         for alert in alerts:
@@ -297,8 +320,11 @@ class SystemMonitor:
             return {"status": "no_data", "message": "監視データなし"}
 
         latest = self.system_metrics_history[-1]
-        recent_alerts = [a for a in self.alerts if
-                        (datetime.now() - a.timestamp).total_seconds() < 300]  # 5分以内
+        recent_alerts = [
+            a
+            for a in self.alerts
+            if (datetime.now() - a.timestamp).total_seconds() < 300
+        ]  # 5分以内
 
         return {
             "status": "ok" if not recent_alerts else "warning",
@@ -312,7 +338,7 @@ class SystemMonitor:
                 "disk_usage_percent": latest.disk_usage_percent,
                 "disk_free_gb": latest.disk_free_gb,
                 "active_processes": latest.active_processes,
-                "load_average": latest.load_average
+                "load_average": latest.load_average,
             },
             "alerts": {
                 "total": self.total_alerts,
@@ -322,10 +348,11 @@ class SystemMonitor:
                         "level": a.level,
                         "category": a.category,
                         "message": a.message,
-                        "timestamp": a.timestamp
-                    } for a in list(self.alerts)[-5:]  # 最新5件
-                ]
-            }
+                        "timestamp": a.timestamp,
+                    }
+                    for a in list(self.alerts)[-5:]  # 最新5件
+                ],
+            },
         }
 
     def get_process_summary(self) -> List[Dict[str, Any]]:
@@ -339,20 +366,24 @@ class SystemMonitor:
                 latest_processes[pid] = metrics_list[-1]
 
         # CPU使用率順でソート
-        sorted_processes = sorted(latest_processes.values(),
-                                key=lambda x: x.cpu_percent, reverse=True)
+        sorted_processes = sorted(
+            latest_processes.values(), key=lambda x: x.cpu_percent, reverse=True
+        )
 
         for proc in sorted_processes[:20]:  # トップ20
-            process_summary.append({
-                "pid": proc.pid,
-                "name": proc.name,
-                "cpu_percent": proc.cpu_percent,
-                "memory_percent": proc.memory_percent,
-                "memory_rss_mb": proc.memory_rss_mb,
-                "status": proc.status,
-                "num_threads": proc.num_threads,
-                "uptime_hours": (datetime.now() - proc.create_time).total_seconds() / 3600
-            })
+            process_summary.append(
+                {
+                    "pid": proc.pid,
+                    "name": proc.name,
+                    "cpu_percent": proc.cpu_percent,
+                    "memory_percent": proc.memory_percent,
+                    "memory_rss_mb": proc.memory_rss_mb,
+                    "status": proc.status,
+                    "num_threads": proc.num_threads,
+                    "uptime_hours": (datetime.now() - proc.create_time).total_seconds()
+                    / 3600,
+                }
+            )
 
         return process_summary
 
@@ -361,8 +392,9 @@ class SystemMonitor:
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
         # 指定時間内のメトリクスをフィルタ
-        recent_metrics = [m for m in self.system_metrics_history
-                         if m.timestamp >= cutoff_time]
+        recent_metrics = [
+            m for m in self.system_metrics_history if m.timestamp >= cutoff_time
+        ]
 
         if not recent_metrics:
             return {"cpu": [], "memory": [], "disk": [], "timestamps": []}
@@ -371,7 +403,7 @@ class SystemMonitor:
             "cpu": [m.cpu_percent for m in recent_metrics],
             "memory": [m.memory_percent for m in recent_metrics],
             "disk": [m.disk_usage_percent for m in recent_metrics],
-            "timestamps": [m.timestamp.isoformat() for m in recent_metrics]
+            "timestamps": [m.timestamp.isoformat() for m in recent_metrics],
         }
 
     def generate_performance_report(self) -> Dict[str, Any]:
@@ -389,12 +421,15 @@ class SystemMonitor:
             return {
                 "min": min(values),
                 "max": max(values),
-                "avg": sum(values) / len(values)
+                "avg": sum(values) / len(values),
             }
 
         return {
             "report_time": datetime.now(),
-            "monitoring_duration_hours": (datetime.now() - self.start_time).total_seconds() / 3600,
+            "monitoring_duration_hours": (
+                datetime.now() - self.start_time
+            ).total_seconds()
+            / 3600,
             "data_points": len(self.system_metrics_history),
             "cpu_stats": stats(cpu_values),
             "memory_stats": stats(memory_values),
@@ -403,7 +438,7 @@ class SystemMonitor:
                 level: len([a for a in self.alerts if a.level == level])
                 for level in ["INFO", "WARNING", "CRITICAL"]
             },
-            "top_processes": self.get_process_summary()[:10]
+            "top_processes": self.get_process_summary()[:10],
         }
 
 

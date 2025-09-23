@@ -16,8 +16,8 @@ from scipy import stats
 from datetime import datetime, timedelta
 import logging
 from utils.logger_config import setup_logger
-logger = setup_logger(__name__)
 
+logger = setup_logger(__name__)
 
 
 class AdvancedRiskManager:

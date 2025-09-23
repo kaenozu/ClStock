@@ -27,6 +27,7 @@ from .trading_strategy import SignalType
 @dataclass
 class TradeRecord:
     """取引記録"""
+
     trade_id: str
     session_id: str
     symbol: str
@@ -53,6 +54,7 @@ class TradeRecord:
 @dataclass
 class PerformanceMetrics:
     """パフォーマンス指標"""
+
     total_trades: int
     winning_trades: int
     losing_trades: int
@@ -78,6 +80,7 @@ class PerformanceMetrics:
 @dataclass
 class TaxCalculation:
     """税務計算"""
+
     total_realized_gains: float
     total_realized_losses: float
     net_capital_gains: float
@@ -95,7 +98,9 @@ class TradeRecorder:
     全ての取引の詳細記録とパフォーマンス分析
     """
 
-    def __init__(self, db_path: str = "C:\\gemini-desktop\\ClStock\\data\\trading_records.db"):
+    def __init__(
+        self, db_path: str = "C:\\gemini-desktop\\ClStock\\data\\trading_records.db"
+    ):
         """
         Args:
             db_path: データベースファイルパス
@@ -108,7 +113,7 @@ class TradeRecorder:
         self._init_database()
 
         # チャート設定
-        plt.style.use('seaborn-v0_8')
+        plt.style.use("seaborn-v0_8")
         sns.set_palette("husl")
 
         self.logger = logging.getLogger(__name__)
@@ -126,27 +131,31 @@ class TradeRecorder:
         try:
             # TradeRecord作成
             trade_record = TradeRecord(
-                trade_id=trade_data.get('trade_id', ''),
-                session_id=trade_data.get('session_id', self.session_id or ''),
-                symbol=trade_data.get('symbol', ''),
-                action=trade_data.get('action', ''),
-                quantity=trade_data.get('quantity', 0),
-                price=trade_data.get('price', 0.0),
-                timestamp=datetime.fromisoformat(trade_data.get('timestamp', datetime.now().isoformat())),
-                signal_type=SignalType(trade_data.get('signal_type', SignalType.HOLD.value)),
-                confidence=trade_data.get('confidence', 0.0),
-                precision=trade_data.get('precision', 0.0),
-                precision_87_achieved=trade_data.get('precision_87_achieved', False),
-                expected_return=trade_data.get('expected_return', 0.0),
-                actual_return=trade_data.get('actual_return'),
-                profit_loss=trade_data.get('profit_loss'),
-                trading_costs=trade_data.get('trading_costs', {}),
-                position_size=trade_data.get('position_size', 0.0),
-                market_value=trade_data.get('market_value', 0.0),
-                reasoning=trade_data.get('reasoning', ''),
-                stop_loss_price=trade_data.get('stop_loss_price'),
-                take_profit_price=trade_data.get('take_profit_price'),
-                execution_details=trade_data.get('execution_details', {})
+                trade_id=trade_data.get("trade_id", ""),
+                session_id=trade_data.get("session_id", self.session_id or ""),
+                symbol=trade_data.get("symbol", ""),
+                action=trade_data.get("action", ""),
+                quantity=trade_data.get("quantity", 0),
+                price=trade_data.get("price", 0.0),
+                timestamp=datetime.fromisoformat(
+                    trade_data.get("timestamp", datetime.now().isoformat())
+                ),
+                signal_type=SignalType(
+                    trade_data.get("signal_type", SignalType.HOLD.value)
+                ),
+                confidence=trade_data.get("confidence", 0.0),
+                precision=trade_data.get("precision", 0.0),
+                precision_87_achieved=trade_data.get("precision_87_achieved", False),
+                expected_return=trade_data.get("expected_return", 0.0),
+                actual_return=trade_data.get("actual_return"),
+                profit_loss=trade_data.get("profit_loss"),
+                trading_costs=trade_data.get("trading_costs", {}),
+                position_size=trade_data.get("position_size", 0.0),
+                market_value=trade_data.get("market_value", 0.0),
+                reasoning=trade_data.get("reasoning", ""),
+                stop_loss_price=trade_data.get("stop_loss_price"),
+                take_profit_price=trade_data.get("take_profit_price"),
+                execution_details=trade_data.get("execution_details", {}),
             )
 
             # メモリ内記録
@@ -162,10 +171,12 @@ class TradeRecorder:
             self.logger.error(f"取引記録エラー: {e}")
             return False
 
-    def generate_performance_report(self,
-                                  session_id: Optional[str] = None,
-                                  start_date: Optional[datetime] = None,
-                                  end_date: Optional[datetime] = None) -> PerformanceMetrics:
+    def generate_performance_report(
+        self,
+        session_id: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> PerformanceMetrics:
         """
         パフォーマンスレポート生成
 
@@ -183,17 +194,32 @@ class TradeRecorder:
 
             if not trades:
                 return PerformanceMetrics(
-                    total_trades=0, winning_trades=0, losing_trades=0,
-                    win_rate=0.0, total_return=0.0, total_return_pct=0.0,
-                    average_return=0.0, average_win=0.0, average_loss=0.0,
-                    profit_factor=0.0, sharpe_ratio=0.0, sortino_ratio=0.0,
-                    max_drawdown=0.0, max_consecutive_wins=0, max_consecutive_losses=0,
-                    precision_87_trades=0, precision_87_success_rate=0.0,
-                    best_trade=0.0, worst_trade=0.0, average_holding_period=0.0
+                    total_trades=0,
+                    winning_trades=0,
+                    losing_trades=0,
+                    win_rate=0.0,
+                    total_return=0.0,
+                    total_return_pct=0.0,
+                    average_return=0.0,
+                    average_win=0.0,
+                    average_loss=0.0,
+                    profit_factor=0.0,
+                    sharpe_ratio=0.0,
+                    sortino_ratio=0.0,
+                    max_drawdown=0.0,
+                    max_consecutive_wins=0,
+                    max_consecutive_losses=0,
+                    precision_87_trades=0,
+                    precision_87_success_rate=0.0,
+                    best_trade=0.0,
+                    worst_trade=0.0,
+                    average_holding_period=0.0,
                 )
 
             # 完了取引のみを対象
-            completed_trades = [t for t in trades if t.action == 'CLOSE' and t.profit_loss is not None]
+            completed_trades = [
+                t for t in trades if t.action == "CLOSE" and t.profit_loss is not None
+            ]
 
             if not completed_trades:
                 return self._empty_metrics()
@@ -201,7 +227,9 @@ class TradeRecorder:
             # 基本統計
             total_trades = len(completed_trades)
             profits = [t.profit_loss for t in completed_trades]
-            returns = [t.actual_return for t in completed_trades if t.actual_return is not None]
+            returns = [
+                t.actual_return for t in completed_trades if t.actual_return is not None
+            ]
 
             winning_trades = len([p for p in profits if p > 0])
             losing_trades = len([p for p in profits if p < 0])
@@ -221,36 +249,59 @@ class TradeRecorder:
             # プロフィットファクター
             total_wins = sum(winning_profits) if winning_profits else 0.0
             total_losses = abs(sum(losing_profits)) if losing_profits else 0.0
-            profit_factor = total_wins / total_losses if total_losses > 0 else float('inf')
+            profit_factor = (
+                total_wins / total_losses if total_losses > 0 else float("inf")
+            )
 
             # シャープレシオ
-            sharpe_ratio = (np.mean(returns) / np.std(returns)) * np.sqrt(252) if returns and np.std(returns) > 0 else 0.0
+            sharpe_ratio = (
+                (np.mean(returns) / np.std(returns)) * np.sqrt(252)
+                if returns and np.std(returns) > 0
+                else 0.0
+            )
 
             # ソルティーノレシオ
             negative_returns = [r for r in returns if r < 0]
             downside_deviation = np.std(negative_returns) if negative_returns else 0.0
-            sortino_ratio = (np.mean(returns) / downside_deviation) * np.sqrt(252) if downside_deviation > 0 else 0.0
+            sortino_ratio = (
+                (np.mean(returns) / downside_deviation) * np.sqrt(252)
+                if downside_deviation > 0
+                else 0.0
+            )
 
             # 最大ドローダウン
             max_drawdown = self._calculate_max_drawdown(completed_trades)
 
             # 連続勝敗
-            max_consecutive_wins, max_consecutive_losses = self._calculate_consecutive_streaks(profits)
+            max_consecutive_wins, max_consecutive_losses = (
+                self._calculate_consecutive_streaks(profits)
+            )
 
             # 87%精度統計
-            precision_87_trades = len([t for t in completed_trades if t.precision_87_achieved])
+            precision_87_trades = len(
+                [t for t in completed_trades if t.precision_87_achieved]
+            )
             precision_87_success_rate = 0.0
             if precision_87_trades > 0:
-                precision_87_wins = len([t for t in completed_trades
-                                       if t.precision_87_achieved and t.profit_loss > 0])
-                precision_87_success_rate = precision_87_wins / precision_87_trades * 100
+                precision_87_wins = len(
+                    [
+                        t
+                        for t in completed_trades
+                        if t.precision_87_achieved and t.profit_loss > 0
+                    ]
+                )
+                precision_87_success_rate = (
+                    precision_87_wins / precision_87_trades * 100
+                )
 
             # ベスト・ワースト取引
             best_trade = max(profits) if profits else 0.0
             worst_trade = min(profits) if profits else 0.0
 
             # 平均保有期間計算
-            average_holding_period = self._calculate_average_holding_period(completed_trades)
+            average_holding_period = self._calculate_average_holding_period(
+                completed_trades
+            )
 
             # 総リターン率計算（初期資本基準）
             initial_capital = 1000000  # デフォルト値
@@ -276,16 +327,16 @@ class TradeRecorder:
                 precision_87_success_rate=precision_87_success_rate,
                 best_trade=best_trade,
                 worst_trade=worst_trade,
-                average_holding_period=average_holding_period
+                average_holding_period=average_holding_period,
             )
 
         except Exception as e:
             self.logger.error(f"パフォーマンスレポート生成エラー: {e}")
             return self._empty_metrics()
 
-    def generate_trading_charts(self,
-                              session_id: Optional[str] = None,
-                              chart_types: List[str] = None) -> Dict[str, str]:
+    def generate_trading_charts(
+        self, session_id: Optional[str] = None, chart_types: List[str] = None
+    ) -> Dict[str, str]:
         """
         取引チャート生成
 
@@ -297,43 +348,58 @@ class TradeRecorder:
             チャート画像（Base64エンコード）辞書
         """
         if chart_types is None:
-            chart_types = ['equity_curve', 'monthly_returns', 'trade_distribution', 'precision_analysis']
+            chart_types = [
+                "equity_curve",
+                "monthly_returns",
+                "trade_distribution",
+                "precision_analysis",
+            ]
 
         charts = {}
 
         try:
             trades = self._filter_trades(session_id)
-            completed_trades = [t for t in trades if t.action == 'CLOSE' and t.profit_loss is not None]
+            completed_trades = [
+                t for t in trades if t.action == "CLOSE" and t.profit_loss is not None
+            ]
 
             if not completed_trades:
                 return charts
 
             # 1. 資産曲線
-            if 'equity_curve' in chart_types:
-                charts['equity_curve'] = self._create_equity_curve(completed_trades)
+            if "equity_curve" in chart_types:
+                charts["equity_curve"] = self._create_equity_curve(completed_trades)
 
             # 2. 月次リターン
-            if 'monthly_returns' in chart_types:
-                charts['monthly_returns'] = self._create_monthly_returns_chart(completed_trades)
+            if "monthly_returns" in chart_types:
+                charts["monthly_returns"] = self._create_monthly_returns_chart(
+                    completed_trades
+                )
 
             # 3. 取引分布
-            if 'trade_distribution' in chart_types:
-                charts['trade_distribution'] = self._create_trade_distribution_chart(completed_trades)
+            if "trade_distribution" in chart_types:
+                charts["trade_distribution"] = self._create_trade_distribution_chart(
+                    completed_trades
+                )
 
             # 4. 87%精度分析
-            if 'precision_analysis' in chart_types:
-                charts['precision_analysis'] = self._create_precision_analysis_chart(completed_trades)
+            if "precision_analysis" in chart_types:
+                charts["precision_analysis"] = self._create_precision_analysis_chart(
+                    completed_trades
+                )
 
         except Exception as e:
             self.logger.error(f"チャート生成エラー: {e}")
 
         return charts
 
-    def export_to_csv(self,
-                     filepath: str,
-                     session_id: Optional[str] = None,
-                     start_date: Optional[datetime] = None,
-                     end_date: Optional[datetime] = None) -> bool:
+    def export_to_csv(
+        self,
+        filepath: str,
+        session_id: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> bool:
         """
         CSV エクスポート
 
@@ -355,32 +421,34 @@ class TradeRecorder:
             # CSV用データ作成
             csv_data = []
             for trade in trades:
-                csv_data.append({
-                    'trade_id': trade.trade_id,
-                    'session_id': trade.session_id,
-                    'timestamp': trade.timestamp.isoformat(),
-                    'symbol': trade.symbol,
-                    'action': trade.action,
-                    'signal_type': trade.signal_type.value,
-                    'quantity': trade.quantity,
-                    'price': trade.price,
-                    'confidence': trade.confidence,
-                    'precision': trade.precision,
-                    'precision_87_achieved': trade.precision_87_achieved,
-                    'expected_return': trade.expected_return,
-                    'actual_return': trade.actual_return,
-                    'profit_loss': trade.profit_loss,
-                    'position_size': trade.position_size,
-                    'market_value': trade.market_value,
-                    'reasoning': trade.reasoning,
-                    'commission': trade.trading_costs.get('commission', 0),
-                    'spread': trade.trading_costs.get('spread', 0),
-                    'total_cost': trade.trading_costs.get('total_cost', 0)
-                })
+                csv_data.append(
+                    {
+                        "trade_id": trade.trade_id,
+                        "session_id": trade.session_id,
+                        "timestamp": trade.timestamp.isoformat(),
+                        "symbol": trade.symbol,
+                        "action": trade.action,
+                        "signal_type": trade.signal_type.value,
+                        "quantity": trade.quantity,
+                        "price": trade.price,
+                        "confidence": trade.confidence,
+                        "precision": trade.precision,
+                        "precision_87_achieved": trade.precision_87_achieved,
+                        "expected_return": trade.expected_return,
+                        "actual_return": trade.actual_return,
+                        "profit_loss": trade.profit_loss,
+                        "position_size": trade.position_size,
+                        "market_value": trade.market_value,
+                        "reasoning": trade.reasoning,
+                        "commission": trade.trading_costs.get("commission", 0),
+                        "spread": trade.trading_costs.get("spread", 0),
+                        "total_cost": trade.trading_costs.get("total_cost", 0),
+                    }
+                )
 
             # CSV書き出し
             df = pd.DataFrame(csv_data)
-            df.to_csv(filepath, index=False, encoding='utf-8-sig')
+            df.to_csv(filepath, index=False, encoding="utf-8-sig")
 
             self.logger.info(f"CSV エクスポート完了: {filepath}")
             return True
@@ -389,10 +457,12 @@ class TradeRecorder:
             self.logger.error(f"CSV エクスポートエラー: {e}")
             return False
 
-    def export_to_json(self,
-                      filepath: str,
-                      session_id: Optional[str] = None,
-                      include_performance: bool = True) -> bool:
+    def export_to_json(
+        self,
+        filepath: str,
+        session_id: Optional[str] = None,
+        include_performance: bool = True,
+    ) -> bool:
         """
         JSON エクスポート
 
@@ -408,19 +478,19 @@ class TradeRecorder:
             trades = self._filter_trades(session_id)
 
             export_data = {
-                'export_timestamp': datetime.now().isoformat(),
-                'session_id': session_id,
-                'trade_count': len(trades),
-                'trades': [asdict(trade) for trade in trades]
+                "export_timestamp": datetime.now().isoformat(),
+                "session_id": session_id,
+                "trade_count": len(trades),
+                "trades": [asdict(trade) for trade in trades],
             }
 
             # パフォーマンス指標追加
             if include_performance:
                 metrics = self.generate_performance_report(session_id)
-                export_data['performance_metrics'] = asdict(metrics)
+                export_data["performance_metrics"] = asdict(metrics)
 
             # JSON書き出し
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(export_data, f, ensure_ascii=False, indent=2, default=str)
 
             self.logger.info(f"JSON エクスポート完了: {filepath}")
@@ -430,9 +500,9 @@ class TradeRecorder:
             self.logger.error(f"JSON エクスポートエラー: {e}")
             return False
 
-    def calculate_tax_implications(self,
-                                 session_id: Optional[str] = None,
-                                 tax_year: int = None) -> TaxCalculation:
+    def calculate_tax_implications(
+        self, session_id: Optional[str] = None, tax_year: int = None
+    ) -> TaxCalculation:
         """
         税務計算
 
@@ -452,13 +522,20 @@ class TradeRecorder:
             end_date = datetime(tax_year, 12, 31)
             trades = self._filter_trades(session_id, start_date, end_date)
 
-            completed_trades = [t for t in trades if t.action == 'CLOSE' and t.profit_loss is not None]
+            completed_trades = [
+                t for t in trades if t.action == "CLOSE" and t.profit_loss is not None
+            ]
 
             if not completed_trades:
                 return TaxCalculation(
-                    total_realized_gains=0.0, total_realized_losses=0.0,
-                    net_capital_gains=0.0, short_term_gains=0.0, long_term_gains=0.0,
-                    wash_sales=0.0, estimated_tax_liability=0.0, deductible_expenses=0.0
+                    total_realized_gains=0.0,
+                    total_realized_losses=0.0,
+                    net_capital_gains=0.0,
+                    short_term_gains=0.0,
+                    long_term_gains=0.0,
+                    wash_sales=0.0,
+                    estimated_tax_liability=0.0,
+                    deductible_expenses=0.0,
                 )
 
             # 実現損益計算
@@ -498,45 +575,67 @@ class TradeRecorder:
                 long_term_gains=long_term_gains,
                 wash_sales=0.0,  # 簡略化
                 estimated_tax_liability=estimated_tax_liability,
-                deductible_expenses=deductible_expenses
+                deductible_expenses=deductible_expenses,
             )
 
         except Exception as e:
             self.logger.error(f"税務計算エラー: {e}")
             return TaxCalculation(
-                total_realized_gains=0.0, total_realized_losses=0.0,
-                net_capital_gains=0.0, short_term_gains=0.0, long_term_gains=0.0,
-                wash_sales=0.0, estimated_tax_liability=0.0, deductible_expenses=0.0
+                total_realized_gains=0.0,
+                total_realized_losses=0.0,
+                net_capital_gains=0.0,
+                short_term_gains=0.0,
+                long_term_gains=0.0,
+                wash_sales=0.0,
+                estimated_tax_liability=0.0,
+                deductible_expenses=0.0,
             )
 
     def get_precision_87_analysis(self) -> Dict[str, Any]:
         """87%精度システム分析"""
         try:
             all_trades = self.trade_records
-            completed_trades = [t for t in all_trades if t.action == 'CLOSE' and t.profit_loss is not None]
+            completed_trades = [
+                t
+                for t in all_trades
+                if t.action == "CLOSE" and t.profit_loss is not None
+            ]
 
             if not completed_trades:
                 return {}
 
             # 87%精度取引
-            precision_87_trades = [t for t in completed_trades if t.precision_87_achieved]
-            regular_trades = [t for t in completed_trades if not t.precision_87_achieved]
+            precision_87_trades = [
+                t for t in completed_trades if t.precision_87_achieved
+            ]
+            regular_trades = [
+                t for t in completed_trades if not t.precision_87_achieved
+            ]
 
             # 統計計算
             precision_87_stats = self._calculate_trade_stats(precision_87_trades)
             regular_stats = self._calculate_trade_stats(regular_trades)
 
             return {
-                'total_trades': len(completed_trades),
-                'precision_87_trades': len(precision_87_trades),
-                'precision_87_ratio': len(precision_87_trades) / len(completed_trades) * 100,
-                'precision_87_performance': precision_87_stats,
-                'regular_performance': regular_stats,
-                'performance_comparison': {
-                    'win_rate_difference': precision_87_stats['win_rate'] - regular_stats['win_rate'],
-                    'avg_return_difference': precision_87_stats['avg_return'] - regular_stats['avg_return'],
-                    'profit_factor_ratio': precision_87_stats['profit_factor'] / regular_stats['profit_factor'] if regular_stats['profit_factor'] > 0 else float('inf')
-                }
+                "total_trades": len(completed_trades),
+                "precision_87_trades": len(precision_87_trades),
+                "precision_87_ratio": len(precision_87_trades)
+                / len(completed_trades)
+                * 100,
+                "precision_87_performance": precision_87_stats,
+                "regular_performance": regular_stats,
+                "performance_comparison": {
+                    "win_rate_difference": precision_87_stats["win_rate"]
+                    - regular_stats["win_rate"],
+                    "avg_return_difference": precision_87_stats["avg_return"]
+                    - regular_stats["avg_return"],
+                    "profit_factor_ratio": (
+                        precision_87_stats["profit_factor"]
+                        / regular_stats["profit_factor"]
+                        if regular_stats["profit_factor"] > 0
+                        else float("inf")
+                    ),
+                },
             }
 
         except Exception as e:
@@ -562,7 +661,8 @@ class TradeRecorder:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            cursor.execute('''
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS trade_records (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     trade_id TEXT NOT NULL,
@@ -588,7 +688,8 @@ class TradeRecorder:
                     execution_details_json TEXT,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
-            ''')
+            """
+            )
 
             conn.commit()
             conn.close()
@@ -602,7 +703,8 @@ class TradeRecorder:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            cursor.execute('''
+            cursor.execute(
+                """
                 INSERT INTO trade_records (
                     trade_id, session_id, symbol, action, quantity, price, timestamp,
                     signal_type, confidence, precision_val, precision_87_achieved,
@@ -610,16 +712,31 @@ class TradeRecorder:
                     position_size, market_value, reasoning, stop_loss_price,
                     take_profit_price, execution_details_json
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                trade.trade_id, trade.session_id, trade.symbol, trade.action,
-                trade.quantity, trade.price, trade.timestamp.isoformat(),
-                trade.signal_type.value, trade.confidence, trade.precision,
-                trade.precision_87_achieved, trade.expected_return,
-                trade.actual_return, trade.profit_loss,
-                json.dumps(trade.trading_costs), trade.position_size,
-                trade.market_value, trade.reasoning, trade.stop_loss_price,
-                trade.take_profit_price, json.dumps(trade.execution_details)
-            ))
+            """,
+                (
+                    trade.trade_id,
+                    trade.session_id,
+                    trade.symbol,
+                    trade.action,
+                    trade.quantity,
+                    trade.price,
+                    trade.timestamp.isoformat(),
+                    trade.signal_type.value,
+                    trade.confidence,
+                    trade.precision,
+                    trade.precision_87_achieved,
+                    trade.expected_return,
+                    trade.actual_return,
+                    trade.profit_loss,
+                    json.dumps(trade.trading_costs),
+                    trade.position_size,
+                    trade.market_value,
+                    trade.reasoning,
+                    trade.stop_loss_price,
+                    trade.take_profit_price,
+                    json.dumps(trade.execution_details),
+                ),
+            )
 
             conn.commit()
             conn.close()
@@ -627,10 +744,12 @@ class TradeRecorder:
         except Exception as e:
             self.logger.error(f"データベース保存エラー: {e}")
 
-    def _filter_trades(self,
-                      session_id: Optional[str] = None,
-                      start_date: Optional[datetime] = None,
-                      end_date: Optional[datetime] = None) -> List[TradeRecord]:
+    def _filter_trades(
+        self,
+        session_id: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> List[TradeRecord]:
         """取引フィルタリング"""
         trades = self.trade_records
 
@@ -648,13 +767,26 @@ class TradeRecorder:
     def _empty_metrics(self) -> PerformanceMetrics:
         """空のメトリクス"""
         return PerformanceMetrics(
-            total_trades=0, winning_trades=0, losing_trades=0,
-            win_rate=0.0, total_return=0.0, total_return_pct=0.0,
-            average_return=0.0, average_win=0.0, average_loss=0.0,
-            profit_factor=0.0, sharpe_ratio=0.0, sortino_ratio=0.0,
-            max_drawdown=0.0, max_consecutive_wins=0, max_consecutive_losses=0,
-            precision_87_trades=0, precision_87_success_rate=0.0,
-            best_trade=0.0, worst_trade=0.0, average_holding_period=0.0
+            total_trades=0,
+            winning_trades=0,
+            losing_trades=0,
+            win_rate=0.0,
+            total_return=0.0,
+            total_return_pct=0.0,
+            average_return=0.0,
+            average_win=0.0,
+            average_loss=0.0,
+            profit_factor=0.0,
+            sharpe_ratio=0.0,
+            sortino_ratio=0.0,
+            max_drawdown=0.0,
+            max_consecutive_wins=0,
+            max_consecutive_losses=0,
+            precision_87_trades=0,
+            precision_87_success_rate=0.0,
+            best_trade=0.0,
+            worst_trade=0.0,
+            average_holding_period=0.0,
         )
 
     def _calculate_max_drawdown(self, trades: List[TradeRecord]) -> float:
@@ -710,7 +842,7 @@ class TradeRecorder:
         holding_periods = []
 
         for trade in trades:
-            if trade.action == 'CLOSE':
+            if trade.action == "CLOSE":
                 # 簡略化: OPENとCLOSEの時間差を計算
                 # 実際には対応するOPEN取引を見つける必要がある
                 holding_days = 1.0  # デフォルト値
@@ -727,8 +859,12 @@ class TradeRecorder:
         """取引統計計算"""
         if not trades:
             return {
-                'total_trades': 0, 'win_rate': 0.0, 'avg_return': 0.0,
-                'profit_factor': 0.0, 'best_trade': 0.0, 'worst_trade': 0.0
+                "total_trades": 0,
+                "win_rate": 0.0,
+                "avg_return": 0.0,
+                "profit_factor": 0.0,
+                "best_trade": 0.0,
+                "worst_trade": 0.0,
             }
 
         profits = [t.profit_loss for t in trades]
@@ -736,12 +872,12 @@ class TradeRecorder:
         losses = [p for p in profits if p < 0]
 
         return {
-            'total_trades': len(trades),
-            'win_rate': len(wins) / len(profits) * 100,
-            'avg_return': np.mean(profits),
-            'profit_factor': sum(wins) / abs(sum(losses)) if losses else float('inf'),
-            'best_trade': max(profits),
-            'worst_trade': min(profits)
+            "total_trades": len(trades),
+            "win_rate": len(wins) / len(profits) * 100,
+            "avg_return": np.mean(profits),
+            "profit_factor": sum(wins) / abs(sum(losses)) if losses else float("inf"),
+            "best_trade": max(profits),
+            "worst_trade": min(profits),
         }
 
     def _create_equity_curve(self, trades: List[TradeRecord]) -> str:
@@ -758,11 +894,11 @@ class TradeRecorder:
             cumulative_pnl.append(cumulative)
 
         dates = [t.timestamp for t in sorted_trades]
-        ax.plot(dates, cumulative_pnl, linewidth=2, label='累積損益')
-        ax.axhline(y=0, color='red', linestyle='--', alpha=0.5)
-        ax.set_title('資産曲線', fontsize=14, fontweight='bold')
-        ax.set_xlabel('日付')
-        ax.set_ylabel('累積損益 (円)')
+        ax.plot(dates, cumulative_pnl, linewidth=2, label="累積損益")
+        ax.axhline(y=0, color="red", linestyle="--", alpha=0.5)
+        ax.set_title("資産曲線", fontsize=14, fontweight="bold")
+        ax.set_xlabel("日付")
+        ax.set_ylabel("累積損益 (円)")
         ax.legend()
         ax.grid(True, alpha=0.3)
         plt.xticks(rotation=45)
@@ -777,7 +913,7 @@ class TradeRecorder:
         # 月次集計
         monthly_returns = {}
         for trade in trades:
-            month_key = trade.timestamp.strftime('%Y-%m')
+            month_key = trade.timestamp.strftime("%Y-%m")
             if month_key not in monthly_returns:
                 monthly_returns[month_key] = 0.0
             monthly_returns[month_key] += trade.profit_loss
@@ -785,12 +921,12 @@ class TradeRecorder:
         months = sorted(monthly_returns.keys())
         returns = [monthly_returns[month] for month in months]
 
-        colors = ['green' if r >= 0 else 'red' for r in returns]
+        colors = ["green" if r >= 0 else "red" for r in returns]
         ax.bar(months, returns, color=colors, alpha=0.7)
-        ax.set_title('月次リターン', fontsize=14, fontweight='bold')
-        ax.set_xlabel('月')
-        ax.set_ylabel('リターン (円)')
-        ax.axhline(y=0, color='black', linestyle='-', alpha=0.5)
+        ax.set_title("月次リターン", fontsize=14, fontweight="bold")
+        ax.set_xlabel("月")
+        ax.set_ylabel("リターン (円)")
+        ax.axhline(y=0, color="black", linestyle="-", alpha=0.5)
         plt.xticks(rotation=45)
         plt.tight_layout()
 
@@ -803,17 +939,17 @@ class TradeRecorder:
         profits = [t.profit_loss for t in trades]
 
         # ヒストグラム
-        ax1.hist(profits, bins=20, alpha=0.7, color='blue', edgecolor='black')
-        ax1.set_title('取引損益分布', fontsize=12, fontweight='bold')
-        ax1.set_xlabel('損益 (円)')
-        ax1.set_ylabel('取引数')
-        ax1.axvline(x=0, color='red', linestyle='--', alpha=0.7)
+        ax1.hist(profits, bins=20, alpha=0.7, color="blue", edgecolor="black")
+        ax1.set_title("取引損益分布", fontsize=12, fontweight="bold")
+        ax1.set_xlabel("損益 (円)")
+        ax1.set_ylabel("取引数")
+        ax1.axvline(x=0, color="red", linestyle="--", alpha=0.7)
 
         # ボックスプロット
         ax2.boxplot(profits)
-        ax2.set_title('取引損益ボックスプロット', fontsize=12, fontweight='bold')
-        ax2.set_ylabel('損益 (円)')
-        ax2.axhline(y=0, color='red', linestyle='--', alpha=0.7)
+        ax2.set_title("取引損益ボックスプロット", fontsize=12, fontweight="bold")
+        ax2.set_ylabel("損益 (円)")
+        ax2.axhline(y=0, color="red", linestyle="--", alpha=0.7)
 
         plt.tight_layout()
         return self._fig_to_base64(fig)
@@ -827,18 +963,20 @@ class TradeRecorder:
 
         # 勝率比較
         if precision_87_trades and regular_trades:
-            precision_87_wins = len([t for t in precision_87_trades if t.profit_loss > 0])
+            precision_87_wins = len(
+                [t for t in precision_87_trades if t.profit_loss > 0]
+            )
             regular_wins = len([t for t in regular_trades if t.profit_loss > 0])
 
             precision_87_win_rate = precision_87_wins / len(precision_87_trades) * 100
             regular_win_rate = regular_wins / len(regular_trades) * 100
 
-            categories = ['87%精度取引', '通常取引']
+            categories = ["87%精度取引", "通常取引"]
             win_rates = [precision_87_win_rate, regular_win_rate]
 
-            ax1.bar(categories, win_rates, color=['gold', 'skyblue'], alpha=0.8)
-            ax1.set_title('勝率比較', fontsize=12, fontweight='bold')
-            ax1.set_ylabel('勝率 (%)')
+            ax1.bar(categories, win_rates, color=["gold", "skyblue"], alpha=0.8)
+            ax1.set_title("勝率比較", fontsize=12, fontweight="bold")
+            ax1.set_ylabel("勝率 (%)")
             ax1.set_ylim(0, 100)
 
         # 平均リターン比較
@@ -846,14 +984,14 @@ class TradeRecorder:
             precision_87_avg = np.mean([t.profit_loss for t in precision_87_trades])
             regular_avg = np.mean([t.profit_loss for t in regular_trades])
 
-            categories = ['87%精度取引', '通常取引']
+            categories = ["87%精度取引", "通常取引"]
             avg_returns = [precision_87_avg, regular_avg]
 
-            colors = ['green' if r >= 0 else 'red' for r in avg_returns]
+            colors = ["green" if r >= 0 else "red" for r in avg_returns]
             ax2.bar(categories, avg_returns, color=colors, alpha=0.8)
-            ax2.set_title('平均リターン比較', fontsize=12, fontweight='bold')
-            ax2.set_ylabel('平均リターン (円)')
-            ax2.axhline(y=0, color='black', linestyle='-', alpha=0.5)
+            ax2.set_title("平均リターン比較", fontsize=12, fontweight="bold")
+            ax2.set_ylabel("平均リターン (円)")
+            ax2.axhline(y=0, color="black", linestyle="-", alpha=0.5)
 
         plt.tight_layout()
         return self._fig_to_base64(fig)
@@ -861,7 +999,7 @@ class TradeRecorder:
     def _fig_to_base64(self, fig) -> str:
         """図をBase64エンコード"""
         buffer = BytesIO()
-        fig.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+        fig.savefig(buffer, format="png", dpi=100, bbox_inches="tight")
         buffer.seek(0)
         image_base64 = base64.b64encode(buffer.getvalue()).decode()
         plt.close(fig)

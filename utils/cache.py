@@ -18,8 +18,13 @@ logger = logging.getLogger(__name__)
 class DataCache:
     """シンプルなファイルベースキャッシュ"""
 
-    def __init__(self, cache_dir: str = "cache", default_ttl: int = 3600, 
-                 auto_cleanup: bool = True, cleanup_interval: int = 3600):
+    def __init__(
+        self,
+        cache_dir: str = "cache",
+        default_ttl: int = 3600,
+        auto_cleanup: bool = True,
+        cleanup_interval: int = 3600,
+    ):
         """
         Args:
             cache_dir: キャッシュディレクトリ
@@ -34,47 +39,51 @@ class DataCache:
         self.cleanup_interval = cleanup_interval
         self._shutdown_event = None
         self.cleanup_thread = None
-        
+
         if self.auto_cleanup:
             self._start_cleanup_thread()
 
     def _start_cleanup_thread(self):
         """自動クリーンアップスレッドを開始"""
         import threading
+
         self._shutdown_event = threading.Event()
         self.cleanup_thread = threading.Thread(target=self._cleanup_worker, daemon=True)
         self.cleanup_thread.start()
-        logger.info(f"Automatic cache cleanup thread started with interval {self.cleanup_interval}s")
+        logger.info(
+            f"Automatic cache cleanup thread started with interval {self.cleanup_interval}s"
+        )
 
     def _cleanup_worker(self):
         """クリーンアップワーカースレッド"""
         import time
+
         while self._shutdown_event and not self._shutdown_event.is_set():
             try:
                 # クリーンアップ間隔待機
                 if self._shutdown_event.wait(self.cleanup_interval):
                     break
-                    
+
                 # 自動クリーンアップ実行
                 self.cleanup_expired()
-                
+
             except Exception as e:
                 logger.error(f"Cache cleanup worker error: {e}")
                 # エラーでも継続
-                
+
         logger.info("Cache cleanup worker stopped")
 
     def shutdown(self):
         """キャッシュをシャットダウン"""
         if self._shutdown_event:
             self._shutdown_event.set()
-            
+
         # クリーンアップスレッドの終了を待機
         if self.cleanup_thread and self.cleanup_thread.is_alive():
             self.cleanup_thread.join(timeout=5.0)  # 5秒でタイムアウト
             if self.cleanup_thread.is_alive():
                 logger.warning("Cache cleanup thread did not terminate gracefully")
-        
+
         logger.info("DataCache shutdown completed")
 
     def _get_cache_key(self, *args, **kwargs) -> str:

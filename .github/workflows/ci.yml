@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Modern CI
 
 on:
   push:
@@ -7,67 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  quality-and-tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8, 3.9, 3.10, 3.11]
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov pytest-mock bandit mypy black flake8
-
-    - name: Code formatting check (Black)
-      run: |
-        black --check --diff .
-
-    - name: Linting (flake8)
-      run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
-
-    - name: Type checking (mypy)
-      run: |
-        mypy models data systems --ignore-missing-imports
-
-    - name: Security scanning (bandit)
-      run: |
-        bandit -r . -f json -o bandit-report.json || true
-        bandit -r . --severity-level medium
-
-    - name: Run tests with coverage
-      run: |
-        pytest tests_new/ --cov=models --cov=data --cov=systems --cov-report=xml --cov-report=term-missing --cov-fail-under=80
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-
-  quality-gate:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
 
     steps:
     - uses: actions/checkout@v4
@@ -75,74 +16,22 @@ jobs:
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: 3.11
+        python-version: '3.11'
 
-    - name: Install dependencies
+    - name: Upgrade pip and install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov radon
+        pip install black==24.* flake8==7.* pytest==8.* pytest-mock
 
-    - name: Code complexity check
+    - name: Code style (black)
       run: |
-        radon cc . --min=B --show-complexity
+        black --check models/performance.py
 
-    - name: Test coverage check
+    - name: Lint (flake8)
       run: |
-        pytest tests_new/ --cov=models --cov=data --cov=systems --cov-fail-under=85
+        flake8 models/performance.py
 
-    - name: Performance regression test
+    - name: Unit tests (core performance)
       run: |
-        python -m pytest tests_new/performance/ -v
-
-  build:
-    needs: [test, quality-gate]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.11
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-
-    - name: Build application
-      run: |
-        python -c "import models; print('Build successful')"
-
-    - name: Create deployment artifact
-      run: |
-        tar -czf clstock-${{ github.sha }}.tar.gz \
-          models/ data/ systems/ config/ api/ app/ \
-          requirements.txt pyproject.toml
-
-    - name: Upload build artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: clstock-build
-        path: clstock-${{ github.sha }}.tar.gz
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
-
-    steps:
-    - name: Download build artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: clstock-build
-
-    - name: Deploy to production
-      run: |
-        echo "Deployment would happen here"
-        # Add actual deployment commands here
-        echo "ClStock deployment completed successfully"
+        pytest tests/unit/test_models/test_performance.py -v

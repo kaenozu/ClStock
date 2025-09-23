@@ -21,7 +21,9 @@ def calculate_rsi(prices: pd.Series, window: int = 14) -> pd.Series:
         return pd.Series([50] * len(prices), index=prices.index)
 
 
-def calculate_macd(prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> pd.DataFrame:
+def calculate_macd(
+    prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9
+) -> pd.DataFrame:
     """MACD計算"""
     try:
         ema_fast = prices.ewm(span=fast).mean()
@@ -30,40 +32,46 @@ def calculate_macd(prices: pd.Series, fast: int = 12, slow: int = 26, signal: in
         signal_line = macd.ewm(span=signal).mean()
         histogram = macd - signal_line
 
-        return pd.DataFrame({
-            'MACD': macd,
-            'Signal': signal_line,
-            'Histogram': histogram
-        })
+        return pd.DataFrame(
+            {"MACD": macd, "Signal": signal_line, "Histogram": histogram}
+        )
     except Exception:
-        return pd.DataFrame({
-            'MACD': [0] * len(prices),
-            'Signal': [0] * len(prices),
-            'Histogram': [0] * len(prices)
-        }, index=prices.index)
+        return pd.DataFrame(
+            {
+                "MACD": [0] * len(prices),
+                "Signal": [0] * len(prices),
+                "Histogram": [0] * len(prices),
+            },
+            index=prices.index,
+        )
 
 
-def calculate_bollinger_bands(prices: pd.Series, window: int = 20, std_dev: float = 2) -> pd.DataFrame:
+def calculate_bollinger_bands(
+    prices: pd.Series, window: int = 20, std_dev: float = 2
+) -> pd.DataFrame:
     """ボリンジャーバンド計算"""
     try:
         sma = prices.rolling(window=window).mean()
         std = prices.rolling(window=window).std()
 
-        return pd.DataFrame({
-            'Upper': sma + (std * std_dev),
-            'Middle': sma,
-            'Lower': sma - (std * std_dev)
-        })
+        return pd.DataFrame(
+            {
+                "Upper": sma + (std * std_dev),
+                "Middle": sma,
+                "Lower": sma - (std * std_dev),
+            }
+        )
     except Exception:
-        return pd.DataFrame({
-            'Upper': prices,
-            'Middle': prices,
-            'Lower': prices
-        })
+        return pd.DataFrame({"Upper": prices, "Middle": prices, "Lower": prices})
 
 
-def calculate_stochastic(high: pd.Series, low: pd.Series, close: pd.Series,
-                        k_period: int = 14, d_period: int = 3) -> pd.DataFrame:
+def calculate_stochastic(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    k_period: int = 14,
+    d_period: int = 3,
+) -> pd.DataFrame:
     """ストキャスティクス計算"""
     try:
         lowest_low = low.rolling(window=k_period).min()
@@ -72,19 +80,16 @@ def calculate_stochastic(high: pd.Series, low: pd.Series, close: pd.Series,
         k_percent = 100 * ((close - lowest_low) / (highest_high - lowest_low))
         d_percent = k_percent.rolling(window=d_period).mean()
 
-        return pd.DataFrame({
-            '%K': k_percent,
-            '%D': d_percent
-        })
+        return pd.DataFrame({"%K": k_percent, "%D": d_percent})
     except Exception:
-        return pd.DataFrame({
-            '%K': [50] * len(close),
-            '%D': [50] * len(close)
-        }, index=close.index)
+        return pd.DataFrame(
+            {"%K": [50] * len(close), "%D": [50] * len(close)}, index=close.index
+        )
 
 
-def calculate_williams_r(high: pd.Series, low: pd.Series, close: pd.Series,
-                        period: int = 14) -> pd.Series:
+def calculate_williams_r(
+    high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14
+) -> pd.Series:
     """ウィリアムズ%R計算"""
     try:
         highest_high = high.rolling(window=period).max()
@@ -96,8 +101,9 @@ def calculate_williams_r(high: pd.Series, low: pd.Series, close: pd.Series,
         return pd.Series([-50] * len(close), index=close.index)
 
 
-def calculate_atr(high: pd.Series, low: pd.Series, close: pd.Series,
-                  period: int = 14) -> pd.Series:
+def calculate_atr(
+    high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14
+) -> pd.Series:
     """Average True Range計算"""
     try:
         tr1 = high - low

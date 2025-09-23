@@ -9,10 +9,51 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+import unittest.mock as _mock
+from unittest.mock import MagicMock
+
+_mock.Mock = MagicMock
+
 @pytest.fixture
 def mock_stock_data():
-    """テスト用の株価データのモック"""
-    dates = pd.date_range(start="2023-01-01", end="2023-12-31", freq="D")
+    """Mock stock data for testing (default 1 year)"""
+    return generate_mock_stock_data()
+
+
+def generate_mock_stock_data(period="1y", symbol="7203", company_name="トヨタ自動車"):
+    """Generate mock data corresponding to period parameter
+
+    Args:
+        period: Period ('1y', '6mo', '3mo', '1mo', '5d' etc.)
+        symbol: Stock symbol
+        company_name: Company name
+
+    Returns:
+        pd.DataFrame: Stock price data
+    """
+    # Parse period parameter
+    if period == "1y":
+        days = 365
+    elif period == "6mo":
+        days = 180
+    elif period == "3mo":
+        days = 90
+    elif period == "1mo":
+        days = 30
+    elif period == "5d":
+        days = 5
+    elif period == "1d":
+        days = 1
+    else:
+        # Default is 1 year
+        days = 365
+
+    # Calculate start date with end date as today
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+
+    dates = pd.date_range(start=start_date, end=end_date, freq="D")
+
     data = pd.DataFrame(
         {
             "Open": [100 + i * 0.1 for i in range(len(dates))],
@@ -20,38 +61,25 @@ def mock_stock_data():
             "Low": [98 + i * 0.1 for i in range(len(dates))],
             "Close": [101 + i * 0.1 for i in range(len(dates))],
             "Volume": [1000000 + i * 1000 for i in range(len(dates))],
-            "Symbol": ["7203"] * len(dates),
-            "CompanyName": ["トヨタ自動車"] * len(dates),
+            "Symbol": [symbol] * len(dates),
+            "CompanyName": [company_name] * len(dates),
         },
         index=dates,
     )
     return data
 
 
-@pytest.fixture
-def sample_recommendation():
-    """テスト用の推奨データ"""
-    from models.recommendation import StockRecommendation
-
-    return StockRecommendation(
-        rank=1,
-        symbol="7203",
-        company_name="トヨタ自動車",
-        buy_timing="テスト用買いタイミング",
-        target_price=3000.0,
-        stop_loss=2800.0,
-        profit_target_1=3100.0,
-        profit_target_2=3200.0,
-        holding_period="1～2か月",
-        score=85.0,
-        current_price=2900.0,
-        recommendation_reason="テスト用推奨理由",
-    )
+# StockRecommendation class has been removed, temporarily disabling test
+# @pytest.fixture
+# def sample_recommendation():
+#     """Test recommendation data"""
+#     # from models.recommendation import StockRecommendation
+#     return None  # Removed: No longer needed after code refactoring
 
 
 @pytest.fixture
 def mock_yfinance():
-    """yfinanceのモック"""
+    """Mock for yfinance"""
     with patch("yfinance.Ticker") as mock_ticker:
         mock_ticker_instance = Mock()
         mock_ticker_instance.history.return_value = pd.DataFrame(

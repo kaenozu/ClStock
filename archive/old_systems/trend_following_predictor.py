@@ -313,37 +313,41 @@ class TrendFollowingPredictor:
             if data is None:
                 # データ取得
                 stock_data = self.data_provider.get_stock_data(symbol, period="1y")
-                stock_data = self.data_provider.calculate_technical_indicators(stock_data)
+                stock_data = self.data_provider.calculate_technical_indicators(
+                    stock_data
+                )
             else:
                 stock_data = data
-            
+
             if len(stock_data) < 50:
                 return {
-                    'direction': 0,
-                    'confidence': 0.5,
-                    'predicted_price': stock_data['Close'].iloc[-1] if len(stock_data) > 0 else 0,
-                    'error': 'Insufficient data'
+                    "direction": 0,
+                    "confidence": 0.5,
+                    "predicted_price": (
+                        stock_data["Close"].iloc[-1] if len(stock_data) > 0 else 0
+                    ),
+                    "error": "Insufficient data",
                 }
-            
+
             # トレンド特徴量作成
             trend_features = self.create_trend_features(stock_data)
-            
+
             if len(trend_features) == 0:
                 return {
-                    'direction': 0,
-                    'confidence': 0.5,
-                    'predicted_price': stock_data['Close'].iloc[-1],
-                    'error': 'No trend features'
+                    "direction": 0,
+                    "confidence": 0.5,
+                    "predicted_price": stock_data["Close"].iloc[-1],
+                    "error": "No trend features",
                 }
-            
+
             # 最新の特徴量を取得
             latest_features = trend_features.iloc[-1]
-            
+
             # 簡易的な予測ロジック
-            rsi = latest_features.get('RSI', 50)
-            macd = latest_features.get('MACD', 0)
-            sma_ratio = latest_features.get('SMA_ratio', 1)
-            
+            rsi = latest_features.get("RSI", 50)
+            macd = latest_features.get("MACD", 0)
+            sma_ratio = latest_features.get("SMA_ratio", 1)
+
             # 上昇/下降の判定
             direction_score = 0
             if rsi > 60 and macd > 0 and sma_ratio > 1.02:
@@ -352,32 +356,32 @@ class TrendFollowingPredictor:
                 direction_score = -1  # 下降
             else:
                 direction_score = 0  # 中立
-            
+
             # 信頼度計算 (0-1)
             confidence = min(abs(rsi - 50) / 50 + abs(macd) + abs(sma_ratio - 1), 1.0)
-            
+
             # 予測価格 (現在価格からの変化率予測)
-            current_price = stock_data['Close'].iloc[-1]
+            current_price = stock_data["Close"].iloc[-1]
             price_change_rate = direction_score * 0.02 * confidence  # 最大2%の変化
             predicted_price = current_price * (1 + price_change_rate)
-            
+
             return {
-                'direction': direction_score,
-                'confidence': confidence,
-                'predicted_price': predicted_price,
-                'current_price': current_price,
-                'rsi': rsi,
-                'macd': macd,
-                'sma_ratio': sma_ratio
+                "direction": direction_score,
+                "confidence": confidence,
+                "predicted_price": predicted_price,
+                "current_price": current_price,
+                "rsi": rsi,
+                "macd": macd,
+                "sma_ratio": sma_ratio,
             }
-            
+
         except Exception as e:
             logger.error(f"Prediction error for {symbol}: {e}")
             return {
-                'direction': 0,
-                'confidence': 0.5,
-                'predicted_price': 0,
-                'error': str(e)
+                "direction": 0,
+                "confidence": 0.5,
+                "predicted_price": 0,
+                "error": str(e),
             }
 
 

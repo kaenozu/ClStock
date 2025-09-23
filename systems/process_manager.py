@@ -29,6 +29,7 @@ settings = get_settings()
 
 class ProcessStatus(Enum):
     """プロセス状態"""
+
     STOPPED = "stopped"
     STARTING = "starting"
     RUNNING = "running"
@@ -40,6 +41,7 @@ class ProcessStatus(Enum):
 @dataclass
 class ProcessInfo:
     """プロセス情報"""
+
     name: str
     command: str
     working_dir: str = str(PROJECT_ROOT)
@@ -67,7 +69,9 @@ class ProcessManager:
         self.monitor_thread: Optional[threading.Thread] = None
         self._shutdown_event = threading.Event()
         self._shutdown_lock = threading.Lock()  # シャットダウン処理の排他制御用
-        self._shutdown_thread: Optional[threading.Thread] = None  # シャットダウンスレッドの参照
+        self._shutdown_thread: Optional[threading.Thread] = (
+            None  # シャットダウンスレッドの参照
+        )
 
         # デフォルトサービス定義
         self._define_default_services()
@@ -82,46 +86,46 @@ class ProcessManager:
             "dashboard": ProcessInfo(
                 name="dashboard",
                 command="python app/personal_dashboard.py",
-                working_dir=str(PROJECT_ROOT)
+                working_dir=str(PROJECT_ROOT),
             ),
             "demo_trading": ProcessInfo(
                 name="demo_trading",
                 command="python demo_start.py",
                 working_dir=str(PROJECT_ROOT),
-                auto_restart=False
+                auto_restart=False,
             ),
             "investment_system": ProcessInfo(
                 name="investment_system",
                 command="python investment_system.py",
-                working_dir=str(PROJECT_ROOT)
+                working_dir=str(PROJECT_ROOT),
             ),
             "deep_learning": ProcessInfo(
                 name="deep_learning",
                 command="python big_data_deep_learning.py",
-                working_dir=str(PROJECT_ROOT)
+                working_dir=str(PROJECT_ROOT),
             ),
             "ensemble_test": ProcessInfo(
                 name="ensemble_test",
                 command="python advanced_ensemble_test.py",
                 working_dir=str(PROJECT_ROOT),
-                auto_restart=False
+                auto_restart=False,
             ),
             "clstock_main": ProcessInfo(
                 name="clstock_main",
                 command="python clstock_main.py --integrated 7203",
                 working_dir=str(PROJECT_ROOT),
-                auto_restart=False
+                auto_restart=False,
             ),
             "optimized_system": ProcessInfo(
                 name="optimized_system",
                 command="python optimized_investment_system.py",
-                working_dir=str(PROJECT_ROOT)
+                working_dir=str(PROJECT_ROOT),
             ),
             "selective_system": ProcessInfo(
                 name="selective_system",
                 command="python super_selective_system.py",
-                working_dir=str(PROJECT_ROOT)
-            )
+                working_dir=str(PROJECT_ROOT),
+            ),
         }
 
         for name, process_info in services.items():
@@ -167,7 +171,7 @@ class ProcessManager:
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
             process_info.pid = process_info.process.pid
@@ -227,7 +231,9 @@ class ProcessManager:
                 except subprocess.TimeoutExpired:
                     logger.warning(f"タイムアウト、強制終了: {name}")
                     process_info.process.kill()
-                    process_info.process.wait(timeout=10)  # 強制終了後もタイムアウトを設定
+                    process_info.process.wait(
+                        timeout=10
+                    )  # 強制終了後もタイムアウトを設定
 
             process_info.status = ProcessStatus.STOPPED
             process_info.pid = None
@@ -274,7 +280,9 @@ class ProcessManager:
             return
 
         self.monitoring_active = True
-        self.monitor_thread = threading.Thread(target=self._monitor_processes, daemon=True)
+        self.monitor_thread = threading.Thread(
+            target=self._monitor_processes, daemon=True
+        )
         self.monitor_thread.start()
         logger.info("プロセス監視開始")
 
@@ -291,7 +299,7 @@ class ProcessManager:
                 # デーモンスレッドなので強制終了は不要
 
         logger.info("プロセス監視停止")
-        
+
     def wait_for_shutdown(self, timeout: int = 60):
         """シャットダウン完了を待機"""
         if self._shutdown_thread and self._shutdown_thread.is_alive():
@@ -322,8 +330,13 @@ class ProcessManager:
                 process_info.status = ProcessStatus.FAILED
 
                 # 自動再起動
-                if process_info.auto_restart and process_info.restart_count < process_info.max_restart_attempts:
-                    logger.info(f"自動再起動実行: {process_info.name} (試行 {process_info.restart_count + 1})")
+                if (
+                    process_info.auto_restart
+                    and process_info.restart_count < process_info.max_restart_attempts
+                ):
+                    logger.info(
+                        f"自動再起動実行: {process_info.name} (試行 {process_info.restart_count + 1})"
+                    )
                     process_info.restart_count += 1
 
                     time.sleep(process_info.restart_delay)
@@ -338,7 +351,9 @@ class ProcessManager:
                     memory_mb = process.memory_info().rss / 1024 / 1024
 
                     if memory_mb > 1000:  # 1GB超過
-                        logger.warning(f"高メモリ使用量検出: {process_info.name} ({memory_mb:.1f}MB)")
+                        logger.warning(
+                            f"高メモリ使用量検出: {process_info.name} ({memory_mb:.1f}MB)"
+                        )
                 except psutil.NoSuchProcess:
                     logger.warning(f"プロセス消失: {process_info.name}")
                     process_info.status = ProcessStatus.FAILED
@@ -356,7 +371,7 @@ class ProcessManager:
         # 全サービス停止（エラーが発生しても他のサービスの停止を続行）
         success_count = 0
         failure_count = 0
-        
+
         for name in list(self.processes.keys()):
             try:
                 if self.stop_service(name, force=force):
@@ -367,48 +382,52 @@ class ProcessManager:
                 logger.error(f"サービス停止中にエラー発生 {name}: {e}")
                 failure_count += 1
 
-        logger.info(f"全サービス停止完了 (成功: {success_count}, 失敗: {failure_count})")
-        
+        logger.info(
+            f"全サービス停止完了 (成功: {success_count}, 失敗: {failure_count})"
+        )
+
         # シャットダウンイベントが設定されている場合、プロセス終了を待機
         if self._shutdown_event.is_set():
             logger.info("シャットダウンイベント検出、プロセス終了準備完了")
 
     def get_system_status(self) -> Dict:
         """システム全体の状態"""
-        running_count = sum(1 for p in self.processes.values() if p.status == ProcessStatus.RUNNING)
-        failed_count = sum(1 for p in self.processes.values() if p.status == ProcessStatus.FAILED)
+        running_count = sum(
+            1 for p in self.processes.values() if p.status == ProcessStatus.RUNNING
+        )
+        failed_count = sum(
+            1 for p in self.processes.values() if p.status == ProcessStatus.FAILED
+        )
 
         return {
             "total_services": len(self.processes),
             "running": running_count,
             "failed": failed_count,
             "monitoring_active": self.monitoring_active,
-            "timestamp": datetime.now()
+            "timestamp": datetime.now(),
         }
 
     def _signal_handler(self, signum, frame):
         """シグナルハンドラー"""
         logger.info(f"シグナル受信: {signum}")
-        
+
         # 排他制御で複数のシャットダウン処理を防止
         if not self._shutdown_lock.acquire(blocking=False):
             logger.info("シャットダウンは既に進行中")
             return
-            
+
         try:
             # 既にシャットダウンが進行中の場合は何もしない
             if self._shutdown_event.is_set():
                 logger.info("シャットダウンは既に進行中")
                 return
-                
+
             # シャットダウンイベントを設定
             self._shutdown_event.set()
-            
+
             # 別スレッドで非同期シャットダウン処理を実行
             self._shutdown_thread = threading.Thread(
-                target=self._graceful_shutdown, 
-                daemon=True, 
-                name="ShutdownThread"
+                target=self._graceful_shutdown, daemon=True, name="ShutdownThread"
             )
             self._shutdown_thread.start()
         finally:
@@ -454,7 +473,9 @@ if __name__ == "__main__":
     try:
         # 対話モード
         while True:
-            command = input("\nコマンド (start/stop/restart/status/quit): ").strip().lower()
+            command = (
+                input("\nコマンド (start/stop/restart/status/quit): ").strip().lower()
+            )
 
             if command == "quit":
                 break

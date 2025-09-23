@@ -30,6 +30,7 @@ from models_new.precision.precision_87_system import Precision87BreakthroughSyst
 
 class TradeStatus(Enum):
     """取引ステータス"""
+
     PENDING = "PENDING"
     EXECUTED = "EXECUTED"
     CANCELLED = "CANCELLED"
@@ -40,6 +41,7 @@ class TradeStatus(Enum):
 @dataclass
 class DemoTrade:
     """デモ取引記録"""
+
     trade_id: str
     symbol: str
     signal_type: SignalType
@@ -63,6 +65,7 @@ class DemoTrade:
 @dataclass
 class DemoSession:
     """デモセッション情報"""
+
     session_id: str
     start_time: datetime
     end_time: Optional[datetime]
@@ -85,12 +88,14 @@ class DemoTrader:
     実際の取引と同等の精度でのシミュレーション
     """
 
-    def __init__(self,
-                 initial_capital: float = 1000000,
-                 target_symbols: List[str] = None,
-                 precision_threshold: float = 85.0,
-                 confidence_threshold: float = 0.7,
-                 update_interval: int = 300):  # 5分間隔
+    def __init__(
+        self,
+        initial_capital: float = 1000000,
+        target_symbols: List[str] = None,
+        precision_threshold: float = 85.0,
+        confidence_threshold: float = 0.7,
+        update_interval: int = 300,
+    ):  # 5分間隔
         """
         Args:
             initial_capital: 初期仮想資金
@@ -108,7 +113,7 @@ class DemoTrader:
         self.trading_strategy = TradingStrategy(
             initial_capital=initial_capital,
             precision_threshold=precision_threshold,
-            confidence_threshold=confidence_threshold
+            confidence_threshold=confidence_threshold,
         )
         self.portfolio_manager = DemoPortfolioManager(initial_capital)
         self.risk_manager = DemoRiskManager(initial_capital)
@@ -162,7 +167,7 @@ class DemoTrader:
             max_drawdown=0.0,
             sharpe_ratio=0.0,
             precision_87_count=0,
-            active_positions=0
+            active_positions=0,
         )
 
         # システム初期化
@@ -206,7 +211,9 @@ class DemoTrader:
             self.current_session.total_trades = len(self.completed_trades)
             self.current_session.winning_trades = self.winning_trades
             self.current_session.total_return = (
-                (self.current_capital - self.initial_capital) / self.initial_capital * 100
+                (self.current_capital - self.initial_capital)
+                / self.initial_capital
+                * 100
             )
             self.current_session.precision_87_count = self.precision_87_trades
 
@@ -305,7 +312,7 @@ class DemoTrader:
             if current_data is None or len(current_data) == 0:
                 return None
 
-            current_price = current_data['Close'].iloc[-1]
+            current_price = current_data["Close"].iloc[-1]
 
             # スリッページ計算
             slippage_rate = np.random.normal(0, 0.0002)  # 平均0、標準偏差0.02%
@@ -327,7 +334,7 @@ class DemoTrader:
             )
 
             # 総コスト
-            total_cost = actual_position_value + trading_costs['total_cost']
+            total_cost = actual_position_value + trading_costs["total_cost"]
 
             # 資金チェック
             if total_cost > self.current_capital:
@@ -356,7 +363,7 @@ class DemoTrader:
                 actual_return=0.0,
                 profit_loss=0.0,
                 trading_costs=trading_costs,
-                reasoning=signal.reasoning
+                reasoning=signal.reasoning,
             )
 
             # 資金更新
@@ -368,16 +375,18 @@ class DemoTrader:
             )
 
             # 取引記録
-            self.trade_recorder.record_trade({
-                'trade_id': trade_id,
-                'symbol': signal.symbol,
-                'action': 'OPEN',
-                'quantity': quantity,
-                'price': execution_price,
-                'timestamp': datetime.now().isoformat(),
-                'signal_data': asdict(signal),
-                'trading_costs': trading_costs
-            })
+            self.trade_recorder.record_trade(
+                {
+                    "trade_id": trade_id,
+                    "symbol": signal.symbol,
+                    "action": "OPEN",
+                    "quantity": quantity,
+                    "price": execution_price,
+                    "timestamp": datetime.now().isoformat(),
+                    "signal_data": asdict(signal),
+                    "trading_costs": trading_costs,
+                }
+            )
 
             return trade
 
@@ -392,22 +401,28 @@ class DemoTrader:
         for trade_id, trade in self.active_trades.items():
             try:
                 # 現在価格取得
-                current_data = self.data_provider.get_stock_data(trade.symbol, period="1d")
+                current_data = self.data_provider.get_stock_data(
+                    trade.symbol, period="1d"
+                )
                 if current_data is None or len(current_data) == 0:
                     continue
 
-                current_price = current_data['Close'].iloc[-1]
+                current_price = current_data["Close"].iloc[-1]
                 trade.current_price = current_price
 
                 # 損益計算
                 if trade.signal_type == SignalType.BUY:
                     profit_loss = (current_price - trade.entry_price) * trade.quantity
-                    actual_return = (current_price - trade.entry_price) / trade.entry_price
+                    actual_return = (
+                        current_price - trade.entry_price
+                    ) / trade.entry_price
                 else:  # SELL
                     profit_loss = (trade.entry_price - current_price) * trade.quantity
-                    actual_return = (trade.entry_price - current_price) / trade.entry_price
+                    actual_return = (
+                        trade.entry_price - current_price
+                    ) / trade.entry_price
 
-                trade.profit_loss = profit_loss - trade.trading_costs['total_cost']
+                trade.profit_loss = profit_loss - trade.trading_costs["total_cost"]
                 trade.actual_return = actual_return
 
                 # エグジット条件チェック
@@ -415,12 +430,16 @@ class DemoTrader:
                 close_reason = ""
 
                 # ストップロス
-                if trade.stop_loss_price and self._check_stop_loss(trade, current_price):
+                if trade.stop_loss_price and self._check_stop_loss(
+                    trade, current_price
+                ):
                     should_close = True
                     close_reason = "ストップロス"
 
                 # 利確
-                elif trade.take_profit_price and self._check_take_profit(trade, current_price):
+                elif trade.take_profit_price and self._check_take_profit(
+                    trade, current_price
+                ):
                     should_close = True
                     close_reason = "利確"
 
@@ -458,19 +477,19 @@ class DemoTrader:
                 final_profit_loss = (trade.entry_price - close_price) * trade.quantity
 
             # 取引コスト差し引き
-            final_profit_loss -= trade.trading_costs['total_cost']
+            final_profit_loss -= trade.trading_costs["total_cost"]
 
             # クローズ時の追加コスト
             close_costs = self.trading_strategy.calculate_trading_costs(
                 trade.quantity * close_price, trade.signal_type
             )
-            final_profit_loss -= close_costs['total_cost']
+            final_profit_loss -= close_costs["total_cost"]
 
             trade.profit_loss = final_profit_loss
 
             # 資金に反映
             position_value = trade.quantity * close_price
-            self.current_capital += position_value - close_costs['total_cost']
+            self.current_capital += position_value - close_costs["total_cost"]
 
             # 勝敗判定
             if final_profit_loss > 0:
@@ -484,17 +503,19 @@ class DemoTrader:
             self.portfolio_manager.remove_position(trade.symbol)
 
             # 取引記録
-            self.trade_recorder.record_trade({
-                'trade_id': trade_id,
-                'symbol': trade.symbol,
-                'action': 'CLOSE',
-                'quantity': trade.quantity,
-                'price': close_price,
-                'timestamp': datetime.now().isoformat(),
-                'profit_loss': final_profit_loss,
-                'close_reason': reason,
-                'close_costs': close_costs
-            })
+            self.trade_recorder.record_trade(
+                {
+                    "trade_id": trade_id,
+                    "symbol": trade.symbol,
+                    "action": "CLOSE",
+                    "quantity": trade.quantity,
+                    "price": close_price,
+                    "timestamp": datetime.now().isoformat(),
+                    "profit_loss": final_profit_loss,
+                    "close_reason": reason,
+                    "close_costs": close_costs,
+                }
+            )
 
             self.logger.info(
                 f"ポジションクローズ: {trade.symbol} "
@@ -536,8 +557,13 @@ class DemoTrader:
             self._close_all_positions()
 
         # 1日の最大取引回数制限
-        today_trades = len([t for t in self.completed_trades
-                           if t.entry_time.date() == datetime.now().date()])
+        today_trades = len(
+            [
+                t
+                for t in self.completed_trades
+                if t.entry_time.date() == datetime.now().date()
+            ]
+        )
         if today_trades >= 10:
             self.logger.info("1日の最大取引回数に到達")
             return
@@ -545,7 +571,9 @@ class DemoTrader:
     def _update_portfolio_status(self):
         """ポートフォリオ状況更新"""
         total_equity = self._calculate_total_equity()
-        total_return = (total_equity - self.initial_capital) / self.initial_capital * 100
+        total_return = (
+            (total_equity - self.initial_capital) / self.initial_capital * 100
+        )
 
         if self.current_session:
             self.current_session.current_capital = self.current_capital
@@ -583,8 +611,16 @@ class DemoTrader:
     def _get_default_symbols(self) -> List[str]:
         """デフォルト対象銘柄取得"""
         return [
-            "6758.T", "7203.T", "8306.T", "9984.T", "6861.T",  # 主要株
-            "4502.T", "6503.T", "7201.T", "8001.T", "9022.T"   # 追加株
+            "6758.T",
+            "7203.T",
+            "8306.T",
+            "9984.T",
+            "6861.T",  # 主要株
+            "4502.T",
+            "6503.T",
+            "7201.T",
+            "8001.T",
+            "9022.T",  # 追加株
         ]
 
     def _save_session_results(self):
@@ -593,9 +629,9 @@ class DemoTrader:
             return
 
         session_data = {
-            'session': asdict(self.current_session),
-            'completed_trades': [asdict(trade) for trade in self.completed_trades],
-            'final_statistics': self.get_trading_statistics()
+            "session": asdict(self.current_session),
+            "completed_trades": [asdict(trade) for trade in self.completed_trades],
+            "final_statistics": self.get_trading_statistics(),
         }
 
         # JSONファイルに保存
@@ -603,7 +639,7 @@ class DemoTrader:
         filepath = f"C:\\gemini-desktop\\ClStock\\data\\{filename}"
 
         try:
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(session_data, f, ensure_ascii=False, indent=2, default=str)
             self.logger.info(f"セッション結果保存: {filepath}")
         except Exception as e:
@@ -626,17 +662,21 @@ class DemoTrader:
         sharpe_ratio = np.mean(returns) / np.std(returns) if np.std(returns) != 0 else 0
 
         return {
-            'total_trades': len(self.completed_trades),
-            'winning_trades': self.winning_trades,
-            'win_rate': win_rate,
-            'total_profit': total_profit,
-            'average_profit': avg_profit,
-            'average_return': avg_return,
-            'sharpe_ratio': sharpe_ratio,
-            'precision_87_trades': self.precision_87_trades,
-            'precision_87_rate': self.precision_87_trades / len(self.completed_trades) * 100,
-            'total_signals_generated': self.total_signals_generated,
-            'signal_execution_rate': self.total_trades_executed / self.total_signals_generated * 100
+            "total_trades": len(self.completed_trades),
+            "winning_trades": self.winning_trades,
+            "win_rate": win_rate,
+            "total_profit": total_profit,
+            "average_profit": avg_profit,
+            "average_return": avg_return,
+            "sharpe_ratio": sharpe_ratio,
+            "precision_87_trades": self.precision_87_trades,
+            "precision_87_rate": self.precision_87_trades
+            / len(self.completed_trades)
+            * 100,
+            "total_signals_generated": self.total_signals_generated,
+            "signal_execution_rate": self.total_trades_executed
+            / self.total_signals_generated
+            * 100,
         }
 
     def get_current_status(self) -> Dict[str, Any]:
@@ -645,15 +685,19 @@ class DemoTrader:
         unrealized_pnl = sum(trade.profit_loss for trade in self.active_trades.values())
 
         return {
-            'session_id': self.current_session.session_id if self.current_session else None,
-            'is_running': self.is_running,
-            'initial_capital': self.initial_capital,
-            'current_capital': self.current_capital,
-            'total_equity': total_equity,
-            'total_return': (total_equity - self.initial_capital) / self.initial_capital * 100,
-            'active_positions': len(self.active_trades),
-            'completed_trades': len(self.completed_trades),
-            'unrealized_pnl': unrealized_pnl,
-            'precision_87_trades': self.precision_87_trades,
-            'trading_statistics': self.get_trading_statistics()
+            "session_id": (
+                self.current_session.session_id if self.current_session else None
+            ),
+            "is_running": self.is_running,
+            "initial_capital": self.initial_capital,
+            "current_capital": self.current_capital,
+            "total_equity": total_equity,
+            "total_return": (total_equity - self.initial_capital)
+            / self.initial_capital
+            * 100,
+            "active_positions": len(self.active_trades),
+            "completed_trades": len(self.completed_trades),
+            "unrealized_pnl": unrealized_pnl,
+            "precision_87_trades": self.precision_87_trades,
+            "trading_statistics": self.get_trading_statistics(),
         }

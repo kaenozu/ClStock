@@ -19,6 +19,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from models_new.precision.precision_87_system import Precision87BreakthroughSystem
 from data.stock_data import StockDataProvider
 
+
 class MediumTermPredictionSystem:
     """1ヶ月基準の中期予測システム"""
 
@@ -26,18 +27,26 @@ class MediumTermPredictionSystem:
         self.precision_system = Precision87BreakthroughSystem()
         self.data_provider = StockDataProvider()
         self.prediction_period_days = 20  # 1ヶ月（営業日ベース）
-        self.target_symbols = ['7203.T', '6758.T', '8306.T', '6861.T', '9984.T', '8001.T', '4502.T']
+        self.target_symbols = [
+            "7203.T",
+            "6758.T",
+            "8306.T",
+            "6861.T",
+            "9984.T",
+            "8001.T",
+            "4502.T",
+        ]
 
     def analyze_medium_term_trend(self, symbol: str) -> Dict[str, Any]:
         """中期トレンド分析（1ヶ月基準）"""
         try:
             # 3ヶ月のデータを取得
-            stock_data = self.data_provider.get_stock_data(symbol, '3mo')
+            stock_data = self.data_provider.get_stock_data(symbol, "3mo")
             if stock_data.empty:
                 return self._create_fallback_analysis(symbol)
 
-            close = stock_data['Close']
-            volume = stock_data['Volume']
+            close = stock_data["Close"]
+            volume = stock_data["Volume"]
 
             # 現在価格
             current_price = float(close.iloc[-1])
@@ -64,18 +73,18 @@ class MediumTermPredictionSystem:
             support_resistance = self._calculate_support_resistance(close)
 
             return {
-                'symbol': symbol,
-                'current_price': current_price,
-                'ma_5': ma_5,
-                'ma_20': ma_20,
-                'ma_60': ma_60,
-                'trend_direction': trend_direction,
-                'volatility_20d': volatility_20d,
-                'rsi': rsi,
-                'volume_trend': volume_trend,
-                'support': support_resistance['support'],
-                'resistance': support_resistance['resistance'],
-                'analysis_timestamp': datetime.now()
+                "symbol": symbol,
+                "current_price": current_price,
+                "ma_5": ma_5,
+                "ma_20": ma_20,
+                "ma_60": ma_60,
+                "trend_direction": trend_direction,
+                "volatility_20d": volatility_20d,
+                "rsi": rsi,
+                "volume_trend": volume_trend,
+                "support": support_resistance["support"],
+                "resistance": support_resistance["resistance"],
+                "analysis_timestamp": datetime.now(),
             }
 
         except Exception as e:
@@ -126,55 +135,52 @@ class MediumTermPredictionSystem:
         support = float(recent_prices.min())
         resistance = float(recent_prices.max())
 
-        return {
-            'support': support,
-            'resistance': resistance
-        }
+        return {"support": support, "resistance": resistance}
 
     def generate_buy_sell_signals(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
         """売買シグナル生成"""
-        current_price = analysis['current_price']
-        rsi = analysis['rsi']
-        trend = analysis['trend_direction']
-        volatility = analysis['volatility_20d']
-        volume_trend = analysis['volume_trend']
-        support = analysis['support']
-        resistance = analysis['resistance']
+        current_price = analysis["current_price"]
+        rsi = analysis["rsi"]
+        trend = analysis["trend_direction"]
+        volatility = analysis["volatility_20d"]
+        volume_trend = analysis["volume_trend"]
+        support = analysis["support"]
+        resistance = analysis["resistance"]
 
         signals = {
-            'buy_signal_strength': 0,
-            'sell_signal_strength': 0,
-            'hold_signal_strength': 0,
-            'recommendation': 'HOLD',
-            'target_price': current_price,
-            'stop_loss': current_price * 0.95,
-            'reasoning': []
+            "buy_signal_strength": 0,
+            "sell_signal_strength": 0,
+            "hold_signal_strength": 0,
+            "recommendation": "HOLD",
+            "target_price": current_price,
+            "stop_loss": current_price * 0.95,
+            "reasoning": [],
         }
 
         # RSIによるシグナル
         if rsi < 30:
-            signals['buy_signal_strength'] += 30
-            signals['reasoning'].append("RSI過売り状態（買いシグナル）")
+            signals["buy_signal_strength"] += 30
+            signals["reasoning"].append("RSI過売り状態（買いシグナル）")
         elif rsi > 70:
-            signals['sell_signal_strength'] += 30
-            signals['reasoning'].append("RSI過買い状態（売りシグナル）")
+            signals["sell_signal_strength"] += 30
+            signals["reasoning"].append("RSI過買い状態（売りシグナル）")
 
         # トレンドによるシグナル
         if "上昇" in trend:
-            signals['buy_signal_strength'] += 25
-            signals['reasoning'].append(f"トレンド分析: {trend}")
+            signals["buy_signal_strength"] += 25
+            signals["reasoning"].append(f"トレンド分析: {trend}")
         elif "下降" in trend:
-            signals['sell_signal_strength'] += 25
-            signals['reasoning'].append(f"トレンド分析: {trend}")
+            signals["sell_signal_strength"] += 25
+            signals["reasoning"].append(f"トレンド分析: {trend}")
 
         # 出来高によるシグナル
         if volume_trend == "出来高増加":
             if "上昇" in trend:
-                signals['buy_signal_strength'] += 15
-                signals['reasoning'].append("出来高増加（上昇トレンド確認）")
+                signals["buy_signal_strength"] += 15
+                signals["reasoning"].append("出来高増加（上昇トレンド確認）")
             elif "下降" in trend:
-                signals['sell_signal_strength'] += 15
-                signals['reasoning'].append("出来高増加（下降トレンド確認）")
+                signals["sell_signal_strength"] += 15
+                signals["reasoning"].append("出来高増加（下降トレンド確認）")
 
         # サポート・レジスタンスによるシグナル
         # ゼロ除算を防ぐ安全チェック
@@ -185,31 +191,39 @@ class MediumTermPredictionSystem:
             # レジスタンスとサポートが同じ場合（価格変動なし）
             price_position = 0.5  # 中立ポジション
         if price_position < 0.2:
-            signals['buy_signal_strength'] += 20
-            signals['reasoning'].append("サポートライン付近（買い機会）")
+            signals["buy_signal_strength"] += 20
+            signals["reasoning"].append("サポートライン付近（買い機会）")
         elif price_position > 0.8:
-            signals['sell_signal_strength'] += 20
-            signals['reasoning'].append("レジスタンスライン付近（売り機会）")
+            signals["sell_signal_strength"] += 20
+            signals["reasoning"].append("レジスタンスライン付近（売り機会）")
 
         # ボラティリティ調整
         if volatility > 0.4:  # 高ボラティリティ
-            signals['buy_signal_strength'] *= 0.8
-            signals['sell_signal_strength'] *= 0.8
-            signals['reasoning'].append("高ボラティリティによりシグナル強度調整")
+            signals["buy_signal_strength"] *= 0.8
+            signals["sell_signal_strength"] *= 0.8
+            signals["reasoning"].append("高ボラティリティによりシグナル強度調整")
 
         # 最終判定
-        if signals['buy_signal_strength'] > signals['sell_signal_strength'] and signals['buy_signal_strength'] > 50:
-            signals['recommendation'] = 'BUY'
-            signals['target_price'] = min(current_price * 1.1, resistance * 0.95)
-            signals['stop_loss'] = max(current_price * 0.95, support * 1.02)
-        elif signals['sell_signal_strength'] > signals['buy_signal_strength'] and signals['sell_signal_strength'] > 50:
-            signals['recommendation'] = 'SELL'
-            signals['target_price'] = max(current_price * 0.9, support * 1.05)
-            signals['stop_loss'] = min(current_price * 1.05, resistance * 0.98)
+        if (
+            signals["buy_signal_strength"] > signals["sell_signal_strength"]
+            and signals["buy_signal_strength"] > 50
+        ):
+            signals["recommendation"] = "BUY"
+            signals["target_price"] = min(current_price * 1.1, resistance * 0.95)
+            signals["stop_loss"] = max(current_price * 0.95, support * 1.02)
+        elif (
+            signals["sell_signal_strength"] > signals["buy_signal_strength"]
+            and signals["sell_signal_strength"] > 50
+        ):
+            signals["recommendation"] = "SELL"
+            signals["target_price"] = max(current_price * 0.9, support * 1.05)
+            signals["stop_loss"] = min(current_price * 1.05, resistance * 0.98)
         else:
-            signals['recommendation'] = 'HOLD'
-            signals['hold_signal_strength'] = 100 - max(signals['buy_signal_strength'], signals['sell_signal_strength'])
-            signals['reasoning'].append("シグナル不明確、様子見推奨")
+            signals["recommendation"] = "HOLD"
+            signals["hold_signal_strength"] = 100 - max(
+                signals["buy_signal_strength"], signals["sell_signal_strength"]
+            )
+            signals["reasoning"].append("シグナル不明確、様子見推奨")
 
         return signals
 
@@ -226,8 +240,10 @@ class MediumTermPredictionSystem:
             signals = self.generate_buy_sell_signals(analysis)
 
             # 1ヶ月予測価格計算（89%精度システム + 中期トレンド分析）
-            current_price = analysis['current_price']
-            precision_prediction = precision_result.get('final_prediction', current_price)
+            current_price = analysis["current_price"]
+            precision_prediction = precision_result.get(
+                "final_prediction", current_price
+            )
 
             # 中期調整係数
             trend_adjustment = self._calculate_medium_term_adjustment(analysis)
@@ -235,27 +251,29 @@ class MediumTermPredictionSystem:
             final_prediction = precision_prediction * trend_adjustment
 
             # 信頼度計算
-            base_confidence = precision_result.get('final_confidence', 0.85)
+            base_confidence = precision_result.get("final_confidence", 0.85)
             trend_confidence = self._calculate_trend_confidence(analysis)
             final_confidence = (base_confidence + trend_confidence) / 2
 
             return {
-                'symbol': symbol,
-                'prediction_period': '1ヶ月',
-                'current_price': current_price,
-                'predicted_price': final_prediction,
-                'price_change_percent': ((final_prediction - current_price) / current_price * 100),
-                'confidence': final_confidence,
-                'accuracy_estimate': 89.4,  # 分析結果による最適精度
-                'signals': signals,
-                'trend_analysis': analysis,
-                'precision_system_result': precision_result,
-                'prediction_timestamp': datetime.now(),
-                'system_info': {
-                    'system_name': 'MediumTermPredictionSystem',
-                    'optimization_target': '1ヶ月予測（89.4%精度）',
-                    'methodology': '89%精度システム + 中期トレンド分析'
-                }
+                "symbol": symbol,
+                "prediction_period": "1ヶ月",
+                "current_price": current_price,
+                "predicted_price": final_prediction,
+                "price_change_percent": (
+                    (final_prediction - current_price) / current_price * 100
+                ),
+                "confidence": final_confidence,
+                "accuracy_estimate": 89.4,  # 分析結果による最適精度
+                "signals": signals,
+                "trend_analysis": analysis,
+                "precision_system_result": precision_result,
+                "prediction_timestamp": datetime.now(),
+                "system_info": {
+                    "system_name": "MediumTermPredictionSystem",
+                    "optimization_target": "1ヶ月予測（89.4%精度）",
+                    "methodology": "89%精度システム + 中期トレンド分析",
+                },
             }
 
         except Exception as e:
@@ -263,9 +281,9 @@ class MediumTermPredictionSystem:
 
     def _calculate_medium_term_adjustment(self, analysis: Dict[str, Any]) -> float:
         """中期トレンド調整係数計算"""
-        trend = analysis['trend_direction']
-        rsi = analysis['rsi']
-        volatility = analysis['volatility_20d']
+        trend = analysis["trend_direction"]
+        rsi = analysis["rsi"]
+        volatility = analysis["volatility_20d"]
 
         adjustment = 1.0
 
@@ -293,9 +311,9 @@ class MediumTermPredictionSystem:
 
     def _calculate_trend_confidence(self, analysis: Dict[str, Any]) -> float:
         """トレンド信頼度計算"""
-        trend = analysis['trend_direction']
-        volume_trend = analysis['volume_trend']
-        volatility = analysis['volatility_20d']
+        trend = analysis["trend_direction"]
+        volume_trend = analysis["volume_trend"]
+        volatility = analysis["volatility_20d"]
 
         confidence = 0.5
 
@@ -317,41 +335,46 @@ class MediumTermPredictionSystem:
 
         return max(0.3, min(0.95, confidence))
 
-    def _create_fallback_analysis(self, symbol: str, error: str = None) -> Dict[str, Any]:
+    def _create_fallback_analysis(
+        self, symbol: str, error: str = None
+    ) -> Dict[str, Any]:
         """フォールバック分析結果"""
         return {
-            'symbol': symbol,
-            'current_price': 0,
-            'ma_5': 0,
-            'ma_20': 0,
-            'ma_60': 0,
-            'trend_direction': "データ不足",
-            'volatility_20d': 0.3,
-            'rsi': 50,
-            'volume_trend': "データ不足",
-            'support': 0,
-            'resistance': 0,
-            'analysis_timestamp': datetime.now(),
-            'error': error
+            "symbol": symbol,
+            "current_price": 0,
+            "ma_5": 0,
+            "ma_20": 0,
+            "ma_60": 0,
+            "trend_direction": "データ不足",
+            "volatility_20d": 0.3,
+            "rsi": 50,
+            "volume_trend": "データ不足",
+            "support": 0,
+            "resistance": 0,
+            "analysis_timestamp": datetime.now(),
+            "error": error,
         }
 
-    def _create_fallback_prediction(self, symbol: str, error: str = None) -> Dict[str, Any]:
+    def _create_fallback_prediction(
+        self, symbol: str, error: str = None
+    ) -> Dict[str, Any]:
         """フォールバック予測結果"""
         return {
-            'symbol': symbol,
-            'prediction_period': '1ヶ月',
-            'current_price': 0,
-            'predicted_price': 0,
-            'price_change_percent': 0,
-            'confidence': 0.3,
-            'accuracy_estimate': 84.6,
-            'signals': {
-                'recommendation': 'HOLD',
-                'reasoning': ['データ不足により分析不可']
+            "symbol": symbol,
+            "prediction_period": "1ヶ月",
+            "current_price": 0,
+            "predicted_price": 0,
+            "price_change_percent": 0,
+            "confidence": 0.3,
+            "accuracy_estimate": 84.6,
+            "signals": {
+                "recommendation": "HOLD",
+                "reasoning": ["データ不足により分析不可"],
             },
-            'prediction_timestamp': datetime.now(),
-            'error': error
+            "prediction_timestamp": datetime.now(),
+            "error": error,
         }
+
 
 def main():
     """テスト実行"""
@@ -360,7 +383,7 @@ def main():
 
     system = MediumTermPredictionSystem()
 
-    test_symbol = '7203.T'  # トヨタ
+    test_symbol = "7203.T"  # トヨタ
     result = system.get_medium_term_prediction(test_symbol)
 
     print(f"\n銘柄: {result['symbol']}")
@@ -369,6 +392,7 @@ def main():
     print(f"変動予測: {result['price_change_percent']:+.1f}%")
     print(f"信頼度: {result['confidence']:.1%}")
     print(f"推奨: {result['signals']['recommendation']}")
+
 
 if __name__ == "__main__":
     main()

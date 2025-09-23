@@ -11,10 +11,11 @@ from datetime import datetime, timedelta
 import io
 
 # 標準出力をUTF-8に設定
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 
 def start_demo_trading():
     """デモ取引を開始する"""
@@ -38,12 +39,16 @@ def start_demo_trading():
         print("📊 システム初期化中...")
 
         # 87%精度システム初期化
-        from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+        from models_new.precision.precision_87_system import (
+            Precision87BreakthroughSystem,
+        )
+
         precision_system = Precision87BreakthroughSystem()
         print("✅ 87%精度システム初期化完了")
 
         # データプロバイダー初期化
         from data.stock_data import StockDataProvider
+
         data_provider = StockDataProvider()
         print("✅ データプロバイダー初期化完了")
 
@@ -54,7 +59,7 @@ def start_demo_trading():
             "cash": initial_money,
             "positions": {},
             "trades": [],
-            "daily_pnl": []
+            "daily_pnl": [],
         }
 
         # 各銘柄で予測実行
@@ -65,10 +70,10 @@ def start_demo_trading():
                 # 87%精度予測実行
                 result = precision_system.predict_with_87_precision(symbol)
 
-                prediction = result['final_prediction']
-                confidence = result['final_confidence']
-                accuracy = result['final_accuracy']
-                achieved_87 = result['precision_87_achieved']
+                prediction = result["final_prediction"]
+                confidence = result["final_confidence"]
+                accuracy = result["final_accuracy"]
+                achieved_87 = result["precision_87_achieved"]
 
                 print(f"  💡 予測結果:")
                 print(f"    価格予測: {prediction:.1f}")
@@ -79,29 +84,35 @@ def start_demo_trading():
                 # 取引判断（簡単版）
                 if achieved_87 and confidence > 0.7:
                     # 高精度・高信頼度の場合は取引実行
-                    position_size = min(100000, portfolio["cash"] * 0.1)  # 最大10万円または資金の10%
+                    position_size = min(
+                        100000, portfolio["cash"] * 0.1
+                    )  # 最大10万円または資金の10%
 
                     if position_size > 10000 and portfolio["cash"] >= position_size:
                         # 実際の現在価格を取得
                         try:
                             current_data = data_provider.get_stock_data(symbol, "1d")
                             if not current_data.empty:
-                                current_price = float(current_data['Close'].iloc[-1])
+                                current_price = float(current_data["Close"].iloc[-1])
                             else:
                                 # データが取得できない場合のみ予測価格を使用
                                 current_price = prediction * 0.98
-                                print(f"  ⚠️  {symbol} の現在価格が取得できないため、予測価格を使用")
+                                print(
+                                    f"  ⚠️  {symbol} の現在価格が取得できないため、予測価格を使用"
+                                )
                         except Exception as e:
                             # エラーの場合は予測価格を使用
                             current_price = prediction * 0.98
-                            print(f"  ⚠️  {symbol} の価格取得エラー: {str(e)} - 予測価格を使用")
+                            print(
+                                f"  ⚠️  {symbol} の価格取得エラー: {str(e)} - 予測価格を使用"
+                            )
 
                         shares = int(position_size / current_price)
 
                         portfolio["positions"][symbol] = {
                             "shares": shares,
                             "buy_price": current_price,
-                            "current_value": shares * current_price
+                            "current_value": shares * current_price,
                         }
                         portfolio["cash"] -= shares * current_price
 
@@ -113,11 +124,13 @@ def start_demo_trading():
                             "amount": shares * current_price,
                             "confidence": confidence,
                             "accuracy": accuracy,
-                            "timestamp": datetime.now()
+                            "timestamp": datetime.now(),
                         }
                         portfolio["trades"].append(trade_record)
 
-                        print(f"  🔥 取引実行: {shares}株 買い注文 (単価: {current_price:.0f}円)")
+                        print(
+                            f"  🔥 取引実行: {shares}株 買い注文 (単価: {current_price:.0f}円)"
+                        )
                     else:
                         print(f"  ⏸️ 資金不足のため取引見送り")
                 else:
@@ -131,7 +144,9 @@ def start_demo_trading():
         print("📈 デモ取引結果サマリー")
         print("=" * 60)
 
-        total_investment = sum(pos["current_value"] for pos in portfolio["positions"].values())
+        total_investment = sum(
+            pos["current_value"] for pos in portfolio["positions"].values()
+        )
         remaining_cash = portfolio["cash"]
         total_portfolio_value = total_investment + remaining_cash
 
@@ -143,8 +158,12 @@ def start_demo_trading():
         print(f"\n🎯 実行した取引:")
         if portfolio["trades"]:
             for i, trade in enumerate(portfolio["trades"], 1):
-                print(f"  {i}. {trade['symbol']}: {trade['shares']}株 @ {trade['price']:.0f}円")
-                print(f"     信頼度: {trade['confidence']:.1%}, 精度: {trade['accuracy']:.1f}%")
+                print(
+                    f"  {i}. {trade['symbol']}: {trade['shares']}株 @ {trade['price']:.0f}円"
+                )
+                print(
+                    f"     信頼度: {trade['confidence']:.1%}, 精度: {trade['accuracy']:.1f}%"
+                )
         else:
             print("  取引実行なし（基準を満たす予測がありませんでした）")
 
@@ -170,6 +189,7 @@ def start_demo_trading():
         print("  2. models_new/モジュールが正しく配置されているか")
         print("  3. インターネット接続でデータが取得できるか")
         return None
+
 
 def show_help():
     """使い方の説明"""
@@ -200,6 +220,7 @@ def show_help():
     print("  - 1銘柄あたり最大10万円")
     print()
     print("=" * 60)
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ["help", "-h", "--help"]:

@@ -17,6 +17,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 import logging
 from utils.logger_config import setup_logger
+
 logger = setup_logger(__name__)
 
 
@@ -33,45 +34,42 @@ class OptimizedInvestmentSystem:
         # 高利益実績銘柄を優先選定
         self.high_performance_symbols = [
             # 最高利益銘柄（バックテスト結果から）
-            '8058.T',   # 三菱商事 - 大きな利益実績
-            '8411.T',   # みずほFG - 連続利益
-            '6701.T',   # NEC - 高い利益機会
-            '8002.T',   # 丸紅 - 安定利益
-            '8031.T',   # 三井物産 - 利益確認済み
-            '7269.T',   # スズキ - 最近の利益
-            '8001.T',   # 伊藤忠商事 - 高額取引
-            '1332.T',   # 日本水産 - 連続買い
-
+            "8058.T",  # 三菱商事 - 大きな利益実績
+            "8411.T",  # みずほFG - 連続利益
+            "6701.T",  # NEC - 高い利益機会
+            "8002.T",  # 丸紅 - 安定利益
+            "8031.T",  # 三井物産 - 利益確認済み
+            "7269.T",  # スズキ - 最近の利益
+            "8001.T",  # 伊藤忠商事 - 高額取引
+            "1332.T",  # 日本水産 - 連続買い
             # 高ボラティリティ・高利益期待銘柄
-            '6758.T',   # ソニーG - 大型株安定
-            '7203.T',   # トヨタ - 取引頻度高
-            '9984.T',   # ソフトバンク - 高成長
-            '8306.T',   # 三菱UFJ - 金融大手
-            '9433.T',   # KDDI - 通信安定
-            '4689.T',   # Zホールディングス - IT成長
-
+            "6758.T",  # ソニーG - 大型株安定
+            "7203.T",  # トヨタ - 取引頻度高
+            "9984.T",  # ソフトバンク - 高成長
+            "8306.T",  # 三菱UFJ - 金融大手
+            "9433.T",  # KDDI - 通信安定
+            "4689.T",  # Zホールディングス - IT成長
             # 追加高成長期待銘柄
-            '6861.T',   # キーエンス - 高収益
-            '4519.T',   # 中外製薬 - バイオ
-            '6367.T',   # ダイキン - 空調世界1位
-            '9432.T',   # NTT - 通信インフラ
-            '6902.T',   # デンソー - 自動車部品
-
+            "6861.T",  # キーエンス - 高収益
+            "4519.T",  # 中外製薬 - バイオ
+            "6367.T",  # ダイキン - 空調世界1位
+            "9432.T",  # NTT - 通信インフラ
+            "6902.T",  # デンソー - 自動車部品
             # 新規追加：高成長セクター
-            '2914.T',   # JT - 高配当
-            '8035.T',   # 東京エレクトロン - 半導体
-            '6503.T',   # 三菱電機 - 重電
-            '6501.T',   # 日立 - コングロマリット
-            '4502.T',   # 武田薬品 - 製薬大手
-            '5201.T',   # AGC - ガラス
-            '5401.T',   # 新日鉄住金 - 鉄鋼
-            '3865.T',   # 北越コーポレーション - 紙パルプ
-            '6724.T',   # セイコーエプソン - 精密機器
+            "2914.T",  # JT - 高配当
+            "8035.T",  # 東京エレクトロン - 半導体
+            "6503.T",  # 三菱電機 - 重電
+            "6501.T",  # 日立 - コングロマリット
+            "4502.T",  # 武田薬品 - 製薬大手
+            "5201.T",  # AGC - ガラス
+            "5401.T",  # 新日鉄住金 - 鉄鋼
+            "3865.T",  # 北越コーポレーション - 紙パルプ
+            "6724.T",  # セイコーエプソン - 精密機器
         ]
 
         # より厳しい利益基準
         self.min_profit_threshold = 1.5  # 最低1.5%の利益を期待
-        self.max_loss_threshold = -1.0   # 損失1%で損切り
+        self.max_loss_threshold = -1.0  # 損失1%で損切り
         self.position_size_factor = 0.15  # 資金の15%を投入（積極運用）
 
     def identify_high_profit_opportunity(self, data):
@@ -97,24 +95,25 @@ class OptimizedInvestmentSystem:
 
         # 強気シグナル（より積極的）
         bullish_signals = (
-            (close > sma_5) &
-            (sma_5 > sma_10) &
-            (sma_10 > sma_20) &
-            (rsi > 30) & (rsi < 75) &  # RSI範囲
-            volume_spike &
-            (close.pct_change(3) > 0.005)  # 3日で0.5%以上上昇
+            (close > sma_5)
+            & (sma_5 > sma_10)
+            & (sma_10 > sma_20)
+            & (rsi > 30)
+            & (rsi < 75)  # RSI範囲
+            & volume_spike
+            & (close.pct_change(3) > 0.005)  # 3日で0.5%以上上昇
         )
 
         # 弱気シグナル（早期売却）
         bearish_signals = (
-            (close < sma_5) |
-            (sma_5 < sma_10) |
-            (rsi > 80) |  # 過買い
-            (close.pct_change(2) < -0.015)  # 2日で1.5%下落
+            (close < sma_5)
+            | (sma_5 < sma_10)
+            | (rsi > 80)  # 過買い
+            | (close.pct_change(2) < -0.015)  # 2日で1.5%下落
         )
 
         signals = pd.Series(0, index=data.index)
-        signals[bullish_signals] = 1   # 買いシグナル
+        signals[bullish_signals] = 1  # 買いシグナル
         signals[bearish_signals] = -1  # 売りシグナル
 
         return signals
@@ -124,7 +123,7 @@ class OptimizedInvestmentSystem:
         available_capital = self.current_capital
 
         # 高信頼度銘柄には大きくポジション
-        if symbol in ['8058.T', '8411.T', '6701.T', '8002.T']:
+        if symbol in ["8058.T", "8411.T", "6701.T", "8002.T"]:
             position_factor = 0.20  # 20%投入
         elif symbol in self.high_performance_symbols[:10]:
             position_factor = 0.15  # 15%投入
@@ -147,25 +146,31 @@ class OptimizedInvestmentSystem:
                 if symbol in self.positions:
                     self.positions[symbol]["shares"] += shares
                     # 平均取得価格更新
-                    old_total = self.positions[symbol]["avg_price"] * (self.positions[symbol]["shares"] - shares)
+                    old_total = self.positions[symbol]["avg_price"] * (
+                        self.positions[symbol]["shares"] - shares
+                    )
                     new_total = old_total + total_cost
-                    self.positions[symbol]["avg_price"] = new_total / self.positions[symbol]["shares"]
+                    self.positions[symbol]["avg_price"] = (
+                        new_total / self.positions[symbol]["shares"]
+                    )
                 else:
                     self.positions[symbol] = {
                         "shares": shares,
                         "avg_price": price,
-                        "buy_date": date
+                        "buy_date": date,
                     }
 
-                self.transaction_history.append({
-                    "date": date,
-                    "symbol": symbol,
-                    "action": action,
-                    "shares": shares,
-                    "price": price,
-                    "total": total_cost,
-                    "capital_after": self.current_capital
-                })
+                self.transaction_history.append(
+                    {
+                        "date": date,
+                        "symbol": symbol,
+                        "action": action,
+                        "shares": shares,
+                        "price": price,
+                        "total": total_cost,
+                        "capital_after": self.current_capital,
+                    }
+                )
 
                 return True
             return False
@@ -181,16 +186,18 @@ class OptimizedInvestmentSystem:
                 if self.positions[symbol]["shares"] == 0:
                     del self.positions[symbol]
 
-                self.transaction_history.append({
-                    "date": date,
-                    "symbol": symbol,
-                    "action": action,
-                    "shares": shares,
-                    "price": price,
-                    "total": total_cost,
-                    "profit": profit,
-                    "capital_after": self.current_capital
-                })
+                self.transaction_history.append(
+                    {
+                        "date": date,
+                        "symbol": symbol,
+                        "action": action,
+                        "shares": shares,
+                        "price": price,
+                        "total": total_cost,
+                        "profit": profit,
+                        "capital_after": self.current_capital,
+                    }
+                )
 
                 return True
             return False
@@ -209,7 +216,9 @@ class OptimizedInvestmentSystem:
                 stock_data = self.data_provider.get_stock_data(symbol, "2y")
 
                 if stock_data.empty:
-                    print(f"  エラー: Data fetch error for {symbol}: No historical data available")
+                    print(
+                        f"  エラー: Data fetch error for {symbol}: No historical data available"
+                    )
                     continue
 
                 signals = self.identify_high_profit_opportunity(stock_data)
@@ -225,31 +234,45 @@ class OptimizedInvestmentSystem:
 
                     # 買いシグナル
                     if current_signal == 1 and symbol not in self.positions:
-                        shares = self.calculate_optimal_position_size(symbol, current_price)
+                        shares = self.calculate_optimal_position_size(
+                            symbol, current_price
+                        )
                         if shares > 0:
-                            success = self.execute_trade(symbol, "BUY", shares, current_price, current_date)
+                            success = self.execute_trade(
+                                symbol, "BUY", shares, current_price, current_date
+                            )
                             if success:
                                 trade_count += 1
-                                print(f"    {current_date.strftime('%Y-%m-%d')}: 買い {shares}株 @{current_price:.0f}円")
+                                print(
+                                    f"    {current_date.strftime('%Y-%m-%d')}: 買い {shares}株 @{current_price:.0f}円"
+                                )
 
                     # 売りシグナルまたは損切り・利確
                     elif symbol in self.positions:
                         position = self.positions[symbol]
-                        profit_rate = (current_price - position["avg_price"]) / position["avg_price"] * 100
+                        profit_rate = (
+                            (current_price - position["avg_price"])
+                            / position["avg_price"]
+                            * 100
+                        )
 
                         should_sell = (
-                            current_signal == -1 or  # 売りシグナル
-                            profit_rate >= self.min_profit_threshold or  # 利確
-                            profit_rate <= self.max_loss_threshold  # 損切り
+                            current_signal == -1  # 売りシグナル
+                            or profit_rate >= self.min_profit_threshold  # 利確
+                            or profit_rate <= self.max_loss_threshold  # 損切り
                         )
 
                         if should_sell:
                             shares = position["shares"]
                             profit = (current_price - position["avg_price"]) * shares
-                            success = self.execute_trade(symbol, "SELL", shares, current_price, current_date)
+                            success = self.execute_trade(
+                                symbol, "SELL", shares, current_price, current_date
+                            )
                             if success:
                                 trade_count += 1
-                                print(f"    {current_date.strftime('%Y-%m-%d')}: 売り {shares}株 @{current_price:.0f}円 (利益: {profit:+.0f}円)")
+                                print(
+                                    f"    {current_date.strftime('%Y-%m-%d')}: 売り {shares}株 @{current_price:.0f}円 (利益: {profit:+.0f}円)"
+                                )
 
                 print(f"  総取引回数: {trade_count}回")
 
@@ -280,21 +303,30 @@ class OptimizedInvestmentSystem:
         print(f"総取引回数: {len(self.transaction_history)}回")
 
         # 成功取引の分析
-        successful_trades = [t for t in self.transaction_history if t.get("profit", 0) > 0]
+        successful_trades = [
+            t for t in self.transaction_history if t.get("profit", 0) > 0
+        ]
         if successful_trades:
-            success_rate = len(successful_trades) / (len(self.transaction_history) / 2) * 100
+            success_rate = (
+                len(successful_trades) / (len(self.transaction_history) / 2) * 100
+            )
             print(f"成功率: {success_rate:.1f}%")
 
         # 最新取引履歴
         print(f"\n最新取引履歴:")
         for trade in self.transaction_history[-10:]:
             if trade["action"] == "SELL" and "profit" in trade:
-                print(f"  {trade['date'].strftime('%Y-%m-%d')}: {trade['action']} {trade['symbol']} {trade['shares']}株 @{trade['price']:.0f}円 (利益: {trade['profit']:+.0f}円)")
+                print(
+                    f"  {trade['date'].strftime('%Y-%m-%d')}: {trade['action']} {trade['symbol']} {trade['shares']}株 @{trade['price']:.0f}円 (利益: {trade['profit']:+.0f}円)"
+                )
             else:
-                print(f"  {trade['date'].strftime('%Y-%m-%d')}: {trade['action']} {trade['symbol']} {trade['shares']}株 @{trade['price']:.0f}円")
+                print(
+                    f"  {trade['date'].strftime('%Y-%m-%d')}: {trade['action']} {trade['symbol']} {trade['shares']}株 @{trade['price']:.0f}円"
+                )
 
         print(f"\n最適化システム最終パフォーマンス: {profit_rate:+.1f}%")
         return profit_rate
+
 
 def main():
     """最適化投資システム実行"""
@@ -302,6 +334,7 @@ def main():
     performance = system.run_optimized_backtest()
 
     print(f"\n🚀 最適化完了: {performance:+.1f}%の利益率達成")
+
 
 if __name__ == "__main__":
     main()
