@@ -43,13 +43,14 @@ jobs:
           bandit-security-report.json
           safety-report.json
 
-  dependency-review:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
-    steps:
-    - name: Dependency Review
-      uses: actions/dependency-review-action@v3
+  # dependency-review:
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
+  #
+  #   steps:
+  #   - name: Dependency Review
+  #     uses: actions/dependency-review-action@v3
+  #   # Note: Requires GitHub Advanced Security for private repositories
 
   code-metrics:
     runs-on: ubuntu-latest
