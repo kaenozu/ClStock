@@ -14,20 +14,21 @@ from typing import Optional
 if sys.platform == "win32":
     os.system("color")
 
+
 class Colors:
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
+    HEADER = "\033[95m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
 
 
 def clear_screen():
     """画面クリア"""
-    os.system('cls' if os.name == 'nt' else 'clear')
+    os.system("cls" if os.name == "nt" else "clear")
 
 
 def print_header():
@@ -87,7 +88,9 @@ def run_87_prediction():
     print(f"\n{Colors.YELLOW}予測実行中...{Colors.ENDC}")
 
     try:
-        from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+        from models_new.precision.precision_87_system import (
+            Precision87BreakthroughSystem,
+        )
 
         system = Precision87BreakthroughSystem()
         result = system.predict_with_87_precision(symbol)
@@ -98,11 +101,18 @@ def run_87_prediction():
         print(f"信頼度: {result['final_confidence']:.1%}")
         print(f"推定精度: {result['final_accuracy']:.1f}%")
 
+    except Exception as e:
+        print(f"\n{Colors.RED}エラーが発生しました: {e}{Colors.ENDC}")
+
+    input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
+
 
 def run_hybrid_prediction():
     """ハイブリッド予測システム実行"""
     clear_screen()
-    print(f"{Colors.CYAN}【ハイブリッド予測システム - 速度と精度の両立】{Colors.ENDC}\n")
+    print(
+        f"{Colors.CYAN}【ハイブリッド予測システム - 速度と精度の両立】{Colors.ENDC}\n"
+    )
 
     print(f"{Colors.YELLOW}予測モードを選択してください:{Colors.ENDC}")
     print("1. 速度優先 (144倍高速化)")
@@ -115,12 +125,17 @@ def run_hybrid_prediction():
     symbol = input("銘柄コード (デフォルト: 7203): ").strip() or "7203"
 
     # バッチ予測オプション
-    batch_input = input("バッチ予測（複数銘柄）? (y/n, デフォルト: n): ").strip().lower()
+    batch_input = (
+        input("バッチ予測（複数銘柄）? (y/n, デフォルト: n): ").strip().lower()
+    )
 
     print(f"\n{Colors.YELLOW}ハイブリッド予測実行中...{Colors.ENDC}")
 
     try:
-        from models_new.hybrid.hybrid_predictor import HybridStockPredictor, PredictionMode
+        from models_new.hybrid.hybrid_predictor import (
+            HybridStockPredictor,
+            PredictionMode,
+        )
         from data.stock_data import StockDataProvider
 
         # モード選択
@@ -128,7 +143,7 @@ def run_hybrid_prediction():
             "1": PredictionMode.SPEED_PRIORITY,
             "2": PredictionMode.ACCURACY_PRIORITY,
             "3": PredictionMode.BALANCED,
-            "4": PredictionMode.AUTO
+            "4": PredictionMode.AUTO,
         }
 
         selected_mode = mode_map.get(mode_choice, PredictionMode.AUTO)
@@ -137,10 +152,12 @@ def run_hybrid_prediction():
         data_provider = StockDataProvider()
         hybrid_system = HybridStockPredictor(data_provider=data_provider)
 
-        if batch_input == 'y':
+        if batch_input == "y":
             # バッチ予測
-            symbols_input = input("銘柄コード（カンマ区切り、例: 7203,6758,8306）: ").strip()
-            symbols = [s.strip() for s in symbols_input.split(',') if s.strip()]
+            symbols_input = input(
+                "銘柄コード（カンマ区切り、例: 7203,6758,8306）: "
+            ).strip()
+            symbols = [s.strip() for s in symbols_input.split(",") if s.strip()]
 
             if not symbols:
                 symbols = ["7203", "6758", "8306"]  # デフォルト
@@ -174,16 +191,20 @@ def run_hybrid_prediction():
             print(f"使用システム: {result.metadata.get('system_used', 'unknown')}")
             print(f"予測時間: {result.metadata.get('prediction_time', 0):.3f}秒")
 
-            if result.metadata.get('prediction_strategy') == 'balanced_integrated':
+            if result.metadata.get("prediction_strategy") == "balanced_integrated":
                 print(f"\n{Colors.CYAN}【統合詳細】{Colors.ENDC}")
-                print(f"拡張システム予測: {result.metadata.get('enhanced_prediction', 'N/A')}")
-                print(f"87%システム予測: {result.metadata.get('precision_prediction', 'N/A')}")
+                print(
+                    f"拡張システム予測: {result.metadata.get('enhanced_prediction', 'N/A')}"
+                )
+                print(
+                    f"87%システム予測: {result.metadata.get('precision_prediction', 'N/A')}"
+                )
                 print(f"統合方式: {result.metadata.get('integration_method', 'N/A')}")
 
         # パフォーマンス統計表示
         try:
             stats = hybrid_system.get_performance_stats()
-            if 'total_predictions' in stats:
+            if "total_predictions" in stats:
                 print(f"\n{Colors.CYAN}【システム統計】{Colors.ENDC}")
                 print(f"総予測回数: {stats['total_predictions']}")
                 print(f"平均予測時間: {stats['avg_prediction_time']:.3f}秒")
@@ -207,7 +228,7 @@ def run_demo_trading():
     print("100万円の仮想資金で主要5銘柄の取引をシミュレートします。")
     confirm = input("\n開始しますか？ (y/n): ").strip().lower()
 
-    if confirm == 'y':
+    if confirm == "y":
         print(f"\n{Colors.YELLOW}デモ取引開始...{Colors.ENDC}")
         os.system("python demo_start.py")
     else:
@@ -226,7 +247,7 @@ def start_dashboard():
 
     confirm = input("\n起動しますか？ (y/n): ").strip().lower()
 
-    if confirm == 'y':
+    if confirm == "y":
         print(f"\n{Colors.YELLOW}起動中...{Colors.ENDC}")
         print("Ctrl+C で停止できます\n")
         try:
@@ -264,7 +285,7 @@ def show_process_management():
                 os.system(f"python clstock_cli.py service stop {service}")
             else:
                 confirm = input("全サービスを停止しますか？ (y/n): ").strip().lower()
-                if confirm == 'y':
+                if confirm == "y":
                     os.system("python clstock_cli.py service stop --force")
         elif choice == "4":
             os.system("python monitoring/system_monitor.py")
@@ -285,8 +306,8 @@ def fetch_stock_data():
 
     try:
         if symbols:
-            symbol_list = symbols.split(',')
-            symbol_args = ' '.join([f'-s {s.strip()}' for s in symbol_list])
+            symbol_list = symbols.split(",")
+            symbol_args = " ".join([f"-s {s.strip()}" for s in symbol_list])
             cmd = f"python clstock_cli.py data fetch {symbol_args} -p {period}"
         else:
             cmd = f"python clstock_cli.py data fetch -p {period}"
@@ -336,6 +357,7 @@ def show_settings():
 
     try:
         from config.settings import get_settings
+
         settings = get_settings()
 
         print(f"{Colors.YELLOW}■ 予測設定{Colors.ENDC}")
@@ -349,12 +371,16 @@ def show_settings():
 
         print(f"\n{Colors.YELLOW}■ プロセス管理設定{Colors.ENDC}")
         print(f"  最大同時プロセス: {settings.process.max_concurrent_processes}")
-        print(f"  自動再起動: {'有効' if settings.process.auto_restart_failed else '無効'}")
+        print(
+            f"  自動再起動: {'有効' if settings.process.auto_restart_failed else '無効'}"
+        )
         print(f"  CPU警告閾値: {settings.process.cpu_warning_threshold_percent}%")
 
         print(f"\n{Colors.YELLOW}■ リアルタイム設定{Colors.ENDC}")
         print(f"  更新間隔: {settings.realtime.update_interval_seconds}秒")
-        print(f"  時間外取引: {'有効' if settings.realtime.enable_after_hours_trading else '無効'}")
+        print(
+            f"  時間外取引: {'有効' if settings.realtime.enable_after_hours_trading else '無効'}"
+        )
 
     except Exception as e:
         print(f"{Colors.RED}設定読み込みエラー: {e}{Colors.ENDC}")
@@ -403,7 +429,7 @@ def investment_advisor():
     print("対話型投資アドバイザーを起動します。")
     confirm = input("\n起動しますか？ (y/n): ").strip().lower()
 
-    if confirm == 'y':
+    if confirm == "y":
         try:
             os.system("python investment_advisor_cui.py")
         except FileNotFoundError:
@@ -424,7 +450,7 @@ def performance_monitor():
 
     confirm = input("\n開始しますか？ (y/n): ").strip().lower()
 
-    if confirm == 'y':
+    if confirm == "y":
         try:
             os.system("python monitoring/system_monitor.py")
         except KeyboardInterrupt:
@@ -457,16 +483,23 @@ def run_optimal_selection():
             print(f"\n{Colors.YELLOW}87%精度システムで予測実行中...{Colors.ENDC}")
             os.system("python demo_start.py")
         elif choice == "2":
-            confirm = input("\n最適化分析を開始しますか？(時間がかかります) (y/n): ").strip().lower()
-            if confirm == 'y':
+            confirm = (
+                input("\n最適化分析を開始しますか？(時間がかかります) (y/n): ")
+                .strip()
+                .lower()
+            )
+            if confirm == "y":
                 print(f"\n{Colors.YELLOW}TSE4000最適化実行中...{Colors.ENDC}")
                 os.system("python tse_4000_optimizer.py")
         elif choice == "3":
             print(f"\n{Colors.GREEN}現在の対象銘柄（87%精度システム）:{Colors.ENDC}")
             # 87%精度システムで使用する銘柄を表示
             target_stocks = [
-                "7203 (トヨタ自動車)", "6758 (ソニーグループ)",
-                "8306 (三菱UFJ)", "6861 (キーエンス)", "9984 (ソフトバンクG)"
+                "7203 (トヨタ自動車)",
+                "6758 (ソニーグループ)",
+                "8306 (三菱UFJ)",
+                "6861 (キーエンス)",
+                "9984 (ソフトバンクG)",
             ]
             for i, stock in enumerate(target_stocks, 1):
                 print(f"  {i}. {stock}")
@@ -486,24 +519,25 @@ def log_analysis():
 
     try:
         from utils.logger_config import get_centralized_logger
+
         logger = get_centralized_logger()
 
         report = logger.generate_log_report()
-        analysis = report['log_analysis']
+        analysis = report["log_analysis"]
 
         print(f"{Colors.YELLOW}■ ログ統計（過去24時間）{Colors.ENDC}")
         print(f"  INFO: {analysis['info_count']}件")
         print(f"  WARNING: {analysis['warning_count']}件")
         print(f"  ERROR: {analysis['error_count']}件")
 
-        if analysis['error_patterns']:
+        if analysis["error_patterns"]:
             print(f"\n{Colors.YELLOW}■ エラーパターン{Colors.ENDC}")
-            for pattern in analysis['error_patterns']:
+            for pattern in analysis["error_patterns"]:
                 print(f"  {pattern['keyword']}: {pattern['count']}件")
 
-        if analysis['services']:
+        if analysis["services"]:
             print(f"\n{Colors.YELLOW}■ サービス別ログ{Colors.ENDC}")
-            for service, stats in analysis['services'].items():
+            for service, stats in analysis["services"].items():
                 print(f"  {service}: {stats['logs']}件 (エラー: {stats['errors']}件)")
 
         print(f"\n{Colors.YELLOW}■ ディスク使用量{Colors.ENDC}")
@@ -565,6 +599,7 @@ def optimization_history_menu():
     """最適化履歴管理メニュー"""
     try:
         from systems.optimization_history import get_history_manager
+
         manager = get_history_manager()
 
         while True:
@@ -576,7 +611,9 @@ def optimization_history_menu():
             if active_record:
                 print(f"{Colors.GREEN}現在アクティブ: {active_record.id}{Colors.ENDC}")
                 print(f"説明: {active_record.description}")
-                print(f"収益率: {active_record.performance_metrics.get('return_rate', 0):.2f}%")
+                print(
+                    f"収益率: {active_record.performance_metrics.get('return_rate', 0):.2f}%"
+                )
             else:
                 print(f"{Colors.YELLOW}アクティブな記録はありません{Colors.ENDC}")
 
@@ -588,7 +625,9 @@ def optimization_history_menu():
             print("5. 古い記録をクリーンアップ")
             print("0. メインメニューに戻る")
 
-            choice = input(f"\n{Colors.BLUE}選択してください (0-5): {Colors.ENDC}").strip()
+            choice = input(
+                f"\n{Colors.BLUE}選択してください (0-5): {Colors.ENDC}"
+            ).strip()
 
             if choice == "0":
                 break
@@ -625,8 +664,10 @@ def show_history_list(manager):
             print("-" * 70)
             for record in history:
                 status = "✅" if record.is_active else "  "
-                return_rate = record.performance_metrics.get('return_rate', 0)
-                print(f"{record.id:<25} {status:<8} {return_rate:>6.2f}% {record.description}")
+                return_rate = record.performance_metrics.get("return_rate", 0)
+                print(
+                    f"{record.id:<25} {status:<8} {return_rate:>6.2f}% {record.description}"
+                )
     except Exception as e:
         print(f"{Colors.RED}エラー: {e}{Colors.ENDC}")
 
@@ -648,10 +689,14 @@ def rollback_to_record(manager):
         print("利用可能な記録:")
         for i, record in enumerate(history, 1):
             status = "（現在アクティブ）" if record.is_active else ""
-            rollback_status = "" if record.rollback_available else "（ロールバック不可）"
+            rollback_status = (
+                "" if record.rollback_available else "（ロールバック不可）"
+            )
             print(f"{i}. {record.id} - {record.description} {status}{rollback_status}")
 
-        choice = input(f"\n{Colors.BLUE}ロールバックする記録番号を選択 (0でキャンセル): {Colors.ENDC}").strip()
+        choice = input(
+            f"\n{Colors.BLUE}ロールバックする記録番号を選択 (0でキャンセル): {Colors.ENDC}"
+        ).strip()
 
         if choice == "0":
             return
@@ -663,9 +708,15 @@ def rollback_to_record(manager):
 
                 print(f"\n選択された記録: {selected_record.id}")
                 print(f"説明: {selected_record.description}")
-                confirm = input(f"\n{Colors.YELLOW}本当にロールバックしますか？ (y/n): {Colors.ENDC}").strip().lower()
+                confirm = (
+                    input(
+                        f"\n{Colors.YELLOW}本当にロールバックしますか？ (y/n): {Colors.ENDC}"
+                    )
+                    .strip()
+                    .lower()
+                )
 
-                if confirm == 'y':
+                if confirm == "y":
                     success = manager.rollback_to(selected_record.id)
                     if success:
                         print(f"\n{Colors.GREEN}ロールバック完了！{Colors.ENDC}")
@@ -713,14 +764,22 @@ def compare_records(manager):
                 print(f"\n{Colors.GREEN}【比較結果】{Colors.ENDC}")
                 print(f"記録1: {record1.id}")
                 print(f"記録2: {record2.id}")
-                print(f"\n共通銘柄 ({len(comparison['common_stocks'])}件): {', '.join(comparison['common_stocks'])}")
-                print(f"\n記録1のみ ({len(comparison['only_in_1'])}件): {', '.join(comparison['only_in_1'])}")
-                print(f"\n記録2のみ ({len(comparison['only_in_2'])}件): {', '.join(comparison['only_in_2'])}")
+                print(
+                    f"\n共通銘柄 ({len(comparison['common_stocks'])}件): {', '.join(comparison['common_stocks'])}"
+                )
+                print(
+                    f"\n記録1のみ ({len(comparison['only_in_1'])}件): {', '.join(comparison['only_in_1'])}"
+                )
+                print(
+                    f"\n記録2のみ ({len(comparison['only_in_2'])}件): {', '.join(comparison['only_in_2'])}"
+                )
 
-                if comparison['performance_diff']:
+                if comparison["performance_diff"]:
                     print(f"\n{Colors.YELLOW}パフォーマンス差分:{Colors.ENDC}")
-                    for metric, diff_data in comparison['performance_diff'].items():
-                        print(f"{metric}: {diff_data['record1']:.2f} → {diff_data['record2']:.2f} (差分: {diff_data['diff']:+.2f})")
+                    for metric, diff_data in comparison["performance_diff"].items():
+                        print(
+                            f"{metric}: {diff_data['record1']:.2f} → {diff_data['record2']:.2f} (差分: {diff_data['diff']:+.2f})"
+                        )
             else:
                 print(f"{Colors.RED}無効な番号です{Colors.ENDC}")
         except ValueError:
@@ -741,13 +800,13 @@ def show_statistics(manager):
         stats = manager.get_statistics()
 
         print(f"総記録数: {stats['total_records']}")
-        if stats['total_records'] > 0:
+        if stats["total_records"] > 0:
             print(f"平均収益率: {stats['average_return']:.2f}%")
             print(f"最高収益率: {stats['best_return']:.2f}%")
             print(f"最低収益率: {stats['worst_return']:.2f}%")
-            if stats['active_record']:
+            if stats["active_record"]:
                 print(f"アクティブ記録: {stats['active_record']}")
-            if stats['latest_optimization']:
+            if stats["latest_optimization"]:
                 print(f"最新最適化: {stats['latest_optimization']}")
 
     except Exception as e:
@@ -770,7 +829,9 @@ def cleanup_old_records_menu(manager):
             input("\nEnterキーで続行...")
             return
 
-        keep_count = input(f"\n{Colors.BLUE}保持する記録数 (デフォルト: 10): {Colors.ENDC}").strip()
+        keep_count = input(
+            f"\n{Colors.BLUE}保持する記録数 (デフォルト: 10): {Colors.ENDC}"
+        ).strip()
 
         if not keep_count:
             keep_count = 10
@@ -790,9 +851,15 @@ def cleanup_old_records_menu(manager):
             print("すべての記録が保持されます")
         else:
             will_remove = current_count - keep_count
-            confirm = input(f"\n{Colors.YELLOW}{will_remove}件の記録を削除します。よろしいですか？ (y/n): {Colors.ENDC}").strip().lower()
+            confirm = (
+                input(
+                    f"\n{Colors.YELLOW}{will_remove}件の記録を削除します。よろしいですか？ (y/n): {Colors.ENDC}"
+                )
+                .strip()
+                .lower()
+            )
 
-            if confirm == 'y':
+            if confirm == "y":
                 manager.cleanup_old_records(keep_count)
                 print(f"\n{Colors.GREEN}クリーンアップ完了！{Colors.ENDC}")
             else:

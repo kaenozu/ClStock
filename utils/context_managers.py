@@ -17,14 +17,14 @@ logger = get_logger(__name__)
 
 class GracefulShutdownManager:
     """Manages graceful shutdown of the application"""
-    
+
     def __init__(self):
         self.shutdown_handlers = []
         self.is_shutting_down = False
         self._setup_signal_handlers()
         # Register the shutdown method to be called on Python interpreter exit
         atexit.register(self.shutdown)
-        
+
     def _setup_signal_handlers(self):
         """Setup signal handlers for graceful shutdown"""
         try:
@@ -33,53 +33,54 @@ class GracefulShutdownManager:
         except (ValueError, AttributeError):
             # Not available on all platforms (e.g., Windows)
             logger.warning("Signal handlers not available on this platform")
-            
+
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals"""
         logger.info(f"Received signal {signum}, initiating graceful shutdown")
         self.shutdown()
         # Exit the process after shutdown
         sys.exit(0)
-        
+
     def register_shutdown_handler(self, handler: Callable[[], None]):
         """Register a function to be called during shutdown"""
         self.shutdown_handlers.append(handler)
-        
+
     def shutdown(self):
         """Perform graceful shutdown"""
         if self.is_shutting_down:
             return
-            
+
         self.is_shutting_down = True
         logger.info("Initiating graceful shutdown...")
-        
+
         # Call all registered shutdown handlers
         for handler in self.shutdown_handlers:
             try:
                 handler()
             except Exception as e:
                 logger.error(f"Error during shutdown handler execution: {e}")
-                
+
         # Perform final cleanup
         self._final_cleanup()
-        
+
     def _final_cleanup(self):
         """Final cleanup operations"""
         # Shutdown cache
         try:
             from utils.cache import shutdown_cache
+
             shutdown_cache()
             logger.info("Cache shutdown completed")
         except Exception as e:
             logger.error(f"Error during cache shutdown: {e}")
-            
+
         # Close logging
         try:
             logging.shutdown()
             logger.info("Logging shutdown completed")
         except Exception as e:
             logger.error(f"Error during logging shutdown: {e}")
-            
+
         logger.info("Graceful shutdown completed")
 
 
@@ -91,7 +92,7 @@ shutdown_manager = GracefulShutdownManager()
 def managed_resource(resource_factory: Callable, cleanup_func: Callable):
     """
     Context manager for resources that need explicit cleanup
-    
+
     Args:
         resource_factory: Function that creates the resource
         cleanup_func: Function that cleans up the resource
@@ -112,7 +113,7 @@ def managed_resource(resource_factory: Callable, cleanup_func: Callable):
 def network_connection(connection_factory: Callable):
     """
     Context manager for network connections
-    
+
     Args:
         connection_factory: Function that creates the network connection
     """
@@ -126,9 +127,9 @@ def network_connection(connection_factory: Callable):
     finally:
         if connection is not None:
             try:
-                if hasattr(connection, 'close'):
+                if hasattr(connection, "close"):
                     connection.close()
-                elif hasattr(connection, 'disconnect'):
+                elif hasattr(connection, "disconnect"):
                     connection.disconnect()
             except Exception as e:
                 logger.error(f"Error closing network connection: {e}")
@@ -138,16 +139,16 @@ def network_connection(connection_factory: Callable):
 def file_lock(lock_file_path: str, timeout: int = 30):
     """
     Context manager for file-based locking
-    
+
     Args:
         lock_file_path: Path to the lock file
         timeout: Timeout in seconds
     """
     import time
-    
+
     lock_acquired = False
     start_time = time.time()
-    
+
     try:
         # Try to acquire lock
         while not lock_acquired and (time.time() - start_time) < timeout:
@@ -162,12 +163,12 @@ def file_lock(lock_file_path: str, timeout: int = 30):
             except Exception as e:
                 logger.error(f"Error creating lock file: {e}")
                 raise
-                
+
         if not lock_acquired:
             raise TimeoutError(f"Could not acquire lock within {timeout} seconds")
-            
+
         yield lock_file_path
-        
+
     finally:
         # Release lock
         if lock_acquired and os.path.exists(lock_file_path):

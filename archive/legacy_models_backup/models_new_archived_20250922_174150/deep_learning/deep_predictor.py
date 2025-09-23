@@ -60,25 +60,25 @@ class DeepLearningPredictor:
             from tensorflow.keras.layers import LSTM, Dense, Dropout, BatchNormalization
             from tensorflow.keras.optimizers import Adam
 
-            model = Sequential([
-                LSTM(128, return_sequences=True, input_shape=input_shape),
-                Dropout(0.3),
-                BatchNormalization(),
-                LSTM(128, return_sequences=True),
-                Dropout(0.3),
-                BatchNormalization(),
-                LSTM(64, return_sequences=False),
-                Dropout(0.3),
-                BatchNormalization(),
-                Dense(32, activation="relu"),
-                Dropout(0.2),
-                Dense(1, activation="linear"),
-            ])
+            model = Sequential(
+                [
+                    LSTM(128, return_sequences=True, input_shape=input_shape),
+                    Dropout(0.3),
+                    BatchNormalization(),
+                    LSTM(128, return_sequences=True),
+                    Dropout(0.3),
+                    BatchNormalization(),
+                    LSTM(64, return_sequences=False),
+                    Dropout(0.3),
+                    BatchNormalization(),
+                    Dense(32, activation="relu"),
+                    Dropout(0.2),
+                    Dense(1, activation="linear"),
+                ]
+            )
 
             model.compile(
-                optimizer=Adam(learning_rate=0.001),
-                loss="mse",
-                metrics=["mae"]
+                optimizer=Adam(learning_rate=0.001), loss="mse", metrics=["mae"]
             )
             return model
 
@@ -137,10 +137,7 @@ class DeepLearningPredictor:
 
         # シーケンス次元を平坦化するためのシンプルモデル
         return RandomForestRegressor(
-            n_estimators=100,
-            max_depth=10,
-            random_state=42,
-            n_jobs=-1
+            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1
         )
 
     def train_deep_model(self, symbols: List[str]):
@@ -149,6 +146,7 @@ class DeepLearningPredictor:
         all_data = []
 
         from models.ml_models import MLStockPredictor
+
         ml_predictor = MLStockPredictor()
 
         for symbol in symbols:
@@ -184,7 +182,7 @@ class DeepLearningPredictor:
             self.model = self.build_transformer_model(input_shape)
 
         # TensorFlowモデルの場合
-        if hasattr(self.model, 'fit') and hasattr(self.model, 'predict'):
+        if hasattr(self.model, "fit") and hasattr(self.model, "predict"):
             try:
                 # TensorFlowの場合
                 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
@@ -244,6 +242,7 @@ class DeepLearningPredictor:
 
         try:
             from models.ml_models import MLStockPredictor
+
             ml_predictor = MLStockPredictor()
 
             data = self.data_provider.get_stock_data(symbol, "1y")
@@ -260,7 +259,7 @@ class DeepLearningPredictor:
             recent_data = self.scaler.transform(recent_data)
 
             # 予測実行
-            if hasattr(self.model, 'predict') and recent_data.ndim == 2:
+            if hasattr(self.model, "predict") and recent_data.ndim == 2:
                 # TensorFlowモデル
                 sequence = recent_data.reshape(1, self.sequence_length, -1)
                 pred = self.model.predict(sequence)[0][0]
@@ -285,7 +284,7 @@ class DeepLearningPredictor:
             scaler_file = self.model_path / f"deep_{self.model_type}_scaler.joblib"
 
             # TensorFlowモデルの場合
-            if hasattr(self.model, 'save'):
+            if hasattr(self.model, "save"):
                 self.model.save(f"{model_file}.h5")
             else:
                 # sklearn モデル
@@ -317,6 +316,7 @@ class DeepLearningPredictor:
                 # TensorFlowモデル
                 try:
                     import tensorflow as tf
+
                     self.model = tf.keras.models.load_model(model_file_h5)
                     self.is_trained = True
                     return True
@@ -338,10 +338,10 @@ class DeepLearningPredictor:
     def get_model_info(self) -> Dict[str, Any]:
         """モデル情報取得"""
         return {
-            'name': 'DeepLearningPredictor',
-            'version': '1.0.0',
-            'model_type': self.model_type,
-            'sequence_length': self.sequence_length,
-            'is_trained': self.is_trained,
-            'feature_count': len(self.feature_columns)
+            "name": "DeepLearningPredictor",
+            "version": "1.0.0",
+            "model_type": self.model_type,
+            "sequence_length": self.sequence_length,
+            "is_trained": self.is_trained,
+            "feature_count": len(self.feature_columns),
         }

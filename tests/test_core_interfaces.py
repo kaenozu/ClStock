@@ -5,8 +5,11 @@ Core Interfaces のテスト
 import pytest
 from datetime import datetime
 from models_refactored.core.interfaces import (
-    PredictionResult, BatchPredictionResult, ModelConfiguration,
-    ModelType, PredictionMode
+    PredictionResult,
+    BatchPredictionResult,
+    ModelConfiguration,
+    ModelType,
+    PredictionMode,
 )
 
 
@@ -20,7 +23,7 @@ class TestPredictionResult:
             confidence=0.85,
             accuracy=0.90,
             timestamp=datetime.now(),
-            symbol="TEST001"
+            symbol="TEST001",
         )
 
         assert result.prediction == 100.0
@@ -44,7 +47,7 @@ class TestPredictionResult:
             symbol="TEST002",
             model_type=ModelType.HYBRID,
             execution_time=0.5,
-            metadata=metadata
+            metadata=metadata,
         )
 
         assert result.prediction == 150.0
@@ -64,7 +67,7 @@ class TestPredictionResult:
             confidence=0.75,
             accuracy=0.82,
             timestamp=timestamp,
-            symbol="TEST003"
+            symbol="TEST003",
         )
 
         result_dict = result.to_dict()
@@ -86,10 +89,7 @@ class TestBatchPredictionResult:
         predictions = {"STOCK001": 100.0, "STOCK002": 200.0}
         errors = {"STOCK003": "Data not found"}
 
-        result = BatchPredictionResult(
-            predictions=predictions,
-            errors=errors
-        )
+        result = BatchPredictionResult(predictions=predictions, errors=errors)
 
         assert result.predictions == predictions
         assert result.errors == errors
@@ -102,9 +102,7 @@ class TestBatchPredictionResult:
         metadata = {"processing_time": 2.5, "success_rate": 1.0}
 
         result = BatchPredictionResult(
-            predictions=predictions,
-            errors=errors,
-            metadata=metadata
+            predictions=predictions, errors=errors, metadata=metadata
         )
 
         assert result.predictions == predictions
@@ -140,7 +138,7 @@ class TestModelConfiguration:
             max_workers=8,
             cache_size=2000,
             timeout_seconds=600,
-            custom_params=custom_params
+            custom_params=custom_params,
         )
 
         assert config.model_type == ModelType.DEEP_LEARNING

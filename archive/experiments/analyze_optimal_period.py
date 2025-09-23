@@ -10,18 +10,19 @@ from datetime import datetime, timedelta
 import yfinance as yf
 from typing import Dict, Tuple
 
+
 class OptimalPeriodAnalyzer:
     """最適予測期間分析クラス"""
 
     def __init__(self):
-        self.test_symbols = ['7203.T', '6758.T', '8306.T', '6861.T']
+        self.test_symbols = ["7203.T", "6758.T", "8306.T", "6861.T"]
         self.periods = {
-            '1日': 1,
-            '3日': 3,
-            '1週間': 5,
-            '2週間': 10,
-            '1ヶ月': 20,
-            '3ヶ月': 60
+            "1日": 1,
+            "3日": 3,
+            "1週間": 5,
+            "2週間": 10,
+            "1ヶ月": 20,
+            "3ヶ月": 60,
         }
 
     def analyze_prediction_accuracy_by_period(self) -> Dict:
@@ -31,7 +32,7 @@ class OptimalPeriodAnalyzer:
         for symbol in self.test_symbols:
             print(f"\n分析中: {symbol}")
             stock = yf.Ticker(symbol)
-            hist = stock.history(period='1y')
+            hist = stock.history(period="1y")
 
             if len(hist) < 100:
                 continue
@@ -39,26 +40,34 @@ class OptimalPeriodAnalyzer:
             symbol_results = {}
 
             for period_name, days in self.periods.items():
-                accuracy, volatility, confidence = self.calculate_period_metrics(hist, days)
+                accuracy, volatility, confidence = self.calculate_period_metrics(
+                    hist, days
+                )
                 symbol_results[period_name] = {
-                    'accuracy': accuracy,
-                    'volatility': volatility,
-                    'confidence': confidence
+                    "accuracy": accuracy,
+                    "volatility": volatility,
+                    "confidence": confidence,
                 }
 
             results[symbol] = symbol_results
 
         return results
 
-    def calculate_period_metrics(self, data: pd.DataFrame, days: int) -> Tuple[float, float, float]:
+    def calculate_period_metrics(
+        self, data: pd.DataFrame, days: int
+    ) -> Tuple[float, float, float]:
         """期間別メトリクス計算"""
-        close = data['Close']
+        close = data["Close"]
         returns = close.pct_change()
 
         # ボラティリティ計算（短期対応）
         if days == 1:
             # 1日予測は直近5日の標準偏差を使用
-            period_volatility = returns.rolling(5).std().iloc[-1] if len(returns) >= 5 else returns.std()
+            period_volatility = (
+                returns.rolling(5).std().iloc[-1]
+                if len(returns) >= 5
+                else returns.std()
+            )
         else:
             period_volatility = returns.rolling(max(days, 2)).std().mean()
 
@@ -75,12 +84,24 @@ class OptimalPeriodAnalyzer:
         # 総合精度推定（短期予想調整）
         if days == 1:
             # 1日予測は高頻度データの特性を活用
-            accuracy = 87 + trend_consistency * 3 + technical_effectiveness * 4 - period_volatility * 80
+            accuracy = (
+                87
+                + trend_consistency * 3
+                + technical_effectiveness * 4
+                - period_volatility * 80
+            )
         else:
-            accuracy = 85 + trend_consistency * 5 + technical_effectiveness * 3 - period_volatility * 100
+            accuracy = (
+                85
+                + trend_consistency * 5
+                + technical_effectiveness * 3
+                - period_volatility * 100
+            )
 
         # 信頼度計算
-        volatility_factor = period_volatility if not pd.isna(period_volatility) else 0.02
+        volatility_factor = (
+            period_volatility if not pd.isna(period_volatility) else 0.02
+        )
         confidence = min(max((100 - volatility_factor * 100) / 100, 0.3), 0.95)
 
         return accuracy, period_volatility, confidence
@@ -105,9 +126,17 @@ class OptimalPeriodAnalyzer:
         valid_comparisons = 0
 
         for i in range(window, len(rolling_mean)):
-            if pd.notna(rolling_mean.iloc[i]) and pd.notna(rolling_mean.iloc[i-1]):
-                prev_direction = rolling_mean.iloc[i-1] - rolling_mean.iloc[i-window] if i >= window else 0
-                curr_direction = rolling_mean.iloc[i] - rolling_mean.iloc[i-window+1] if i >= window-1 else 0
+            if pd.notna(rolling_mean.iloc[i]) and pd.notna(rolling_mean.iloc[i - 1]):
+                prev_direction = (
+                    rolling_mean.iloc[i - 1] - rolling_mean.iloc[i - window]
+                    if i >= window
+                    else 0
+                )
+                curr_direction = (
+                    rolling_mean.iloc[i] - rolling_mean.iloc[i - window + 1]
+                    if i >= window - 1
+                    else 0
+                )
 
                 if prev_direction * curr_direction < 0:  # 方向転換
                     direction_changes += 1
@@ -121,7 +150,7 @@ class OptimalPeriodAnalyzer:
 
     def calculate_technical_effectiveness(self, data: pd.DataFrame, days: int) -> float:
         """技術的指標の有効性計算"""
-        close = data['Close']
+        close = data["Close"]
 
         # RSI予測精度
         rsi_accuracy = self.test_rsi_prediction(close, days)
@@ -179,7 +208,9 @@ class OptimalPeriodAnalyzer:
 
                 # 実際の動き
                 if i + forecast_days < len(prices):
-                    actual = 1 if prices.iloc[i + forecast_days] > prices.iloc[i] else -1
+                    actual = (
+                        1 if prices.iloc[i + forecast_days] > prices.iloc[i] else -1
+                    )
 
                     if prediction == actual:
                         correct_predictions += 1
@@ -218,8 +249,8 @@ class OptimalPeriodAnalyzer:
         for i in range(start_idx, end_idx):
             if pd.notna(ma_short.iloc[i]) and pd.notna(ma_long.iloc[i]) and i > 0:
                 # ゴールデンクロス/デッドクロス検出
-                if pd.notna(ma_short.iloc[i-1]) and pd.notna(ma_long.iloc[i-1]):
-                    prev_diff = ma_short.iloc[i-1] - ma_long.iloc[i-1]
+                if pd.notna(ma_short.iloc[i - 1]) and pd.notna(ma_long.iloc[i - 1]):
+                    prev_diff = ma_short.iloc[i - 1] - ma_long.iloc[i - 1]
                     curr_diff = ma_short.iloc[i] - ma_long.iloc[i]
 
                     if prev_diff < 0 and curr_diff > 0:  # ゴールデンクロス
@@ -232,7 +263,9 @@ class OptimalPeriodAnalyzer:
                     # 実際の動き
                     forecast_days = max(days, 1)
                     if i + forecast_days < len(prices):
-                        actual = 1 if prices.iloc[i + forecast_days] > prices.iloc[i] else -1
+                        actual = (
+                            1 if prices.iloc[i + forecast_days] > prices.iloc[i] else -1
+                        )
 
                         if prediction == actual:
                             correct_predictions += 1
@@ -245,9 +278,9 @@ class OptimalPeriodAnalyzer:
 
     def display_analysis_results(self):
         """分析結果表示"""
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("ClStock 最適予測期間分析レポート")
-        print("="*80)
+        print("=" * 80)
 
         results = self.analyze_prediction_accuracy_by_period()
 
@@ -257,7 +290,7 @@ class OptimalPeriodAnalyzer:
             scores = []
             for symbol_results in results.values():
                 if period in symbol_results:
-                    scores.append(symbol_results[period]['accuracy'])
+                    scores.append(symbol_results[period]["accuracy"])
             if scores:
                 period_scores[period] = np.mean(scores)
 
@@ -267,11 +300,16 @@ class OptimalPeriodAnalyzer:
         ranked_periods = sorted(period_scores.items(), key=lambda x: x[1], reverse=True)
 
         for rank, (period, score) in enumerate(ranked_periods, 1):
-            confidence_avg = np.mean([
-                results[s][period]['confidence']
-                for s in results if period in results[s]
-            ])
-            print(f"{rank}位: {period:8} - 精度: {score:.1f}% | 信頼度: {confidence_avg:.2%}")
+            confidence_avg = np.mean(
+                [
+                    results[s][period]["confidence"]
+                    for s in results
+                    if period in results[s]
+                ]
+            )
+            print(
+                f"{rank}位: {period:8} - 精度: {score:.1f}% | 信頼度: {confidence_avg:.2%}"
+            )
 
         # 詳細分析
         print("\n最適期間の特性分析")
@@ -285,24 +323,26 @@ class OptimalPeriodAnalyzer:
         print(f"\n銘柄別精度（{best_period}）:")
         for symbol, symbol_results in results.items():
             if best_period in symbol_results:
-                acc = symbol_results[best_period]['accuracy']
-                vol = symbol_results[best_period]['volatility']
-                conf = symbol_results[best_period]['confidence']
-                print(f"  {symbol}: {acc:.1f}% (ボラティリティ: {vol:.3f}, 信頼度: {conf:.2%})")
+                acc = symbol_results[best_period]["accuracy"]
+                vol = symbol_results[best_period]["volatility"]
+                conf = symbol_results[best_period]["confidence"]
+                print(
+                    f"  {symbol}: {acc:.1f}% (ボラティリティ: {vol:.3f}, 信頼度: {conf:.2%})"
+                )
 
         # 推奨事項
         print("\n推奨事項:")
-        if best_period == '1週間':
+        if best_period == "1週間":
             print("1週間予測が最適")
             print("  - 技術的指標が最も効果的")
             print("  - ノイズが少なく、トレンドが明確")
             print("  - 89%精度システムに最適化済み")
-        elif best_period == '2週間':
+        elif best_period == "2週間":
             print("2週間予測が最適")
             print("  - 中期トレンドの把握に優れる")
             print("  - 季節性要因の影響を受けにくい")
             print("  - リスク/リターンのバランスが良好")
-        elif best_period == '1ヶ月':
+        elif best_period == "1ヶ月":
             print("1ヶ月予測が最適")
             print("  - 長期トレンドの確実性が高い")
             print("  - ファンダメンタルズとの整合性")
@@ -310,10 +350,12 @@ class OptimalPeriodAnalyzer:
 
         return period_scores
 
+
 def main():
     """メイン実行"""
     analyzer = OptimalPeriodAnalyzer()
     analyzer.display_analysis_results()
+
 
 if __name__ == "__main__":
     main()

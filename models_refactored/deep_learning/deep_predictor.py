@@ -13,10 +13,12 @@ from ..core.base_predictor import BaseStockPredictor
 class RefactoredDeepLearningPredictor(BaseStockPredictor):
     """統合リファクタリング版ディープラーニング予測器（プレースホルダー）"""
 
-    def __init__(self,
-                 config: ModelConfiguration,
-                 data_provider: DataProvider = None,
-                 cache_provider: CacheProvider = None):
+    def __init__(
+        self,
+        config: ModelConfiguration,
+        data_provider: DataProvider = None,
+        cache_provider: CacheProvider = None,
+    ):
         super().__init__(config, data_provider, cache_provider)
 
     def _predict_implementation(self, symbol: str) -> float:

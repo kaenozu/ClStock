@@ -12,7 +12,7 @@ from .base.interfaces import (
     DataProvider,
     ModelTrainer,
     CacheManager,
-    PerformanceMonitor
+    PerformanceMonitor,
 )
 
 # 精密予測システム
@@ -33,31 +33,29 @@ __author__ = "ClStock Development Team"
 
 __all__ = [
     # インターフェース
-    'StockPredictor',
-    'PredictionResult',
-    'ModelPerformance',
-    'DataProvider',
-    'ModelTrainer',
-    'CacheManager',
-    'PerformanceMonitor',
-
+    "StockPredictor",
+    "PredictionResult",
+    "ModelPerformance",
+    "DataProvider",
+    "ModelTrainer",
+    "CacheManager",
+    "PerformanceMonitor",
     # 予測システム
-    'Precision87BreakthroughSystem',
-    'EnsembleStockPredictor',
-    'DeepLearningPredictor',
-
+    "Precision87BreakthroughSystem",
+    "EnsembleStockPredictor",
+    "DeepLearningPredictor",
     # 監視・管理
-    'AdvancedCacheManager',
-    'ModelPerformanceMonitor'
+    "AdvancedCacheManager",
+    "ModelPerformanceMonitor",
 ]
 
 
 def get_available_predictors():
     """利用可能な予測器一覧を取得"""
     return {
-        'precision_87': Precision87BreakthroughSystem,
-        'ensemble': EnsembleStockPredictor,
-        'deep_learning': DeepLearningPredictor
+        "precision_87": Precision87BreakthroughSystem,
+        "ensemble": EnsembleStockPredictor,
+        "deep_learning": DeepLearningPredictor,
     }
 
 
@@ -66,7 +64,9 @@ def create_predictor(predictor_type: str, **kwargs):
     predictors = get_available_predictors()
 
     if predictor_type not in predictors:
-        raise ValueError(f"Unknown predictor type: {predictor_type}. Available: {list(predictors.keys())}")
+        raise ValueError(
+            f"Unknown predictor type: {predictor_type}. Available: {list(predictors.keys())}"
+        )
 
     return predictors[predictor_type](**kwargs)
 
@@ -74,6 +74,6 @@ def create_predictor(predictor_type: str, **kwargs):
 def create_monitoring_suite():
     """監視システム一式を作成"""
     return {
-        'cache_manager': AdvancedCacheManager(),
-        'performance_monitor': ModelPerformanceMonitor()
+        "cache_manager": AdvancedCacheManager(),
+        "performance_monitor": ModelPerformanceMonitor(),
     }

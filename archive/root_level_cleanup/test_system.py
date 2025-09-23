@@ -7,21 +7,27 @@
 import sys
 import os
 
+
 def test_imports():
     """主要モジュールのインポートテスト"""
     print("=== インポートテスト ===")
 
     try:
         # 87%精度システム
-        from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+        from models_new.precision.precision_87_system import (
+            Precision87BreakthroughSystem,
+        )
+
         print("[OK] 87%精度システム")
 
         # データプロバイダー
         from data.stock_data import StockDataProvider
+
         print("[OK] データプロバイダー")
 
         # デモ取引システム
         from trading.demo_trader import DemoTrader
+
         print("[OK] デモ取引システム")
 
         return True
@@ -29,6 +35,7 @@ def test_imports():
     except Exception as e:
         print(f"[ERROR] インポートエラー: {e}")
         return False
+
 
 def test_file_structure():
     """ファイル構造テスト"""
@@ -38,12 +45,12 @@ def test_file_structure():
         "demo_start.py",
         "menu.py",
         "clstock_cli.py",
-        "investment_advisor_cui.py"
+        "investment_advisor_cui.py",
     ]
 
     archived_files = [
         "archive/old_systems/optimal_30_prediction_system.py",
-        "archive/tests/test_precision_87_system.py"
+        "archive/tests/test_precision_87_system.py",
     ]
 
     all_good = True
@@ -64,12 +71,15 @@ def test_file_structure():
 
     return all_good
 
+
 def test_demo_functionality():
     """デモ機能の簡易テスト"""
     print("\n=== デモ機能テスト ===")
 
     try:
-        from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+        from models_new.precision.precision_87_system import (
+            Precision87BreakthroughSystem,
+        )
 
         # システム初期化
         system = Precision87BreakthroughSystem()
@@ -78,7 +88,7 @@ def test_demo_functionality():
         # 予測テスト（1銘柄のみ）
         result = system.predict_with_87_precision("7203")
 
-        if 'final_prediction' in result:
+        if "final_prediction" in result:
             print(f"[OK] 予測実行 (予測値: {result['final_prediction']:.1f})")
             print(f"   信頼度: {result['final_confidence']:.1%}")
             print(f"   精度: {result['final_accuracy']:.1f}%")
@@ -91,6 +101,7 @@ def test_demo_functionality():
         print(f"[ERROR] デモ機能エラー: {e}")
         return False
 
+
 def main():
     """メインテスト実行"""
     print("ClStock システム整理後動作確認")
@@ -99,7 +110,7 @@ def main():
     tests = [
         ("インポート", test_imports),
         ("ファイル構造", test_file_structure),
-        ("デモ機能", test_demo_functionality)
+        ("デモ機能", test_demo_functionality),
     ]
 
     results = []
@@ -128,6 +139,7 @@ def main():
         print("\n[WARNING] 一部テストが失敗しました。")
 
     return all_passed
+
 
 if __name__ == "__main__":
     main()

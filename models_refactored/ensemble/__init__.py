@@ -9,8 +9,8 @@ from .memory_efficient_cache import MemoryEfficientCache
 from .multi_timeframe_integrator import MultiTimeframeIntegrator
 
 __all__ = [
-    'RefactoredEnsemblePredictor',
-    'ParallelFeatureCalculator',
-    'MemoryEfficientCache',
-    'MultiTimeframeIntegrator'
+    "RefactoredEnsemblePredictor",
+    "ParallelFeatureCalculator",
+    "MemoryEfficientCache",
+    "MultiTimeframeIntegrator",
 ]

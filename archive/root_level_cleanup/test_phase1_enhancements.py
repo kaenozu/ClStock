@@ -17,13 +17,13 @@ import traceback
 
 # ロギング設定
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
 # プロジェクトパスの追加
 sys.path.append(os.path.dirname(__file__))
+
 
 def main():
     """メインテスト実行関数"""
@@ -37,11 +37,13 @@ def main():
         # Phase 1機能テスト実行
         test_results = run_phase1_enhancement_tests()
 
-        if test_results['success']:
+        if test_results["success"]:
             print("\n[成功] Phase 1機能強化テスト完了!")
             display_test_results(test_results)
         else:
-            print(f"\n[失敗] Phase 1テスト失敗: {test_results.get('error', 'Unknown error')}")
+            print(
+                f"\n[失敗] Phase 1テスト失敗: {test_results.get('error', 'Unknown error')}"
+            )
 
     except KeyboardInterrupt:
         print("\n\nテストが中断されました")
@@ -49,12 +51,16 @@ def main():
         print(f"\n[エラー] 予期しないエラー: {str(e)}")
         traceback.print_exc()
 
+
 def run_phase1_enhancement_tests() -> Dict[str, Any]:
     """Phase 1機能強化の包括的テスト"""
     try:
         print("1. Phase 1ハイブリッドシステム初期化")
 
-        from models_new.hybrid.hybrid_predictor import HybridStockPredictor, PredictionMode
+        from models_new.hybrid.hybrid_predictor import (
+            HybridStockPredictor,
+            PredictionMode,
+        )
         from data.stock_data import StockDataProvider
 
         # データプロバイダー初期化
@@ -65,7 +71,7 @@ def run_phase1_enhancement_tests() -> Dict[str, Any]:
             data_provider=data_provider,
             default_mode=PredictionMode.AUTO,
             enable_cache=True,
-            enable_adaptive_optimization=True
+            enable_adaptive_optimization=True,
         )
 
         print("   [OK] Phase 1強化ハイブリッドシステム初期化完了")
@@ -81,56 +87,59 @@ def run_phase1_enhancement_tests() -> Dict[str, Any]:
 
         # テスト結果格納
         test_results = {
-            'initialization': True,
-            'system_info': system_info,
-            'cache_tests': {},
-            'next_gen_mode_tests': {},
-            'adaptive_optimization_tests': {},
-            'performance_comparison': {}
+            "initialization": True,
+            "system_info": system_info,
+            "cache_tests": {},
+            "next_gen_mode_tests": {},
+            "adaptive_optimization_tests": {},
+            "performance_comparison": {},
         }
 
         # キャッシュシステムテスト
         print("\n2. インテリジェントキャッシュテスト")
-        test_results['cache_tests'] = test_intelligent_cache(enhanced_hybrid, test_symbols)
+        test_results["cache_tests"] = test_intelligent_cache(
+            enhanced_hybrid, test_symbols
+        )
 
         # 次世代予測モードテスト
         print("\n3. 次世代予測モードテスト")
-        test_results['next_gen_mode_tests'] = test_next_generation_modes(enhanced_hybrid, test_symbols)
+        test_results["next_gen_mode_tests"] = test_next_generation_modes(
+            enhanced_hybrid, test_symbols
+        )
 
         # 学習型最適化テスト
         print("\n4. 学習型最適化テスト")
-        test_results['adaptive_optimization_tests'] = test_adaptive_optimization(enhanced_hybrid, test_symbols)
+        test_results["adaptive_optimization_tests"] = test_adaptive_optimization(
+            enhanced_hybrid, test_symbols
+        )
 
         # パフォーマンス比較テスト
         print("\n5. パフォーマンス比較テスト")
-        test_results['performance_comparison'] = test_performance_improvements(enhanced_hybrid, test_symbols)
+        test_results["performance_comparison"] = test_performance_improvements(
+            enhanced_hybrid, test_symbols
+        )
 
-        test_results['success'] = True
+        test_results["success"] = True
         return test_results
 
     except ImportError as e:
-        return {
-            'success': False,
-            'error': f'モジュールインポートエラー: {str(e)}'
-        }
+        return {"success": False, "error": f"モジュールインポートエラー: {str(e)}"}
     except Exception as e:
-        return {
-            'success': False,
-            'error': f'テスト実行エラー: {str(e)}'
-        }
+        return {"success": False, "error": f"テスト実行エラー: {str(e)}"}
+
 
 def test_intelligent_cache(hybrid_system, test_symbols: List[str]) -> Dict[str, Any]:
     """インテリジェントキャッシュテスト"""
     cache_results = {
-        'cache_enabled': hybrid_system.cache_enabled,
-        'cache_hits': 0,
-        'cache_misses': 0,
-        'performance_improvement': 0,
-        'cache_statistics': {}
+        "cache_enabled": hybrid_system.cache_enabled,
+        "cache_hits": 0,
+        "cache_misses": 0,
+        "performance_improvement": 0,
+        "cache_statistics": {},
     }
 
     if not hybrid_system.cache_enabled:
-        cache_results['error'] = 'キャッシュが無効です'
+        cache_results["error"] = "キャッシュが無効です"
         return cache_results
 
     print("   キャッシュ動作テスト...")
@@ -147,27 +156,32 @@ def test_intelligent_cache(hybrid_system, test_symbols: List[str]) -> Dict[str, 
         second_time = time.time() - start_time
 
         # キャッシュヒット判定
-        if result2.metadata.get('cache_hit', False):
-            cache_results['cache_hits'] += 1
+        if result2.metadata.get("cache_hit", False):
+            cache_results["cache_hits"] += 1
             improvement = (first_time - second_time) / first_time * 100
-            cache_results['performance_improvement'] += improvement
+            cache_results["performance_improvement"] += improvement
             print(f"     {symbol}: キャッシュヒット - {improvement:.1f}% 高速化")
         else:
-            cache_results['cache_misses'] += 1
+            cache_results["cache_misses"] += 1
             print(f"     {symbol}: キャッシュミス")
 
     # キャッシュ統計取得
     if hybrid_system.intelligent_cache:
-        cache_results['cache_statistics'] = hybrid_system.intelligent_cache.get_cache_statistics()
+        cache_results["cache_statistics"] = (
+            hybrid_system.intelligent_cache.get_cache_statistics()
+        )
 
     # 平均パフォーマンス向上
     total_tests = len(test_symbols)
     if total_tests > 0:
-        cache_results['performance_improvement'] /= total_tests
+        cache_results["performance_improvement"] /= total_tests
 
     return cache_results
 
-def test_next_generation_modes(hybrid_system, test_symbols: List[str]) -> Dict[str, Any]:
+
+def test_next_generation_modes(
+    hybrid_system, test_symbols: List[str]
+) -> Dict[str, Any]:
     """次世代予測モードテスト"""
 
     # 次世代モードリスト
@@ -177,7 +191,7 @@ def test_next_generation_modes(hybrid_system, test_symbols: List[str]) -> Dict[s
         PredictionMode.SWING_TRADE,
         PredictionMode.SCALPING,
         PredictionMode.PORTFOLIO_ANALYSIS,
-        PredictionMode.RISK_MANAGEMENT
+        PredictionMode.RISK_MANAGEMENT,
     ]
 
     mode_results = {}
@@ -185,11 +199,11 @@ def test_next_generation_modes(hybrid_system, test_symbols: List[str]) -> Dict[s
     for mode in next_gen_modes:
         print(f"   {mode.value}モードテスト...")
         mode_data = {
-            'predictions': [],
-            'total_time': 0,
-            'avg_confidence': 0,
-            'avg_accuracy': 0,
-            'mode_specific_features': {}
+            "predictions": [],
+            "total_time": 0,
+            "avg_confidence": 0,
+            "avg_accuracy": 0,
+            "mode_specific_features": {},
         }
 
         start_time = time.time()
@@ -197,44 +211,55 @@ def test_next_generation_modes(hybrid_system, test_symbols: List[str]) -> Dict[s
         for symbol in test_symbols[:1]:  # 1銘柄のみでテスト（時間短縮）
             try:
                 result = hybrid_system.predict(symbol, mode)
-                mode_data['predictions'].append({
-                    'symbol': symbol,
-                    'prediction': result.prediction,
-                    'confidence': result.confidence,
-                    'accuracy': result.accuracy,
-                    'metadata': result.metadata
-                })
+                mode_data["predictions"].append(
+                    {
+                        "symbol": symbol,
+                        "prediction": result.prediction,
+                        "confidence": result.confidence,
+                        "accuracy": result.accuracy,
+                        "metadata": result.metadata,
+                    }
+                )
 
                 # モード固有の特徴確認
-                strategy = result.metadata.get('prediction_strategy', 'unknown')
-                optimization = result.metadata.get('optimization', 'none')
+                strategy = result.metadata.get("prediction_strategy", "unknown")
+                optimization = result.metadata.get("optimization", "none")
 
                 print(f"     {symbol}: 戦略={strategy}, 最適化={optimization}")
 
             except Exception as e:
-                logger.error(f"Mode {mode.value} prediction failed for {symbol}: {str(e)}")
+                logger.error(
+                    f"Mode {mode.value} prediction failed for {symbol}: {str(e)}"
+                )
 
-        mode_data['total_time'] = time.time() - start_time
+        mode_data["total_time"] = time.time() - start_time
 
-        if mode_data['predictions']:
-            mode_data['avg_confidence'] = np.mean([p['confidence'] for p in mode_data['predictions']])
-            mode_data['avg_accuracy'] = np.mean([p['accuracy'] for p in mode_data['predictions']])
+        if mode_data["predictions"]:
+            mode_data["avg_confidence"] = np.mean(
+                [p["confidence"] for p in mode_data["predictions"]]
+            )
+            mode_data["avg_accuracy"] = np.mean(
+                [p["accuracy"] for p in mode_data["predictions"]]
+            )
 
         mode_results[mode.value] = mode_data
 
     return mode_results
 
-def test_adaptive_optimization(hybrid_system, test_symbols: List[str]) -> Dict[str, Any]:
+
+def test_adaptive_optimization(
+    hybrid_system, test_symbols: List[str]
+) -> Dict[str, Any]:
     """学習型最適化テスト"""
     optimization_results = {
-        'optimization_enabled': hybrid_system.adaptive_optimization_enabled,
-        'optimization_triggers': 0,
-        'pattern_learning': {},
-        'performance_monitoring': {}
+        "optimization_enabled": hybrid_system.adaptive_optimization_enabled,
+        "optimization_triggers": 0,
+        "pattern_learning": {},
+        "performance_monitoring": {},
     }
 
     if not hybrid_system.adaptive_optimization_enabled:
-        optimization_results['error'] = '学習型最適化が無効です'
+        optimization_results["error"] = "学習型最適化が無効です"
         return optimization_results
 
     print("   学習型最適化動作テスト...")
@@ -248,14 +273,18 @@ def test_adaptive_optimization(hybrid_system, test_symbols: List[str]) -> Dict[s
 
     for i in range(10):  # 10回予測実行
         symbol = test_symbols[i % len(test_symbols)]
-        mode = [PredictionMode.SPEED_PRIORITY, PredictionMode.ACCURACY_PRIORITY, PredictionMode.BALANCED][i % 3]
+        mode = [
+            PredictionMode.SPEED_PRIORITY,
+            PredictionMode.ACCURACY_PRIORITY,
+            PredictionMode.BALANCED,
+        ][i % 3]
 
         result = hybrid_system.predict(symbol, mode)
         prediction_count += 1
 
         # 最適化トリガー確認
         if hybrid_system.optimization_counter == 0:  # リセットされた = 最適化実行
-            optimization_results['optimization_triggers'] += 1
+            optimization_results["optimization_triggers"] += 1
             print(f"     最適化実行 #{optimization_results['optimization_triggers']}")
 
     # 最適化間隔を元に戻す
@@ -263,16 +292,21 @@ def test_adaptive_optimization(hybrid_system, test_symbols: List[str]) -> Dict[s
 
     # 最適化状況取得
     optimization_status = hybrid_system.get_adaptive_optimization_status()
-    optimization_results['optimization_status'] = optimization_status
+    optimization_results["optimization_status"] = optimization_status
 
     # パフォーマンス統計取得
     performance_stats = hybrid_system.get_performance_stats()
-    if 'cache_statistics' in performance_stats:
-        optimization_results['performance_monitoring'] = performance_stats['cache_statistics']
+    if "cache_statistics" in performance_stats:
+        optimization_results["performance_monitoring"] = performance_stats[
+            "cache_statistics"
+        ]
 
     return optimization_results
 
-def test_performance_improvements(hybrid_system, test_symbols: List[str]) -> Dict[str, Any]:
+
+def test_performance_improvements(
+    hybrid_system, test_symbols: List[str]
+) -> Dict[str, Any]:
     """パフォーマンス改善テスト"""
 
     # 従来システム（キャッシュ・最適化無効）との比較
@@ -292,9 +326,9 @@ def test_performance_improvements(hybrid_system, test_symbols: List[str]) -> Dic
 
     # 基本システム（比較用）でのテスト
     from models_new.hybrid.hybrid_predictor import HybridStockPredictor
+
     basic_hybrid = HybridStockPredictor(
-        enable_cache=False,
-        enable_adaptive_optimization=False
+        enable_cache=False, enable_adaptive_optimization=False
     )
 
     basic_times = []
@@ -315,22 +349,25 @@ def test_performance_improvements(hybrid_system, test_symbols: List[str]) -> Dic
 
     avg_enhanced_confidence = np.mean(enhanced_confidences)
     avg_basic_confidence = np.mean(basic_confidences)
-    confidence_improvement = (avg_enhanced_confidence - avg_basic_confidence) / avg_basic_confidence * 100
+    confidence_improvement = (
+        (avg_enhanced_confidence - avg_basic_confidence) / avg_basic_confidence * 100
+    )
 
     comparison_results = {
-        'enhanced_avg_time': avg_enhanced_time,
-        'basic_avg_time': avg_basic_time,
-        'speed_improvement_percent': speed_improvement,
-        'enhanced_avg_confidence': avg_enhanced_confidence,
-        'basic_avg_confidence': avg_basic_confidence,
-        'confidence_improvement_percent': confidence_improvement,
-        'overall_performance_score': (speed_improvement + confidence_improvement) / 2
+        "enhanced_avg_time": avg_enhanced_time,
+        "basic_avg_time": avg_basic_time,
+        "speed_improvement_percent": speed_improvement,
+        "enhanced_avg_confidence": avg_enhanced_confidence,
+        "basic_avg_confidence": avg_basic_confidence,
+        "confidence_improvement_percent": confidence_improvement,
+        "overall_performance_score": (speed_improvement + confidence_improvement) / 2,
     }
 
     print(f"     速度改善: {speed_improvement:.1f}%")
     print(f"     信頼度改善: {confidence_improvement:.1f}%")
 
     return comparison_results
+
 
 def display_test_results(results: Dict[str, Any]):
     """テスト結果の表示"""
@@ -339,53 +376,53 @@ def display_test_results(results: Dict[str, Any]):
     print("=" * 80)
 
     # システム情報
-    if 'system_info' in results:
-        system_info = results['system_info']
+    if "system_info" in results:
+        system_info = results["system_info"]
         print(f"システム名: {system_info['name']}")
         print(f"バージョン: {system_info['version']}")
 
     # キャッシュテスト結果
-    if 'cache_tests' in results:
+    if "cache_tests" in results:
         print("\n[インテリジェントキャッシュ]")
-        cache_tests = results['cache_tests']
+        cache_tests = results["cache_tests"]
 
-        if cache_tests.get('cache_enabled'):
+        if cache_tests.get("cache_enabled"):
             print(f"  キャッシュヒット: {cache_tests['cache_hits']}")
             print(f"  キャッシュミス: {cache_tests['cache_misses']}")
             print(f"  平均高速化: {cache_tests['performance_improvement']:.1f}%")
 
-            if 'cache_statistics' in cache_tests:
-                stats = cache_tests['cache_statistics']
-                if 'hit_rate' in stats:
+            if "cache_statistics" in cache_tests:
+                stats = cache_tests["cache_statistics"]
+                if "hit_rate" in stats:
                     print(f"  ヒット率: {stats['hit_rate']*100:.1f}%")
 
     # 次世代モードテスト結果
-    if 'next_gen_mode_tests' in results:
+    if "next_gen_mode_tests" in results:
         print("\n[次世代予測モード]")
-        mode_tests = results['next_gen_mode_tests']
+        mode_tests = results["next_gen_mode_tests"]
 
         for mode, data in mode_tests.items():
-            if data['predictions']:
+            if data["predictions"]:
                 print(f"  {mode}:")
                 print(f"    平均信頼度: {data['avg_confidence']:.2f}")
                 print(f"    平均精度: {data['avg_accuracy']:.1f}%")
                 print(f"    処理時間: {data['total_time']:.3f}秒")
 
     # 学習型最適化結果
-    if 'adaptive_optimization_tests' in results:
+    if "adaptive_optimization_tests" in results:
         print("\n[学習型最適化]")
-        opt_tests = results['adaptive_optimization_tests']
+        opt_tests = results["adaptive_optimization_tests"]
 
-        if opt_tests.get('optimization_enabled'):
+        if opt_tests.get("optimization_enabled"):
             print(f"  最適化実行回数: {opt_tests['optimization_triggers']}")
             print(f"  状況: 有効")
         else:
             print(f"  状況: 無効")
 
     # パフォーマンス比較結果
-    if 'performance_comparison' in results:
+    if "performance_comparison" in results:
         print("\n[パフォーマンス比較]")
-        perf_comp = results['performance_comparison']
+        perf_comp = results["performance_comparison"]
 
         print(f"  速度改善: {perf_comp['speed_improvement_percent']:.1f}%")
         print(f"  信頼度改善: {perf_comp['confidence_improvement_percent']:.1f}%")
@@ -395,6 +432,7 @@ def display_test_results(results: Dict[str, Any]):
     print("[結論] Phase 1機能強化テスト完了")
     print("インテリジェントキャッシュ + 次世代モード + 学習型最適化が統合動作")
     print("=" * 80)
+
 
 if __name__ == "__main__":
     main()

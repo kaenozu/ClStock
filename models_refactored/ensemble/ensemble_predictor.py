@@ -20,7 +20,7 @@ from ..core.interfaces import (
     ModelType,
     PredictionMode,
     DataProvider,
-    CacheProvider
+    CacheProvider,
 )
 from ..core.base_predictor import BaseStockPredictor
 from .parallel_feature_calculator import ParallelFeatureCalculator
@@ -34,62 +34,70 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
     # 予測重みの定数
     BASE_PREDICTION_WEIGHT = 0.7
     TIMEFRAME_PREDICTION_WEIGHT = 0.3
-    
+
     # 信頼度調整の定数
     MAX_CONFIDENCE_RATIO = 0.3
     CONFIDENCE_MULTIPLIER = 10
-    
+
     # 中性予測調整の定数
     NEUTRAL_PREDICTION_VALUE = 50.0
     HIGH_CONFIDENCE_NEUTRAL_WEIGHT = 0.1
     LOW_CONFIDENCE_NEUTRAL_WEIGHT = 0.3
     HIGH_CONFIDENCE_PREDICTION_WEIGHT = 0.9
     LOW_CONFIDENCE_PREDICTION_WEIGHT = 0.7
-    
+
     # キャッシュサイズの定数
     FEATURE_CACHE_SIZE = 500
     PREDICTION_CACHE_SIZE = 200
-    
+
     # フォールバック予測の定数
     TREND_THRESHOLD = 0.02  # 2%のトレンド閾値
     BULLISH_PREDICTION = 65.0
     BEARISH_PREDICTION = 35.0
     FALLBACK_ACCURACY = 45.0
     DEFAULT_CONFIDENCE = 0.1
-    
+
     # 信頼度レベルの閾値
     HIGH_CONFIDENCE_THRESHOLD = 0.7
     MEDIUM_CONFIDENCE_THRESHOLD = 0.4
 
-    def __init__(self,
-                 config: ModelConfiguration = None,
-                 data_provider: DataProvider = None,
-                 cache_provider: CacheProvider = None):
+    def __init__(
+        self,
+        config: ModelConfiguration = None,
+        data_provider: DataProvider = None,
+        cache_provider: CacheProvider = None,
+    ):
         super().__init__(config, data_provider, cache_provider)
-        
+
         self.models = {}
         self.weights = {}
         self.feature_names = []
         self.scaler = None
-        
+
         # 並列特徴量計算システム
         self.parallel_calculator = ParallelFeatureCalculator()
-        
+
         # メモリ効率キャッシュシステム（定数使用）
         self.feature_cache = MemoryEfficientCache(max_size=self.FEATURE_CACHE_SIZE)
-        self.prediction_cache = MemoryEfficientCache(max_size=self.PREDICTION_CACHE_SIZE)
-        
+        self.prediction_cache = MemoryEfficientCache(
+            max_size=self.PREDICTION_CACHE_SIZE
+        )
+
         # マルチタイムフレーム統合システム
         self.timeframe_integrator = MultiTimeframeIntegrator()
-        
+
         self.logger = logging.getLogger(__name__)
-        self.logger.info(f"Initialized RefactoredEnsemblePredictor with config: {config.model_type if config else 'default'}")
+        self.logger.info(
+            f"Initialized RefactoredEnsemblePredictor with config: {config.model_type if config else 'default'}"
+        )
 
     def _predict_implementation(self, symbol: str) -> float:
         """エンサンブル予測の実装（BaseStockPredictor準拠）"""
         if not self.is_trained:
             if not self.load_ensemble():
-                self.logger.warning(f"No trained model available for {symbol}, using fallback")
+                self.logger.warning(
+                    f"No trained model available for {symbol}, using fallback"
+                )
                 return self.NEUTRAL_PREDICTION_VALUE
 
         try:
@@ -104,35 +112,40 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
             timeframe_analysis = self.timeframe_integrator.integrate_predictions(
                 symbol, self.data_provider
             )
-            
+
             # 基本の特徴量ベース予測
             base_prediction = self._get_base_ensemble_prediction(symbol)
-            
+
             # タイムフレーム統合予測
-            integrated_prediction = timeframe_analysis['integrated_prediction']
-            confidence_adjustment = timeframe_analysis['confidence_adjustment']
-            
+            integrated_prediction = timeframe_analysis["integrated_prediction"]
+            confidence_adjustment = timeframe_analysis["confidence_adjustment"]
+
             # 最終予測の計算（基本予測 + タイムフレーム統合）
             final_prediction = (
-                base_prediction * self.BASE_PREDICTION_WEIGHT +
-                integrated_prediction * self.TIMEFRAME_PREDICTION_WEIGHT
+                base_prediction * self.BASE_PREDICTION_WEIGHT
+                + integrated_prediction * self.TIMEFRAME_PREDICTION_WEIGHT
             )
-            
+
             # 信頼度による調整（定数使用）
             if confidence_adjustment > self.HIGH_CONFIDENCE_THRESHOLD:  # 高信頼度
                 final_prediction = final_prediction  # そのまま
             elif confidence_adjustment > self.MEDIUM_CONFIDENCE_THRESHOLD:  # 中信頼度
-                final_prediction = (final_prediction * self.HIGH_CONFIDENCE_PREDICTION_WEIGHT + 
-                                  self.NEUTRAL_PREDICTION_VALUE * self.HIGH_CONFIDENCE_NEUTRAL_WEIGHT)
+                final_prediction = (
+                    final_prediction * self.HIGH_CONFIDENCE_PREDICTION_WEIGHT
+                    + self.NEUTRAL_PREDICTION_VALUE
+                    * self.HIGH_CONFIDENCE_NEUTRAL_WEIGHT
+                )
             else:  # 低信頼度
-                final_prediction = (final_prediction * self.LOW_CONFIDENCE_PREDICTION_WEIGHT + 
-                                  self.NEUTRAL_PREDICTION_VALUE * self.LOW_CONFIDENCE_NEUTRAL_WEIGHT)
-            
+                final_prediction = (
+                    final_prediction * self.LOW_CONFIDENCE_PREDICTION_WEIGHT
+                    + self.NEUTRAL_PREDICTION_VALUE * self.LOW_CONFIDENCE_NEUTRAL_WEIGHT
+                )
+
             result = max(0, min(100, float(final_prediction)))
-            
+
             # 結果をキャッシュ
             self.prediction_cache.put(cache_key, result)
-            
+
             return result
 
         except Exception as e:
@@ -182,36 +195,42 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
                 return 50.0
 
         except Exception as e:
-            self.logger.error(f"Error in base ensemble prediction for {symbol}: {str(e)}")
+            self.logger.error(
+                f"Error in base ensemble prediction for {symbol}: {str(e)}"
+            )
             return 50.0
 
-    def _calculate_features_optimized(self, symbol: str, data: pd.DataFrame) -> pd.DataFrame:
+    def _calculate_features_optimized(
+        self, symbol: str, data: pd.DataFrame
+    ) -> pd.DataFrame:
         """最適化された特徴量計算（キャッシュ対応）"""
         # キャッシュキー生成（データのハッシュベース）
         data_hash = pd.util.hash_pandas_object(data.tail(100)).sum()
         cache_key = f"features_{symbol}_{data_hash}"
-        
+
         # キャッシュチェック
         cached_features = self.feature_cache.get(cache_key)
         if cached_features is not None:
             self.logger.debug(f"Using cached features for {symbol}")
             return cached_features
-        
+
         try:
             # 並列特徴量計算システムを使用
             features = self.parallel_calculator._calculate_single_symbol_features(
                 symbol, self.data_provider
             )
-            
+
             if not features.empty:
                 # キャッシュに保存
                 self.feature_cache.put(cache_key, features)
                 self.logger.debug(f"Cached features for {symbol}")
-            
+
             return features
-            
+
         except Exception as e:
-            self.logger.error(f"Error calculating optimized features for {symbol}: {str(e)}")
+            self.logger.error(
+                f"Error calculating optimized features for {symbol}: {str(e)}"
+            )
             return pd.DataFrame()
 
     def _ensemble_predict_from_predictions(
@@ -233,14 +252,14 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
         try:
             # 複数モデルタイプを準備
             self.prepare_ensemble_models()
-            
+
             # 訓練データ準備と実行
             # （詳細は元のEnsembleStockPredictorのtrain_ensembleメソッドを参考）
-            
+
             self.is_trained = True
             self.save_ensemble()
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Training failed: {str(e)}")
             return False
@@ -249,11 +268,12 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
         """複数のモデルタイプを準備"""
         from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
         from sklearn.neural_network import MLPRegressor
-        
+
         models_to_add = []
 
         try:
             import xgboost as xgb
+
             xgb_model = xgb.XGBRegressor(
                 n_estimators=200,
                 max_depth=6,
@@ -269,6 +289,7 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
 
         try:
             import lightgbm as lgb
+
             lgb_model = lgb.LGBMRegressor(
                 n_estimators=200,
                 max_depth=6,
@@ -315,10 +336,10 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
         try:
             from pathlib import Path
             import joblib
-            
+
             model_path = Path("models_refactored/saved_models")
             model_path.mkdir(parents=True, exist_ok=True)
-            
+
             ensemble_file = model_path / "refactored_ensemble_models.joblib"
             ensemble_data = {
                 "models": self.models,
@@ -337,10 +358,10 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
         try:
             from pathlib import Path
             import joblib
-            
+
             model_path = Path("models_refactored/saved_models")
             ensemble_file = model_path / "refactored_ensemble_models.joblib"
-            
+
             if not ensemble_file.exists():
                 return False
 

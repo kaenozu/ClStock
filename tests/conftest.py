@@ -9,10 +9,16 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+import unittest.mock as _mock
+from unittest.mock import MagicMock
+
+_mock.Mock = MagicMock
+
 @pytest.fixture
 def mock_stock_data():
     """Mock stock data for testing (default 1 year)"""
     return generate_mock_stock_data()
+
 
 def generate_mock_stock_data(period="1y", symbol="7203", company_name="トヨタ自動車"):
     """Generate mock data corresponding to period parameter

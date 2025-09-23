@@ -11,17 +11,27 @@ from typing import Dict, List, Optional
 # プロジェクトルートパス
 PROJECT_ROOT = Path(__file__).parent.parent
 
+
 @dataclass
 class DatabaseConfig:
     """データベース設定"""
+
     # 絶対パスでデータベースファイルを指定
-    personal_portfolio_db: Path = field(default_factory=lambda: PROJECT_ROOT / "data" / "personal_portfolio.db")
-    prediction_history_db: Path = field(default_factory=lambda: PROJECT_ROOT / "data" / "prediction_history.db")
-    backtest_results_db: Path = field(default_factory=lambda: PROJECT_ROOT / "data" / "backtest_results.db")
+    personal_portfolio_db: Path = field(
+        default_factory=lambda: PROJECT_ROOT / "data" / "personal_portfolio.db"
+    )
+    prediction_history_db: Path = field(
+        default_factory=lambda: PROJECT_ROOT / "data" / "prediction_history.db"
+    )
+    backtest_results_db: Path = field(
+        default_factory=lambda: PROJECT_ROOT / "data" / "backtest_results.db"
+    )
+
 
 @dataclass
 class PredictionConfig:
     """予測システム設定（命名統一）"""
+
     # 精度設定
     target_accuracy: float = 87.0  # 目標精度（%）
     achieved_accuracy: float = 89.18  # 実際の達成精度（%）
@@ -41,6 +51,7 @@ class PredictionConfig:
     rsi_overbought: int = 70
     bollinger_period: int = 20
     bollinger_std: int = 2
+
 
 @dataclass
 class ModelConfig:
@@ -158,16 +169,18 @@ class ProcessConfig:
     max_log_lines_per_process: int = 1000
 
     # 優先度設定
-    process_priorities: Dict[str, int] = field(default_factory=lambda: {
-        "dashboard": 10,
-        "demo_trading": 5,
-        "investment_system": 8,
-        "deep_learning": 3,
-        "ensemble_test": 2,
-        "clstock_main": 7,
-        "optimized_system": 6,
-        "selective_system": 4
-    })
+    process_priorities: Dict[str, int] = field(
+        default_factory=lambda: {
+            "dashboard": 10,
+            "demo_trading": 5,
+            "investment_system": 8,
+            "deep_learning": 3,
+            "ensemble_test": 2,
+            "clstock_main": 7,
+            "optimized_system": 6,
+            "selective_system": 4,
+        }
+    )
 
     # ポート管理設定
     port_range_start: int = 8000
@@ -190,59 +203,61 @@ class AppSettings:
     process: ProcessConfig = field(default_factory=ProcessConfig)
 
     # 対象銘柄
-    target_stocks: Dict[str, str] = field(default_factory=lambda: {
-        # 指定された50銘柄
-        "7203": "トヨタ自動車",
-        "6758": "ソニーグループ",
-        "9432": "NTT",
-        "9434": "ソフトバンク",
-        "6701": "日本電気",
-        "8316": "三井住友フィナンシャルグループ",
-        "8411": "みずほフィナンシャルグループ",
-        "8306": "三菱UFJフィナンシャル・グループ",
-        "8058": "三菱商事",
-        "8001": "伊藤忠商事",
-        "8002": "丸紅",
-        "8031": "三井物産",
-        "6902": "デンソー",
-        "7267": "ホンダ",
-        "6501": "日立製作所",
-        "6503": "三菱電機",
-        "7751": "キヤノン",
-        "8035": "東京エレクトロン",
-        "6770": "アルプスアルパイン",
-        "9433": "KDDI",
-        "6502": "東芝",
-        "6752": "パナソニックHD",
-        "6954": "ファナック",
-        "6861": "キーエンス",
-        "4523": "エーザイ",
-        "4578": "大塚HD",
-        "7201": "日産自動車",
-        "7261": "マツダ",
-        "7269": "スズキ",
-        "4901": "富士フイルムHD",
-        "4502": "武田薬品工業",
-        "4503": "アステラス製薬",
-        "6504": "富士電機",
-        "4011": "ヤフー",  # 代替
-        "2914": "日本たばこ産業",
-        "5020": "ENEOSホールディングス",
-        "1605": "INPEX",
-        "1332": "日本水産",
-        "5201": "AGC",
-        "5401": "日本製鉄",
-        "6098": "リクルートHD",
-        "3865": "北越コーポレーション",
-        "6724": "セイコーエプソン",
-        "6703": "沖電気",
-        "4063": "信越化学工業",
-        "4689": "ヤフー",
-        "9983": "ファーストリテイリング",
-        "4755": "楽天グループ",
-        "6367": "ダイキン工業",
-        "4519": "中外製薬",
-    })
+    target_stocks: Dict[str, str] = field(
+        default_factory=lambda: {
+            # 指定された50銘柄
+            "7203": "トヨタ自動車",
+            "6758": "ソニーグループ",
+            "9432": "NTT",
+            "9434": "ソフトバンク",
+            "6701": "日本電気",
+            "8316": "三井住友フィナンシャルグループ",
+            "8411": "みずほフィナンシャルグループ",
+            "8306": "三菱UFJフィナンシャル・グループ",
+            "8058": "三菱商事",
+            "8001": "伊藤忠商事",
+            "8002": "丸紅",
+            "8031": "三井物産",
+            "6902": "デンソー",
+            "7267": "ホンダ",
+            "6501": "日立製作所",
+            "6503": "三菱電機",
+            "7751": "キヤノン",
+            "8035": "東京エレクトロン",
+            "6770": "アルプスアルパイン",
+            "9433": "KDDI",
+            "6502": "東芝",
+            "6752": "パナソニックHD",
+            "6954": "ファナック",
+            "6861": "キーエンス",
+            "4523": "エーザイ",
+            "4578": "大塚HD",
+            "7201": "日産自動車",
+            "7261": "マツダ",
+            "7269": "スズキ",
+            "4901": "富士フイルムHD",
+            "4502": "武田薬品工業",
+            "4503": "アステラス製薬",
+            "6504": "富士電機",
+            "4011": "ヤフー",  # 代替
+            "2914": "日本たばこ産業",
+            "5020": "ENEOSホールディングス",
+            "1605": "INPEX",
+            "1332": "日本水産",
+            "5201": "AGC",
+            "5401": "日本製鉄",
+            "6098": "リクルートHD",
+            "3865": "北越コーポレーション",
+            "6724": "セイコーエプソン",
+            "6703": "沖電気",
+            "4063": "信越化学工業",
+            "4689": "ヤフー",
+            "9983": "ファーストリテイリング",
+            "4755": "楽天グループ",
+            "6367": "ダイキン工業",
+            "4519": "中外製薬",
+        }
+    )
 
 
 @dataclass
@@ -269,7 +284,7 @@ class RealTimeConfig:
     # API設定
     data_source: str = "yahoo"  # yahoo, rakuten, sbi
     order_execution: str = "simulation"  # simulation, live
-    
+
     # WebSocket設定
     websocket_url: str = ""
     websocket_timeout: int = 10
@@ -277,13 +292,13 @@ class RealTimeConfig:
     websocket_ping_timeout: int = 10
     max_reconnection_attempts: int = 5
     reconnection_base_delay: float = 1.0
-    
+
     # データ品質監視設定
     enable_data_quality_monitoring: bool = True
     max_price_spike_threshold: float = 0.1  # 10%の価格変動をスパイクとして検出
     data_latency_warning_threshold: int = 300  # 5分以上遅延で警告
     min_data_points_for_validation: int = 10
-    
+
     # キャッシュ設定
     enable_real_time_caching: bool = True
     max_tick_history_per_symbol: int = 1000
@@ -291,14 +306,14 @@ class RealTimeConfig:
     cache_cleanup_interval_hours: int = 24
     tick_cache_ttl_seconds: int = 300  # 5分
     order_book_cache_ttl_seconds: int = 60  # 1分
-    
+
     # ログ設定
     enable_detailed_logging: bool = True
     log_websocket_messages: bool = False  # デバッグ用
     log_data_quality_issues: bool = True
     log_cache_operations: bool = False
     performance_logging_interval: int = 300  # 5分間隔
-    
+
     # 監視設定
     enable_performance_monitoring: bool = True
     enable_market_metrics_calculation: bool = True
@@ -306,19 +321,22 @@ class RealTimeConfig:
     alert_on_connection_loss: bool = True
     alert_on_data_quality_degradation: bool = True
     data_quality_alert_threshold: float = 0.95  # 品質95%を下回ったらアラート
-    
+
     # サブスクリプション設定
     default_tick_subscription: List[str] = field(default_factory=lambda: [])
     default_order_book_subscription: List[str] = field(default_factory=lambda: [])
-    default_index_subscription: List[str] = field(default_factory=lambda: ["NIKKEI", "TOPIX"])
+    default_index_subscription: List[str] = field(
+        default_factory=lambda: ["NIKKEI", "TOPIX"]
+    )
     enable_news_subscription: bool = True
     news_relevance_threshold: float = 0.7
-    
+
     # 市場時間設定
     market_open_time: str = "09:00"  # JST
     market_close_time: str = "15:00"  # JST
     market_timezone: str = "Asia/Tokyo"
     enable_after_hours_trading: bool = False  # 時間外取引有効フラグ（True/False）
+
 
 # グローバル設定インスタンス
 settings = AppSettings()

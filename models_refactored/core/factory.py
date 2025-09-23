@@ -13,7 +13,7 @@ from .interfaces import (
     ModelType,
     PredictionMode,
     DataProvider,
-    CacheProvider
+    CacheProvider,
 )
 
 
@@ -31,18 +31,24 @@ class PredictorFactory:
         self._register_default_predictors()
 
     @classmethod
-    def register_predictor(cls, model_type: ModelType, predictor_class: Type[StockPredictor]):
+    def register_predictor(
+        cls, model_type: ModelType, predictor_class: Type[StockPredictor]
+    ):
         """予測器クラスの登録"""
         cls._registered_predictors[model_type] = predictor_class
-        logging.getLogger(__name__).info(f"Registered predictor: {model_type.value} -> {predictor_class.__name__}")
+        logging.getLogger(__name__).info(
+            f"Registered predictor: {model_type.value} -> {predictor_class.__name__}"
+        )
 
     @classmethod
-    def create_predictor(cls,
-                        model_type: ModelType,
-                        config: Optional[ModelConfiguration] = None,
-                        data_provider: Optional[DataProvider] = None,
-                        cache_provider: Optional[CacheProvider] = None,
-                        **kwargs) -> StockPredictor:
+    def create_predictor(
+        cls,
+        model_type: ModelType,
+        config: Optional[ModelConfiguration] = None,
+        data_provider: Optional[DataProvider] = None,
+        cache_provider: Optional[CacheProvider] = None,
+        **kwargs,
+    ) -> StockPredictor:
         """
         予測器の生成
 
@@ -58,13 +64,14 @@ class PredictorFactory:
         """
         if model_type not in cls._registered_predictors:
             available_types = list(cls._registered_predictors.keys())
-            raise ValueError(f"Unknown model type: {model_type}. Available: {available_types}")
+            raise ValueError(
+                f"Unknown model type: {model_type}. Available: {available_types}"
+            )
 
         # デフォルト設定の作成
         if config is None:
             config = ModelConfiguration(
-                model_type=model_type,
-                prediction_mode=PredictionMode.BALANCED
+                model_type=model_type, prediction_mode=PredictionMode.BALANCED
             )
         else:
             config.model_type = model_type
@@ -77,7 +84,7 @@ class PredictorFactory:
                 config=config,
                 data_provider=data_provider,
                 cache_provider=cache_provider,
-                **kwargs
+                **kwargs,
             )
 
             logging.getLogger(__name__).info(
@@ -87,17 +94,21 @@ class PredictorFactory:
             return predictor
 
         except Exception as e:
-            logging.getLogger(__name__).error(f"Failed to create predictor {model_type.value}: {str(e)}")
+            logging.getLogger(__name__).error(
+                f"Failed to create predictor {model_type.value}: {str(e)}"
+            )
             raise
 
     @classmethod
-    def get_or_create_predictor(cls,
-                               model_type: ModelType,
-                               instance_name: Optional[str] = None,
-                               config: Optional[ModelConfiguration] = None,
-                               data_provider: Optional[DataProvider] = None,
-                               cache_provider: Optional[CacheProvider] = None,
-                               **kwargs) -> StockPredictor:
+    def get_or_create_predictor(
+        cls,
+        model_type: ModelType,
+        instance_name: Optional[str] = None,
+        config: Optional[ModelConfiguration] = None,
+        data_provider: Optional[DataProvider] = None,
+        cache_provider: Optional[CacheProvider] = None,
+        **kwargs,
+    ) -> StockPredictor:
         """
         予測器の取得または生成（シングルトンパターン）
 
@@ -123,18 +134,20 @@ class PredictorFactory:
             config=config,
             data_provider=data_provider,
             cache_provider=cache_provider,
-            **kwargs
+            **kwargs,
         )
 
         cls._instances[instance_name] = predictor
         return predictor
 
     @classmethod
-    def create_ensemble_predictors(cls,
-                                  model_types: List[ModelType],
-                                  config: Optional[ModelConfiguration] = None,
-                                  data_provider: Optional[DataProvider] = None,
-                                  cache_provider: Optional[CacheProvider] = None) -> List[StockPredictor]:
+    def create_ensemble_predictors(
+        cls,
+        model_types: List[ModelType],
+        config: Optional[ModelConfiguration] = None,
+        data_provider: Optional[DataProvider] = None,
+        cache_provider: Optional[CacheProvider] = None,
+    ) -> List[StockPredictor]:
         """
         複数の予測器をアンサンブル用に生成
 
@@ -155,7 +168,7 @@ class PredictorFactory:
                     model_type=model_type,
                     config=config,
                     data_provider=data_provider,
-                    cache_provider=cache_provider
+                    cache_provider=cache_provider,
                 )
                 predictors.append(predictor)
             except Exception as e:
@@ -163,7 +176,9 @@ class PredictorFactory:
                     f"Failed to create predictor for ensemble: {model_type.value} - {str(e)}"
                 )
 
-        logging.getLogger(__name__).info(f"Created ensemble with {len(predictors)} predictors")
+        logging.getLogger(__name__).info(
+            f"Created ensemble with {len(predictors)} predictors"
+        )
         return predictors
 
     @classmethod
@@ -172,7 +187,9 @@ class PredictorFactory:
         return list(cls._registered_predictors.keys())
 
     @classmethod
-    def get_predictor_class(cls, model_type: ModelType) -> Optional[Type[StockPredictor]]:
+    def get_predictor_class(
+        cls, model_type: ModelType
+    ) -> Optional[Type[StockPredictor]]:
         """モデルタイプに対応する予測器クラスの取得"""
         return cls._registered_predictors.get(model_type)
 
@@ -200,7 +217,9 @@ class PredictorFactory:
 
             self.register_predictor(ModelType.ENSEMBLE, RefactoredEnsemblePredictor)
             self.register_predictor(ModelType.HYBRID, RefactoredHybridPredictor)
-            self.register_predictor(ModelType.DEEP_LEARNING, RefactoredDeepLearningPredictor)
+            self.register_predictor(
+                ModelType.DEEP_LEARNING, RefactoredDeepLearningPredictor
+            )
 
             self.logger.info("Default predictors registered successfully")
 
@@ -208,40 +227,47 @@ class PredictorFactory:
             self.logger.warning(f"Some default predictors could not be registered: {e}")
 
     @staticmethod
-    def create_default_config(model_type: ModelType,
-                            prediction_mode: PredictionMode = PredictionMode.BALANCED,
-                            cache_enabled: bool = True,
-                            parallel_enabled: bool = True,
-                            custom_params: Optional[Dict[str, Any]] = None) -> ModelConfiguration:
+    def create_default_config(
+        model_type: ModelType,
+        prediction_mode: PredictionMode = PredictionMode.BALANCED,
+        cache_enabled: bool = True,
+        parallel_enabled: bool = True,
+        custom_params: Optional[Dict[str, Any]] = None,
+    ) -> ModelConfiguration:
         """デフォルト設定の作成ヘルパー"""
         return ModelConfiguration(
             model_type=model_type,
             prediction_mode=prediction_mode,
             cache_enabled=cache_enabled,
             parallel_enabled=parallel_enabled,
-            custom_params=custom_params or {}
+            custom_params=custom_params or {},
         )
 
 
 # グローバルファクトリインスタンス
 _global_factory = PredictorFactory()
 
+
 # 便利関数
 def create_predictor(model_type: ModelType, **kwargs) -> StockPredictor:
     """グローバルファクトリを使用した予測器生成"""
     return _global_factory.create_predictor(model_type, **kwargs)
 
+
 def get_or_create_predictor(model_type: ModelType, **kwargs) -> StockPredictor:
     """グローバルファクトリを使用した予測器取得/生成"""
     return _global_factory.get_or_create_predictor(model_type, **kwargs)
+
 
 def register_predictor(model_type: ModelType, predictor_class: Type[StockPredictor]):
     """グローバルファクトリへの予測器登録"""
     return _global_factory.register_predictor(model_type, predictor_class)
 
+
 def list_available_types() -> List[ModelType]:
     """利用可能なモデルタイプの取得"""
     return _global_factory.list_available_types()
+
 
 def clear_instances():
     """インスタンスキャッシュのクリア"""

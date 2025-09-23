@@ -53,25 +53,25 @@ class DeepLearningPredictor(StockPredictor):
             from tensorflow.keras.layers import LSTM, Dense, Dropout, BatchNormalization
             from tensorflow.keras.optimizers import Adam
 
-            model = Sequential([
-                LSTM(128, return_sequences=True, input_shape=input_shape),
-                Dropout(0.3),
-                BatchNormalization(),
-                LSTM(128, return_sequences=True),
-                Dropout(0.3),
-                BatchNormalization(),
-                LSTM(64, return_sequences=False),
-                Dropout(0.3),
-                BatchNormalization(),
-                Dense(32, activation="relu"),
-                Dropout(0.2),
-                Dense(1, activation="linear"),
-            ])
+            model = Sequential(
+                [
+                    LSTM(128, return_sequences=True, input_shape=input_shape),
+                    Dropout(0.3),
+                    BatchNormalization(),
+                    LSTM(128, return_sequences=True),
+                    Dropout(0.3),
+                    BatchNormalization(),
+                    LSTM(64, return_sequences=False),
+                    Dropout(0.3),
+                    BatchNormalization(),
+                    Dense(32, activation="relu"),
+                    Dropout(0.2),
+                    Dense(1, activation="linear"),
+                ]
+            )
 
             model.compile(
-                optimizer=Adam(learning_rate=0.001),
-                loss="mse",
-                metrics=["mae"]
+                optimizer=Adam(learning_rate=0.001), loss="mse", metrics=["mae"]
             )
             return model
         except ImportError:
@@ -157,6 +157,7 @@ class DeepLearningPredictor(StockPredictor):
             # Train with callbacks
             try:
                 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+
                 callbacks = [
                     EarlyStopping(patience=15, restore_best_weights=True),
                     ReduceLROnPlateau(patience=7, factor=0.5),
@@ -182,14 +183,18 @@ class DeepLearningPredictor(StockPredictor):
             # Evaluation
             test_pred = self.model.predict(X_test)
             test_mse = mean_squared_error(y_test, test_pred)
-            logger.info(f"Deep Learning {self.deep_model_type} Test MSE: {test_mse:.4f}")
+            logger.info(
+                f"Deep Learning {self.deep_model_type} Test MSE: {test_mse:.4f}"
+            )
 
         except Exception as e:
             logger.error(f"Deep learning training failed: {e}")
             # Fallback to simple prediction
             self._is_trained = False
 
-    def predict(self, symbol: str, data: Optional[pd.DataFrame] = None) -> PredictionResult:
+    def predict(
+        self, symbol: str, data: Optional[pd.DataFrame] = None
+    ) -> PredictionResult:
         """Deep learning prediction"""
         if not self.is_trained():
             raise ValueError("Model must be trained before making predictions")
@@ -226,11 +231,11 @@ class DeepLearningPredictor(StockPredictor):
                 confidence=0.75,  # Deep learning confidence
                 timestamp=datetime.now(),
                 metadata={
-                    'model_type': self.model_type,
-                    'deep_model_type': self.deep_model_type,
-                    'symbol': symbol,
-                    'sequence_length': self.sequence_length
-                }
+                    "model_type": self.model_type,
+                    "deep_model_type": self.deep_model_type,
+                    "symbol": symbol,
+                    "sequence_length": self.sequence_length,
+                },
             )
 
         except Exception as e:
@@ -239,7 +244,7 @@ class DeepLearningPredictor(StockPredictor):
                 prediction=50.0,
                 confidence=0.0,
                 timestamp=datetime.now(),
-                metadata={'error': str(e)}
+                metadata={"error": str(e)},
             )
 
     def save_model(self):
@@ -252,12 +257,11 @@ class DeepLearningPredictor(StockPredictor):
                 self.model.save(model_path / f"deep_{self.deep_model_type}_model.h5")
 
             joblib.dump(
-                self.scaler,
-                model_path / f"deep_{self.deep_model_type}_scaler.joblib"
+                self.scaler, model_path / f"deep_{self.deep_model_type}_scaler.joblib"
             )
             joblib.dump(
                 self.feature_columns,
-                model_path / f"deep_{self.deep_model_type}_features.joblib"
+                model_path / f"deep_{self.deep_model_type}_features.joblib",
             )
 
             logger.info(f"Deep {self.deep_model_type} model saved")
@@ -278,6 +282,7 @@ class DeepLearningPredictor(StockPredictor):
 
             try:
                 import tensorflow as tf
+
                 self.model = tf.keras.models.load_model(model_file)
             except ImportError:
                 logger.warning("TensorFlow not available, cannot load model")
@@ -306,32 +311,34 @@ class DQNReinforcementLearner(StockPredictor):
         self.target_network = self._build_q_network()
         self.memory: List[Dict[str, Any]] = []
         self.epsilon = 0.3  # 探索率
-        self.gamma = 0.95   # 割引率
+        self.gamma = 0.95  # 割引率
         self.learning_rate = 0.001
 
     def _build_q_network(self) -> Dict[str, Any]:
         """Q-ネットワーク構築"""
         return {
-            'input_dim': 15,  # 市場状態次元
-            'hidden_dims': [64, 32, 16],
-            'output_dim': 3,  # アクション: [買い, 保持, 売り]
-            'weights': self._initialize_weights()
+            "input_dim": 15,  # 市場状態次元
+            "hidden_dims": [64, 32, 16],
+            "output_dim": 3,  # アクション: [買い, 保持, 売り]
+            "weights": self._initialize_weights(),
         }
 
     def _initialize_weights(self) -> Dict[str, np.ndarray]:
         """ネットワーク重み初期化"""
         return {
-            'w1': np.random.randn(15, 64) * 0.1,
-            'b1': np.zeros(64),
-            'w2': np.random.randn(64, 32) * 0.1,
-            'b2': np.zeros(32),
-            'w3': np.random.randn(32, 16) * 0.1,
-            'b3': np.zeros(16),
-            'w4': np.random.randn(16, 3) * 0.1,
-            'b4': np.zeros(3)
+            "w1": np.random.randn(15, 64) * 0.1,
+            "b1": np.zeros(64),
+            "w2": np.random.randn(64, 32) * 0.1,
+            "b2": np.zeros(32),
+            "w3": np.random.randn(32, 16) * 0.1,
+            "b3": np.zeros(16),
+            "w4": np.random.randn(16, 3) * 0.1,
+            "b4": np.zeros(3),
         }
 
-    def extract_market_state(self, symbol: str, historical_data: pd.DataFrame) -> np.ndarray:
+    def extract_market_state(
+        self, symbol: str, historical_data: pd.DataFrame
+    ) -> np.ndarray:
         """市場状態特徴量抽出"""
         try:
             if len(historical_data) < 50:
@@ -340,47 +347,50 @@ class DQNReinforcementLearner(StockPredictor):
             data = historical_data.tail(50).copy()
 
             # 価格系特徴量
-            returns = data['Close'].pct_change().dropna()
+            returns = data["Close"].pct_change().dropna()
             volatility = returns.rolling(10).std().iloc[-1]
             momentum = returns.tail(5).mean()
 
             # テクニカル指標
-            sma_5 = data['Close'].rolling(5).mean().iloc[-1]
-            sma_20 = data['Close'].rolling(20).mean().iloc[-1]
-            current_price = data['Close'].iloc[-1]
+            sma_5 = data["Close"].rolling(5).mean().iloc[-1]
+            sma_20 = data["Close"].rolling(20).mean().iloc[-1]
+            current_price = data["Close"].iloc[-1]
 
             # RSI
-            delta = data['Close'].diff()
+            delta = data["Close"].diff()
             gain = delta.where(delta > 0, 0).rolling(14).mean().iloc[-1]
             loss = (-delta.where(delta < 0, 0)).rolling(14).mean().iloc[-1]
             rsi = 100 - (100 / (1 + gain / loss)) if loss != 0 else 50
 
             # MACD
-            ema_12 = data['Close'].ewm(span=12).mean().iloc[-1]
-            ema_26 = data['Close'].ewm(span=26).mean().iloc[-1]
+            ema_12 = data["Close"].ewm(span=12).mean().iloc[-1]
+            ema_26 = data["Close"].ewm(span=26).mean().iloc[-1]
             macd = ema_12 - ema_26
 
             # 出来高系
-            volume_ratio = data['Volume'].iloc[-1] / data['Volume'].tail(20).mean()
+            volume_ratio = data["Volume"].iloc[-1] / data["Volume"].tail(20).mean()
 
             # 市場状態ベクトル
-            state = np.array([
-                volatility,
-                momentum,
-                (current_price - sma_5) / sma_5,
-                (current_price - sma_20) / sma_20,
-                (sma_5 - sma_20) / sma_20,
-                rsi / 100,
-                macd,
-                volume_ratio,
-                returns.tail(1).iloc[0],
-                returns.tail(3).mean(),
-                returns.tail(10).mean(),
-                returns.tail(10).std(),
-                (data['High'].iloc[-1] - data['Low'].iloc[-1]) / data['Close'].iloc[-1],
-                data['Close'].iloc[-1] / data['Close'].iloc[-5] - 1,
-                len(data)
-            ])
+            state = np.array(
+                [
+                    volatility,
+                    momentum,
+                    (current_price - sma_5) / sma_5,
+                    (current_price - sma_20) / sma_20,
+                    (sma_5 - sma_20) / sma_20,
+                    rsi / 100,
+                    macd,
+                    volume_ratio,
+                    returns.tail(1).iloc[0],
+                    returns.tail(3).mean(),
+                    returns.tail(10).mean(),
+                    returns.tail(10).std(),
+                    (data["High"].iloc[-1] - data["Low"].iloc[-1])
+                    / data["Close"].iloc[-1],
+                    data["Close"].iloc[-1] / data["Close"].iloc[-5] - 1,
+                    len(data),
+                ]
+            )
 
             # NaN値処理
             state = np.nan_to_num(state, 0.0)
@@ -393,22 +403,22 @@ class DQNReinforcementLearner(StockPredictor):
     def forward_pass(self, state: np.ndarray, network: Dict[str, Any]) -> np.ndarray:
         """フォワードパス"""
         try:
-            weights = network['weights']
+            weights = network["weights"]
 
             # Layer 1
-            z1 = np.dot(state, weights['w1']) + weights['b1']
+            z1 = np.dot(state, weights["w1"]) + weights["b1"]
             a1 = np.maximum(0, z1)  # ReLU
 
             # Layer 2
-            z2 = np.dot(a1, weights['w2']) + weights['b2']
+            z2 = np.dot(a1, weights["w2"]) + weights["b2"]
             a2 = np.maximum(0, z2)  # ReLU
 
             # Layer 3
-            z3 = np.dot(a2, weights['w3']) + weights['b3']
+            z3 = np.dot(a2, weights["w3"]) + weights["b3"]
             a3 = np.maximum(0, z3)  # ReLU
 
             # Output Layer
-            q_values = np.dot(a3, weights['w4']) + weights['b4']
+            q_values = np.dot(a3, weights["w4"]) + weights["b4"]
             return q_values
 
         except Exception as e:
@@ -430,11 +440,14 @@ class DQNReinforcementLearner(StockPredictor):
         self._is_trained = True
         logger.info("DQN training completed (simplified implementation)")
 
-    def predict(self, symbol: str, data: Optional[pd.DataFrame] = None) -> PredictionResult:
+    def predict(
+        self, symbol: str, data: Optional[pd.DataFrame] = None
+    ) -> PredictionResult:
         """DQN prediction"""
         try:
             if data is None:
                 from data.stock_data import StockDataProvider
+
                 data_provider = StockDataProvider()
                 data = data_provider.get_stock_data(symbol, "1y")
 
@@ -445,19 +458,19 @@ class DQNReinforcementLearner(StockPredictor):
             signal = self.get_trading_signal(symbol, data)
 
             # Convert action to score
-            action_map = {'BUY': 75, 'HOLD': 50, 'SELL': 25}
-            score = action_map.get(signal['action'], 50)
+            action_map = {"BUY": 75, "HOLD": 50, "SELL": 25}
+            score = action_map.get(signal["action"], 50)
 
             return PredictionResult(
                 prediction=float(score),
-                confidence=signal['confidence'],
+                confidence=signal["confidence"],
                 timestamp=datetime.now(),
                 metadata={
-                    'model_type': self.model_type,
-                    'symbol': symbol,
-                    'action': signal['action'],
-                    'signal_strength': signal['signal_strength']
-                }
+                    "model_type": self.model_type,
+                    "symbol": symbol,
+                    "action": signal["action"],
+                    "signal_strength": signal["signal_strength"],
+                },
             )
 
         except Exception as e:
@@ -466,10 +479,12 @@ class DQNReinforcementLearner(StockPredictor):
                 prediction=50.0,
                 confidence=0.5,
                 timestamp=datetime.now(),
-                metadata={'error': str(e)}
+                metadata={"error": str(e)},
             )
 
-    def get_trading_signal(self, symbol: str, historical_data: pd.DataFrame) -> Dict[str, Any]:
+    def get_trading_signal(
+        self, symbol: str, historical_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """取引シグナル生成 - 87%精度向上版"""
         try:
             state = self.extract_market_state(symbol, historical_data)
@@ -477,7 +492,7 @@ class DQNReinforcementLearner(StockPredictor):
             q_values = self.forward_pass(state, self.q_network)
 
             # アクション解釈（強化版）
-            action_map = {0: 'BUY', 1: 'HOLD', 2: 'SELL'}
+            action_map = {0: "BUY", 1: "HOLD", 2: "SELL"}
 
             # より強力なシグナル強度計算
             q_max = float(np.max(q_values))
@@ -489,14 +504,20 @@ class DQNReinforcementLearner(StockPredictor):
 
             # 市場状況による信頼度調整
             market_volatility = float(np.std(state[:5])) if len(state) >= 5 else 0.1
-            trend_strength = float(abs(np.mean(state[5:10]))) if len(state) >= 10 else 0.5
+            trend_strength = (
+                float(abs(np.mean(state[5:10]))) if len(state) >= 10 else 0.5
+            )
 
             # DQN信頼度の強化計算
             base_confidence = float(q_max)
-            volatility_adjustment = min(market_volatility * 2, 0.2)  # ボラティリティボーナス
+            volatility_adjustment = min(
+                market_volatility * 2, 0.2
+            )  # ボラティリティボーナス
             trend_adjustment = min(trend_strength * 0.3, 0.15)  # トレンド強度ボーナス
 
-            enhanced_confidence = min(base_confidence + volatility_adjustment + trend_adjustment, 0.95)
+            enhanced_confidence = min(
+                base_confidence + volatility_adjustment + trend_adjustment, 0.95
+            )
 
             # アクション別の追加調整
             if action == 0:  # BUY
@@ -512,26 +533,26 @@ class DQNReinforcementLearner(StockPredictor):
             signal_strength = float(np.clip(signal_strength * 1.5, -1.0, 1.0))
 
             return {
-                'action': action_map[action],
-                'signal_strength': signal_strength,
-                'confidence': float(np.clip(enhanced_confidence, 0.3, 0.95)),
-                'q_values': q_values.tolist(),
-                'market_state': state.tolist(),
-                'enhancement_applied': {
-                    'volatility_adjustment': volatility_adjustment,
-                    'trend_adjustment': trend_adjustment,
-                    'signal_multiplier': 1.5
-                }
+                "action": action_map[action],
+                "signal_strength": signal_strength,
+                "confidence": float(np.clip(enhanced_confidence, 0.3, 0.95)),
+                "q_values": q_values.tolist(),
+                "market_state": state.tolist(),
+                "enhancement_applied": {
+                    "volatility_adjustment": volatility_adjustment,
+                    "trend_adjustment": trend_adjustment,
+                    "signal_multiplier": 1.5,
+                },
             }
 
         except Exception as e:
             logger.error(f"取引シグナル生成エラー {symbol}: {e}")
             # フォールバック時も改善
             return {
-                'action': 'HOLD',
-                'signal_strength': 0.1,  # 少し改善
-                'confidence': 0.55,  # 少し改善
-                'q_values': [0.55, 0.5, 0.45],
-                'market_state': [],
-                'enhancement_applied': {'fallback': True}
+                "action": "HOLD",
+                "signal_strength": 0.1,  # 少し改善
+                "confidence": 0.55,  # 少し改善
+                "q_values": [0.55, 0.5, 0.45],
+                "market_state": [],
+                "enhancement_applied": {"fallback": True},
             }

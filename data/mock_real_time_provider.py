@@ -17,7 +17,7 @@ from models_new.base.interfaces import (
     TickData,
     OrderBookData,
     IndexData,
-    NewsData
+    NewsData,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,14 +39,11 @@ class MockRealTimeProvider(RealTimeDataProvider):
             "6758": 12000.0,  # ソニー
             "8058": 3200.0,  # 三菱商事
             "4519": 4800.0,  # 中外製薬
-            "6861": 8500.0   # キーエンス
+            "6861": 8500.0,  # キーエンス
         }
 
         # 指数データ
-        self.index_values = {
-            "NIKKEI": 28000.0,
-            "TOPIX": 2000.0
-        }
+        self.index_values = {"NIKKEI": 28000.0, "TOPIX": 2000.0}
 
         # データ生成タスク
         self.data_generation_tasks = []
@@ -165,7 +162,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
             "subscribed_symbols": list(self.subscribed_symbols),
             "subscribed_indices": list(self.subscribed_indices),
             "last_update": datetime.now().isoformat(),
-            "data_source": "mock"
+            "data_source": "mock",
         }
 
     async def is_connected(self) -> bool:
@@ -242,7 +239,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
             "{company}の新製品発表が好評",
             "{company}株主総会で新戦略発表",
             "市場全体の動向が{company}に影響",
-            "{company}の四半期決算発表"
+            "{company}の四半期決算発表",
         ]
 
         company_names = {
@@ -250,7 +247,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
             "6758": "ソニーグループ",
             "8058": "三菱商事",
             "4519": "中外製薬",
-            "6861": "キーエンス"
+            "6861": "キーエンス",
         }
 
         while self.is_connected_flag and self.subscribed_news:
@@ -267,11 +264,13 @@ class MockRealTimeProvider(RealTimeDataProvider):
                     news_data = NewsData(
                         id=f"news_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                         timestamp=datetime.now(),
-                        title=random.choice(news_templates).format(company=company_name),
+                        title=random.choice(news_templates).format(
+                            company=company_name
+                        ),
                         content=f"{company_name}に関する重要なニュースが発表されました。",
                         symbols=[symbol],
                         sentiment=random.choice(["positive", "negative", "neutral"]),
-                        impact_score=random.uniform(0.3, 1.0)
+                        impact_score=random.uniform(0.3, 1.0),
                     )
 
                     # コールバック実行
@@ -302,7 +301,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
             volume=random.randint(100, 10000),
             bid_price=round(new_price * 0.999, 2),
             ask_price=round(new_price * 1.001, 2),
-            trade_type=random.choice(["buy", "sell", "unknown"])
+            trade_type=random.choice(["buy", "sell", "unknown"]),
         )
 
     def _create_mock_order_book_data(self, symbol: str) -> OrderBookData:
@@ -324,10 +323,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
             asks.append((price, volume))
 
         return OrderBookData(
-            symbol=symbol,
-            timestamp=datetime.now(),
-            bids=bids,
-            asks=asks
+            symbol=symbol, timestamp=datetime.now(), bids=bids, asks=asks
         )
 
     def _create_mock_index_data(self, index: str) -> IndexData:
@@ -347,7 +343,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
             timestamp=datetime.now(),
             value=round(new_value, 2),
             change=round(change_points, 2),
-            change_percent=round(change_percent, 3)
+            change_percent=round(change_percent, 3),
         )
 
     # コールバック登録メソッド
@@ -371,25 +367,28 @@ class MockRealTimeProvider(RealTimeDataProvider):
     def get_stock_data(self, symbol: str, period: str = "1d") -> pd.DataFrame:
         """モック過去データ取得"""
         # シンプルなモックデータを生成
-        dates = pd.date_range(start=datetime.now() - timedelta(days=30),
-                             end=datetime.now(), freq='D')
+        dates = pd.date_range(
+            start=datetime.now() - timedelta(days=30), end=datetime.now(), freq="D"
+        )
 
         base_price = self.symbol_prices.get(symbol, 1000.0)
 
         data = []
         for date in dates:
             price = base_price * (1 + random.uniform(-0.05, 0.05))
-            data.append({
-                'Date': date,
-                'Open': price * (1 + random.uniform(-0.02, 0.02)),
-                'High': price * (1 + random.uniform(0.0, 0.03)),
-                'Low': price * (1 + random.uniform(-0.03, 0.0)),
-                'Close': price,
-                'Volume': random.randint(100000, 1000000)
-            })
+            data.append(
+                {
+                    "Date": date,
+                    "Open": price * (1 + random.uniform(-0.02, 0.02)),
+                    "High": price * (1 + random.uniform(0.0, 0.03)),
+                    "Low": price * (1 + random.uniform(-0.03, 0.0)),
+                    "Close": price,
+                    "Volume": random.randint(100000, 1000000),
+                }
+            )
 
         df = pd.DataFrame(data)
-        df.set_index('Date', inplace=True)
+        df.set_index("Date", inplace=True)
         return df
 
     def get_technical_indicators(self, symbol: str) -> Dict[str, float]:
@@ -401,5 +400,5 @@ class MockRealTimeProvider(RealTimeDataProvider):
             "sma_20": current_price * (1 + random.uniform(-0.05, 0.05)),
             "sma_50": current_price * (1 + random.uniform(-0.1, 0.1)),
             "rsi": random.uniform(20, 80),
-            "volume": float(random.randint(100000, 1000000))
+            "volume": float(random.randint(100000, 1000000)),
         }

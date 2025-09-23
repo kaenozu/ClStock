@@ -61,7 +61,11 @@ class TestLoggerConfig:
         assert "test_service" in centralized_logger.log_collectors
         assert "test_service" in centralized_logger.log_files
 
-    @patch("builtins.open", new_callable=mock_open, read_data="[2023-01-01 12:00:00] [INFO] [TEST] Test message\n")
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="[2023-01-01 12:00:00] [INFO] [TEST] Test message\n",
+    )
     def test_centralized_logger_get_recent_logs(self, mock_file):
         """Test getting recent logs from centralized logger."""
         centralized_logger = CentralizedLogger()
@@ -69,12 +73,18 @@ class TestLoggerConfig:
         centralized_logger.centralized_log = "/path/to/centralized.log"
 
         # Mock the file existence
-        with patch.object(centralized_logger.centralized_log, 'exists', return_value=True):
+        with patch.object(
+            centralized_logger.centralized_log, "exists", return_value=True
+        ):
             logs = centralized_logger.get_recent_logs(hours=1, service_filter="TEST")
             # Should return the log line
             assert len(logs) >= 0  # May be empty depending on time filter
 
-    @patch("builtins.open", new_callable=mock_open, read_data="[2023-01-01 12:00:00] [ERROR] [TEST] Error message\n[2023-01-01 12:01:00] [INFO] [TEST] Info message\n")
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="[2023-01-01 12:00:00] [ERROR] [TEST] Error message\n[2023-01-01 12:01:00] [INFO] [TEST] Info message\n",
+    )
     def test_centralized_logger_analyze_patterns(self, mock_file):
         """Test log pattern analysis."""
         centralized_logger = CentralizedLogger()
@@ -82,7 +92,9 @@ class TestLoggerConfig:
         centralized_logger.centralized_log = "/path/to/centralized.log"
 
         # Mock the file existence
-        with patch.object(centralized_logger.centralized_log, 'exists', return_value=True):
+        with patch.object(
+            centralized_logger.centralized_log, "exists", return_value=True
+        ):
             analysis = centralized_logger.analyze_log_patterns()
 
             # Should have analysis results

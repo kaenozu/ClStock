@@ -37,10 +37,12 @@ class SecureDatabase:
             if conn:
                 conn.close()
 
-    def execute_safe_query(self,
-                          query: str,
-                          params: Optional[Union[tuple, dict]] = None,
-                          fetch_all: bool = True) -> List[Dict[str, Any]]:
+    def execute_safe_query(
+        self,
+        query: str,
+        params: Optional[Union[tuple, dict]] = None,
+        fetch_all: bool = True,
+    ) -> List[Dict[str, Any]]:
         """
         パラメータ化クエリの安全な実行
 
@@ -74,9 +76,9 @@ class SecureDatabase:
                 row = cursor.fetchone()
                 return [dict(row)] if row else []
 
-    def execute_safe_update(self,
-                           query: str,
-                           params: Optional[Union[tuple, dict]] = None) -> int:
+    def execute_safe_update(
+        self, query: str, params: Optional[Union[tuple, dict]] = None
+    ) -> int:
         """
         安全な更新クエリの実行
 
@@ -91,7 +93,9 @@ class SecureDatabase:
 
         # 更新系クエリかチェック
         query_upper = query.strip().upper()
-        if not any(query_upper.startswith(cmd) for cmd in ['INSERT', 'UPDATE', 'DELETE']):
+        if not any(
+            query_upper.startswith(cmd) for cmd in ["INSERT", "UPDATE", "DELETE"]
+        ):
             raise ValueError("This method only supports INSERT, UPDATE, DELETE queries")
 
         with self.get_connection() as conn:
@@ -119,15 +123,30 @@ class SecureDatabase:
 
         # 危険なパターンリスト
         dangerous_patterns = [
-            'DROP ', 'TRUNCATE ', 'ALTER ', 'CREATE ',
-            'EXEC ', 'EXECUTE ', 'UNION ', 'INFORMATION_SCHEMA',
-            'SYS.', 'MASTER.', '--', '/*', '*/',
-            ';', 'SCRIPT', 'JAVASCRIPT', 'VBSCRIPT'
+            "DROP ",
+            "TRUNCATE ",
+            "ALTER ",
+            "CREATE ",
+            "EXEC ",
+            "EXECUTE ",
+            "UNION ",
+            "INFORMATION_SCHEMA",
+            "SYS.",
+            "MASTER.",
+            "--",
+            "/*",
+            "*/",
+            ";",
+            "SCRIPT",
+            "JAVASCRIPT",
+            "VBSCRIPT",
         ]
 
         for pattern in dangerous_patterns:
             if pattern in query_upper:
-                logger.warning(f"Potentially dangerous query pattern detected: {pattern}")
+                logger.warning(
+                    f"Potentially dangerous query pattern detected: {pattern}"
+                )
                 raise ValueError(f"Query contains dangerous pattern: {pattern}")
 
         # パラメータプレースホルダーの使用を確認
@@ -136,7 +155,9 @@ class SecureDatabase:
             # 実際の実装では、より精密な解析が必要
             logger.warning("Query may contain string literals - use parameters instead")
 
-    def get_stock_data_safe(self, symbol: str, limit: int = 1000) -> List[Dict[str, Any]]:
+    def get_stock_data_safe(
+        self, symbol: str, limit: int = 1000
+    ) -> List[Dict[str, Any]]:
         """
         安全な株価データ取得
 
@@ -157,14 +178,16 @@ class SecureDatabase:
 
         return self.execute_safe_query(query, (symbol, limit))
 
-    def insert_stock_data_safe(self,
-                              symbol: str,
-                              date: str,
-                              open_price: float,
-                              high: float,
-                              low: float,
-                              close: float,
-                              volume: int) -> int:
+    def insert_stock_data_safe(
+        self,
+        symbol: str,
+        date: str,
+        open_price: float,
+        high: float,
+        low: float,
+        close: float,
+        volume: int,
+    ) -> int:
         """
         安全な株価データ挿入
 
@@ -245,7 +268,7 @@ class SecureDatabase:
             """
             CREATE INDEX IF NOT EXISTS idx_stock_prices_date
             ON stock_prices (date)
-            """
+            """,
         ]
 
         with self.get_connection() as conn:
@@ -258,6 +281,7 @@ class SecureDatabase:
 
 # グローバルなデータベースインスタンス
 _db_instance = None
+
 
 def get_secure_db() -> SecureDatabase:
     """セキュアなデータベースインスタンスを取得"""

@@ -7,8 +7,11 @@ import pandas as pd
 # セキュリティと検証機能
 from api.security import security, verify_token
 from utils.validators import (
-    validate_stock_symbol, validate_period, validate_symbols_list,
-    ValidationError, log_validation_error
+    validate_stock_symbol,
+    validate_period,
+    validate_symbols_list,
+    ValidationError,
+    log_validation_error,
 )
 
 # 古いmodelsディレクトリは廃止されました
@@ -16,7 +19,11 @@ from utils.validators import (
 # from models.predictor import StockPredictor
 
 # 新しいインポートパス
-from models_refactored.core.interfaces import StockPredictor, PredictionResult as RecommendationResponse
+from models_refactored.core.interfaces import (
+    StockPredictor,
+    PredictionResult as RecommendationResponse,
+)
+
 # StockRecommendationクラスは削除されたため、一時的にコメントアウト
 from data.stock_data import StockDataProvider
 
@@ -26,7 +33,7 @@ router = APIRouter()
 @router.get("/recommendations", response_model=RecommendationResponse)
 async def get_recommendations(
     top_n: int = Query(5, ge=1, le=10, description="推奨銘柄の上位N件を取得"),
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     try:
         # Authentication verification
@@ -61,8 +68,7 @@ async def get_recommendations(
 
 @router.get("/recommendation/{symbol}")
 async def get_single_recommendation(
-    symbol: str,
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    symbol: str, credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
     """Get recommendation information for a specific symbol"""
     from utils.exceptions import InvalidSymbolError, PredictionError

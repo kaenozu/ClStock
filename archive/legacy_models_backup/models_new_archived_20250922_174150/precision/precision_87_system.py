@@ -22,10 +22,10 @@ class Precision87BreakthroughSystem(StockPredictor):
 
         # 87%精度達成のための最適化重み
         self.ensemble_weights = {
-            'base_model': 0.6,      # ベースモデルの重みを増加
-            'meta_learning': 0.25,   # メタ学習最適化
-            'dqn_reinforcement': 0.1, # DQN強化学習
-            'sentiment_macro': 0.05   # センチメント・マクロ
+            "base_model": 0.6,  # ベースモデルの重みを増加
+            "meta_learning": 0.25,  # メタ学習最適化
+            "dqn_reinforcement": 0.1,  # DQN強化学習
+            "sentiment_macro": 0.05,  # センチメント・マクロ
         }
         self.logger = logging.getLogger(__name__)
 
@@ -36,6 +36,7 @@ class Precision87BreakthroughSystem(StockPredictor):
             try:
                 # MetaLearningOptimizer は元のml_modelsにまだ存在するためそのまま維持
                 from models.ml_models import MetaLearningOptimizer
+
                 self._meta_learner = MetaLearningOptimizer()
             except ImportError:
                 self.logger.warning("MetaLearningOptimizer not available")
@@ -49,6 +50,7 @@ class Precision87BreakthroughSystem(StockPredictor):
             try:
                 # DQNReinforcementLearner は元のml_modelsにまだ存在するためそのまま維持
                 from models.ml_models import DQNReinforcementLearner
+
                 self._dqn_agent = DQNReinforcementLearner()
             except ImportError:
                 self.logger.warning("DQNReinforcementLearner not available")
@@ -59,12 +61,12 @@ class Precision87BreakthroughSystem(StockPredictor):
         """標準インターフェース予測実行"""
         result = self.predict_with_87_precision(symbol)
         return PredictionResult(
-            prediction=result['final_prediction'],
-            confidence=result['final_confidence'],
-            accuracy=result['final_accuracy'],
+            prediction=result["final_prediction"],
+            confidence=result["final_confidence"],
+            accuracy=result["final_accuracy"],
             timestamp=datetime.now(),
             symbol=symbol,
-            metadata=result
+            metadata=result,
         )
 
     def predict_batch(self, symbols: list) -> list:
@@ -74,26 +76,29 @@ class Precision87BreakthroughSystem(StockPredictor):
     def get_confidence(self, symbol: str) -> float:
         """予測信頼度取得"""
         result = self.predict_with_87_precision(symbol)
-        return result['final_confidence']
+        return result["final_confidence"]
 
     def get_model_info(self) -> Dict[str, Any]:
         """モデル情報取得"""
         return {
-            'name': 'Precision87BreakthroughSystem',
-            'version': '1.0.0',
-            'target_accuracy': 87.0,
-            'ensemble_weights': self.ensemble_weights,
-            'components': ['base_model', 'meta_learning', 'dqn_reinforcement']
+            "name": "Precision87BreakthroughSystem",
+            "version": "1.0.0",
+            "target_accuracy": 87.0,
+            "ensemble_weights": self.ensemble_weights,
+            "components": ["base_model", "meta_learning", "dqn_reinforcement"],
         }
 
     def predict_with_87_precision(self, symbol: str) -> Dict[str, Any]:
         """87%精度予測実行"""
         try:
             from data.stock_data import StockDataProvider
+
             # データ取得
             data_provider = StockDataProvider()
             historical_data = data_provider.get_stock_data(symbol, period="1y")
-            historical_data = data_provider.calculate_technical_indicators(historical_data)
+            historical_data = data_provider.calculate_technical_indicators(
+                historical_data
+            )
 
             if len(historical_data) < 100:
                 return self._default_prediction(symbol, "Insufficient data")
@@ -102,13 +107,15 @@ class Precision87BreakthroughSystem(StockPredictor):
             base_prediction = self._get_base_846_prediction(symbol, historical_data)
 
             # 2. メタ学習最適化
-            symbol_profile = self.meta_learner.create_symbol_profile(symbol, historical_data)
+            symbol_profile = self.meta_learner.create_symbol_profile(
+                symbol, historical_data
+            )
             # 基本パラメータを辞書として作成
             base_params = {
-                'learning_rate': 0.01,
-                'regularization': 0.01,
-                'prediction': base_prediction['prediction'],
-                'confidence': base_prediction['confidence']
+                "learning_rate": 0.01,
+                "regularization": 0.01,
+                "prediction": base_prediction["prediction"],
+                "confidence": base_prediction["confidence"],
             }
             meta_adaptation = self.meta_learner.adapt_model_parameters(
                 symbol, symbol_profile, base_params
@@ -125,24 +132,32 @@ class Precision87BreakthroughSystem(StockPredictor):
             # 5. 87%精度チューニング
             tuned_prediction = self._apply_87_precision_tuning(final_prediction, symbol)
 
-            self.logger.info(f"87%精度予測完了 {symbol}: {tuned_prediction['final_accuracy']:.1f}%")
+            self.logger.info(
+                f"87%精度予測完了 {symbol}: {tuned_prediction['final_accuracy']:.1f}%"
+            )
             return tuned_prediction
 
         except Exception as e:
             self.logger.error(f"87%精度予測エラー {symbol}: {e}")
             return self._default_prediction(symbol, str(e))
 
-    def _get_base_846_prediction(self, symbol: str, data: pd.DataFrame) -> Dict[str, float]:
+    def _get_base_846_prediction(
+        self, symbol: str, data: pd.DataFrame
+    ) -> Dict[str, float]:
         """84.6%ベースシステム予測"""
         try:
             # 高精度なベース予測を生成
-            close = data['Close']
+            close = data["Close"]
             # テクニカル指標から予測スコア計算
             sma_20 = close.rolling(20).mean()
             rsi = self._calculate_rsi(close, 14)
 
             # 価格トレンド分析
-            price_trend = (close.iloc[-1] - close.iloc[-20]) / close.iloc[-20] if len(close) >= 20 else 0
+            price_trend = (
+                (close.iloc[-1] - close.iloc[-20]) / close.iloc[-20]
+                if len(close) >= 20
+                else 0
+            )
 
             # RSIベース予測
             if rsi.iloc[-1] > 70:
@@ -167,22 +182,23 @@ class Precision87BreakthroughSystem(StockPredictor):
                 ma_score = 35
 
             # 統合予測（84.6%レベル）
-            base_prediction = (rsi_score * 0.3 + trend_score * 0.4 + ma_score * 0.3)
+            base_prediction = rsi_score * 0.3 + trend_score * 0.4 + ma_score * 0.3
             base_confidence = min(abs(base_prediction - 50) / 50 + 0.6, 0.9)  # 高信頼度
 
             return {
-                'prediction': float(base_prediction),
-                'confidence': float(base_confidence),
-                'direction': 1 if base_prediction > 50 else -1
+                "prediction": float(base_prediction),
+                "confidence": float(base_confidence),
+                "direction": 1 if base_prediction > 50 else -1,
             }
         except Exception as e:
             self.logger.error(f"ベース予測エラー {symbol}: {e}")
-            return {'prediction': 84.6, 'confidence': 0.846, 'direction': 0}
+            return {"prediction": 84.6, "confidence": 0.846, "direction": 0}
 
     def _calculate_rsi(self, prices: pd.Series, window: int = 14) -> pd.Series:
         """RSI計算 - 共通ユーティリティを使用"""
         try:
             from utils.technical_indicators import calculate_rsi
+
             return calculate_rsi(prices, window)
         except ImportError:
             # フォールバック実装
@@ -194,31 +210,32 @@ class Precision87BreakthroughSystem(StockPredictor):
         except:
             return pd.Series([50] * len(prices), index=prices.index)
 
-    def _integrate_87_predictions(self, base_pred: Dict, meta_adapt: Dict,
-                                dqn_signal: Dict, profile: Dict) -> Dict[str, Any]:
+    def _integrate_87_predictions(
+        self, base_pred: Dict, meta_adapt: Dict, dqn_signal: Dict, profile: Dict
+    ) -> Dict[str, Any]:
         """87%予測統合 - 実際の価格予測版"""
         try:
             # 重み調整
             weights = self.ensemble_weights.copy()
             # プロファイルベース重み調整
-            if profile.get('trend_persistence', 0.5) > 0.7:
-                weights['meta_learning'] += 0.1
-                weights['base_model'] -= 0.05
-                weights['dqn_reinforcement'] -= 0.05
+            if profile.get("trend_persistence", 0.5) > 0.7:
+                weights["meta_learning"] += 0.1
+                weights["base_model"] -= 0.05
+                weights["dqn_reinforcement"] -= 0.05
 
             # 現在価格を取得（予測値計算用）
-            current_price = profile.get('current_price', 100.0)
+            current_price = profile.get("current_price", 100.0)
 
             # 各コンポーネントの方向性スコア（-1から1の範囲）
-            base_direction = (base_pred['prediction'] - 50) / 50  # -1 to 1
-            meta_direction = (meta_adapt.get('adapted_prediction', 50) - 50) / 50
-            dqn_direction = dqn_signal.get('signal_strength', 0)  # 既に-1 to 1
+            base_direction = (base_pred["prediction"] - 50) / 50  # -1 to 1
+            meta_direction = (meta_adapt.get("adapted_prediction", 50) - 50) / 50
+            dqn_direction = dqn_signal.get("signal_strength", 0)  # 既に-1 to 1
 
             # 重み付き方向性統合
             integrated_direction = (
-                base_direction * weights['base_model'] +
-                meta_direction * weights['meta_learning'] +
-                dqn_direction * weights['dqn_reinforcement']
+                base_direction * weights["base_model"]
+                + meta_direction * weights["meta_learning"]
+                + dqn_direction * weights["dqn_reinforcement"]
             )
 
             # 予測変化率（最大±5%の変化）
@@ -229,51 +246,57 @@ class Precision87BreakthroughSystem(StockPredictor):
 
             # 信頼度統合
             integrated_confidence = (
-                base_pred['confidence'] * weights['base_model'] +
-                meta_adapt.get('adapted_confidence', 0.5) * weights['meta_learning'] +
-                dqn_signal['confidence'] * weights['dqn_reinforcement'] +
-                0.5 * weights['sentiment_macro']
+                base_pred["confidence"] * weights["base_model"]
+                + meta_adapt.get("adapted_confidence", 0.5) * weights["meta_learning"]
+                + dqn_signal["confidence"] * weights["dqn_reinforcement"]
+                + 0.5 * weights["sentiment_macro"]
             )
 
             # 統合スコア（0-100範囲、精度計算用）
             integrated_score = 50 + integrated_direction * 50
 
             return {
-                'integrated_score': float(integrated_score),
-                'integrated_confidence': float(integrated_confidence),
-                'predicted_price': float(predicted_price),
-                'current_price': float(current_price),
-                'predicted_change_rate': float(predicted_change_rate),
-                'component_scores': {
-                    'base': base_pred['prediction'],
-                    'meta': meta_adapt.get('adapted_prediction', 50),
-                    'dqn': 50 + dqn_signal.get('signal_strength', 0) * 50
+                "integrated_score": float(integrated_score),
+                "integrated_confidence": float(integrated_confidence),
+                "predicted_price": float(predicted_price),
+                "current_price": float(current_price),
+                "predicted_change_rate": float(predicted_change_rate),
+                "component_scores": {
+                    "base": base_pred["prediction"],
+                    "meta": meta_adapt.get("adapted_prediction", 50),
+                    "dqn": 50 + dqn_signal.get("signal_strength", 0) * 50,
                 },
-                'weights_used': weights
+                "weights_used": weights,
             }
         except Exception as e:
             self.logger.error(f"予測統合エラー: {e}")
-            current_price = profile.get('current_price', 100.0) if 'profile' in locals() else 100.0
+            current_price = (
+                profile.get("current_price", 100.0) if "profile" in locals() else 100.0
+            )
             return {
-                'integrated_score': 50.0,
-                'integrated_confidence': 0.5,
-                'predicted_price': current_price,
-                'current_price': current_price,
-                'predicted_change_rate': 0.0,
-                'component_scores': {},
-                'weights_used': {}
+                "integrated_score": 50.0,
+                "integrated_confidence": 0.5,
+                "predicted_price": current_price,
+                "current_price": current_price,
+                "predicted_change_rate": 0.0,
+                "component_scores": {},
+                "weights_used": {},
             }
 
-    def _apply_87_precision_tuning(self, prediction: Dict, symbol: str) -> Dict[str, Any]:
+    def _apply_87_precision_tuning(
+        self, prediction: Dict, symbol: str
+    ) -> Dict[str, Any]:
         """87%精度チューニング - 実価格対応版"""
         try:
-            score = prediction['integrated_score']
-            confidence = prediction['integrated_confidence']
+            score = prediction["integrated_score"]
+            confidence = prediction["integrated_confidence"]
 
             # 実際の予測価格を使用
-            predicted_price = prediction.get('predicted_price', prediction.get('current_price', 100.0))
-            current_price = prediction.get('current_price', 100.0)
-            predicted_change_rate = prediction.get('predicted_change_rate', 0.0)
+            predicted_price = prediction.get(
+                "predicted_price", prediction.get("current_price", 100.0)
+            )
+            current_price = prediction.get("current_price", 100.0)
+            predicted_change_rate = prediction.get("predicted_change_rate", 0.0)
 
             # より積極的な87%精度ターゲットチューニング
             if confidence > 0.8:
@@ -308,9 +331,9 @@ class Precision87BreakthroughSystem(StockPredictor):
 
             # 87%達成判定（より積極的）
             precision_87_achieved = (
-                estimated_accuracy >= 87.0 or
-                (estimated_accuracy >= 86.2 and confidence > 0.6) or
-                (estimated_accuracy >= 85.8 and confidence > 0.7)
+                estimated_accuracy >= 87.0
+                or (estimated_accuracy >= 86.2 and confidence > 0.6)
+                or (estimated_accuracy >= 85.8 and confidence > 0.7)
             )
 
             # 87%達成時の確実な保証
@@ -320,21 +343,21 @@ class Precision87BreakthroughSystem(StockPredictor):
                 confidence = min(confidence * 1.1, 0.95)
 
             return {
-                'symbol': symbol,
-                'final_prediction': float(predicted_price),  # 実際の価格を返す
-                'final_confidence': float(confidence),
-                'final_accuracy': float(np.clip(estimated_accuracy, 75.0, 92.0)),
-                'precision_87_achieved': precision_87_achieved,
-                'current_price': float(current_price),
-                'predicted_change_rate': float(predicted_change_rate),
-                'component_breakdown': prediction,
-                'tuning_applied': {
-                    'original_score': score,
-                    'tuned_score': tuned_score,
-                    'precision_boost': tuned_score - score,
-                    'accuracy_boost': accuracy_boost,
-                    'enhanced_tuning': True
-                }
+                "symbol": symbol,
+                "final_prediction": float(predicted_price),  # 実際の価格を返す
+                "final_confidence": float(confidence),
+                "final_accuracy": float(np.clip(estimated_accuracy, 75.0, 92.0)),
+                "precision_87_achieved": precision_87_achieved,
+                "current_price": float(current_price),
+                "predicted_change_rate": float(predicted_change_rate),
+                "component_breakdown": prediction,
+                "tuning_applied": {
+                    "original_score": score,
+                    "tuned_score": tuned_score,
+                    "precision_boost": tuned_score - score,
+                    "accuracy_boost": accuracy_boost,
+                    "enhanced_tuning": True,
+                },
             }
 
         except Exception as e:
@@ -344,26 +367,26 @@ class Precision87BreakthroughSystem(StockPredictor):
     def _default_prediction(self, symbol: str, reason: str) -> Dict[str, Any]:
         """デフォルト予測結果"""
         return {
-            'symbol': symbol,
-            'final_prediction': 50.0,
-            'final_confidence': 0.5,
-            'final_accuracy': 84.6,
-            'precision_87_achieved': False,
-            'error': reason,
-            'component_breakdown': {},
-            'tuning_applied': {}
+            "symbol": symbol,
+            "final_prediction": 50.0,
+            "final_confidence": 0.5,
+            "final_accuracy": 84.6,
+            "precision_87_achieved": False,
+            "error": reason,
+            "component_breakdown": {},
+            "tuning_applied": {},
         }
 
 
 # モック実装（依存関係が利用できない場合）
 class MockMetaLearner:
     def create_symbol_profile(self, symbol, data):
-        return {'current_price': data['Close'].iloc[-1], 'trend_persistence': 0.5}
+        return {"current_price": data["Close"].iloc[-1], "trend_persistence": 0.5}
 
     def adapt_model_parameters(self, symbol, profile, params):
-        return {'adapted_prediction': 50, 'adapted_confidence': 0.5}
+        return {"adapted_prediction": 50, "adapted_confidence": 0.5}
 
 
 class MockDQNAgent:
     def get_trading_signal(self, symbol, data):
-        return {'signal_strength': 0, 'confidence': 0.5}
+        return {"signal_strength": 0, "confidence": 0.5}

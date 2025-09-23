@@ -43,9 +43,9 @@ class TestOptimizationHistoryManager:
                 "return_rate": 17.32,
                 "sharpe_ratio": 1.85,
                 "max_drawdown": -8.2,
-                "win_rate": 73.4
+                "win_rate": 73.4,
             },
-            "description": "テスト最適化結果"
+            "description": "テスト最適化結果",
         }
 
     # === RED: 失敗するテストを先に書く ===
@@ -62,7 +62,7 @@ class TestOptimizationHistoryManager:
             stocks=sample_data["stocks"],
             performance_metrics=sample_data["metrics"],
             description=sample_data["description"],
-            auto_apply=False
+            auto_apply=False,
         )
 
         # Assert
@@ -86,13 +86,13 @@ class TestOptimizationHistoryManager:
             stocks=sample_data["stocks"],
             performance_metrics=sample_data["metrics"],
             description=sample_data["description"],
-            auto_apply=True
+            auto_apply=True,
         )
 
         # Assert
         assert config_file.exists()
 
-        with open(config_file, 'r', encoding='utf-8') as f:
+        with open(config_file, "r", encoding="utf-8") as f:
             config = json.load(f)
 
         assert config["optimal_stocks"] == sample_data["stocks"]
@@ -111,13 +111,13 @@ class TestOptimizationHistoryManager:
         id1 = manager.save_optimization_result(
             stocks=sample_data["stocks"],
             performance_metrics=sample_data["metrics"],
-            auto_apply=True
+            auto_apply=True,
         )
 
         id2 = manager.save_optimization_result(
             stocks=["9984", "4519", "6098"],
             performance_metrics={"return_rate": 15.0},
-            auto_apply=True
+            auto_apply=True,
         )
 
         # Assert
@@ -136,13 +136,13 @@ class TestOptimizationHistoryManager:
         id1 = manager.save_optimization_result(
             stocks=sample_data["stocks"],
             performance_metrics=sample_data["metrics"],
-            auto_apply=True
+            auto_apply=True,
         )
 
         id2 = manager.save_optimization_result(
             stocks=["9984", "4519", "6098"],
             performance_metrics={"return_rate": 15.0},
-            auto_apply=True
+            auto_apply=True,
         )
 
         # Act
@@ -172,7 +172,7 @@ class TestOptimizationHistoryManager:
             stocks=sample_data["stocks"],
             performance_metrics=sample_data["metrics"],
             description=sample_data["description"],
-            auto_apply=True
+            auto_apply=True,
         )
 
         # Act - 新しいインスタンスで読み込み
@@ -190,12 +190,12 @@ class TestOptimizationHistoryManager:
         # Arrange
         id1 = manager.save_optimization_result(
             stocks=["7203", "6758", "9432"],
-            performance_metrics={"return_rate": 15.0, "sharpe_ratio": 1.5}
+            performance_metrics={"return_rate": 15.0, "sharpe_ratio": 1.5},
         )
 
         id2 = manager.save_optimization_result(
             stocks=["7203", "8306", "6861"],
-            performance_metrics={"return_rate": 18.0, "sharpe_ratio": 1.8}
+            performance_metrics={"return_rate": 18.0, "sharpe_ratio": 1.8},
         )
 
         # Act
@@ -212,17 +212,13 @@ class TestOptimizationHistoryManager:
         """統計情報が正しく計算されることを確認"""
         # Arrange
         manager.save_optimization_result(
-            stocks=["7203"],
-            performance_metrics={"return_rate": 10.0}
+            stocks=["7203"], performance_metrics={"return_rate": 10.0}
         )
         manager.save_optimization_result(
-            stocks=["6758"],
-            performance_metrics={"return_rate": 20.0}
+            stocks=["6758"], performance_metrics={"return_rate": 20.0}
         )
         manager.save_optimization_result(
-            stocks=["9432"],
-            performance_metrics={"return_rate": 15.0},
-            auto_apply=True
+            stocks=["9432"], performance_metrics={"return_rate": 15.0}, auto_apply=True
         )
 
         # Act
@@ -240,8 +236,7 @@ class TestOptimizationHistoryManager:
         # Arrange - 10件の記録を作成
         for i in range(10):
             manager.save_optimization_result(
-                stocks=[f"stock_{i}"],
-                performance_metrics={"return_rate": float(i)}
+                stocks=[f"stock_{i}"], performance_metrics={"return_rate": float(i)}
             )
 
         # Act
@@ -259,13 +254,11 @@ class TestOptimizationHistoryManager:
         manager.save_optimization_result(
             stocks=sample_data["stocks"],
             performance_metrics=sample_data["metrics"],
-            auto_apply=True
+            auto_apply=True,
         )
 
         manager.save_optimization_result(
-            stocks=["9984"],
-            performance_metrics={"return_rate": 10.0},
-            auto_apply=True
+            stocks=["9984"], performance_metrics={"return_rate": 10.0}, auto_apply=True
         )
 
         # Assert
@@ -297,8 +290,7 @@ class TestOptimizationHistoryManager:
         """rollback_available=Falseの記録にロールバックできないことを確認"""
         # Arrange
         record_id = manager.save_optimization_result(
-            stocks=sample_data["stocks"],
-            performance_metrics=sample_data["metrics"]
+            stocks=sample_data["stocks"], performance_metrics=sample_data["metrics"]
         )
 
         # ロールバック不可に変更
@@ -319,15 +311,14 @@ class TestOptimizationHistoryManager:
     def test_list_historyが新しい順で返すこと(self, manager):
         """履歴リストが新しい順で返されることを確認"""
         # Arrange
-        with patch('systems.optimization_history.datetime') as mock_datetime:
+        with patch("systems.optimization_history.datetime") as mock_datetime:
             base_time = datetime.now()
 
             # 時間をずらして3つの記録を作成
             for i in range(3):
                 mock_datetime.now.return_value = base_time + timedelta(hours=i)
                 manager.save_optimization_result(
-                    stocks=[f"stock_{i}"],
-                    performance_metrics={"return_rate": float(i)}
+                    stocks=[f"stock_{i}"], performance_metrics={"return_rate": float(i)}
                 )
 
         # Act
@@ -354,7 +345,7 @@ class TestOptimizationRecord:
             config_hash="abcd1234",
             is_active=True,
             description="テストレコード",
-            rollback_available=True
+            rollback_available=True,
         )
 
         # Assert
@@ -366,6 +357,7 @@ class TestOptimizationRecord:
 
 
 # === Integration Tests ===
+
 
 class TestIntegration:
     """統合テスト"""
@@ -386,7 +378,7 @@ class TestIntegration:
             stocks=["7203", "6758", "9432", "8306", "6861"],
             performance_metrics={"return_rate": 15.0, "sharpe_ratio": 1.5},
             description="初回最適化",
-            auto_apply=True
+            auto_apply=True,
         )
 
         # Act 2: 2回目の最適化
@@ -394,7 +386,7 @@ class TestIntegration:
             stocks=["9984", "4519", "6098", "7203", "6758"],
             performance_metrics={"return_rate": 18.0, "sharpe_ratio": 1.8},
             description="改善版",
-            auto_apply=True
+            auto_apply=True,
         )
 
         # Act 3: ロールバック

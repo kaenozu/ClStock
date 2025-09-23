@@ -1,13 +1,13 @@
-"""Test performance optimization models."""
+﻿"""Test performance optimization models."""
 
 import pytest
 import pandas as pd
 import numpy as np
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, patch
 from datetime import datetime
 from concurrent.futures import Future
 
-# 古いmodelsディレクトリは廃止されました
+# 蜿､縺・odels繝・ぅ繝ｬ繧ｯ繝医Μ縺ｯ蟒・ｭ｢縺輔ｌ縺ｾ縺励◆
 # from models.performance import (
 #     ParallelStockPredictor,
 #     AdvancedCacheManager,
@@ -16,10 +16,13 @@ from concurrent.futures import Future
 # from models.base import PredictionResult
 # from models.core import EnsembleStockPredictor
 
-# 新しいインポートパス
-from models_refactored.core.interfaces import PredictionResult
-from models_refactored.ensemble.ensemble_predictor import RefactoredEnsemblePredictor as EnsembleStockPredictor
-from models_refactored.monitoring.cache_manager import RealTimeCacheManager as AdvancedCacheManager
+# 譁ｰ縺励＞繧､繝ｳ繝昴・繝医ヱ繧ｹ
+Mock = MagicMock
+from models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
+from models.core import PredictionResult
+from models_refactored.ensemble.ensemble_predictor import (
+    RefactoredEnsemblePredictor as EnsembleStockPredictor,
+)
 
 
 @pytest.fixture
@@ -30,7 +33,7 @@ def mock_ensemble_predictor():
         prediction=75.0,
         confidence=0.8,
         timestamp=datetime.now(),
-        metadata={'test': True}
+        metadata={"test": True},
     )
     return predictor
 
@@ -38,13 +41,15 @@ def mock_ensemble_predictor():
 @pytest.fixture
 def sample_stock_data():
     """Create sample stock data for testing."""
-    return pd.DataFrame({
-        'open': [100, 101, 102],
-        'high': [102, 103, 104],
-        'low': [99, 100, 101],
-        'close': [101, 102, 103],
-        'volume': [1000, 1100, 1200]
-    })
+    return pd.DataFrame(
+        {
+            "open": [100, 101, 102],
+            "high": [102, 103, 104],
+            "low": [99, 100, 101],
+            "close": [101, 102, 103],
+            "volume": [1000, 1100, 1200],
+        }
+    )
 
 
 class TestParallelStockPredictor:
@@ -93,8 +98,10 @@ class TestParallelStockPredictor:
         # Should not call the predictor due to cache
         mock_ensemble_predictor.predict.assert_not_called()
 
-    @patch('models.performance.ThreadPoolExecutor')
-    def test_predict_multiple_stocks_parallel_uncached(self, mock_executor, mock_ensemble_predictor):
+    @patch("models.performance.ThreadPoolExecutor")
+    def test_predict_multiple_stocks_parallel_uncached(
+        self, mock_executor, mock_ensemble_predictor
+    ):
         """Test parallel prediction with uncached results."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor, n_jobs=2)
 
@@ -111,7 +118,7 @@ class TestParallelStockPredictor:
         mock_executor.return_value = mock_executor_instance
 
         # Mock as_completed
-        with patch('models.performance.as_completed') as mock_as_completed:
+        with patch("models.performance.as_completed") as mock_as_completed:
             mock_as_completed.return_value = [mock_future1, mock_future2]
 
             results = predictor.predict_multiple_stocks_parallel(["AAPL", "GOOGL"])
@@ -129,8 +136,10 @@ class TestParallelStockPredictor:
 
         assert predictor.batch_cache == {}
 
-    @patch('data.stock_data.StockDataProvider')
-    def test_get_stock_data_safe_success(self, mock_provider_class, mock_ensemble_predictor, sample_stock_data):
+    @patch("data.stock_data.StockDataProvider")
+    def test_get_stock_data_safe_success(
+        self, mock_provider_class, mock_ensemble_predictor, sample_stock_data
+    ):
         """Test _get_stock_data_safe with successful data retrieval."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor)
 
@@ -143,8 +152,10 @@ class TestParallelStockPredictor:
         assert not result.empty
         assert len(result) == 3
 
-    @patch('data.stock_data.StockDataProvider')
-    def test_get_stock_data_safe_failure(self, mock_provider_class, mock_ensemble_predictor):
+    @patch("data.stock_data.StockDataProvider")
+    def test_get_stock_data_safe_failure(
+        self, mock_provider_class, mock_ensemble_predictor
+    ):
         """Test _get_stock_data_safe with data retrieval failure."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor)
 
@@ -175,8 +186,8 @@ class TestParallelStockPredictor:
 
         assert isinstance(result, PredictionResult)
         assert result.prediction == 75.0
-        assert result.metadata['model_type'] == 'parallel'
-        assert result.metadata['parallel_enabled'] is True
+        assert result.metadata["model_type"] == "parallel"
+        assert result.metadata["parallel_enabled"] is True
 
 
 class TestAdvancedCacheManager:
@@ -376,7 +387,7 @@ class TestUltraHighPerformancePredictor:
         base_predictor.train.assert_called_once_with(sample_stock_data, target)
         assert predictor.is_trained() is True
 
-    @patch('data.stock_data.StockDataProvider')
+    @patch("data.stock_data.StockDataProvider")
     def test_predict_cache_hit(self, mock_provider_class, sample_stock_data):
         """Test predict with cache hit."""
         base_predictor = Mock()
@@ -397,11 +408,11 @@ class TestUltraHighPerformancePredictor:
 
         assert isinstance(result, PredictionResult)
         assert result.prediction == 85.0
-        assert result.metadata['cache_hit'] is True
+        assert result.metadata["cache_hit"] is True
         # Base predictor should not be called due to cache hit
         base_predictor.predict.assert_not_called()
 
-    @patch('data.stock_data.StockDataProvider')
+    @patch("data.stock_data.StockDataProvider")
     def test_predict_cache_miss(self, mock_provider_class, sample_stock_data):
         """Test predict with cache miss."""
         base_predictor = Mock()
@@ -409,7 +420,7 @@ class TestUltraHighPerformancePredictor:
             prediction=75.0,
             confidence=0.8,
             timestamp=datetime.now(),
-            metadata={'base_model': True}
+            metadata={"base_model": True},
         )
 
         cache_manager = AdvancedCacheManager()
@@ -425,8 +436,8 @@ class TestUltraHighPerformancePredictor:
 
         assert isinstance(result, PredictionResult)
         assert result.prediction == 75.0
-        assert result.metadata['cache_hit'] is False
-        assert result.metadata['ultra_performance'] is True
+        assert result.metadata["cache_hit"] is False
+        assert result.metadata["ultra_performance"] is True
 
         # Should call base predictor
         base_predictor.predict.assert_called_once()
@@ -440,10 +451,10 @@ class TestUltraHighPerformancePredictor:
 
         stats = predictor.get_performance_stats()
 
-        assert 'cache_stats' in stats
-        assert stats['model_type'] == 'ultra_performance'
-        assert stats['base_predictor_type'] == 'test_base'
-        assert 'parallel_jobs' in stats
+        assert "cache_stats" in stats
+        assert stats["model_type"] == "ultra_performance"
+        assert stats["base_predictor_type"] == "test_base"
+        assert "parallel_jobs" in stats
 
     def test_optimize_cache(self):
         """Test optimize_cache method."""
@@ -455,8 +466,8 @@ class TestUltraHighPerformancePredictor:
 
         cache_manager.cleanup_old_cache.assert_called_once()
 
-    @patch('models.performance.ThreadPoolExecutor')
-    @patch('models.performance.as_completed')
+    @patch("models.performance.ThreadPoolExecutor")
+    @patch("models.performance.as_completed")
     def test_predict_multiple_mixed_cache(self, mock_as_completed, mock_executor):
         """Test predict_multiple with mixed cache hits and misses."""
         base_predictor = Mock()
@@ -464,10 +475,20 @@ class TestUltraHighPerformancePredictor:
         predictor = UltraHighPerformancePredictor(base_predictor, cache_manager)
 
         # Mock some methods to avoid complex setup
-        with patch.object(predictor, 'predict') as mock_predict:
+        with patch.object(predictor, "predict") as mock_predict:
             mock_predict.side_effect = [
-                PredictionResult(prediction=75.0, confidence=0.8, timestamp=datetime.now(), metadata={'cache_hit': False}),
-                PredictionResult(prediction=80.0, confidence=0.9, timestamp=datetime.now(), metadata={'cache_hit': False})
+                PredictionResult(
+                    prediction=75.0,
+                    confidence=0.8,
+                    timestamp=datetime.now(),
+                    metadata={"cache_hit": False},
+                ),
+                PredictionResult(
+                    prediction=80.0,
+                    confidence=0.9,
+                    timestamp=datetime.now(),
+                    metadata={"cache_hit": False},
+                ),
             ]
 
             # Mock executor
@@ -486,4 +507,6 @@ class TestUltraHighPerformancePredictor:
             results = predictor.predict_multiple(["AAPL", "GOOGL"])
 
             assert len(results) == 2
-            assert all(isinstance(result, PredictionResult) for result in results.values())
+            assert all(
+                isinstance(result, PredictionResult) for result in results.values()
+            )

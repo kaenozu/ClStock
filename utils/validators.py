@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class ValidationError(Exception):
     """検証エラー"""
+
     pass
 
 
@@ -36,7 +37,7 @@ def validate_stock_symbol(symbol: str) -> str:
     symbol = str(symbol).strip().upper()
 
     # 基本的な形式チェック（英数字とハイフン、ドットのみ）
-    if not re.match(r'^[A-Z0-9\.\-]+$', symbol):
+    if not re.match(r"^[A-Z0-9\.\-]+$", symbol):
         raise ValidationError(f"Invalid stock symbol format: {symbol}")
 
     # 長さチェック
@@ -64,21 +65,35 @@ def validate_period(period: str) -> str:
 
     # 許可された期間のリスト
     valid_periods = [
-        "1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"
+        "1d",
+        "5d",
+        "1mo",
+        "3mo",
+        "6mo",
+        "1y",
+        "2y",
+        "5y",
+        "10y",
+        "ytd",
+        "max",
     ]
 
     period = str(period).lower().strip()
 
     if period not in valid_periods:
-        raise ValidationError(f"Invalid period: {period}. Valid periods: {', '.join(valid_periods)}")
+        raise ValidationError(
+            f"Invalid period: {period}. Valid periods: {', '.join(valid_periods)}"
+        )
 
     return period
 
 
-def validate_numeric_range(value: Union[str, int, float],
-                          min_val: Optional[float] = None,
-                          max_val: Optional[float] = None,
-                          field_name: str = "value") -> float:
+def validate_numeric_range(
+    value: Union[str, int, float],
+    min_val: Optional[float] = None,
+    max_val: Optional[float] = None,
+    field_name: str = "value",
+) -> float:
     """
     数値範囲の検証
 
@@ -127,7 +142,7 @@ def validate_email(email: str) -> str:
     email = str(email).strip().lower()
 
     # 基本的なメール形式チェック
-    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     if not re.match(email_pattern, email):
         raise ValidationError(f"Invalid email format: {email}")
 
@@ -156,7 +171,7 @@ def sanitize_string(value: str, max_length: int = 1000) -> str:
         value = str(value)
 
     # 制御文字を除去
-    value = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', value)
+    value = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", value)
 
     # 長さチェック
     if len(value) > max_length:
@@ -184,7 +199,7 @@ def validate_api_key(api_key: str) -> str:
     api_key = str(api_key).strip()
 
     # 基本的な形式チェック（英数字とハイフンのみ）
-    if not re.match(r'^[a-zA-Z0-9\-_]+$', api_key):
+    if not re.match(r"^[a-zA-Z0-9\-_]+$", api_key):
         raise ValidationError("Invalid API key format")
 
     # 長さチェック
@@ -227,8 +242,9 @@ def validate_symbols_list(symbols: List[str], max_count: int = 100) -> List[str]
     return unique_symbols
 
 
-def validate_date_range(start_date: Optional[str] = None,
-                       end_date: Optional[str] = None) -> tuple:
+def validate_date_range(
+    start_date: Optional[str] = None, end_date: Optional[str] = None
+) -> tuple:
     """
     日付範囲の検証
 
@@ -250,7 +266,9 @@ def validate_date_range(start_date: Optional[str] = None,
         try:
             start_dt = datetime.strptime(start_date, date_format)
         except ValueError:
-            raise ValidationError(f"Invalid start date format: {start_date}. Use YYYY-MM-DD")
+            raise ValidationError(
+                f"Invalid start date format: {start_date}. Use YYYY-MM-DD"
+            )
     else:
         start_dt = None
 
@@ -258,7 +276,9 @@ def validate_date_range(start_date: Optional[str] = None,
         try:
             end_dt = datetime.strptime(end_date, date_format)
         except ValueError:
-            raise ValidationError(f"Invalid end date format: {end_date}. Use YYYY-MM-DD")
+            raise ValidationError(
+                f"Invalid end date format: {end_date}. Use YYYY-MM-DD"
+            )
     else:
         end_dt = None
 

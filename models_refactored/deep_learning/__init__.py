@@ -5,4 +5,4 @@ Deep Learning Module - 統合リファクタリング版
 
 from .deep_predictor import RefactoredDeepLearningPredictor
 
-__all__ = ['RefactoredDeepLearningPredictor']
+__all__ = ["RefactoredDeepLearningPredictor"]

@@ -6,14 +6,21 @@
 """
 
 import logging
+import asyncio
+from datetime import datetime
 from typing import Dict, Optional, Protocol, Type, Any
 from abc import ABC, abstractmethod
 
 from config.settings import get_settings, RealTimeConfig
 from models_refactored.monitoring.cache_manager import RealTimeCacheManager
-from models_refactored.monitoring.performance_monitor import ModelPerformanceMonitor as PerformanceMonitor
+from models_refactored.monitoring.performance_monitor import (
+    ModelPerformanceMonitor as PerformanceMonitor,
+)
 from models_refactored.core.interfaces import DataProvider as RealTimeDataProvider
-from data.real_time_provider import WebSocketRealTimeProvider, RealTimeDataQualityMonitor
+from data.real_time_provider import (
+    WebSocketRealTimeProvider,
+    RealTimeDataQualityMonitor,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +39,9 @@ class RealTimeProviderFactory(ABC):
         pass
 
     @abstractmethod
-    def create_quality_monitor(self, config: RealTimeConfig) -> RealTimeDataQualityMonitor:
+    def create_quality_monitor(
+        self, config: RealTimeConfig
+    ) -> RealTimeDataQualityMonitor:
         """データ品質監視を作成"""
         pass
 
@@ -48,10 +57,12 @@ class DefaultRealTimeFactory(RealTimeProviderFactory):
         """リアルタイムキャッシュマネージャーを作成"""
         return RealTimeCacheManager(
             max_cache_size=config.max_tick_history_per_symbol * 10,  # 複数銘柄対応
-            ttl_hours=config.cache_cleanup_interval_hours
+            ttl_hours=config.cache_cleanup_interval_hours,
         )
 
-    def create_quality_monitor(self, config: RealTimeConfig) -> RealTimeDataQualityMonitor:
+    def create_quality_monitor(
+        self, config: RealTimeConfig
+    ) -> RealTimeDataQualityMonitor:
         """データ品質監視を作成"""
         return RealTimeDataQualityMonitor()
 
@@ -62,13 +73,16 @@ class MockRealTimeFactory(RealTimeProviderFactory):
     def create_provider(self, config: RealTimeConfig) -> RealTimeDataProvider:
         """モックプロバイダーを作成"""
         from data.mock_real_time_provider import MockRealTimeProvider
+
         return MockRealTimeProvider()
 
     def create_cache_manager(self, config: RealTimeConfig) -> RealTimeCacheManager:
         """テスト用キャッシュマネージャーを作成"""
         return RealTimeCacheManager(max_cache_size=100, ttl_hours=1)
 
-    def create_quality_monitor(self, config: RealTimeConfig) -> RealTimeDataQualityMonitor:
+    def create_quality_monitor(
+        self, config: RealTimeConfig
+    ) -> RealTimeDataQualityMonitor:
         """テスト用品質監視を作成"""
         return RealTimeDataQualityMonitor()
 
@@ -96,7 +110,7 @@ class RealTimeSystemManager:
             "connection_attempts": 0,
             "successful_connections": 0,
             "data_quality_alerts": 0,
-            "last_health_check": None
+            "last_health_check": None,
         }
 
         # コールバックの設定
@@ -106,16 +120,16 @@ class RealTimeSystemManager:
 
     def _setup_callbacks(self) -> None:
         """データプロバイダーのコールバックを設定"""
-        if hasattr(self.provider, 'add_tick_callback'):
+        if hasattr(self.provider, "add_tick_callback"):
             self.provider.add_tick_callback(self._on_tick_received)
 
-        if hasattr(self.provider, 'add_order_book_callback'):
+        if hasattr(self.provider, "add_order_book_callback"):
             self.provider.add_order_book_callback(self._on_order_book_received)
 
-        if hasattr(self.provider, 'add_index_callback'):
+        if hasattr(self.provider, "add_index_callback"):
             self.provider.add_index_callback(self._on_index_received)
 
-        if hasattr(self.provider, 'add_news_callback'):
+        if hasattr(self.provider, "add_news_callback"):
             self.provider.add_news_callback(self._on_news_received)
 
     async def start_system(self) -> bool:
@@ -157,7 +171,7 @@ class RealTimeSystemManager:
             await self.provider.disconnect()
 
             # キャッシュの保存
-            if hasattr(self.cache_manager, 'save_cache_to_disk'):
+            if hasattr(self.cache_manager, "save_cache_to_disk"):
                 self.cache_manager.save_cache_to_disk()
 
             logger.info("Real-time data system stopped")
@@ -173,11 +187,15 @@ class RealTimeSystemManager:
 
         # 板情報サブスクリプション
         if self.config.default_order_book_subscription:
-            await self.provider.subscribe_order_book(self.config.default_order_book_subscription)
+            await self.provider.subscribe_order_book(
+                self.config.default_order_book_subscription
+            )
 
         # 指数データサブスクリプション
         if self.config.default_index_subscription:
-            await self.provider.subscribe_indices(self.config.default_index_subscription)
+            await self.provider.subscribe_indices(
+                self.config.default_index_subscription
+            )
 
         # ニュースサブスクリプション
         if self.config.enable_news_subscription:
@@ -196,8 +214,7 @@ class RealTimeSystemManager:
             # キャッシュに保存
             if self.config.enable_real_time_caching:
                 self.cache_manager.cache_tick_data(
-                    tick_data,
-                    max_history=self.config.max_tick_history_per_symbol
+                    tick_data, max_history=self.config.max_tick_history_per_symbol
                 )
 
             # 統計更新
@@ -208,7 +225,9 @@ class RealTimeSystemManager:
                 self.performance_monitor.record_data_point("tick_processing", 1)
 
             if self.config.enable_detailed_logging:
-                logger.debug(f"Processed tick data for {tick_data.symbol}: {tick_data.price}")
+                logger.debug(
+                    f"Processed tick data for {tick_data.symbol}: {tick_data.price}"
+                )
 
         except Exception as e:
             logger.error(f"Error processing tick data: {e}")
@@ -227,7 +246,7 @@ class RealTimeSystemManager:
             if self.config.enable_real_time_caching:
                 self.cache_manager.cache_order_book_data(
                     order_book_data,
-                    max_history=self.config.max_order_book_history_per_symbol
+                    max_history=self.config.max_order_book_history_per_symbol,
                 )
 
             # 統計更新
@@ -244,13 +263,17 @@ class RealTimeSystemManager:
         try:
             # キャッシュに保存
             cache_key = f"latest_index_{index_data.symbol}"
-            self.cache_manager.set(cache_key, index_data, ttl=self.config.tick_cache_ttl_seconds)
+            self.cache_manager.set(
+                cache_key, index_data, ttl=self.config.tick_cache_ttl_seconds
+            )
 
             # 統計更新
             self.system_stats["total_data_processed"] += 1
 
             if self.config.enable_detailed_logging:
-                logger.debug(f"Processed index data for {index_data.symbol}: {index_data.value}")
+                logger.debug(
+                    f"Processed index data for {index_data.symbol}: {index_data.value}"
+                )
 
         except Exception as e:
             logger.error(f"Error processing index data: {e}")
@@ -259,8 +282,10 @@ class RealTimeSystemManager:
         """ニュースデータ受信時のコールバック"""
         try:
             # 関連性フィルタリング
-            if (news_data.impact_score and
-                news_data.impact_score < self.config.news_relevance_threshold):
+            if (
+                news_data.impact_score
+                and news_data.impact_score < self.config.news_relevance_threshold
+            ):
                 return
 
             # キャッシュに保存
@@ -307,18 +332,24 @@ class RealTimeSystemManager:
             except Exception as e:
                 logger.error(f"Error in performance monitoring: {e}")
 
-    async def _check_data_quality_alerts(self, quality_metrics: Dict[str, float]) -> None:
+    async def _check_data_quality_alerts(
+        self, quality_metrics: Dict[str, float]
+    ) -> None:
         """データ品質アラートをチェック"""
         tick_quality = quality_metrics.get("tick_quality_rate", 1.0)
         order_book_quality = quality_metrics.get("order_book_quality_rate", 1.0)
 
-        if (tick_quality < self.config.data_quality_alert_threshold or
-            order_book_quality < self.config.data_quality_alert_threshold):
+        if (
+            tick_quality < self.config.data_quality_alert_threshold
+            or order_book_quality < self.config.data_quality_alert_threshold
+        ):
 
             self.system_stats["data_quality_alerts"] += 1
-            logger.warning(f"Data quality degradation detected: "
-                         f"tick_quality={tick_quality:.3f}, "
-                         f"order_book_quality={order_book_quality:.3f}")
+            logger.warning(
+                f"Data quality degradation detected: "
+                f"tick_quality={tick_quality:.3f}, "
+                f"order_book_quality={order_book_quality:.3f}"
+            )
 
     async def get_system_health(self) -> Dict[str, Any]:
         """システムヘルス状態を取得"""
@@ -331,17 +362,17 @@ class RealTimeSystemManager:
             "config": {
                 "data_source": self.config.data_source,
                 "enable_monitoring": self.config.enable_performance_monitoring,
-                "cache_enabled": self.config.enable_real_time_caching
-            }
+                "cache_enabled": self.config.enable_real_time_caching,
+            },
         }
 
     def get_market_data(self, symbol: str) -> Dict[str, Any]:
         """指定銘柄の市場データを取得"""
         return self.cache_manager.calculate_market_metrics(symbol)
 
-    async def subscribe_to_symbol(self, symbol: str,
-                                 include_ticks: bool = True,
-                                 include_order_book: bool = True) -> bool:
+    async def subscribe_to_symbol(
+        self, symbol: str, include_ticks: bool = True, include_order_book: bool = True
+    ) -> bool:
         """新しい銘柄をサブスクリプション"""
         try:
             if include_ticks:
@@ -362,7 +393,9 @@ class RealTimeSystemManager:
 _real_time_system_manager: Optional[RealTimeSystemManager] = None
 
 
-def get_real_time_system_manager(factory: Optional[RealTimeProviderFactory] = None) -> RealTimeSystemManager:
+def get_real_time_system_manager(
+    factory: Optional[RealTimeProviderFactory] = None,
+) -> RealTimeSystemManager:
     """リアルタイムシステムマネージャーのシングルトンインスタンスを取得"""
     global _real_time_system_manager
 

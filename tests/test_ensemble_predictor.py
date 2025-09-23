@@ -13,7 +13,7 @@ import pandas as pd
 import numpy as np
 
 # プロジェクトルートをパスに追加
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from models_refactored.ensemble.ensemble_predictor import RefactoredEnsemblePredictor
 from models_refactored.core.interfaces import PredictionResult
@@ -26,21 +26,25 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         """テスト前の準備"""
         # モックデータプロバイダー
         self.mock_data_provider = Mock()
-        self.predictor = RefactoredEnsemblePredictor(data_provider=self.mock_data_provider)
+        self.predictor = RefactoredEnsemblePredictor(
+            data_provider=self.mock_data_provider
+        )
 
         # テスト用のサンプルデータ
-        self.sample_data = pd.DataFrame({
-            'Close': [100, 101, 102, 103, 104],
-            'Volume': [1000, 1100, 1200, 1300, 1400]
-        })
+        self.sample_data = pd.DataFrame(
+            {
+                "Close": [100, 101, 102, 103, 104],
+                "Volume": [1000, 1100, 1200, 1300, 1400],
+            }
+        )
 
     def test_interface_compliance(self):
         """StockPredictorインターフェース準拠性テスト"""
         # 必須メソッドが実装されているかチェック
-        self.assertTrue(hasattr(self.predictor, 'predict'))
-        self.assertTrue(hasattr(self.predictor, 'predict_batch'))
-        self.assertTrue(hasattr(self.predictor, 'get_confidence'))
-        self.assertTrue(hasattr(self.predictor, 'get_model_info'))
+        self.assertTrue(hasattr(self.predictor, "predict"))
+        self.assertTrue(hasattr(self.predictor, "predict_batch"))
+        self.assertTrue(hasattr(self.predictor, "get_confidence"))
+        self.assertTrue(hasattr(self.predictor, "get_model_info"))
 
         # callableかチェック
         self.assertTrue(callable(self.predictor.predict))
@@ -67,7 +71,9 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         self.assertEqual(len(valid_symbols), 3)
 
         # 一部無効な銘柄を含むリスト
-        mixed_symbols = self.predictor._validate_symbols_list(["7203", "INVALID", "6758"])
+        mixed_symbols = self.predictor._validate_symbols_list(
+            ["7203", "INVALID", "6758"]
+        )
         self.assertEqual(len(mixed_symbols), 2)
 
         # 全て無効な場合
@@ -79,13 +85,15 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         deps = self.predictor._check_dependencies()
 
         # 必須依存関係がチェックされているか
-        self.assertIn('sklearn', deps)
-        self.assertIn('numpy', deps)
-        self.assertIn('pandas', deps)
-        self.assertIn('xgboost', deps)
-        self.assertIn('lightgbm', deps)
+        self.assertIn("sklearn", deps)
+        self.assertIn("numpy", deps)
+        self.assertIn("pandas", deps)
+        self.assertIn("xgboost", deps)
+        self.assertIn("lightgbm", deps)
 
-    @patch('models_refactored.ensemble.ensemble_predictor.RefactoredEnsemblePredictor.predict_score')
+    @patch(
+        "models_refactored.ensemble.ensemble_predictor.RefactoredEnsemblePredictor.predict_score"
+    )
     def test_predict_with_valid_input(self, mock_predict_score):
         """有効入力での予測テスト"""
         mock_predict_score.return_value = 75.0
@@ -97,7 +105,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         self.assertEqual(result.symbol, "7203")
         self.assertEqual(result.prediction, 75.0)
         self.assertTrue(0 <= result.confidence <= 1)
-        self.assertIn('validated', result.metadata)
+        self.assertIn("validated", result.metadata)
 
     def test_predict_with_invalid_input(self):
         """無効入力での予測テスト"""
@@ -107,7 +115,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         self.assertEqual(result.symbol, "INVALID")
         self.assertEqual(result.prediction, 50.0)
         self.assertEqual(result.confidence, 0.0)
-        self.assertIn('error', result.metadata)
+        self.assertIn("error", result.metadata)
 
     def test_fallback_prediction(self):
         """フォールバック予測テスト"""
@@ -120,7 +128,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         self.assertEqual(result.symbol, "7203")
         self.assertTrue(0 <= result.prediction <= 100)
         self.assertTrue(0 <= result.confidence <= 1)
-        self.assertEqual(result.metadata['model_type'], 'fallback')
+        self.assertEqual(result.metadata["model_type"], "fallback")
 
     def test_fallback_prediction_no_data(self):
         """データなしでのフォールバック予測テスト"""
@@ -134,7 +142,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
 
     def test_predict_batch_valid_symbols(self):
         """有効銘柄でのバッチ予測テスト"""
-        with patch.object(self.predictor, 'predict') as mock_predict:
+        with patch.object(self.predictor, "predict") as mock_predict:
             # モック予測結果
             mock_result = PredictionResult(
                 prediction=75.0,
@@ -142,7 +150,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
                 accuracy=85.0,
                 timestamp=datetime.now(),
                 symbol="test",
-                metadata={}
+                metadata={},
             )
             mock_predict.return_value = mock_result
 
@@ -160,14 +168,14 @@ class TestEnsembleStockPredictor(unittest.TestCase):
 
     def test_predict_batch_mixed_symbols(self):
         """有効・無効混在銘柄でのバッチ予測テスト"""
-        with patch.object(self.predictor, 'predict') as mock_predict:
+        with patch.object(self.predictor, "predict") as mock_predict:
             mock_result = PredictionResult(
                 prediction=75.0,
                 confidence=0.8,
                 accuracy=85.0,
                 timestamp=datetime.now(),
                 symbol="test",
-                metadata={}
+                metadata={},
             )
             mock_predict.return_value = mock_result
 
@@ -201,34 +209,32 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         info = self.predictor.get_model_info()
 
         self.assertIsInstance(info, dict)
-        self.assertEqual(info['name'], 'RefactoredEnsemblePredictor')
-        self.assertEqual(info['version'], '1.0.0')
-        self.assertEqual(len(info['models']), 2)
-        self.assertTrue(info['interface_compliant'])
-        self.assertEqual(info['feature_count'], 3)
+        self.assertEqual(info["name"], "RefactoredEnsemblePredictor")
+        self.assertEqual(info["version"], "1.0.0")
+        self.assertEqual(len(info["models"]), 2)
+        self.assertTrue(info["interface_compliant"])
+        self.assertEqual(info["feature_count"], 3)
 
     def test_safe_model_operation_success(self):
         """安全なモデル操作（成功）テスト"""
+
         def success_operation():
             return "success"
 
         result = self.predictor._safe_model_operation(
-            "test_operation",
-            success_operation,
-            fallback_value="fallback"
+            "test_operation", success_operation, fallback_value="fallback"
         )
 
         self.assertEqual(result, "success")
 
     def test_safe_model_operation_failure(self):
         """安全なモデル操作（失敗）テスト"""
+
         def failure_operation():
             raise Exception("Test error")
 
         result = self.predictor._safe_model_operation(
-            "test_operation",
-            failure_operation,
-            fallback_value="fallback"
+            "test_operation", failure_operation, fallback_value="fallback"
         )
 
         self.assertEqual(result, "fallback")
@@ -243,7 +249,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         self.assertEqual(self.predictor.models["test_model"], mock_model)
         self.assertEqual(self.predictor.weights["test_model"], 0.8)
 
-    @patch('models_refactored.ensemble.ensemble_predictor.joblib.dump')
+    @patch("models_refactored.ensemble.ensemble_predictor.joblib.dump")
     def test_save_ensemble(self, mock_dump):
         """アンサンブル保存テスト"""
         self.predictor.models = {"model1": Mock()}
@@ -254,8 +260,8 @@ class TestEnsembleStockPredictor(unittest.TestCase):
 
         mock_dump.assert_called_once()
 
-    @patch('models_refactored.ensemble.ensemble_predictor.joblib.load')
-    @patch('pathlib.Path.exists')
+    @patch("models_refactored.ensemble.ensemble_predictor.joblib.load")
+    @patch("pathlib.Path.exists")
     def test_load_ensemble_success(self, mock_exists, mock_load):
         """アンサンブル読み込み（成功）テスト"""
         mock_exists.return_value = True
@@ -264,7 +270,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
             "weights": {"model1": 1.0},
             "scaler": Mock(),
             "feature_names": ["feature1"],
-            "is_trained": True
+            "is_trained": True,
         }
 
         result = self.predictor.load_ensemble()
@@ -272,7 +278,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         self.assertTrue(result)
         self.assertTrue(self.predictor.is_trained)
 
-    @patch('pathlib.Path.exists')
+    @patch("pathlib.Path.exists")
     def test_load_ensemble_file_not_found(self, mock_exists):
         """アンサンブル読み込み（ファイルなし）テスト"""
         mock_exists.return_value = False
@@ -307,5 +313,5 @@ class TestEnsembleStockPredictorIntegration(unittest.TestCase):
             self.skipTest(f"Integration test skipped due to: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

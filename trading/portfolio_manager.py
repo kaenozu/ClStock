@@ -22,6 +22,7 @@ from .trading_strategy import SignalType
 @dataclass
 class Position:
     """ポジション情報"""
+
     symbol: str
     quantity: int
     average_price: float
@@ -39,6 +40,7 @@ class Position:
 @dataclass
 class PortfolioMetrics:
     """ポートフォリオ指標"""
+
     total_value: float
     cash_value: float
     invested_value: float
@@ -60,6 +62,7 @@ class PortfolioMetrics:
 @dataclass
 class RiskMetrics:
     """リスクメトリクス"""
+
     var_95: float  # 95% VaR
     var_99: float  # 99% VaR
     expected_shortfall: float  # 期待ショートフォール
@@ -101,11 +104,9 @@ class DemoPortfolioManager:
 
         self.logger = logging.getLogger(__name__)
 
-    def add_position(self,
-                    symbol: str,
-                    quantity: int,
-                    price: float,
-                    position_type: SignalType) -> bool:
+    def add_position(
+        self, symbol: str, quantity: int, price: float, position_type: SignalType
+    ) -> bool:
         """
         ポジション追加
 
@@ -125,8 +126,9 @@ class DemoPortfolioManager:
             if symbol in self.positions:
                 existing = self.positions[symbol]
                 total_quantity = existing.quantity + quantity
-                total_value = (existing.quantity * existing.average_price +
-                             quantity * price)
+                total_value = (
+                    existing.quantity * existing.average_price + quantity * price
+                )
                 average_price = total_value / total_quantity
 
                 self.positions[symbol].quantity = total_quantity
@@ -141,7 +143,7 @@ class DemoPortfolioManager:
                     current_price=price,
                     position_type=position_type,
                     entry_date=datetime.now(),
-                    sector=sector
+                    sector=sector,
                 )
 
             # キャッシュ更新
@@ -202,17 +204,24 @@ class DemoPortfolioManager:
                 # 現在価格取得
                 current_data = self.data_provider.get_stock_data(symbol, period="1d")
                 if current_data is not None and len(current_data) > 0:
-                    position.current_price = current_data['Close'].iloc[-1]
+                    position.current_price = current_data["Close"].iloc[-1]
                     position.market_value = position.quantity * position.current_price
 
                     # 損益計算
                     if position.position_type == SignalType.BUY:
-                        position.unrealized_pnl = (position.current_price - position.average_price) * position.quantity
+                        position.unrealized_pnl = (
+                            position.current_price - position.average_price
+                        ) * position.quantity
                     else:  # SELL
-                        position.unrealized_pnl = (position.average_price - position.current_price) * position.quantity
+                        position.unrealized_pnl = (
+                            position.average_price - position.current_price
+                        ) * position.quantity
 
-                    position.unrealized_pnl_pct = (position.unrealized_pnl /
-                                                 (position.average_price * position.quantity) * 100)
+                    position.unrealized_pnl_pct = (
+                        position.unrealized_pnl
+                        / (position.average_price * position.quantity)
+                        * 100
+                    )
                     position.last_updated = datetime.now()
 
             # ポートフォリオ重み計算
@@ -249,12 +258,18 @@ class DemoPortfolioManager:
             day_change = 0.0
             day_change_pct = 0.0
             if len(self.value_history) > 1:
-                yesterday_value = self.value_history[-2][1] if len(self.value_history) > 1 else total_value
+                yesterday_value = (
+                    self.value_history[-2][1]
+                    if len(self.value_history) > 1
+                    else total_value
+                )
                 day_change = total_value - yesterday_value
                 day_change_pct = day_change / yesterday_value * 100
 
             # 集中リスク（最大ポジション比率）
-            max_position_weight = max([pos.weight for pos in self.positions.values()], default=0.0)
+            max_position_weight = max(
+                [pos.weight for pos in self.positions.values()], default=0.0
+            )
 
             # セクター集中度
             sector_weights = defaultdict(float)
@@ -262,9 +277,13 @@ class DemoPortfolioManager:
                 sector_weights[position.sector] += position.weight
 
             # ボラティリティとシャープレシオ
-            volatility = np.std(self.daily_returns) * np.sqrt(252) if self.daily_returns else 0.0
+            volatility = (
+                np.std(self.daily_returns) * np.sqrt(252) if self.daily_returns else 0.0
+            )
             avg_return = np.mean(self.daily_returns) if self.daily_returns else 0.0
-            sharpe_ratio = avg_return / volatility * np.sqrt(252) if volatility > 0 else 0.0
+            sharpe_ratio = (
+                avg_return / volatility * np.sqrt(252) if volatility > 0 else 0.0
+            )
 
             # 最大ドローダウン
             max_drawdown = self._calculate_max_drawdown()
@@ -281,14 +300,16 @@ class DemoPortfolioManager:
                 day_change=day_change,
                 day_change_pct=day_change_pct,
                 unrealized_pnl=unrealized_pnl,
-                unrealized_pnl_pct=unrealized_pnl / invested_value * 100 if invested_value > 0 else 0.0,
+                unrealized_pnl_pct=(
+                    unrealized_pnl / invested_value * 100 if invested_value > 0 else 0.0
+                ),
                 position_count=len(self.positions),
                 concentration_risk=max_position_weight,
                 sector_concentration=dict(sector_weights),
                 volatility=volatility,
                 sharpe_ratio=sharpe_ratio,
                 max_drawdown=max_drawdown,
-                beta=beta
+                beta=beta,
             )
 
         except Exception as e:
@@ -309,7 +330,7 @@ class DemoPortfolioManager:
                 volatility=0.0,
                 sharpe_ratio=0.0,
                 max_drawdown=0.0,
-                beta=0.0
+                beta=0.0,
             )
 
     def calculate_risk_metrics(self) -> RiskMetrics:
@@ -317,9 +338,13 @@ class DemoPortfolioManager:
         try:
             if not self.daily_returns:
                 return RiskMetrics(
-                    var_95=0.0, var_99=0.0, expected_shortfall=0.0,
-                    portfolio_volatility=0.0, correlation_risk=0.0,
-                    sector_risk={}, individual_stock_risk={}
+                    var_95=0.0,
+                    var_99=0.0,
+                    expected_shortfall=0.0,
+                    portfolio_volatility=0.0,
+                    correlation_risk=0.0,
+                    sector_risk={},
+                    individual_stock_risk={},
                 )
 
             returns = np.array(self.daily_returns)
@@ -331,7 +356,11 @@ class DemoPortfolioManager:
             # Expected Shortfall（CVaR）
             threshold_95 = np.percentile(returns, 5)
             tail_returns = returns[returns <= threshold_95]
-            expected_shortfall = np.mean(tail_returns) * self.get_total_value() if len(tail_returns) > 0 else 0.0
+            expected_shortfall = (
+                np.mean(tail_returns) * self.get_total_value()
+                if len(tail_returns) > 0
+                else 0.0
+            )
 
             # ポートフォリオボラティリティ
             portfolio_volatility = np.std(returns) * np.sqrt(252)
@@ -352,15 +381,19 @@ class DemoPortfolioManager:
                 portfolio_volatility=portfolio_volatility,
                 correlation_risk=correlation_risk,
                 sector_risk=sector_risk,
-                individual_stock_risk=individual_stock_risk
+                individual_stock_risk=individual_stock_risk,
             )
 
         except Exception as e:
             self.logger.error(f"リスクメトリクス計算エラー: {e}")
             return RiskMetrics(
-                var_95=0.0, var_99=0.0, expected_shortfall=0.0,
-                portfolio_volatility=0.0, correlation_risk=0.0,
-                sector_risk={}, individual_stock_risk={}
+                var_95=0.0,
+                var_99=0.0,
+                expected_shortfall=0.0,
+                portfolio_volatility=0.0,
+                correlation_risk=0.0,
+                sector_risk={},
+                individual_stock_risk={},
             )
 
     def get_rebalancing_suggestions(self) -> List[Dict[str, Any]]:
@@ -373,51 +406,61 @@ class DemoPortfolioManager:
             # 1. 集中リスクチェック
             if metrics.concentration_risk > 0.2:  # 20%超過
                 max_position = max(self.positions.items(), key=lambda x: x[1].weight)
-                suggestions.append({
-                    'type': 'CONCENTRATION_RISK',
-                    'priority': 'HIGH',
-                    'message': f'{max_position[0]}の比率が{max_position[1].weight:.1%}と高すぎます',
-                    'action': f'{max_position[0]}のポジションを縮小し、分散を図ってください'
-                })
+                suggestions.append(
+                    {
+                        "type": "CONCENTRATION_RISK",
+                        "priority": "HIGH",
+                        "message": f"{max_position[0]}の比率が{max_position[1].weight:.1%}と高すぎます",
+                        "action": f"{max_position[0]}のポジションを縮小し、分散を図ってください",
+                    }
+                )
 
             # 2. セクター集中度チェック
             for sector, weight in metrics.sector_concentration.items():
                 if weight > 0.4:  # 40%超過
-                    suggestions.append({
-                        'type': 'SECTOR_CONCENTRATION',
-                        'priority': 'MEDIUM',
-                        'message': f'{sector}セクターの比率が{weight:.1%}と高すぎます',
-                        'action': f'{sector}以外のセクターへの投資を検討してください'
-                    })
+                    suggestions.append(
+                        {
+                            "type": "SECTOR_CONCENTRATION",
+                            "priority": "MEDIUM",
+                            "message": f"{sector}セクターの比率が{weight:.1%}と高すぎます",
+                            "action": f"{sector}以外のセクターへの投資を検討してください",
+                        }
+                    )
 
             # 3. ドローダウンチェック
             if metrics.max_drawdown > 0.15:  # 15%超過
-                suggestions.append({
-                    'type': 'DRAWDOWN_RISK',
-                    'priority': 'HIGH',
-                    'message': f'最大ドローダウンが{metrics.max_drawdown:.1%}と大きいです',
-                    'action': '損切りルールの見直しやポジションサイズの縮小を検討してください'
-                })
+                suggestions.append(
+                    {
+                        "type": "DRAWDOWN_RISK",
+                        "priority": "HIGH",
+                        "message": f"最大ドローダウンが{metrics.max_drawdown:.1%}と大きいです",
+                        "action": "損切りルールの見直しやポジションサイズの縮小を検討してください",
+                    }
+                )
 
             # 4. キャッシュ比率チェック
             cash_ratio = metrics.cash_value / metrics.total_value
             if cash_ratio > 0.2:  # 20%超過
-                suggestions.append({
-                    'type': 'CASH_MANAGEMENT',
-                    'priority': 'LOW',
-                    'message': f'キャッシュ比率が{cash_ratio:.1%}と高いです',
-                    'action': '投資機会を探して資金効率を向上させてください'
-                })
+                suggestions.append(
+                    {
+                        "type": "CASH_MANAGEMENT",
+                        "priority": "LOW",
+                        "message": f"キャッシュ比率が{cash_ratio:.1%}と高いです",
+                        "action": "投資機会を探して資金効率を向上させてください",
+                    }
+                )
 
             # 5. 低パフォーマンス銘柄
             for symbol, position in self.positions.items():
                 if position.unrealized_pnl_pct < -10:  # 10%以上の含み損
-                    suggestions.append({
-                        'type': 'UNDERPERFORMING_STOCK',
-                        'priority': 'MEDIUM',
-                        'message': f'{symbol}が{position.unrealized_pnl_pct:.1f}%の含み損',
-                        'action': f'{symbol}の投資判断を見直し、損切りを検討してください'
-                    })
+                    suggestions.append(
+                        {
+                            "type": "UNDERPERFORMING_STOCK",
+                            "priority": "MEDIUM",
+                            "message": f"{symbol}が{position.unrealized_pnl_pct:.1f}%の含み損",
+                            "action": f"{symbol}の投資判断を見直し、損切りを検討してください",
+                        }
+                    )
 
         except Exception as e:
             self.logger.error(f"リバランシング提案エラー: {e}")
@@ -433,17 +476,17 @@ class DemoPortfolioManager:
         """ポジション要約取得"""
         return [
             {
-                'symbol': pos.symbol,
-                'quantity': pos.quantity,
-                'average_price': pos.average_price,
-                'current_price': pos.current_price,
-                'market_value': pos.market_value,
-                'unrealized_pnl': pos.unrealized_pnl,
-                'unrealized_pnl_pct': pos.unrealized_pnl_pct,
-                'weight': pos.weight,
-                'sector': pos.sector,
-                'entry_date': pos.entry_date.isoformat(),
-                'days_held': (datetime.now() - pos.entry_date).days
+                "symbol": pos.symbol,
+                "quantity": pos.quantity,
+                "average_price": pos.average_price,
+                "current_price": pos.current_price,
+                "market_value": pos.market_value,
+                "unrealized_pnl": pos.unrealized_pnl,
+                "unrealized_pnl_pct": pos.unrealized_pnl_pct,
+                "weight": pos.weight,
+                "sector": pos.sector,
+                "entry_date": pos.entry_date.isoformat(),
+                "days_held": (datetime.now() - pos.entry_date).days,
             }
             for pos in self.positions.values()
         ]
@@ -496,7 +539,9 @@ class DemoPortfolioManager:
                 return 0.0
 
             # ベンチマークリターン計算
-            benchmark_returns = self.benchmark_data['Close'].pct_change().dropna().tolist()
+            benchmark_returns = (
+                self.benchmark_data["Close"].pct_change().dropna().tolist()
+            )
 
             # リターン期間を合わせる
             min_length = min(len(self.daily_returns), len(benchmark_returns))
@@ -567,39 +612,69 @@ class DemoPortfolioManager:
         """セクター分類マップ読み込み"""
         # 簡易セクター分類
         return {
-            "6758.T": "電機", "7203.T": "自動車", "8306.T": "銀行",
-            "9984.T": "小売", "6861.T": "電機", "4502.T": "化学",
-            "6503.T": "電機", "7201.T": "自動車", "8001.T": "商社",
-            "9022.T": "運輸", "1332.T": "建設", "1605.T": "建設",
-            "1803.T": "建設", "1808.T": "建設", "1812.T": "建設",
-            "1893.T": "建設", "2282.T": "食品", "3099.T": "小売",
-            "4004.T": "化学", "4005.T": "化学", "4188.T": "電機",
-            "4324.T": "電機", "4519.T": "化学", "4523.T": "化学",
-            "5020.T": "石油", "5101.T": "繊維", "5401.T": "鉄鋼",
-            "6504.T": "電機", "6701.T": "電機", "6770.T": "電機",
-            "6902.T": "電機", "6954.T": "電機", "6981.T": "電機",
-            "7261.T": "自動車", "7267.T": "自動車", "7269.T": "自動車",
-            "7974.T": "ゲーム", "8002.T": "商社", "8031.T": "商社",
-            "8035.T": "商社", "8058.T": "商社", "8306.T": "銀行",
-            "8802.T": "不動産", "9101.T": "運輸", "9022.T": "運輸"
+            "6758.T": "電機",
+            "7203.T": "自動車",
+            "8306.T": "銀行",
+            "9984.T": "小売",
+            "6861.T": "電機",
+            "4502.T": "化学",
+            "6503.T": "電機",
+            "7201.T": "自動車",
+            "8001.T": "商社",
+            "9022.T": "運輸",
+            "1332.T": "建設",
+            "1605.T": "建設",
+            "1803.T": "建設",
+            "1808.T": "建設",
+            "1812.T": "建設",
+            "1893.T": "建設",
+            "2282.T": "食品",
+            "3099.T": "小売",
+            "4004.T": "化学",
+            "4005.T": "化学",
+            "4188.T": "電機",
+            "4324.T": "電機",
+            "4519.T": "化学",
+            "4523.T": "化学",
+            "5020.T": "石油",
+            "5101.T": "繊維",
+            "5401.T": "鉄鋼",
+            "6504.T": "電機",
+            "6701.T": "電機",
+            "6770.T": "電機",
+            "6902.T": "電機",
+            "6954.T": "電機",
+            "6981.T": "電機",
+            "7261.T": "自動車",
+            "7267.T": "自動車",
+            "7269.T": "自動車",
+            "7974.T": "ゲーム",
+            "8002.T": "商社",
+            "8031.T": "商社",
+            "8035.T": "商社",
+            "8058.T": "商社",
+            "8306.T": "銀行",
+            "8802.T": "不動産",
+            "9101.T": "運輸",
+            "9022.T": "運輸",
         }
 
     def export_portfolio_data(self) -> Dict[str, Any]:
         """ポートフォリオデータエクスポート"""
         return {
-            'timestamp': datetime.now().isoformat(),
-            'metrics': asdict(self.get_portfolio_metrics()),
-            'positions': self.get_position_summary(),
-            'risk_metrics': asdict(self.calculate_risk_metrics()),
-            'rebalancing_suggestions': self.get_rebalancing_suggestions(),
-            'value_history': [(dt.isoformat(), val) for dt, val in self.value_history],
-            'daily_returns': self.daily_returns
+            "timestamp": datetime.now().isoformat(),
+            "metrics": asdict(self.get_portfolio_metrics()),
+            "positions": self.get_position_summary(),
+            "risk_metrics": asdict(self.calculate_risk_metrics()),
+            "rebalancing_suggestions": self.get_rebalancing_suggestions(),
+            "value_history": [(dt.isoformat(), val) for dt, val in self.value_history],
+            "daily_returns": self.daily_returns,
         }
 
 
 def asdict(obj) -> Dict[str, Any]:
     """dataclass を辞書に変換（datetime対応）"""
-    if hasattr(obj, '__dataclass_fields__'):
+    if hasattr(obj, "__dataclass_fields__"):
         result = {}
         for field_name, field_value in obj.__dict__.items():
             if isinstance(field_value, datetime):

@@ -18,7 +18,7 @@ from .interfaces import (
     PredictionMode,
     PerformanceMetrics,
     DataProvider,
-    CacheProvider
+    CacheProvider,
 )
 
 
@@ -28,10 +28,12 @@ class BaseStockPredictor(StockPredictor):
     全てのPredictorクラスで共通する機能を実装
     """
 
-    def __init__(self,
-                 config: ModelConfiguration,
-                 data_provider: Optional[DataProvider] = None,
-                 cache_provider: Optional[CacheProvider] = None):
+    def __init__(
+        self,
+        config: ModelConfiguration,
+        data_provider: Optional[DataProvider] = None,
+        cache_provider: Optional[CacheProvider] = None,
+    ):
         super().__init__(config)
 
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -47,7 +49,9 @@ class BaseStockPredictor(StockPredictor):
         # モデル固有データ
         self.model_data: Dict[str, Any] = {}
 
-        self.logger.info(f"Initialized {self.__class__.__name__} with config: {config.model_type.value}")
+        self.logger.info(
+            f"Initialized {self.__class__.__name__} with config: {config.model_type.value}"
+        )
 
     def predict(self, symbol: str) -> PredictionResult:
         """統一された予測実行フロー"""
@@ -85,7 +89,7 @@ class BaseStockPredictor(StockPredictor):
                 symbol=symbol,
                 model_type=self.config.model_type,
                 execution_time=execution_time,
-                metadata=self._get_prediction_metadata(symbol)
+                metadata=self._get_prediction_metadata(symbol),
             )
 
             # 5. キャッシュ保存
@@ -142,29 +146,30 @@ class BaseStockPredictor(StockPredictor):
             memory_usage=self._get_memory_usage(),
             cache_hit_rate=cache_hit_rate,
             total_predictions=self.prediction_count,
-            successful_predictions=self.prediction_count  # 簡略化
+            successful_predictions=self.prediction_count,  # 簡略化
         )
 
     def get_model_info(self) -> Dict[str, Any]:
         """モデル情報の統一取得"""
         return {
-            'name': self.__class__.__name__,
-            'type': self.config.model_type.value,
-            'version': self._model_version,
-            'is_trained': self.is_trained,
-            'prediction_mode': self.config.prediction_mode.value,
-            'config': {
-                'cache_enabled': self.config.cache_enabled,
-                'parallel_enabled': self.config.parallel_enabled,
-                'max_workers': self.config.max_workers,
-                'timeout_seconds': self.config.timeout_seconds
+            "name": self.__class__.__name__,
+            "type": self.config.model_type.value,
+            "version": self._model_version,
+            "is_trained": self.is_trained,
+            "prediction_mode": self.config.prediction_mode.value,
+            "config": {
+                "cache_enabled": self.config.cache_enabled,
+                "parallel_enabled": self.config.parallel_enabled,
+                "max_workers": self.config.max_workers,
+                "timeout_seconds": self.config.timeout_seconds,
             },
-            'statistics': {
-                'prediction_count': self.prediction_count,
-                'cache_hits': self.cache_hits,
-                'cache_misses': self.cache_misses,
-                'avg_execution_time': self.total_execution_time / max(1, self.prediction_count)
-            }
+            "statistics": {
+                "prediction_count": self.prediction_count,
+                "cache_hits": self.cache_hits,
+                "cache_misses": self.cache_misses,
+                "avg_execution_time": self.total_execution_time
+                / max(1, self.prediction_count),
+            },
         }
 
     # 抽象メソッド（サブクラスで実装必須）
@@ -181,14 +186,14 @@ class BaseStockPredictor(StockPredictor):
 
     def _generate_cache_key(self, symbol: str) -> str:
         """キャッシュキー生成"""
-        date_str = datetime.now().strftime('%Y%m%d_%H')
+        date_str = datetime.now().strftime("%Y%m%d_%H")
         return f"{self.__class__.__name__}_{symbol}_{date_str}_{self.config.prediction_mode.value}"
 
     def _calculate_confidence(self, symbol: str, prediction: float) -> float:
         """信頼度計算のデフォルト実装"""
         # 基本的な信頼度計算（サブクラスでオーバーライド可能）
-        if hasattr(self, 'model_data') and 'confidence_scores' in self.model_data:
-            return self.model_data['confidence_scores'].get(symbol, 0.5)
+        if hasattr(self, "model_data") and "confidence_scores" in self.model_data:
+            return self.model_data["confidence_scores"].get(symbol, 0.5)
         return 0.7  # デフォルト信頼度
 
     def _estimate_accuracy(self) -> float:
@@ -207,33 +212,40 @@ class BaseStockPredictor(StockPredictor):
         """F1スコア計算"""
         precision = self._calculate_precision()
         recall = self._calculate_recall()
-        return 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+        return (
+            2 * (precision * recall) / (precision + recall)
+            if (precision + recall) > 0
+            else 0.0
+        )
 
     def _get_memory_usage(self) -> float:
         """メモリ使用量取得"""
         import psutil
+
         process = psutil.Process()
         return process.memory_info().rss / 1024 / 1024  # MB
 
     def _get_prediction_metadata(self, symbol: str) -> Dict[str, Any]:
         """予測メタデータ生成"""
         return {
-            'model_version': self._model_version,
-            'prediction_mode': self.config.prediction_mode.value,
-            'data_timestamp': datetime.now().isoformat()
+            "model_version": self._model_version,
+            "prediction_mode": self.config.prediction_mode.value,
+            "data_timestamp": datetime.now().isoformat(),
         }
 
-    def _create_fallback_result(self, symbol: str, execution_time: float, error: str) -> PredictionResult:
+    def _create_fallback_result(
+        self, symbol: str, execution_time: float, error: str
+    ) -> PredictionResult:
         """フォールバック結果作成"""
         return PredictionResult(
             prediction=50.0,  # 中性予測
-            confidence=0.1,   # 低信頼度
-            accuracy=30.0,    # 低精度
+            confidence=0.1,  # 低信頼度
+            accuracy=30.0,  # 低精度
             timestamp=datetime.now(),
             symbol=symbol,
             model_type=self.config.model_type,
             execution_time=execution_time,
-            metadata={'error': error, 'fallback': True}
+            metadata={"error": error, "fallback": True},
         )
 
     def _update_statistics(self, execution_time: float):

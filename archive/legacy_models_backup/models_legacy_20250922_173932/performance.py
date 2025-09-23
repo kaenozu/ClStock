@@ -92,6 +92,7 @@ class ParallelStockPredictor(StockPredictor):
         """安全なデータ取得"""
         try:
             from data.stock_data import StockDataProvider
+
             data_provider = StockDataProvider()
             return data_provider.get_stock_data(symbol, "1y")
         except Exception as e:
@@ -108,7 +109,9 @@ class ParallelStockPredictor(StockPredictor):
         self.ensemble_predictor.train(data, target)
         self._is_trained = True
 
-    def predict(self, symbol: str, data: Optional[pd.DataFrame] = None) -> PredictionResult:
+    def predict(
+        self, symbol: str, data: Optional[pd.DataFrame] = None
+    ) -> PredictionResult:
         """Single prediction using ensemble predictor"""
         if not self.is_trained():
             raise ValueError("Model must be trained before making predictions")
@@ -120,11 +123,11 @@ class ParallelStockPredictor(StockPredictor):
                 confidence=result.confidence,
                 timestamp=datetime.now(),
                 metadata={
-                    'model_type': self.model_type,
-                    'symbol': symbol,
-                    'parallel_enabled': True,
-                    'n_jobs': self.n_jobs
-                }
+                    "model_type": self.model_type,
+                    "symbol": symbol,
+                    "parallel_enabled": True,
+                    "n_jobs": self.n_jobs,
+                },
             )
         except Exception as e:
             logger.error(f"Parallel prediction error for {symbol}: {str(e)}")
@@ -132,7 +135,7 @@ class ParallelStockPredictor(StockPredictor):
                 prediction=50.0,
                 confidence=0.0,
                 timestamp=datetime.now(),
-                metadata={'error': str(e)}
+                metadata={"error": str(e)},
             )
 
 
@@ -244,14 +247,14 @@ class AdvancedCacheManager:
             **self.cache_stats,
             "hit_rate": hit_rate,
             "total_requests": total_requests,
-            "memory_efficiency": self._calculate_memory_efficiency()
+            "memory_efficiency": self._calculate_memory_efficiency(),
         }
 
     def _calculate_memory_efficiency(self) -> float:
         """メモリ効率を計算"""
         total_cache_size = (
-            self.cache_stats["feature_cache_size"] +
-            self.cache_stats["prediction_cache_size"]
+            self.cache_stats["feature_cache_size"]
+            + self.cache_stats["prediction_cache_size"]
         )
         max_total_size = self.max_size * 2  # 両方のキャッシュの最大サイズ
         return total_cache_size / max_total_size if max_total_size > 0 else 0.0
@@ -273,13 +276,22 @@ class AdvancedCacheManager:
 class UltraHighPerformancePredictor(CacheablePredictor):
     """超高性能予測器 - キャッシュと並列処理の統合"""
 
-    def __init__(self, base_predictor: StockPredictor, cache_manager: AdvancedCacheManager, n_jobs: int = -1):
+    def __init__(
+        self,
+        base_predictor: StockPredictor,
+        cache_manager: AdvancedCacheManager,
+        n_jobs: int = -1,
+    ):
         super().__init__("ultra_performance", cache_manager.max_size)
         self.base_predictor = base_predictor
         self.cache_manager = cache_manager
         self.parallel_predictor = ParallelStockPredictor(
-            base_predictor if isinstance(base_predictor, EnsembleStockPredictor) else None,
-            n_jobs
+            (
+                base_predictor
+                if isinstance(base_predictor, EnsembleStockPredictor)
+                else None
+            ),
+            n_jobs,
         )
 
     def train(self, data: pd.DataFrame, target: pd.Series) -> None:
@@ -287,7 +299,9 @@ class UltraHighPerformancePredictor(CacheablePredictor):
         self.base_predictor.train(data, target)
         self._is_trained = True
 
-    def predict(self, symbol: str, data: Optional[pd.DataFrame] = None) -> PredictionResult:
+    def predict(
+        self, symbol: str, data: Optional[pd.DataFrame] = None
+    ) -> PredictionResult:
         """Ultra-fast prediction with caching"""
         if not self.is_trained():
             raise ValueError("Model must be trained before making predictions")
@@ -295,6 +309,7 @@ class UltraHighPerformancePredictor(CacheablePredictor):
         try:
             if data is None:
                 from data.stock_data import StockDataProvider
+
                 data_provider = StockDataProvider()
                 data = data_provider.get_stock_data(symbol, "1y")
 
@@ -302,18 +317,20 @@ class UltraHighPerformancePredictor(CacheablePredictor):
             data_hash = self.cache_manager.get_data_hash(data)
 
             # キャッシュから予測結果を確認
-            cached_prediction = self.cache_manager.get_cached_prediction(symbol, data_hash)
+            cached_prediction = self.cache_manager.get_cached_prediction(
+                symbol, data_hash
+            )
             if cached_prediction is not None:
                 return PredictionResult(
                     prediction=cached_prediction,
                     confidence=0.9,  # キャッシュヒット時の高い信頼度
                     timestamp=datetime.now(),
                     metadata={
-                        'model_type': self.model_type,
-                        'symbol': symbol,
-                        'cache_hit': True,
-                        'data_hash': data_hash
-                    }
+                        "model_type": self.model_type,
+                        "symbol": symbol,
+                        "cache_hit": True,
+                        "data_hash": data_hash,
+                    },
                 )
 
             # キャッシュミスの場合、新しい予測を実行
@@ -323,11 +340,9 @@ class UltraHighPerformancePredictor(CacheablePredictor):
             self.cache_manager.cache_prediction(symbol, data_hash, result.prediction)
 
             # メタデータを更新
-            result.metadata.update({
-                'cache_hit': False,
-                'data_hash': data_hash,
-                'ultra_performance': True
-            })
+            result.metadata.update(
+                {"cache_hit": False, "data_hash": data_hash, "ultra_performance": True}
+            )
 
             return result
 
@@ -337,7 +352,7 @@ class UltraHighPerformancePredictor(CacheablePredictor):
                 prediction=50.0,
                 confidence=0.0,
                 timestamp=datetime.now(),
-                metadata={'error': str(e)}
+                metadata={"error": str(e)},
             )
 
     def predict_multiple(self, symbols: List[str]) -> Dict[str, PredictionResult]:
@@ -349,17 +364,20 @@ class UltraHighPerformancePredictor(CacheablePredictor):
         for symbol in symbols:
             try:
                 from data.stock_data import StockDataProvider
+
                 data_provider = StockDataProvider()
                 data = data_provider.get_stock_data(symbol, "1y")
                 data_hash = self.cache_manager.get_data_hash(data)
 
-                cached_prediction = self.cache_manager.get_cached_prediction(symbol, data_hash)
+                cached_prediction = self.cache_manager.get_cached_prediction(
+                    symbol, data_hash
+                )
                 if cached_prediction is not None:
                     results[symbol] = PredictionResult(
                         prediction=cached_prediction,
                         confidence=0.9,
                         timestamp=datetime.now(),
-                        metadata={'cache_hit': True, 'symbol': symbol}
+                        metadata={"cache_hit": True, "symbol": symbol},
                     )
                 else:
                     uncached_symbols.append(symbol)
@@ -368,7 +386,9 @@ class UltraHighPerformancePredictor(CacheablePredictor):
 
         # キャッシュミスしたシンボルを並列処理
         if uncached_symbols:
-            with ThreadPoolExecutor(max_workers=self.parallel_predictor.n_jobs) as executor:
+            with ThreadPoolExecutor(
+                max_workers=self.parallel_predictor.n_jobs
+            ) as executor:
                 future_to_symbol = {
                     executor.submit(self.predict, symbol): symbol
                     for symbol in uncached_symbols
@@ -385,7 +405,7 @@ class UltraHighPerformancePredictor(CacheablePredictor):
                             prediction=50.0,
                             confidence=0.0,
                             timestamp=datetime.now(),
-                            metadata={'error': str(e)}
+                            metadata={"error": str(e)},
                         )
 
         return results
@@ -394,11 +414,11 @@ class UltraHighPerformancePredictor(CacheablePredictor):
         """パフォーマンス統計を取得"""
         cache_stats = self.cache_manager.get_cache_stats()
         return {
-            'cache_stats': cache_stats,
-            'parallel_jobs': self.parallel_predictor.n_jobs,
-            'model_type': self.model_type,
-            'base_predictor_type': self.base_predictor.model_type,
-            'is_trained': self.is_trained()
+            "cache_stats": cache_stats,
+            "parallel_jobs": self.parallel_predictor.n_jobs,
+            "model_type": self.model_type,
+            "base_predictor_type": self.base_predictor.model_type,
+            "is_trained": self.is_trained(),
         }
 
     def optimize_cache(self):

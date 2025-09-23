@@ -1,12 +1,16 @@
+# -*- coding: utf-8 -*-
 import pytest
 import pandas as pd
 from unittest.mock import patch, Mock
+
 # 古いmodelsディレクトリは廃止されました
 # from models.predictor import StockPredictor
 # from models.recommendation import StockRecommendation
+from models.recommendation import StockRecommendation
 
 # 新しいStockPredictorインターフェース
 from models_refactored.core.interfaces import StockPredictor
+
 # StockRecommendationは削除されたため、一時的にコメントアウト
 
 

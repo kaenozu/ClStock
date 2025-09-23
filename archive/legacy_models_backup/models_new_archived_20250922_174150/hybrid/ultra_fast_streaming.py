@@ -19,12 +19,14 @@ from dataclasses import dataclass, field
 
 try:
     import websockets
+
     WEBSOCKETS_AVAILABLE = True
 except ImportError:
     WEBSOCKETS_AVAILABLE = False
 
 try:
     import aioredis
+
     AIOREDIS_AVAILABLE = True
 except ImportError:
     AIOREDIS_AVAILABLE = False
@@ -32,9 +34,11 @@ except ImportError:
 from ..base.interfaces import PredictionResult
 from .prediction_modes import PredictionMode
 
+
 @dataclass
 class StreamingDataPoint:
     """ストリーミングデータポイント"""
+
     symbol: str
     price: float
     volume: int
@@ -43,6 +47,7 @@ class StreamingDataPoint:
     ask: float = 0.0
     spread: float = 0.0
     metadata: Dict[str, Any] = field(default_factory=dict)
+
 
 class CircularBuffer:
     """高速循環バッファ"""
@@ -57,17 +62,22 @@ class CircularBuffer:
         async with self.lock:
             self.buffer.append(item)
 
-    async def get_latest(self, symbol: str, count: int = 100) -> List[StreamingDataPoint]:
+    async def get_latest(
+        self, symbol: str, count: int = 100
+    ) -> List[StreamingDataPoint]:
         """最新データ取得"""
         async with self.lock:
             symbol_data = [item for item in self.buffer if item.symbol == symbol]
             return symbol_data[-count:] if len(symbol_data) >= count else symbol_data
 
-    async def get_range(self, symbol: str, start_time: datetime, end_time: datetime) -> List[StreamingDataPoint]:
+    async def get_range(
+        self, symbol: str, start_time: datetime, end_time: datetime
+    ) -> List[StreamingDataPoint]:
         """時間範囲データ取得"""
         async with self.lock:
             return [
-                item for item in self.buffer
+                item
+                for item in self.buffer
                 if item.symbol == symbol and start_time <= item.timestamp <= end_time
             ]
 
@@ -75,13 +85,14 @@ class CircularBuffer:
         """バッファ情報取得"""
         unique_symbols = set(item.symbol for item in self.buffer)
         return {
-            'total_items': len(self.buffer),
-            'unique_symbols': len(unique_symbols),
-            'symbols': list(unique_symbols),
-            'buffer_utilization': len(self.buffer) / self.maxsize,
-            'oldest_timestamp': self.buffer[0].timestamp if self.buffer else None,
-            'newest_timestamp': self.buffer[-1].timestamp if self.buffer else None
+            "total_items": len(self.buffer),
+            "unique_symbols": len(unique_symbols),
+            "symbols": list(unique_symbols),
+            "buffer_utilization": len(self.buffer) / self.maxsize,
+            "oldest_timestamp": self.buffer[0].timestamp if self.buffer else None,
+            "newest_timestamp": self.buffer[-1].timestamp if self.buffer else None,
         }
+
 
 class WebSocketManager:
     """WebSocket接続管理"""
@@ -116,7 +127,9 @@ class WebSocketManager:
                 self.logger.error(f"WebSocket connection failed: {str(e)}")
 
                 # 指数バックオフ再接続
-                interval = self.reconnect_intervals[min(reconnect_count, len(self.reconnect_intervals) - 1)]
+                interval = self.reconnect_intervals[
+                    min(reconnect_count, len(self.reconnect_intervals) - 1)
+                ]
                 self.logger.info(f"Reconnecting in {interval} seconds...")
                 await asyncio.sleep(interval)
                 reconnect_count += 1
@@ -146,7 +159,7 @@ class WebSocketManager:
                     timestamp=datetime.now(),
                     bid=base_prices[symbol] * 0.999,
                     ask=base_prices[symbol] * 1.001,
-                    spread=base_prices[symbol] * 0.002
+                    spread=base_prices[symbol] * 0.002,
                 )
 
                 if self.data_callback:
@@ -155,16 +168,19 @@ class WebSocketManager:
             # 高頻度更新（実際は取引所からのデータ頻度に依存）
             await asyncio.sleep(0.01)  # 10ms間隔
 
-    def set_data_callback(self, callback: Callable[[StreamingDataPoint], Awaitable[None]]):
+    def set_data_callback(
+        self, callback: Callable[[StreamingDataPoint], Awaitable[None]]
+    ):
         """データコールバック設定"""
         self.data_callback = callback
+
 
 class UltraFastPredictor:
     """超高速予測エンジン"""
 
     def __init__(self):
         self.feature_cache = {}  # 特徴量キャッシュ
-        self.model_cache = {}    # モデルキャッシュ
+        self.model_cache = {}  # モデルキャッシュ
         self.prediction_cache = {}  # 予測キャッシュ
         self.logger = logging.getLogger(__name__)
 
@@ -173,7 +189,9 @@ class UltraFastPredictor:
         self.feature_cache_ttl = 5  # 特徴量キャッシュ有効期間（秒）
         self.prediction_cache_ttl = 1  # 予測キャッシュ有効期間（秒）
 
-    async def predict_ultra_fast(self, symbol: str, latest_data: List[StreamingDataPoint]) -> PredictionResult:
+    async def predict_ultra_fast(
+        self, symbol: str, latest_data: List[StreamingDataPoint]
+    ) -> PredictionResult:
         """超高速予測実行"""
         start_time = time.perf_counter()
 
@@ -186,8 +204,8 @@ class UltraFastPredictor:
             cached_prediction = self._get_cached_prediction(symbol)
             if cached_prediction:
                 cache_time = time.perf_counter() - start_time
-                cached_prediction.metadata['prediction_time'] = cache_time
-                cached_prediction.metadata['cache_hit'] = True
+                cached_prediction.metadata["prediction_time"] = cache_time
+                cached_prediction.metadata["cache_hit"] = True
                 return cached_prediction
 
             # 超高速特徴量計算
@@ -208,12 +226,12 @@ class UltraFastPredictor:
                 timestamp=datetime.now(),
                 symbol=symbol,
                 metadata={
-                    'prediction_time': prediction_time,
-                    'cache_hit': False,
-                    'prediction_strategy': 'ultra_fast_streaming',
-                    'data_points_used': len(latest_data),
-                    'feature_count': len(features)
-                }
+                    "prediction_time": prediction_time,
+                    "cache_hit": False,
+                    "prediction_strategy": "ultra_fast_streaming",
+                    "data_points_used": len(latest_data),
+                    "feature_count": len(features),
+                },
             )
 
             # 結果キャッシュ
@@ -225,7 +243,9 @@ class UltraFastPredictor:
             self.logger.error(f"Ultra fast prediction failed for {symbol}: {str(e)}")
             return self._create_fallback_result(symbol, str(e))
 
-    async def _calculate_ultra_fast_features(self, data: List[StreamingDataPoint]) -> Dict[str, float]:
+    async def _calculate_ultra_fast_features(
+        self, data: List[StreamingDataPoint]
+    ) -> Dict[str, float]:
         """超高速特徴量計算"""
         if not data:
             return {}
@@ -235,12 +255,18 @@ class UltraFastPredictor:
 
         # 最小限の特徴量（計算コスト最小化）
         features = {
-            'current_price': prices[-1],
-            'price_change': prices[-1] - prices[0] if len(prices) > 1 else 0,
-            'price_change_pct': (prices[-1] - prices[0]) / prices[0] * 100 if len(prices) > 1 and prices[0] > 0 else 0,
-            'avg_volume': np.mean(volumes),
-            'volume_trend': volumes[-1] / np.mean(volumes) if np.mean(volumes) > 0 else 1,
-            'volatility': np.std(prices) if len(prices) > 1 else 0
+            "current_price": prices[-1],
+            "price_change": prices[-1] - prices[0] if len(prices) > 1 else 0,
+            "price_change_pct": (
+                (prices[-1] - prices[0]) / prices[0] * 100
+                if len(prices) > 1 and prices[0] > 0
+                else 0
+            ),
+            "avg_volume": np.mean(volumes),
+            "volume_trend": (
+                volumes[-1] / np.mean(volumes) if np.mean(volumes) > 0 else 1
+            ),
+            "volatility": np.std(prices) if len(prices) > 1 else 0,
         }
 
         return features
@@ -251,10 +277,10 @@ class UltraFastPredictor:
         # 実際の実装では事前訓練済みの軽量モデルを使用
 
         # 簡素化された予測ロジック
-        price = features.get('current_price', 1000)
-        price_change_pct = features.get('price_change_pct', 0)
-        volume_trend = features.get('volume_trend', 1)
-        volatility = features.get('volatility', 0)
+        price = features.get("current_price", 1000)
+        price_change_pct = features.get("price_change_pct", 0)
+        volume_trend = features.get("volume_trend", 1)
+        volatility = features.get("volatility", 0)
 
         # 線形結合による予測
         prediction = price * (1 + price_change_pct * 0.001 + (volume_trend - 1) * 0.002)
@@ -266,14 +292,16 @@ class UltraFastPredictor:
 
         return max(prediction, 0.01)  # 最小値制限
 
-    def _calculate_fast_confidence(self, features: Dict[str, float], data: List[StreamingDataPoint]) -> float:
+    def _calculate_fast_confidence(
+        self, features: Dict[str, float], data: List[StreamingDataPoint]
+    ) -> float:
         """高速信頼度計算"""
         # データ量ベースの基本信頼度
         data_confidence = min(len(data) / 100, 1.0)
 
         # ボラティリティベースの調整
-        volatility = features.get('volatility', 0)
-        current_price = features.get('current_price', 1000)
+        volatility = features.get("volatility", 0)
+        current_price = features.get("current_price", 1000)
 
         if current_price > 0:
             volatility_ratio = volatility / current_price
@@ -302,8 +330,9 @@ class UltraFastPredictor:
         # キャッシュサイズ制限
         if len(self.prediction_cache) > 1000:
             # 古いエントリを削除
-            oldest_symbol = min(self.prediction_cache.keys(),
-                              key=lambda k: self.prediction_cache[k][1])
+            oldest_symbol = min(
+                self.prediction_cache.keys(), key=lambda k: self.prediction_cache[k][1]
+            )
             del self.prediction_cache[oldest_symbol]
 
     def _create_fallback_result(self, symbol: str, error: str) -> PredictionResult:
@@ -315,11 +344,12 @@ class UltraFastPredictor:
             timestamp=datetime.now(),
             symbol=symbol,
             metadata={
-                'prediction_strategy': 'ultra_fast_fallback',
-                'error': error,
-                'prediction_time': 0.001
-            }
+                "prediction_strategy": "ultra_fast_fallback",
+                "error": error,
+                "prediction_time": 0.001,
+            },
         )
+
 
 class UltraFastStreamingPredictor:
     """
@@ -349,7 +379,9 @@ class UltraFastStreamingPredictor:
 
         self.logger.info("UltraFastStreamingPredictor initialized")
 
-    async def start_streaming(self, symbols: List[str], endpoint: str = "mock://market_data"):
+    async def start_streaming(
+        self, symbols: List[str], endpoint: str = "mock://market_data"
+    ):
         """ストリーミング開始"""
         self.logger.info(f"Starting ultra-fast streaming for {len(symbols)} symbols")
 
@@ -374,19 +406,21 @@ class UltraFastStreamingPredictor:
                 return self._create_no_data_result(symbol)
 
             # 超高速予測実行
-            result = await self.ultra_fast_predictor.predict_ultra_fast(symbol, latest_data)
+            result = await self.ultra_fast_predictor.predict_ultra_fast(
+                symbol, latest_data
+            )
 
             # 統計更新
             self.prediction_count += 1
             prediction_time = time.perf_counter() - start_time
             self.total_prediction_time += prediction_time
 
-            if result.metadata.get('cache_hit', False):
+            if result.metadata.get("cache_hit", False):
                 self.cache_hits += 1
 
             # メタデータ更新
-            result.metadata['streaming_prediction_time'] = prediction_time
-            result.metadata['system_used'] = 'ultra_fast_streaming'
+            result.metadata["streaming_prediction_time"] = prediction_time
+            result.metadata["system_used"] = "ultra_fast_streaming"
 
             return result
 
@@ -394,7 +428,9 @@ class UltraFastStreamingPredictor:
             self.logger.error(f"Streaming prediction failed for {symbol}: {str(e)}")
             return self._create_error_result(symbol, str(e))
 
-    async def predict_batch_streaming(self, symbols: List[str]) -> List[PredictionResult]:
+    async def predict_batch_streaming(
+        self, symbols: List[str]
+    ) -> List[PredictionResult]:
         """バッチストリーミング予測"""
         # 並列実行でさらなる高速化
         tasks = [self.predict_streaming(symbol) for symbol in symbols]
@@ -415,20 +451,28 @@ class UltraFastStreamingPredictor:
         """ストリーミング統計取得"""
         buffer_info = self.data_buffer.get_buffer_info()
 
-        avg_prediction_time = (self.total_prediction_time / self.prediction_count
-                             if self.prediction_count > 0 else 0)
+        avg_prediction_time = (
+            self.total_prediction_time / self.prediction_count
+            if self.prediction_count > 0
+            else 0
+        )
 
-        cache_hit_rate = (self.cache_hits / self.prediction_count
-                         if self.prediction_count > 0 else 0)
+        cache_hit_rate = (
+            self.cache_hits / self.prediction_count if self.prediction_count > 0 else 0
+        )
 
         return {
-            'prediction_count': self.prediction_count,
-            'avg_prediction_time': avg_prediction_time,
-            'cache_hit_rate': cache_hit_rate,
-            'target_response_time': 0.001,
-            'performance_ratio': 0.001 / avg_prediction_time if avg_prediction_time > 0 else float('inf'),
-            'buffer_info': buffer_info,
-            'throughput_per_second': 1 / avg_prediction_time if avg_prediction_time > 0 else 0
+            "prediction_count": self.prediction_count,
+            "avg_prediction_time": avg_prediction_time,
+            "cache_hit_rate": cache_hit_rate,
+            "target_response_time": 0.001,
+            "performance_ratio": (
+                0.001 / avg_prediction_time if avg_prediction_time > 0 else float("inf")
+            ),
+            "buffer_info": buffer_info,
+            "throughput_per_second": (
+                1 / avg_prediction_time if avg_prediction_time > 0 else 0
+            ),
         }
 
     def _create_no_data_result(self, symbol: str) -> PredictionResult:
@@ -440,10 +484,10 @@ class UltraFastStreamingPredictor:
             timestamp=datetime.now(),
             symbol=symbol,
             metadata={
-                'prediction_strategy': 'ultra_fast_no_data',
-                'error': 'No streaming data available',
-                'prediction_time': 0.0001
-            }
+                "prediction_strategy": "ultra_fast_no_data",
+                "error": "No streaming data available",
+                "prediction_time": 0.0001,
+            },
         )
 
     def _create_error_result(self, symbol: str, error: str) -> PredictionResult:
@@ -455,8 +499,8 @@ class UltraFastStreamingPredictor:
             timestamp=datetime.now(),
             symbol=symbol,
             metadata={
-                'prediction_strategy': 'ultra_fast_error',
-                'error': error,
-                'prediction_time': 0.0001
-            }
+                "prediction_strategy": "ultra_fast_error",
+                "error": error,
+                "prediction_time": 0.0001,
+            },
         )

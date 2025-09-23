@@ -1,4 +1,4 @@
-"""Test base model classes."""
+﻿"""Test base model classes."""
 
 import pytest
 import pandas as pd
@@ -6,7 +6,7 @@ import numpy as np
 from datetime import datetime
 from unittest.mock import Mock, patch
 
-# 古いmodelsディレクトリは廃止されました
+# 蜿､縺・odels繝・ぅ繝ｬ繧ｯ繝医Μ縺ｯ蟒・ｭ｢縺輔ｌ縺ｾ縺励◆
 # from models.base import (
 #     StockPredictor,
 #     PredictorInterface,
@@ -15,12 +15,17 @@ from unittest.mock import Mock, patch
 #     PredictionResult
 # )
 
-# 新しいインポートパス
-from models_refactored.core.interfaces import (
+# 譁ｰ縺励＞繧､繝ｳ繝昴・繝医ヱ繧ｹ
+from models.core import (
+    CacheablePredictor,
+    EnsembleStockPredictor,
+    PredictionResult,
+    PredictorInterface,
     StockPredictor,
-    PredictionResult
 )
-from models_refactored.ensemble.ensemble_predictor import RefactoredEnsemblePredictor as EnsemblePredictor
+from models_refactored.ensemble.ensemble_predictor import (
+    RefactoredEnsemblePredictor as EnsemblePredictor,
+)
 
 
 class TestPredictionResult:
@@ -32,13 +37,13 @@ class TestPredictionResult:
             prediction=75.5,
             confidence=0.85,
             timestamp=datetime.now(),
-            metadata={'test': True}
+            metadata={"test": True},
         )
 
         assert result.prediction == 75.5
         assert result.confidence == 0.85
         assert isinstance(result.timestamp, datetime)
-        assert result.metadata['test'] is True
+        assert result.metadata["test"] is True
 
 
 class TestStockPredictor:
@@ -56,13 +61,15 @@ class TestStockPredictor:
     def test_validate_input_valid_data(self):
         """Test validate_input with valid data."""
         predictor = StockPredictor()
-        data = pd.DataFrame({
-            'open': [100, 101],
-            'high': [102, 103],
-            'low': [99, 100],
-            'close': [101, 102],
-            'volume': [1000, 1100]
-        })
+        data = pd.DataFrame(
+            {
+                "open": [100, 101],
+                "high": [102, 103],
+                "low": [99, 100],
+                "close": [101, 102],
+                "volume": [1000, 1100],
+            }
+        )
 
         assert predictor.validate_input(data) is True
 
@@ -77,7 +84,7 @@ class TestStockPredictor:
         assert predictor.validate_input(None) is False
 
         # Missing columns
-        data = pd.DataFrame({'open': [100], 'high': [102]})
+        data = pd.DataFrame({"open": [100], "high": [102]})
         assert predictor.validate_input(data) is False
 
     def test_get_confidence(self):
@@ -88,10 +95,15 @@ class TestStockPredictor:
     def test_predict_not_trained(self):
         """Test predict when model is not trained."""
         predictor = StockPredictor()
-        data = pd.DataFrame({
-            'open': [100], 'high': [102], 'low': [99],
-            'close': [101], 'volume': [1000]
-        })
+        data = pd.DataFrame(
+            {
+                "open": [100],
+                "high": [102],
+                "low": [99],
+                "close": [101],
+                "volume": [1000],
+            }
+        )
 
         with pytest.raises(ValueError, match="Model must be trained"):
             predictor.predict("TEST", data)
@@ -104,25 +116,30 @@ class TestStockPredictor:
         with pytest.raises(ValueError, match="Invalid input data"):
             predictor.predict("TEST", None)
 
-    @patch.object(StockPredictor, 'prepare_features')
-    @patch.object(StockPredictor, 'train')
+    @patch.object(StockPredictor, "prepare_features")
+    @patch.object(StockPredictor, "train")
     def test_predict_default_implementation(self, mock_train, mock_prepare_features):
         """Test default predict implementation."""
         predictor = StockPredictor()
         predictor._is_trained = True
 
-        data = pd.DataFrame({
-            'open': [100], 'high': [102], 'low': [99],
-            'close': [101], 'volume': [1000]
-        })
+        data = pd.DataFrame(
+            {
+                "open": [100],
+                "high": [102],
+                "low": [99],
+                "close": [101],
+                "volume": [1000],
+            }
+        )
 
         result = predictor.predict("TEST", data)
 
         assert isinstance(result, PredictionResult)
         assert result.prediction == 0.0
         assert result.confidence == 0.5
-        assert result.metadata['model_type'] == "base"
-        assert result.metadata['symbol'] == "TEST"
+        assert result.metadata["model_type"] == "base"
+        assert result.metadata["symbol"] == "TEST"
 
 
 class TestEnsemblePredictor:
@@ -214,7 +231,7 @@ class TestCacheablePredictor:
         assert predictor._get_data_hash(None) == "empty"
 
         # Valid data
-        data = pd.DataFrame({'close': [100, 101, 102]})
+        data = pd.DataFrame({"close": [100, 101, 102]})
         hash_value = predictor._get_data_hash(data)
         assert isinstance(hash_value, str)
         assert hash_value != "empty"
@@ -222,13 +239,10 @@ class TestCacheablePredictor:
     def test_cache_prediction(self):
         """Test caching predictions."""
         predictor = CacheablePredictor(cache_size=2)
-        data = pd.DataFrame({'close': [100]})
+        data = pd.DataFrame({"close": [100]})
 
         result = PredictionResult(
-            prediction=75.0,
-            confidence=0.8,
-            timestamp=datetime.now(),
-            metadata={}
+            prediction=75.0, confidence=0.8, timestamp=datetime.now(), metadata={}
         )
 
         predictor.cache_prediction("AAPL", data, result)
@@ -236,8 +250,8 @@ class TestCacheablePredictor:
         assert len(predictor._prediction_cache) == 1
 
         # Test cache overflow
-        data2 = pd.DataFrame({'close': [101]})
-        data3 = pd.DataFrame({'close': [102]})
+        data2 = pd.DataFrame({"close": [101]})
+        data3 = pd.DataFrame({"close": [102]})
 
         predictor.cache_prediction("GOOGL", data2, result)
         assert len(predictor._prediction_cache) == 2
@@ -248,13 +262,10 @@ class TestCacheablePredictor:
     def test_get_cached_prediction(self):
         """Test retrieving cached predictions."""
         predictor = CacheablePredictor()
-        data = pd.DataFrame({'close': [100]})
+        data = pd.DataFrame({"close": [100]})
 
         result = PredictionResult(
-            prediction=75.0,
-            confidence=0.8,
-            timestamp=datetime.now(),
-            metadata={}
+            prediction=75.0, confidence=0.8, timestamp=datetime.now(), metadata={}
         )
 
         # No cache hit
@@ -271,13 +282,15 @@ class TestCacheablePredictor:
 @pytest.fixture
 def sample_stock_data():
     """Create sample stock data for testing."""
-    return pd.DataFrame({
-        'open': [100, 101, 102, 103, 104],
-        'high': [102, 103, 104, 105, 106],
-        'low': [99, 100, 101, 102, 103],
-        'close': [101, 102, 103, 104, 105],
-        'volume': [1000, 1100, 1200, 1300, 1400]
-    })
+    return pd.DataFrame(
+        {
+            "open": [100, 101, 102, 103, 104],
+            "high": [102, 103, 104, 105, 106],
+            "low": [99, 100, 101, 102, 103],
+            "close": [101, 102, 103, 104, 105],
+            "volume": [1000, 1100, 1200, 1300, 1400],
+        }
+    )
 
 
 class TestPredictorInterface:
@@ -306,7 +319,7 @@ class TestPredictorInterface:
                     prediction=50.0,
                     confidence=0.5,
                     timestamp=datetime.now(),
-                    metadata={}
+                    metadata={},
                 )
 
             def get_confidence(self):

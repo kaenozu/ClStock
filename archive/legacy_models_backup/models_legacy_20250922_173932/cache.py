@@ -26,20 +26,17 @@ class RedisCache:
             expiry = datetime.now() + timedelta(seconds=ttl)
 
             # メモリキャッシュに保存
-            self.memory_cache[key] = {
-                'value': value,
-                'expiry': expiry
-            }
+            self.memory_cache[key] = {"value": value, "expiry": expiry}
 
             # ディスクにも永続化
             cache_file = self.cache_dir / f"{key}.cache"
             cache_data = {
-                'value': value,
-                'expiry': expiry.isoformat(),
-                'created': datetime.now().isoformat()
+                "value": value,
+                "expiry": expiry.isoformat(),
+                "created": datetime.now().isoformat(),
             }
 
-            with open(cache_file, 'wb') as f:
+            with open(cache_file, "wb") as f:
                 pickle.dump(cache_data, f)
 
             return True
@@ -54,8 +51,8 @@ class RedisCache:
             # メモリキャッシュから確認
             if key in self.memory_cache:
                 cache_item = self.memory_cache[key]
-                if datetime.now() < cache_item['expiry']:
-                    return cache_item['value']
+                if datetime.now() < cache_item["expiry"]:
+                    return cache_item["value"]
                 else:
                     # 期限切れの場合は削除
                     del self.memory_cache[key]
@@ -63,17 +60,17 @@ class RedisCache:
             # ディスクキャッシュから確認
             cache_file = self.cache_dir / f"{key}.cache"
             if cache_file.exists():
-                with open(cache_file, 'rb') as f:
+                with open(cache_file, "rb") as f:
                     cache_data = pickle.load(f)
 
-                expiry = datetime.fromisoformat(cache_data['expiry'])
+                expiry = datetime.fromisoformat(cache_data["expiry"])
                 if datetime.now() < expiry:
                     # メモリキャッシュにも復元
                     self.memory_cache[key] = {
-                        'value': cache_data['value'],
-                        'expiry': expiry
+                        "value": cache_data["value"],
+                        "expiry": expiry,
                     }
-                    return cache_data['value']
+                    return cache_data["value"]
                 else:
                     # 期限切れファイルを削除
                     cache_file.unlink()
@@ -122,17 +119,17 @@ class RedisCache:
         """キーの残りTTLを取得"""
         try:
             if key in self.memory_cache:
-                expiry = self.memory_cache[key]['expiry']
+                expiry = self.memory_cache[key]["expiry"]
                 remaining = (expiry - datetime.now()).total_seconds()
                 return max(0, int(remaining))
 
             # ディスクキャッシュから確認
             cache_file = self.cache_dir / f"{key}.cache"
             if cache_file.exists():
-                with open(cache_file, 'rb') as f:
+                with open(cache_file, "rb") as f:
                     cache_data = pickle.load(f)
 
-                expiry = datetime.fromisoformat(cache_data['expiry'])
+                expiry = datetime.fromisoformat(cache_data["expiry"])
                 remaining = (expiry - datetime.now()).total_seconds()
                 return max(0, int(remaining))
 
@@ -161,6 +158,7 @@ class RedisCache:
             else:
                 # 基本的なワイルドカード対応
                 import fnmatch
+
                 return [key for key in all_keys if fnmatch.fnmatch(key, pattern)]
 
         except Exception as e:
@@ -195,11 +193,11 @@ class RedisCache:
                 total_size += cache_file.stat().st_size
 
             return {
-                'memory_keys': memory_keys,
-                'disk_files': disk_files,
-                'total_size_bytes': total_size,
-                'cache_directory': str(self.cache_dir),
-                'default_ttl': self.default_ttl
+                "memory_keys": memory_keys,
+                "disk_files": disk_files,
+                "total_size_bytes": total_size,
+                "cache_directory": str(self.cache_dir),
+                "default_ttl": self.default_ttl,
             }
 
         except Exception as e:
@@ -214,7 +212,7 @@ class RedisCache:
             # メモリキャッシュのクリーンアップ
             expired_memory_keys = []
             for key, cache_item in self.memory_cache.items():
-                if datetime.now() >= cache_item['expiry']:
+                if datetime.now() >= cache_item["expiry"]:
                     expired_memory_keys.append(key)
 
             for key in expired_memory_keys:
@@ -224,10 +222,10 @@ class RedisCache:
             # ディスクキャッシュのクリーンアップ
             for cache_file in self.cache_dir.glob("*.cache"):
                 try:
-                    with open(cache_file, 'rb') as f:
+                    with open(cache_file, "rb") as f:
                         cache_data = pickle.load(f)
 
-                    expiry = datetime.fromisoformat(cache_data['expiry'])
+                    expiry = datetime.fromisoformat(cache_data["expiry"])
                     if datetime.now() >= expiry:
                         cache_file.unlink()
                         cleaned_count += 1
@@ -249,20 +247,20 @@ class RedisCache:
         info = self.info()
 
         # ヒット率計算（簡易版）
-        total_operations = getattr(self, '_total_operations', 0)
-        cache_hits = getattr(self, '_cache_hits', 0)
+        total_operations = getattr(self, "_total_operations", 0)
+        cache_hits = getattr(self, "_cache_hits", 0)
         hit_rate = cache_hits / total_operations if total_operations > 0 else 0
 
         return {
             **info,
-            'hit_rate': hit_rate,
-            'total_operations': total_operations,
-            'cache_hits': cache_hits
+            "hit_rate": hit_rate,
+            "total_operations": total_operations,
+            "cache_hits": cache_hits,
         }
 
     def _increment_stats(self, hit: bool = False):
         """統計カウンタを更新"""
-        if not hasattr(self, '_total_operations'):
+        if not hasattr(self, "_total_operations"):
             self._total_operations = 0
             self._cache_hits = 0
 

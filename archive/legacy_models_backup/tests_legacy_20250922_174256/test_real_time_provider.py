@@ -16,7 +16,7 @@ from data.real_time_provider import (
     WebSocketRealTimeProvider,
     DataNormalizer,
     RealTimeDataQualityMonitor,
-    ReconnectionManager
+    ReconnectionManager,
 )
 from data.mock_real_time_provider import MockRealTimeProvider
 from data.real_time_factory import (
@@ -24,7 +24,7 @@ from data.real_time_factory import (
     DefaultRealTimeFactory,
     MockRealTimeFactory,
     get_real_time_system_manager,
-    reset_real_time_system_manager
+    reset_real_time_system_manager,
 )
 from models_new.base.interfaces import TickData, OrderBookData, IndexData, NewsData
 from models_new.monitoring.cache_manager import RealTimeCacheManager
@@ -46,7 +46,7 @@ class TestDataNormalizer(unittest.TestCase):
             "timestamp": "2025-01-20T10:30:00Z",
             "bid": 2499.0,
             "ask": 2501.0,
-            "side": "buy"
+            "side": "buy",
         }
 
         tick = self.normalizer.normalize_tick_data(raw_data)
@@ -61,11 +61,7 @@ class TestDataNormalizer(unittest.TestCase):
 
     def test_normalize_tick_data_minimal(self):
         """最小限のティックデータの正規化テスト"""
-        raw_data = {
-            "symbol": "7203",
-            "price": 2500.0,
-            "volume": 1000
-        }
+        raw_data = {"symbol": "7203", "price": 2500.0, "volume": 1000}
 
         tick = self.normalizer.normalize_tick_data(raw_data)
 
@@ -82,7 +78,7 @@ class TestDataNormalizer(unittest.TestCase):
         raw_data = {
             "symbol": "",  # 空のシンボル
             "price": "invalid",  # 無効な価格
-            "volume": -1000  # 負の出来高
+            "volume": -1000,  # 負の出来高
         }
 
         tick = self.normalizer.normalize_tick_data(raw_data)
@@ -94,7 +90,7 @@ class TestDataNormalizer(unittest.TestCase):
             "symbol": "7203",
             "timestamp": "2025-01-20T10:30:00Z",
             "bids": [[2499.0, 1000], [2498.0, 2000]],
-            "asks": [[2501.0, 1500], [2502.0, 2500]]
+            "asks": [[2501.0, 1500], [2502.0, 2500]],
         }
 
         order_book = self.normalizer.normalize_order_book(raw_data)
@@ -108,11 +104,7 @@ class TestDataNormalizer(unittest.TestCase):
 
     def test_normalize_order_book_invalid(self):
         """無効な板情報の正規化テスト"""
-        raw_data = {
-            "symbol": "",
-            "bids": "invalid",
-            "asks": []
-        }
+        raw_data = {"symbol": "", "bids": "invalid", "asks": []}
 
         order_book = self.normalizer.normalize_order_book(raw_data)
         self.assertIsNone(order_book)
@@ -124,7 +116,7 @@ class TestDataNormalizer(unittest.TestCase):
             "value": 28000.0,
             "change": 100.0,
             "change_percent": 0.36,
-            "timestamp": "2025-01-20T10:30:00Z"
+            "timestamp": "2025-01-20T10:30:00Z",
         }
 
         index_data = self.normalizer.normalize_index_data(raw_data)
@@ -144,7 +136,7 @@ class TestDataNormalizer(unittest.TestCase):
             "symbols": ["7203"],
             "timestamp": "2025-01-20T10:30:00Z",
             "sentiment": "positive",
-            "impact_score": 0.8
+            "impact_score": 0.8,
         }
 
         news = self.normalizer.normalize_news_data(raw_data)
@@ -172,7 +164,7 @@ class TestRealTimeDataQualityMonitor(unittest.TestCase):
             volume=1000,
             bid_price=2499.0,
             ask_price=2501.0,
-            trade_type="buy"
+            trade_type="buy",
         )
 
         result = self.monitor.validate_tick_data(tick)
@@ -187,7 +179,7 @@ class TestRealTimeDataQualityMonitor(unittest.TestCase):
             volume=1000,
             bid_price=2499.0,
             ask_price=2501.0,
-            trade_type="buy"
+            trade_type="buy",
         )
 
         result = self.monitor.validate_tick_data(tick)
@@ -202,7 +194,7 @@ class TestRealTimeDataQualityMonitor(unittest.TestCase):
             volume=1000,
             bid_price=2499.0,
             ask_price=2501.0,
-            trade_type="buy"
+            trade_type="buy",
         )
 
         result = self.monitor.validate_tick_data(tick)
@@ -214,7 +206,7 @@ class TestRealTimeDataQualityMonitor(unittest.TestCase):
             symbol="7203",
             timestamp=datetime.now(),
             bids=[(2499.0, 1000), (2498.0, 2000)],
-            asks=[(2501.0, 1500), (2502.0, 2500)]
+            asks=[(2501.0, 1500), (2502.0, 2500)],
         )
 
         result = self.monitor.validate_order_book(order_book)
@@ -226,7 +218,7 @@ class TestRealTimeDataQualityMonitor(unittest.TestCase):
             symbol="7203",
             timestamp=datetime.now(),
             bids=[(2502.0, 1000)],  # 買い価格が売り価格より高い
-            asks=[(2501.0, 1500)]
+            asks=[(2501.0, 1500)],
         )
 
         result = self.monitor.validate_order_book(order_book)
@@ -319,8 +311,7 @@ class TestRealTimeCacheManager(unittest.TestCase):
     def test_cache_order_book_data(self):
         """板情報キャッシュのテスト"""
         order_book = OrderBookData(
-            "7203", datetime.now(),
-            [(2499.0, 1000)], [(2501.0, 1500)]
+            "7203", datetime.now(), [(2499.0, 1000)], [(2501.0, 1500)]
         )
 
         self.cache_manager.cache_order_book_data(order_book)
@@ -352,11 +343,9 @@ class TestRealTimeCacheManager(unittest.TestCase):
         # 古いデータを追加
         old_time = datetime.now() - timedelta(hours=25)
         old_tick = TickData("7203", old_time, 2500.0, 1000)
-        self.cache_manager.tick_cache["7203"] = [{
-            "data": old_tick,
-            "timestamp": old_time,
-            "cached_at": old_time
-        }]
+        self.cache_manager.tick_cache["7203"] = [
+            {"data": old_tick, "timestamp": old_time, "cached_at": old_time}
+        ]
 
         # 新しいデータを追加
         new_tick = TickData("7203", datetime.now(), 2600.0, 1200)
@@ -561,9 +550,9 @@ class TestIntegration(unittest.IsolatedAsyncioTestCase):
             await manager.start_system()
 
             # サブスクリプション設定
-            await manager.subscribe_to_symbol("7203",
-                                            include_ticks=True,
-                                            include_order_book=True)
+            await manager.subscribe_to_symbol(
+                "7203", include_ticks=True, include_order_book=True
+            )
 
             # データが流れるまで少し待機
             await asyncio.sleep(3)
@@ -588,6 +577,7 @@ if __name__ == "__main__":
         # 非同期テストのみを実行
         async def run_async_tests():
             import unittest
+
             loader = unittest.TestLoader()
             suite = unittest.TestSuite()
 
@@ -599,7 +589,11 @@ if __name__ == "__main__":
             runner = unittest.TextTestRunner(verbosity=2)
 
             # 各テストケースを個別に実行
-            for test_class in [TestMockRealTimeProvider, TestRealTimeSystemManager, TestIntegration]:
+            for test_class in [
+                TestMockRealTimeProvider,
+                TestRealTimeSystemManager,
+                TestIntegration,
+            ]:
                 print(f"\n=== Running {test_class.__name__} ===")
                 test_suite = loader.loadTestsFromTestCase(test_class)
                 for test in test_suite:

@@ -18,6 +18,7 @@ try:
     import plotly.express as px
     from plotly.subplots import make_subplots
     import plotly.io as pio
+
     PLOTLY_AVAILABLE = True
 except ImportError:
     PLOTLY_AVAILABLE = False
@@ -26,19 +27,23 @@ try:
     import dash
     from dash import dcc, html, Input, Output, State
     import dash_bootstrap_components as dbc
+
     DASH_AVAILABLE = True
 except ImportError:
     DASH_AVAILABLE = False
 
+
 @dataclass
 class VisualizationData:
     """可視化データ構造"""
+
     symbol: str
     predictions: List[Dict[str, Any]]
     historical_data: pd.DataFrame
     sentiment_data: Optional[Dict[str, Any]]
     performance_metrics: Dict[str, float]
     timestamp: datetime
+
 
 class ChartGenerator:
     """チャート生成器"""
@@ -48,31 +53,37 @@ class ChartGenerator:
 
         # カラーパレット
         self.colors = {
-            'primary': '#1f77b4',
-            'success': '#2ca02c',
-            'warning': '#ff7f0e',
-            'danger': '#d62728',
-            'info': '#17a2b8',
-            'light': '#f8f9fa',
-            'dark': '#343a40'
+            "primary": "#1f77b4",
+            "success": "#2ca02c",
+            "warning": "#ff7f0e",
+            "danger": "#d62728",
+            "info": "#17a2b8",
+            "light": "#f8f9fa",
+            "dark": "#343a40",
         }
 
         # チャートテーマ設定
         if PLOTLY_AVAILABLE:
             pio.templates.default = "plotly_white"
 
-    def create_prediction_chart(self, symbol: str, historical_data: pd.DataFrame,
-                              predictions: List[Dict], title: str = None) -> str:
+    def create_prediction_chart(
+        self,
+        symbol: str,
+        historical_data: pd.DataFrame,
+        predictions: List[Dict],
+        title: str = None,
+    ) -> str:
         """予測チャート作成"""
         if not PLOTLY_AVAILABLE:
             return "<div>Plotly not available</div>"
 
         try:
             fig = make_subplots(
-                rows=2, cols=1,
+                rows=2,
+                cols=1,
                 row_heights=[0.7, 0.3],
-                subplot_titles=(f'{symbol} 価格予測', '出来高'),
-                vertical_spacing=0.1
+                subplot_titles=(f"{symbol} 価格予測", "出来高"),
+                vertical_spacing=0.1,
             )
 
             # 履歴価格データ
@@ -80,29 +91,31 @@ class ChartGenerator:
                 fig.add_trace(
                     go.Candlestick(
                         x=historical_data.index,
-                        open=historical_data.get('Open', historical_data['Close']),
-                        high=historical_data.get('High', historical_data['Close']),
-                        low=historical_data.get('Low', historical_data['Close']),
-                        close=historical_data['Close'],
-                        name='実際価格',
-                        increasing_line_color=self.colors['success'],
-                        decreasing_line_color=self.colors['danger']
+                        open=historical_data.get("Open", historical_data["Close"]),
+                        high=historical_data.get("High", historical_data["Close"]),
+                        low=historical_data.get("Low", historical_data["Close"]),
+                        close=historical_data["Close"],
+                        name="実際価格",
+                        increasing_line_color=self.colors["success"],
+                        decreasing_line_color=self.colors["danger"],
                     ),
-                    row=1, col=1
+                    row=1,
+                    col=1,
                 )
 
                 # 移動平均線
                 if len(historical_data) >= 20:
-                    ma20 = historical_data['Close'].rolling(window=20).mean()
+                    ma20 = historical_data["Close"].rolling(window=20).mean()
                     fig.add_trace(
                         go.Scatter(
                             x=historical_data.index,
                             y=ma20,
-                            mode='lines',
-                            name='MA20',
-                            line=dict(color=self.colors['warning'], width=1)
+                            mode="lines",
+                            name="MA20",
+                            line=dict(color=self.colors["warning"], width=1),
                         ),
-                        row=1, col=1
+                        row=1,
+                        col=1,
                     )
 
             # 予測データ
@@ -113,12 +126,12 @@ class ChartGenerator:
                 confidence_lower = []
 
                 for pred in predictions:
-                    if 'timestamp' in pred and 'prediction' in pred:
-                        pred_times.append(pred['timestamp'])
-                        pred_values.append(pred['prediction'])
+                    if "timestamp" in pred and "prediction" in pred:
+                        pred_times.append(pred["timestamp"])
+                        pred_values.append(pred["prediction"])
 
-                        confidence = pred.get('confidence', 0.8)
-                        pred_val = pred['prediction']
+                        confidence = pred.get("confidence", 0.8)
+                        pred_val = pred["prediction"]
                         margin = pred_val * (1 - confidence) * 0.1
 
                         confidence_upper.append(pred_val + margin)
@@ -130,12 +143,13 @@ class ChartGenerator:
                         go.Scatter(
                             x=pred_times,
                             y=pred_values,
-                            mode='lines+markers',
-                            name='予測価格',
-                            line=dict(color=self.colors['primary'], width=3),
-                            marker=dict(size=8)
+                            mode="lines+markers",
+                            name="予測価格",
+                            line=dict(color=self.colors["primary"], width=3),
+                            marker=dict(size=8),
                         ),
-                        row=1, col=1
+                        row=1,
+                        col=1,
                     )
 
                     # 信頼区間
@@ -143,42 +157,48 @@ class ChartGenerator:
                         go.Scatter(
                             x=pred_times + pred_times[::-1],
                             y=confidence_upper + confidence_lower[::-1],
-                            fill='toself',
+                            fill="toself",
                             fillcolor=f"rgba{tuple(list(bytes.fromhex(self.colors['primary'][1:])) + [0.2])}",
-                            line=dict(color='rgba(255,255,255,0)'),
-                            name='信頼区間',
-                            showlegend=True
+                            line=dict(color="rgba(255,255,255,0)"),
+                            name="信頼区間",
+                            showlegend=True,
                         ),
-                        row=1, col=1
+                        row=1,
+                        col=1,
                     )
 
             # 出来高
-            if not historical_data.empty and 'Volume' in historical_data.columns:
-                colors_volume = ['red' if close < open else 'green'
-                               for close, open in zip(historical_data['Close'],
-                                                    historical_data.get('Open', historical_data['Close']))]
+            if not historical_data.empty and "Volume" in historical_data.columns:
+                colors_volume = [
+                    "red" if close < open else "green"
+                    for close, open in zip(
+                        historical_data["Close"],
+                        historical_data.get("Open", historical_data["Close"]),
+                    )
+                ]
 
                 fig.add_trace(
                     go.Bar(
                         x=historical_data.index,
-                        y=historical_data['Volume'],
-                        name='出来高',
+                        y=historical_data["Volume"],
+                        name="出来高",
                         marker_color=colors_volume,
-                        opacity=0.7
+                        opacity=0.7,
                     ),
-                    row=2, col=1
+                    row=2,
+                    col=1,
                 )
 
             # レイアウト設定
             fig.update_layout(
-                title=title or f'{symbol} 予測分析チャート',
+                title=title or f"{symbol} 予測分析チャート",
                 xaxis_rangeslider_visible=False,
                 height=800,
                 showlegend=True,
-                template='plotly_white'
+                template="plotly_white",
             )
 
-            return fig.to_html(include_plotlyjs='cdn')
+            return fig.to_html(include_plotlyjs="cdn")
 
         except Exception as e:
             self.logger.error(f"Chart creation failed: {str(e)}")
@@ -191,43 +211,49 @@ class ChartGenerator:
 
         try:
             fig = make_subplots(
-                rows=2, cols=2,
+                rows=2,
+                cols=2,
                 subplot_titles=(
-                    'センチメントスコア', 'ソース別分析',
-                    'トレンド', 'モメンタム'
+                    "センチメントスコア",
+                    "ソース別分析",
+                    "トレンド",
+                    "モメンタム",
                 ),
-                specs=[[{"type": "indicator"}, {"type": "bar"}],
-                       [{"type": "scatter"}, {"type": "indicator"}]]
+                specs=[
+                    [{"type": "indicator"}, {"type": "bar"}],
+                    [{"type": "scatter"}, {"type": "indicator"}],
+                ],
             )
 
             # センチメントスコア（ゲージ）
-            score = sentiment_data.get('current_sentiment', {}).get('score', 0)
+            score = sentiment_data.get("current_sentiment", {}).get("score", 0)
             fig.add_trace(
                 go.Indicator(
                     mode="gauge+number+delta",
                     value=score,
-                    domain={'x': [0, 1], 'y': [0, 1]},
-                    title={'text': "センチメント"},
+                    domain={"x": [0, 1], "y": [0, 1]},
+                    title={"text": "センチメント"},
                     gauge={
-                        'axis': {'range': [-1, 1]},
-                        'bar': {'color': self.colors['primary']},
-                        'steps': [
-                            {'range': [-1, -0.3], 'color': self.colors['danger']},
-                            {'range': [-0.3, 0.3], 'color': self.colors['warning']},
-                            {'range': [0.3, 1], 'color': self.colors['success']}
+                        "axis": {"range": [-1, 1]},
+                        "bar": {"color": self.colors["primary"]},
+                        "steps": [
+                            {"range": [-1, -0.3], "color": self.colors["danger"]},
+                            {"range": [-0.3, 0.3], "color": self.colors["warning"]},
+                            {"range": [0.3, 1], "color": self.colors["success"]},
                         ],
-                        'threshold': {
-                            'line': {'color': "red", 'width': 4},
-                            'thickness': 0.75,
-                            'value': 0
-                        }
-                    }
+                        "threshold": {
+                            "line": {"color": "red", "width": 4},
+                            "thickness": 0.75,
+                            "value": 0,
+                        },
+                    },
                 ),
-                row=1, col=1
+                row=1,
+                col=1,
             )
 
             # ソース別分析
-            sources = sentiment_data.get('sources_breakdown', {})
+            sources = sentiment_data.get("sources_breakdown", {})
             if sources:
                 source_names = list(sources.keys())
                 source_values = list(sources.values())
@@ -236,56 +262,59 @@ class ChartGenerator:
                     go.Bar(
                         x=source_names,
                         y=source_values,
-                        name='ソース別',
-                        marker_color=[self.colors['success'] if v > 0 else self.colors['danger']
-                                    for v in source_values]
+                        name="ソース別",
+                        marker_color=[
+                            self.colors["success"] if v > 0 else self.colors["danger"]
+                            for v in source_values
+                        ],
                     ),
-                    row=1, col=2
+                    row=1,
+                    col=2,
                 )
 
             # トレンド（時系列がある場合）
-            trend_data = sentiment_data.get('trend', {})
-            if 'recent_sentiments' in trend_data:
-                recent = trend_data['recent_sentiments']
+            trend_data = sentiment_data.get("trend", {})
+            if "recent_sentiments" in trend_data:
+                recent = trend_data["recent_sentiments"]
                 fig.add_trace(
                     go.Scatter(
                         x=list(range(len(recent))),
                         y=recent,
-                        mode='lines+markers',
-                        name='最近のトレンド',
-                        line=dict(color=self.colors['info'])
+                        mode="lines+markers",
+                        name="最近のトレンド",
+                        line=dict(color=self.colors["info"]),
                     ),
-                    row=2, col=1
+                    row=2,
+                    col=1,
                 )
 
             # モメンタム
-            momentum = sentiment_data.get('current_sentiment', {}).get('momentum', 0)
+            momentum = sentiment_data.get("current_sentiment", {}).get("momentum", 0)
             fig.add_trace(
                 go.Indicator(
                     mode="gauge+number",
                     value=momentum,
-                    domain={'x': [0, 1], 'y': [0, 1]},
-                    title={'text': "モメンタム"},
+                    domain={"x": [0, 1], "y": [0, 1]},
+                    title={"text": "モメンタム"},
                     gauge={
-                        'axis': {'range': [-1, 1]},
-                        'bar': {'color': self.colors['info']},
-                        'steps': [
-                            {'range': [-1, -0.3], 'color': 'lightgray'},
-                            {'range': [-0.3, 0.3], 'color': 'gray'},
-                            {'range': [0.3, 1], 'color': 'lightblue'}
-                        ]
-                    }
+                        "axis": {"range": [-1, 1]},
+                        "bar": {"color": self.colors["info"]},
+                        "steps": [
+                            {"range": [-1, -0.3], "color": "lightgray"},
+                            {"range": [-0.3, 0.3], "color": "gray"},
+                            {"range": [0.3, 1], "color": "lightblue"},
+                        ],
+                    },
                 ),
-                row=2, col=2
+                row=2,
+                col=2,
             )
 
             fig.update_layout(
-                title='センチメント分析ダッシュボード',
-                height=600,
-                showlegend=False
+                title="センチメント分析ダッシュボード", height=600, showlegend=False
             )
 
-            return fig.to_html(include_plotlyjs='cdn')
+            return fig.to_html(include_plotlyjs="cdn")
 
         except Exception as e:
             self.logger.error(f"Sentiment chart creation failed: {str(e)}")
@@ -302,7 +331,9 @@ class ChartGenerator:
 
             for metric_name, value in performance_metrics.items():
                 if isinstance(value, (int, float)):
-                    color = self.colors['success'] if value > 0 else self.colors['danger']
+                    color = (
+                        self.colors["success"] if value > 0 else self.colors["danger"]
+                    )
                     metrics_html += f"""
                     <div style='border: 1px solid #ddd; padding: 15px; border-radius: 8px; text-align: center;'>
                         <h4 style='margin: 0; color: {color};'>{value:.3f}</h4>
@@ -316,6 +347,7 @@ class ChartGenerator:
         except Exception as e:
             self.logger.error(f"Performance chart creation failed: {str(e)}")
             return f"<div>パフォーマンスチャート生成エラー: {str(e)}</div>"
+
 
 class DashboardGenerator:
     """ダッシュボード生成器"""
@@ -331,7 +363,7 @@ class DashboardGenerator:
             prediction_chart = self.chart_generator.create_prediction_chart(
                 visualization_data.symbol,
                 visualization_data.historical_data,
-                visualization_data.predictions
+                visualization_data.predictions,
             )
 
             # センチメントチャート
@@ -431,7 +463,9 @@ class DashboardGenerator:
 
         except Exception as e:
             self.logger.error(f"Dashboard generation failed: {str(e)}")
-            return f"<html><body><h1>ダッシュボード生成エラー: {str(e)}</h1></body></html>"
+            return (
+                f"<html><body><h1>ダッシュボード生成エラー: {str(e)}</h1></body></html>"
+            )
 
     def _generate_prediction_summary(self, data: VisualizationData) -> str:
         """予測サマリー生成"""
@@ -463,6 +497,7 @@ class DashboardGenerator:
 
         summary_html += "</div>"
         return summary_html
+
 
 class PredictionDashboard:
     """
@@ -503,55 +538,71 @@ class PredictionDashboard:
         if not self.app:
             return
 
-        self.app.layout = dbc.Container([
-            dbc.Row([
-                dbc.Col([
-                    html.H1("ClStock 予測ダッシュボード", className="text-center mb-4"),
-                    html.Hr()
-                ])
-            ]),
-
-            dbc.Row([
-                dbc.Col([
-                    dcc.Dropdown(
-                        id='symbol-dropdown',
-                        options=[
-                            {'label': 'ソニーグループ (6758.T)', 'value': '6758.T'},
-                            {'label': 'トヨタ自動車 (7203.T)', 'value': '7203.T'},
-                            {'label': '三菱UFJ (8306.T)', 'value': '8306.T'}
-                        ],
-                        value='6758.T'
-                    )
-                ], width=4),
-
-                dbc.Col([
-                    dbc.Button("更新", id="refresh-button", color="primary")
-                ], width=2)
-            ], className="mb-4"),
-
-            dbc.Row([
-                dbc.Col([
-                    dcc.Graph(id='prediction-chart')
-                ], width=8),
-
-                dbc.Col([
-                    dcc.Graph(id='sentiment-chart')
-                ], width=4)
-            ]),
-
-            dbc.Row([
-                dbc.Col([
-                    html.Div(id='performance-metrics')
-                ])
-            ], className="mt-4"),
-
-            # 自動更新用
-            dcc.Interval(
-                id='interval-component',
-                interval=30*1000,  # 30秒ごと
-                n_intervals=0
-            )
-        ], fluid=True)
+        self.app.layout = dbc.Container(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            [
+                                html.H1(
+                                    "ClStock 予測ダッシュボード",
+                                    className="text-center mb-4",
+                                ),
+                                html.Hr(),
+                            ]
+                        )
+                    ]
+                ),
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            [
+                                dcc.Dropdown(
+                                    id="symbol-dropdown",
+                                    options=[
+                                        {
+                                            "label": "ソニーグループ (6758.T)",
+                                            "value": "6758.T",
+                                        },
+                                        {
+                                            "label": "トヨタ自動車 (7203.T)",
+                                            "value": "7203.T",
+                                        },
+                                        {
+                                            "label": "三菱UFJ (8306.T)",
+                                            "value": "8306.T",
+                                        },
+                                    ],
+                                    value="6758.T",
+                                )
+                            ],
+                            width=4,
+                        ),
+                        dbc.Col(
+                            [dbc.Button("更新", id="refresh-button", color="primary")],
+                            width=2,
+                        ),
+                    ],
+                    className="mb-4",
+                ),
+                dbc.Row(
+                    [
+                        dbc.Col([dcc.Graph(id="prediction-chart")], width=8),
+                        dbc.Col([dcc.Graph(id="sentiment-chart")], width=4),
+                    ]
+                ),
+                dbc.Row(
+                    [dbc.Col([html.Div(id="performance-metrics")])], className="mt-4"
+                ),
+                # 自動更新用
+                dcc.Interval(
+                    id="interval-component",
+                    interval=30 * 1000,  # 30秒ごと
+                    n_intervals=0,
+                ),
+            ],
+            fluid=True,
+        )
 
     def _setup_callbacks(self):
         """コールバック設定"""
@@ -559,12 +610,16 @@ class PredictionDashboard:
             return
 
         @self.app.callback(
-            [Output('prediction-chart', 'figure'),
-             Output('sentiment-chart', 'figure'),
-             Output('performance-metrics', 'children')],
-            [Input('symbol-dropdown', 'value'),
-             Input('refresh-button', 'n_clicks'),
-             Input('interval-component', 'n_intervals')]
+            [
+                Output("prediction-chart", "figure"),
+                Output("sentiment-chart", "figure"),
+                Output("performance-metrics", "children"),
+            ],
+            [
+                Input("symbol-dropdown", "value"),
+                Input("refresh-button", "n_clicks"),
+                Input("interval-component", "n_intervals"),
+            ],
         )
         def update_dashboard(symbol, n_clicks, n_intervals):
             # 実際の実装では、ここで予測システムからデータを取得
@@ -572,33 +627,45 @@ class PredictionDashboard:
 
             # 予測チャート
             prediction_fig = go.Figure()
-            prediction_fig.add_trace(go.Scatter(
-                x=pd.date_range(start='2024-01-01', periods=30, freq='D'),
-                y=np.random.randn(30).cumsum() + 1000,
-                name='予測価格'
-            ))
-            prediction_fig.update_layout(title=f'{symbol} 予測チャート')
+            prediction_fig.add_trace(
+                go.Scatter(
+                    x=pd.date_range(start="2024-01-01", periods=30, freq="D"),
+                    y=np.random.randn(30).cumsum() + 1000,
+                    name="予測価格",
+                )
+            )
+            prediction_fig.update_layout(title=f"{symbol} 予測チャート")
 
             # センチメントチャート
             sentiment_fig = go.Figure()
-            sentiment_fig.add_trace(go.Indicator(
-                mode="gauge+number",
-                value=np.random.uniform(-1, 1),
-                title={'text': "センチメント"},
-                gauge={'axis': {'range': [-1, 1]}}
-            ))
+            sentiment_fig.add_trace(
+                go.Indicator(
+                    mode="gauge+number",
+                    value=np.random.uniform(-1, 1),
+                    title={"text": "センチメント"},
+                    gauge={"axis": {"range": [-1, 1]}},
+                )
+            )
 
             # パフォーマンス指標
-            metrics = html.Div([
-                dbc.Card([
-                    dbc.CardBody([
-                        html.H4("パフォーマンス指標"),
-                        html.P(f"精度: {np.random.uniform(80, 95):.1f}%"),
-                        html.P(f"信頼度: {np.random.uniform(70, 90):.1f}%"),
-                        html.P(f"処理時間: {np.random.uniform(0.1, 1.0):.3f}秒")
-                    ])
-                ])
-            ])
+            metrics = html.Div(
+                [
+                    dbc.Card(
+                        [
+                            dbc.CardBody(
+                                [
+                                    html.H4("パフォーマンス指標"),
+                                    html.P(f"精度: {np.random.uniform(80, 95):.1f}%"),
+                                    html.P(f"信頼度: {np.random.uniform(70, 90):.1f}%"),
+                                    html.P(
+                                        f"処理時間: {np.random.uniform(0.1, 1.0):.3f}秒"
+                                    ),
+                                ]
+                            )
+                        ]
+                    )
+                ]
+            )
 
             return prediction_fig, sentiment_fig, metrics
 
@@ -606,13 +673,14 @@ class PredictionDashboard:
         """ダッシュボード作成"""
         return self.dashboard_generator.generate_static_dashboard(visualization_data)
 
-    def save_dashboard(self, visualization_data: VisualizationData,
-                      output_path: str = "dashboard.html"):
+    def save_dashboard(
+        self, visualization_data: VisualizationData, output_path: str = "dashboard.html"
+    ):
         """ダッシュボード保存"""
         try:
             dashboard_html = self.create_dashboard(visualization_data)
 
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(dashboard_html)
 
             self.logger.info(f"Dashboard saved to {output_path}")
@@ -622,7 +690,9 @@ class PredictionDashboard:
             self.logger.error(f"Dashboard save failed: {str(e)}")
             return False
 
-    def run_web_server(self, host: str = '127.0.0.1', port: int = 8050, debug: bool = False):
+    def run_web_server(
+        self, host: str = "127.0.0.1", port: int = 8050, debug: bool = False
+    ):
         """Webサーバー起動"""
         if not self.app:
             self.logger.error("Web server not initialized")
@@ -637,8 +707,8 @@ class PredictionDashboard:
     def get_dashboard_status(self) -> Dict[str, Any]:
         """ダッシュボード状況取得"""
         return {
-            'web_server_available': DASH_AVAILABLE,
-            'plotly_available': PLOTLY_AVAILABLE,
-            'web_server_enabled': self.enable_web_server,
-            'app_initialized': self.app is not None
+            "web_server_available": DASH_AVAILABLE,
+            "plotly_available": PLOTLY_AVAILABLE,
+            "web_server_enabled": self.enable_web_server,
+            "app_initialized": self.app is not None,
         }

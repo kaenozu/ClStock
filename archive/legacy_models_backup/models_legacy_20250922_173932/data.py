@@ -41,23 +41,25 @@ class MacroEconomicDataProvider:
             logger.error(f"Economic data fetch failed: {e}")
             return pd.DataFrame()
 
-    def _generate_dummy_economic_data(self, start_date: str, end_date: str) -> pd.DataFrame:
+    def _generate_dummy_economic_data(
+        self, start_date: str, end_date: str
+    ) -> pd.DataFrame:
         """ダミーの経済データを生成"""
-        dates = pd.date_range(start=start_date, end=end_date, freq='D')
+        dates = pd.date_range(start=start_date, end=end_date, freq="D")
 
         # 経済指標のダミーデータ
         np.random.seed(42)
         data = {
-            'gdp_growth': np.random.normal(2.0, 0.5, len(dates)),
-            'inflation_rate': np.random.normal(2.5, 0.3, len(dates)),
-            'unemployment_rate': np.random.normal(4.0, 0.2, len(dates)),
-            'interest_rate': np.random.normal(1.5, 0.1, len(dates)),
-            'consumer_confidence': np.random.normal(100, 10, len(dates)),
-            'manufacturing_pmi': np.random.normal(52, 3, len(dates)),
-            'services_pmi': np.random.normal(53, 3, len(dates)),
-            'dollar_index': np.random.normal(95, 2, len(dates)),
-            'vix_index': np.random.normal(20, 5, len(dates)),
-            'oil_price': np.random.normal(70, 10, len(dates))
+            "gdp_growth": np.random.normal(2.0, 0.5, len(dates)),
+            "inflation_rate": np.random.normal(2.5, 0.3, len(dates)),
+            "unemployment_rate": np.random.normal(4.0, 0.2, len(dates)),
+            "interest_rate": np.random.normal(1.5, 0.1, len(dates)),
+            "consumer_confidence": np.random.normal(100, 10, len(dates)),
+            "manufacturing_pmi": np.random.normal(52, 3, len(dates)),
+            "services_pmi": np.random.normal(53, 3, len(dates)),
+            "dollar_index": np.random.normal(95, 2, len(dates)),
+            "vix_index": np.random.normal(20, 5, len(dates)),
+            "oil_price": np.random.normal(70, 10, len(dates)),
         }
 
         return pd.DataFrame(data, index=dates)
@@ -66,20 +68,20 @@ class MacroEconomicDataProvider:
         """セクター別パフォーマンスを取得"""
         # セクター分類のダミーデータ
         sector_mapping = {
-            'AAPL': 'Technology',
-            'GOOGL': 'Technology',
-            'MSFT': 'Technology',
-            'JPM': 'Financial',
-            'BAC': 'Financial',
-            'JNJ': 'Healthcare',
-            'PFE': 'Healthcare',
-            'XOM': 'Energy',
-            'CVX': 'Energy'
+            "AAPL": "Technology",
+            "GOOGL": "Technology",
+            "MSFT": "Technology",
+            "JPM": "Financial",
+            "BAC": "Financial",
+            "JNJ": "Healthcare",
+            "PFE": "Healthcare",
+            "XOM": "Energy",
+            "CVX": "Energy",
         }
 
         sector_performance = {}
         for symbol in symbols:
-            sector = sector_mapping.get(symbol, 'Unknown')
+            sector = sector_mapping.get(symbol, "Unknown")
             if sector not in sector_performance:
                 # ランダムなパフォーマンス生成
                 sector_performance[sector] = np.random.normal(0.02, 0.05)
@@ -89,11 +91,11 @@ class MacroEconomicDataProvider:
     def get_market_sentiment_indicators(self) -> Dict[str, float]:
         """市場センチメント指標を取得"""
         return {
-            'fear_greed_index': np.random.uniform(0, 100),
-            'put_call_ratio': np.random.uniform(0.5, 1.5),
-            'margin_debt': np.random.uniform(-0.1, 0.1),
-            'insider_trading_ratio': np.random.uniform(-0.05, 0.05),
-            'short_interest': np.random.uniform(0.1, 0.3)
+            "fear_greed_index": np.random.uniform(0, 100),
+            "put_call_ratio": np.random.uniform(0.5, 1.5),
+            "margin_debt": np.random.uniform(-0.1, 0.1),
+            "insider_trading_ratio": np.random.uniform(-0.05, 0.05),
+            "short_interest": np.random.uniform(0.1, 0.3),
         }
 
 
@@ -133,8 +135,8 @@ class SentimentAnalyzer:
             return 0.0
 
         # 簡単なキーワードベースの分析
-        positive_words = ['growth', 'profit', 'increase', 'bull', 'upgrade', 'strong']
-        negative_words = ['loss', 'decline', 'bear', 'downgrade', 'weak', 'crisis']
+        positive_words = ["growth", "profit", "increase", "bull", "upgrade", "strong"]
+        negative_words = ["loss", "decline", "bear", "downgrade", "weak", "crisis"]
 
         total_sentiment = 0.0
         for article in articles:
@@ -145,7 +147,9 @@ class SentimentAnalyzer:
 
             # センチメントスコア計算 (-1 to 1)
             if positive_count + negative_count > 0:
-                article_sentiment = (positive_count - negative_count) / (positive_count + negative_count)
+                article_sentiment = (positive_count - negative_count) / (
+                    positive_count + negative_count
+                )
             else:
                 article_sentiment = 0.0
 
@@ -184,11 +188,11 @@ class SentimentAnalyzer:
             return 0.0
 
         # ソーシャルメディア特有のキーワード
-        positive_emojis = ['🚀', '📈', '💎', '🔥', '👍', '✨']
-        negative_emojis = ['📉', '😭', '💀', '👎', '😰', '🔻']
+        positive_emojis = ["🚀", "📈", "💎", "🔥", "👍", "✨"]
+        negative_emojis = ["📉", "😭", "💀", "👎", "😰", "🔻"]
 
-        bullish_phrases = ['to the moon', 'diamond hands', 'buy the dip', 'hodl']
-        bearish_phrases = ['paper hands', 'dump it', 'sell off', 'crash']
+        bullish_phrases = ["to the moon", "diamond hands", "buy the dip", "hodl"]
+        bearish_phrases = ["paper hands", "dump it", "sell off", "crash"]
 
         total_sentiment = 0.0
         for post in posts:
@@ -207,7 +211,9 @@ class SentimentAnalyzer:
             negative_total = negative_emoji_count + bearish_count
 
             if positive_total + negative_total > 0:
-                post_sentiment = (positive_total - negative_total) / (positive_total + negative_total)
+                post_sentiment = (positive_total - negative_total) / (
+                    positive_total + negative_total
+                )
             else:
                 post_sentiment = 0.0
 
@@ -216,21 +222,31 @@ class SentimentAnalyzer:
         avg_sentiment = total_sentiment / len(posts) if posts else 0.0
         return np.clip(avg_sentiment, -1.0, 1.0)
 
-    def get_sentiment_summary(self, symbol: str, timeframe: str = '1d') -> Dict[str, float]:
+    def get_sentiment_summary(
+        self, symbol: str, timeframe: str = "1d"
+    ) -> Dict[str, float]:
         """センチメントサマリーを取得"""
         # ダミーデータを生成
         base_sentiment = np.random.normal(0, 0.3)
 
         return {
-            'overall_sentiment': np.clip(base_sentiment, -1.0, 1.0),
-            'news_sentiment': np.clip(base_sentiment + np.random.normal(0, 0.1), -1.0, 1.0),
-            'social_sentiment': np.clip(base_sentiment + np.random.normal(0, 0.2), -1.0, 1.0),
-            'analyst_sentiment': np.clip(base_sentiment + np.random.normal(0, 0.15), -1.0, 1.0),
-            'sentiment_momentum': np.random.normal(0, 0.1),
-            'sentiment_volume': np.random.uniform(0.1, 1.0)
+            "overall_sentiment": np.clip(base_sentiment, -1.0, 1.0),
+            "news_sentiment": np.clip(
+                base_sentiment + np.random.normal(0, 0.1), -1.0, 1.0
+            ),
+            "social_sentiment": np.clip(
+                base_sentiment + np.random.normal(0, 0.2), -1.0, 1.0
+            ),
+            "analyst_sentiment": np.clip(
+                base_sentiment + np.random.normal(0, 0.15), -1.0, 1.0
+            ),
+            "sentiment_momentum": np.random.normal(0, 0.1),
+            "sentiment_volume": np.random.uniform(0.1, 1.0),
         }
 
-    def calculate_sentiment_impact(self, current_sentiment: float, historical_sentiment: List[float]) -> float:
+    def calculate_sentiment_impact(
+        self, current_sentiment: float, historical_sentiment: List[float]
+    ) -> float:
         """センチメントの影響度を計算"""
         if not historical_sentiment:
             return 0.0
@@ -240,7 +256,9 @@ class SentimentAnalyzer:
         sentiment_change = current_sentiment - avg_historical
 
         # ボラティリティを考慮
-        sentiment_volatility = np.std(historical_sentiment) if len(historical_sentiment) > 1 else 0.1
+        sentiment_volatility = (
+            np.std(historical_sentiment) if len(historical_sentiment) > 1 else 0.1
+        )
 
         # 影響度計算（標準化）
         impact = sentiment_change / (sentiment_volatility + 0.01)
@@ -255,12 +273,13 @@ class SentimentAnalyzer:
         """キャッシュ統計を取得"""
         now = datetime.now()
         active_entries = sum(
-            1 for _, cached_time in self.sentiment_cache.values()
+            1
+            for _, cached_time in self.sentiment_cache.values()
             if now - cached_time < self.cache_expiry
         )
 
         return {
-            'total_cached_items': len(self.sentiment_cache),
-            'active_cached_items': active_entries,
-            'expired_items': len(self.sentiment_cache) - active_entries
+            "total_cached_items": len(self.sentiment_cache),
+            "active_cached_items": active_entries,
+            "expired_items": len(self.sentiment_cache) - active_entries,
         }

@@ -23,6 +23,7 @@ from models_new.hybrid.prediction_modes import PredictionMode
 from data.stock_data import StockDataProvider
 from data.sector_classification import SectorClassification
 
+
 class InvestmentAdvisorCUI:
     """ClStock投資アドバイザー CUI版"""
 
@@ -34,136 +35,120 @@ class InvestmentAdvisorCUI:
         # 推奨銘柄リスト（ブルーチップ中心45銘柄）
         self.target_symbols = [
             # 自動車・輸送機器（安定大手のみ）
-            '7203.T',   # トヨタ自動車
-            '7267.T',   # ホンダ
-            '7201.T',   # 日産自動車
-            '7269.T',   # スズキ
-
+            "7203.T",  # トヨタ自動車
+            "7267.T",  # ホンダ
+            "7201.T",  # 日産自動車
+            "7269.T",  # スズキ
             # 電機・精密機器（ブルーチップ）
-            '6758.T',   # ソニーグループ
-            '6861.T',   # キーエンス
-            '6954.T',   # ファナック
-            '6981.T',   # 村田製作所
-            '6503.T',   # 三菱電機
-            '6702.T',   # 富士通
-            '6752.T',   # パナソニック
-            '6971.T',   # 京セラ
-            '7751.T',   # キヤノン
-
+            "6758.T",  # ソニーグループ
+            "6861.T",  # キーエンス
+            "6954.T",  # ファナック
+            "6981.T",  # 村田製作所
+            "6503.T",  # 三菱電機
+            "6702.T",  # 富士通
+            "6752.T",  # パナソニック
+            "6971.T",  # 京セラ
+            "7751.T",  # キヤノン
             # 通信・IT（安定大手）
-            '9984.T',   # ソフトバンクグループ
-            '9433.T',   # KDDI
-            '9434.T',   # NTT
-            '9437.T',   # NTTドコモ
-            '6098.T',   # リクルートホールディングス
-            '9613.T',   # NTTデータ
-
+            "9984.T",  # ソフトバンクグループ
+            "9433.T",  # KDDI
+            "9434.T",  # NTT
+            "9437.T",  # NTTドコモ
+            "6098.T",  # リクルートホールディングス
+            "9613.T",  # NTTデータ
             # 金融（メガバンク・大手証券）
-            '8306.T',   # 三菱UFJ
-            '8316.T',   # 三井住友フィナンシャル
-            '8411.T',   # みずほフィナンシャル
-            '8604.T',   # 野村ホールディングス
-
+            "8306.T",  # 三菱UFJ
+            "8316.T",  # 三井住友フィナンシャル
+            "8411.T",  # みずほフィナンシャル
+            "8604.T",  # 野村ホールディングス
             # 商社（5大商社）
-            '8001.T',   # 伊藤忠商事
-            '8058.T',   # 三菱商事
-            '8031.T',   # 三井物産
-            '8053.T',   # 住友商事
-            '8002.T',   # 丸紅
-
+            "8001.T",  # 伊藤忠商事
+            "8058.T",  # 三菱商事
+            "8031.T",  # 三井物産
+            "8053.T",  # 住友商事
+            "8002.T",  # 丸紅
             # 医薬品・化学（安定大手）
-            '4502.T',   # 武田薬品工業
-            '4507.T',   # 塩野義製薬
-            '4503.T',   # アステラス製薬
-            '4005.T',   # 住友化学
-            '4063.T',   # 信越化学工業
-
+            "4502.T",  # 武田薬品工業
+            "4507.T",  # 塩野義製薬
+            "4503.T",  # アステラス製薬
+            "4005.T",  # 住友化学
+            "4063.T",  # 信越化学工業
             # 素材・エネルギー（安定大手）
-            '5401.T',   # 新日鉄住金
-            '5713.T',   # 住友金属鉱山
-            '5020.T',   # ENEOS
-
+            "5401.T",  # 新日鉄住金
+            "5713.T",  # 住友金属鉱山
+            "5020.T",  # ENEOS
             # 消費・小売（ブルーチップ）
-            '7974.T',   # 任天堂
-            '8267.T',   # イオン
-            '9983.T',   # ファーストリテイリング
-            '3382.T',   # セブン&アイ
-            '2914.T',   # JT
-            '2802.T',   # 味の素
-            '4911.T',   # 資生堂
-
+            "7974.T",  # 任天堂
+            "8267.T",  # イオン
+            "9983.T",  # ファーストリテイリング
+            "3382.T",  # セブン&アイ
+            "2914.T",  # JT
+            "2802.T",  # 味の素
+            "4911.T",  # 資生堂
             # 不動産・建設（安定大手）
-            '8802.T',   # 三菱地所
-            '8801.T',   # 三井不動産
-            '1801.T',   # 大成建設
-            '6367.T'    # ダイキン工業
+            "8802.T",  # 三菱地所
+            "8801.T",  # 三井不動産
+            "1801.T",  # 大成建設
+            "6367.T",  # ダイキン工業
         ]
 
         self.symbol_names = {
             # 自動車・輸送機器
-            '7203.T': 'トヨタ自動車',
-            '7267.T': 'ホンダ',
-            '7201.T': '日産自動車',
-            '7269.T': 'スズキ',
-
+            "7203.T": "トヨタ自動車",
+            "7267.T": "ホンダ",
+            "7201.T": "日産自動車",
+            "7269.T": "スズキ",
             # 電機・精密機器
-            '6758.T': 'ソニーグループ',
-            '6861.T': 'キーエンス',
-            '6954.T': 'ファナック',
-            '6981.T': '村田製作所',
-            '6503.T': '三菱電機',
-            '6702.T': '富士通',
-            '6752.T': 'パナソニック',
-            '6971.T': '京セラ',
-            '7751.T': 'キヤノン',
-
+            "6758.T": "ソニーグループ",
+            "6861.T": "キーエンス",
+            "6954.T": "ファナック",
+            "6981.T": "村田製作所",
+            "6503.T": "三菱電機",
+            "6702.T": "富士通",
+            "6752.T": "パナソニック",
+            "6971.T": "京セラ",
+            "7751.T": "キヤノン",
             # 通信・IT
-            '9984.T': 'ソフトバンクG',
-            '9433.T': 'KDDI',
-            '9434.T': 'NTT',
-            '9437.T': 'NTTドコモ',
-            '6098.T': 'リクルート',
-            '9613.T': 'NTTデータ',
-
+            "9984.T": "ソフトバンクG",
+            "9433.T": "KDDI",
+            "9434.T": "NTT",
+            "9437.T": "NTTドコモ",
+            "6098.T": "リクルート",
+            "9613.T": "NTTデータ",
             # 金融
-            '8306.T': '三菱UFJ',
-            '8316.T': '三井住友FG',
-            '8411.T': 'みずほFG',
-            '8604.T': '野村HD',
-
+            "8306.T": "三菱UFJ",
+            "8316.T": "三井住友FG",
+            "8411.T": "みずほFG",
+            "8604.T": "野村HD",
             # 商社
-            '8001.T': '伊藤忠商事',
-            '8058.T': '三菱商事',
-            '8031.T': '三井物産',
-            '8053.T': '住友商事',
-            '8002.T': '丸紅',
-
+            "8001.T": "伊藤忠商事",
+            "8058.T": "三菱商事",
+            "8031.T": "三井物産",
+            "8053.T": "住友商事",
+            "8002.T": "丸紅",
             # 医薬品・化学
-            '4502.T': '武田薬品',
-            '4507.T': '塩野義製薬',
-            '4503.T': 'アステラス製薬',
-            '4005.T': '住友化学',
-            '4063.T': '信越化学',
-
+            "4502.T": "武田薬品",
+            "4507.T": "塩野義製薬",
+            "4503.T": "アステラス製薬",
+            "4005.T": "住友化学",
+            "4063.T": "信越化学",
             # 素材・エネルギー
-            '5401.T': '新日鉄住金',
-            '5713.T': '住友金属鉱山',
-            '5020.T': 'ENEOS',
-
+            "5401.T": "新日鉄住金",
+            "5713.T": "住友金属鉱山",
+            "5020.T": "ENEOS",
             # 消費・小売
-            '7974.T': '任天堂',
-            '8267.T': 'イオン',
-            '9983.T': 'ファーストリテイリング',
-            '3382.T': 'セブン&アイ',
-            '2914.T': 'JT',
-            '2802.T': '味の素',
-            '4911.T': '資生堂',
-
+            "7974.T": "任天堂",
+            "8267.T": "イオン",
+            "9983.T": "ファーストリテイリング",
+            "3382.T": "セブン&アイ",
+            "2914.T": "JT",
+            "2802.T": "味の素",
+            "4911.T": "資生堂",
             # 不動産・建設
-            '8802.T': '三菱地所',
-            '8801.T': '三井不動産',
-            '1801.T': '大成建設',
-            '6367.T': 'ダイキン'
+            "8802.T": "三菱地所",
+            "8801.T": "三井不動産",
+            "1801.T": "大成建設",
+            "6367.T": "ダイキン",
         }
 
     def get_short_term_prediction(self, symbol: str) -> Dict[str, Any]:
@@ -177,13 +162,13 @@ class InvestmentAdvisorCUI:
             if stock_data.empty:
                 return self._create_fallback_prediction(symbol, "short")
 
-            current_price = float(stock_data['Close'].iloc[-1])
+            current_price = float(stock_data["Close"].iloc[-1])
 
             # 短期調整（1日予測用）
-            base_prediction = precision_result.get('final_prediction', current_price)
+            base_prediction = precision_result.get("final_prediction", current_price)
 
             # 短期ボラティリティ調整
-            returns = stock_data['Close'].pct_change()
+            returns = stock_data["Close"].pct_change()
             short_volatility = returns.std() * np.sqrt(252)  # 年率換算
 
             # 短期予測は変動幅を小さく調整
@@ -193,19 +178,19 @@ class InvestmentAdvisorCUI:
             final_prediction = current_price * (1 + adjusted_change)
 
             # 信頼度計算（短期は90.3%精度）
-            base_confidence = precision_result.get('final_confidence', 0.85)
+            base_confidence = precision_result.get("final_confidence", 0.85)
             short_confidence = base_confidence * 0.903  # 90.3%精度を反映
 
             return {
-                'symbol': symbol,
-                'period': '1日',
-                'current_price': current_price,
-                'predicted_price': final_prediction,
-                'price_change_percent': adjusted_change * 100,
-                'confidence': short_confidence,
-                'accuracy_estimate': 90.3,
-                'volatility': short_volatility,
-                'prediction_timestamp': datetime.now()
+                "symbol": symbol,
+                "period": "1日",
+                "current_price": current_price,
+                "predicted_price": final_prediction,
+                "price_change_percent": adjusted_change * 100,
+                "confidence": short_confidence,
+                "accuracy_estimate": 90.3,
+                "volatility": short_volatility,
+                "prediction_timestamp": datetime.now(),
             }
 
         except Exception as e:
@@ -220,24 +205,24 @@ class InvestmentAdvisorCUI:
         recommendation = self._integrate_recommendations(short_term, medium_term)
 
         return {
-            'symbol': symbol,
-            'name': self.symbol_names.get(symbol, symbol),
-            'short_term': short_term,
-            'medium_term': medium_term,
-            'integrated_recommendation': recommendation,
-            'analysis_timestamp': datetime.now()
+            "symbol": symbol,
+            "name": self.symbol_names.get(symbol, symbol),
+            "short_term": short_term,
+            "medium_term": medium_term,
+            "integrated_recommendation": recommendation,
+            "analysis_timestamp": datetime.now(),
         }
 
     def _integrate_recommendations(self, short: Dict, medium: Dict) -> Dict[str, Any]:
         """短期・中期推奨統合"""
-        short_change = short.get('price_change_percent', 0)
-        medium_change = medium.get('price_change_percent', 0)
+        short_change = short.get("price_change_percent", 0)
+        medium_change = medium.get("price_change_percent", 0)
 
-        short_confidence = short.get('confidence', 0.5)
-        medium_confidence = medium.get('confidence', 0.5)
+        short_confidence = short.get("confidence", 0.5)
+        medium_confidence = medium.get("confidence", 0.5)
 
-        medium_signals = medium.get('signals', {})
-        medium_recommendation = medium_signals.get('recommendation', 'HOLD')
+        medium_signals = medium.get("signals", {})
+        medium_recommendation = medium_signals.get("recommendation", "HOLD")
 
         # 具体的な日付計算
         today = datetime.now()
@@ -281,11 +266,13 @@ class InvestmentAdvisorCUI:
             confidence = medium_confidence
         else:
             action = "様子見"
-            timing = f"【待機】{next_week.strftime('%m/%d')}まで様子見、状況変化で再判定"
+            timing = (
+                f"【待機】{next_week.strftime('%m/%d')}まで様子見、状況変化で再判定"
+            )
             confidence = max(short_confidence, medium_confidence)
 
         # 価格ターゲット
-        current_price = short.get('current_price', 0)
+        current_price = short.get("current_price", 0)
         if action in ["強い買い", "買い"]:
             target_price = current_price * (1 + medium_change / 100)
             stop_loss = current_price * 0.95
@@ -297,43 +284,43 @@ class InvestmentAdvisorCUI:
             stop_loss = current_price
 
         return {
-            'action': action,
-            'timing': timing,
-            'confidence': confidence,
-            'target_price': target_price,
-            'stop_loss': stop_loss,
-            'short_term_outlook': f"{short_change:+.1f}%",
-            'medium_term_outlook': f"{medium_change:+.1f}%",
-            'risk_level': self._calculate_risk_level(short, medium)
+            "action": action,
+            "timing": timing,
+            "confidence": confidence,
+            "target_price": target_price,
+            "stop_loss": stop_loss,
+            "short_term_outlook": f"{short_change:+.1f}%",
+            "medium_term_outlook": f"{medium_change:+.1f}%",
+            "risk_level": self._calculate_risk_level(short, medium),
         }
 
     def _calculate_risk_level(self, short: Dict, medium: Dict) -> str:
         """多角的リスクレベル計算"""
         # 1. ボラティリティリスク
-        short_vol = short.get('volatility', 0.3)
-        medium_vol = medium.get('trend_analysis', {}).get('volatility_20d', 0.3)
+        short_vol = short.get("volatility", 0.3)
+        medium_vol = medium.get("trend_analysis", {}).get("volatility_20d", 0.3)
         vol_risk = (short_vol + medium_vol) / 2
 
         # 2. 価格変動幅リスク
-        short_change = abs(short.get('price_change_percent', 0))
-        medium_change = abs(medium.get('price_change_percent', 0))
+        short_change = abs(short.get("price_change_percent", 0))
+        medium_change = abs(medium.get("price_change_percent", 0))
         change_risk = (short_change + medium_change) / 2
 
         # 3. 信頼度逆算リスク（信頼度が低い = リスク高）
-        short_conf = short.get('confidence', 0.5)
-        medium_conf = medium.get('confidence', 0.5)
+        short_conf = short.get("confidence", 0.5)
+        medium_conf = medium.get("confidence", 0.5)
         confidence_risk = 1 - ((short_conf + medium_conf) / 2)
 
         # 4. 銘柄特性リスク（セクター別）
-        symbol = short.get('symbol', '')
+        symbol = short.get("symbol", "")
         sector_risk = self._get_sector_risk(symbol)
 
         # 総合リスクスコア計算（重み付け平均）
         risk_score = (
-            vol_risk * 0.35 +           # ボラティリティ 35%
-            change_risk / 10 * 0.25 +   # 価格変動幅 25%
-            confidence_risk * 0.25 +    # 信頼度逆算 25%
-            sector_risk * 0.15          # セクターリスク 15%
+            vol_risk * 0.35  # ボラティリティ 35%
+            + change_risk / 10 * 0.25  # 価格変動幅 25%
+            + confidence_risk * 0.25  # 信頼度逆算 25%
+            + sector_risk * 0.15  # セクターリスク 15%
         )
 
         # リスクレベル判定（より細かい基準）
@@ -360,7 +347,9 @@ class InvestmentAdvisorCUI:
         all_analyses = []
 
         for i, symbol in enumerate(self.target_symbols[:limit], 1):
-            print(f"分析進行: {i}/{min(limit, len(self.target_symbols))} - {self.symbol_names.get(symbol, symbol)}")
+            print(
+                f"分析進行: {i}/{min(limit, len(self.target_symbols))} - {self.symbol_names.get(symbol, symbol)}"
+            )
 
             try:
                 analysis = self.get_comprehensive_analysis(symbol)
@@ -370,25 +359,27 @@ class InvestmentAdvisorCUI:
                 continue
 
         # 推奨度でソート
-        sorted_analyses = sorted(all_analyses,
-                               key=lambda x: self._calculate_recommendation_score(x),
-                               reverse=True)
+        sorted_analyses = sorted(
+            all_analyses,
+            key=lambda x: self._calculate_recommendation_score(x),
+            reverse=True,
+        )
 
         return sorted_analyses
 
     def _calculate_recommendation_score(self, analysis: Dict) -> float:
         """推奨度スコア計算"""
-        integrated = analysis.get('integrated_recommendation', {})
-        action = integrated.get('action', '様子見')
-        confidence = integrated.get('confidence', 0.5)
+        integrated = analysis.get("integrated_recommendation", {})
+        action = integrated.get("action", "様子見")
+        confidence = integrated.get("confidence", 0.5)
 
         # アクション別スコア
         action_scores = {
-            '強い買い': 100,
-            '買い': 80,
-            '様子見': 50,
-            '売り': 20,
-            '強い売り': 0
+            "強い買い": 100,
+            "買い": 80,
+            "様子見": 50,
+            "売り": 20,
+            "強い売り": 0,
         }
 
         base_score = action_scores.get(action, 50)
@@ -396,7 +387,9 @@ class InvestmentAdvisorCUI:
 
         return base_score * confidence_multiplier
 
-    def display_recommendations(self, recommendations: List[Dict], show_details: bool = False):
+    def display_recommendations(
+        self, recommendations: List[Dict], show_details: bool = False
+    ):
         """推奨結果表示"""
         print("\n" + "=" * 80)
         print("ClStock 90.3%精度 投資推奨レポート")
@@ -412,9 +405,9 @@ class InvestmentAdvisorCUI:
         print("-" * 80)
 
         for i, rec in enumerate(recommendations, 1):
-            integrated = rec['integrated_recommendation']
-            short = rec['short_term']
-            medium = rec['medium_term']
+            integrated = rec["integrated_recommendation"]
+            short = rec["short_term"]
+            medium = rec["medium_term"]
 
             print(f"\n{i}位: {rec['name']} ({rec['symbol']})")
             print(f"推奨: {integrated['action']}")
@@ -425,40 +418,45 @@ class InvestmentAdvisorCUI:
             print(f"信頼度: {integrated['confidence']:.1%}")
             print(f"リスク: {integrated['risk_level']}")
 
-            if integrated['action'] in ['強い買い', '買い']:
+            if integrated["action"] in ["強い買い", "買い"]:
                 print(f"目標価格: {integrated['target_price']:,.0f}円")
                 print(f"損切価格: {integrated['stop_loss']:,.0f}円")
 
             if show_details:
-                medium_signals = medium.get('signals', {})
-                if medium_signals.get('reasoning'):
+                medium_signals = medium.get("signals", {})
+                if medium_signals.get("reasoning"):
                     print("詳細理由:")
-                    for reason in medium_signals['reasoning'][:3]:
+                    for reason in medium_signals["reasoning"][:3]:
                         print(f"  - {reason}")
 
             print("-" * 40)
 
-    def _create_fallback_prediction(self, symbol: str, period_type: str, error: str = None) -> Dict[str, Any]:
+    def _create_fallback_prediction(
+        self, symbol: str, period_type: str, error: str = None
+    ) -> Dict[str, Any]:
         """フォールバック予測"""
         return {
-            'symbol': symbol,
-            'period': '1日' if period_type == 'short' else '1ヶ月',
-            'current_price': 0,
-            'predicted_price': 0,
-            'price_change_percent': 0,
-            'confidence': 0.3,
-            'accuracy_estimate': 90.3 if period_type == 'short' else 89.4,
-            'volatility': 0.3,
-            'prediction_timestamp': datetime.now(),
-            'error': error
+            "symbol": symbol,
+            "period": "1日" if period_type == "short" else "1ヶ月",
+            "current_price": 0,
+            "predicted_price": 0,
+            "price_change_percent": 0,
+            "confidence": 0.3,
+            "accuracy_estimate": 90.3 if period_type == "short" else 89.4,
+            "volatility": 0.3,
+            "prediction_timestamp": datetime.now(),
+            "error": error,
         }
+
 
 def main():
     """メイン実行"""
-    parser = argparse.ArgumentParser(description='ClStock投資アドバイザー CUI版')
-    parser.add_argument('--symbol', '-s', type=str, help='特定銘柄分析 (例: 7203.T)')
-    parser.add_argument('--top', '-t', type=int, default=5, help='上位N銘柄表示 (デフォルト: 5)')
-    parser.add_argument('--details', '-d', action='store_true', help='詳細表示')
+    parser = argparse.ArgumentParser(description="ClStock投資アドバイザー CUI版")
+    parser.add_argument("--symbol", "-s", type=str, help="特定銘柄分析 (例: 7203.T)")
+    parser.add_argument(
+        "--top", "-t", type=int, default=5, help="上位N銘柄表示 (デフォルト: 5)"
+    )
+    parser.add_argument("--details", "-d", action="store_true", help="詳細表示")
 
     args = parser.parse_args()
 
@@ -473,6 +471,7 @@ def main():
         # トップ推奨銘柄
         recommendations = advisor.get_top_recommendations(args.top)
         advisor.display_recommendations(recommendations, show_details=args.details)
+
 
 if __name__ == "__main__":
     main()

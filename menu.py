@@ -15,20 +15,23 @@ from datetime import datetime
 if sys.platform == "win32":
     os.system("color")
 
+
 class Colors:
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    MAGENTA = '\033[35m'
+    HEADER = "\033[95m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    MAGENTA = "\033[35m"
+
 
 def clear_screen():
     """画面クリア"""
-    os.system('cls' if os.name == 'nt' else 'clear')
+    os.system("cls" if os.name == "nt" else "clear")
+
 
 def print_header():
     """最新ヘッダー表示"""
@@ -44,6 +47,7 @@ def print_header():
     print("     144倍高速化 × 91.4%精度 両立達成")
     print("=" * 70)
     print(f"{Colors.ENDC}")
+
 
 def show_main_menu():
     """フルオート基準の簡素化メニュー"""
@@ -63,15 +67,20 @@ def show_main_menu():
     print("  5. システム設定")
     print("  6. ヘルプ・使い方")
     print()
-    
+
     print("  0. 終了")
     print()
+
 
 def run_hybrid_prediction():
     """ハイブリッド予測システム（メイン機能）"""
     clear_screen()
-    print(f"{Colors.MAGENTA}{Colors.BOLD}【ハイブリッド予測システム v2.0】{Colors.ENDC}")
-    print(f"{Colors.CYAN}速度と精度の革新的両立 - 144倍高速化 × 91.4%精度{Colors.ENDC}\n")
+    print(
+        f"{Colors.MAGENTA}{Colors.BOLD}【ハイブリッド予測システム v2.0】{Colors.ENDC}"
+    )
+    print(
+        f"{Colors.CYAN}速度と精度の革新的両立 - 144倍高速化 × 91.4%精度{Colors.ENDC}\n"
+    )
 
     print(f"{Colors.YELLOW}予測モードを選択:{Colors.ENDC}")
     print("1. 速度優先 - 0.018秒/銘柄 (250銘柄/秒)")
@@ -92,7 +101,10 @@ def run_hybrid_prediction():
     print(f"\n{Colors.CYAN}ハイブリッド予測実行中...{Colors.ENDC}")
 
     try:
-        from models_new.hybrid.hybrid_predictor import HybridStockPredictor, PredictionMode
+        from models_new.hybrid.hybrid_predictor import (
+            HybridStockPredictor,
+            PredictionMode,
+        )
         from data.stock_data import StockDataProvider
 
         # モードマッピング
@@ -100,14 +112,14 @@ def run_hybrid_prediction():
             "1": PredictionMode.SPEED_PRIORITY,
             "2": PredictionMode.ACCURACY_PRIORITY,
             "3": PredictionMode.BALANCED,
-            "4": PredictionMode.AUTO
+            "4": PredictionMode.AUTO,
         }
 
         mode_names = {
             "1": "速度優先",
             "2": "精度優先",
             "3": "バランス",
-            "4": "自動選択"
+            "4": "自動選択",
         }
 
         selected_mode = mode_map.get(mode_choice, PredictionMode.AUTO)
@@ -129,8 +141,10 @@ def run_hybrid_prediction():
 
         elif target_choice == "2":
             # バッチ予測
-            symbols_input = input("銘柄コード（カンマ区切り、例: 7203,6758,8306）: ").strip()
-            symbols = [s.strip() for s in symbols_input.split(',') if s.strip()]
+            symbols_input = input(
+                "銘柄コード（カンマ区切り、例: 7203,6758,8306）: "
+            ).strip()
+            symbols = [s.strip() for s in symbols_input.split(",") if s.strip()]
 
             if not symbols:
                 symbols = ["7203", "6758", "8306"]
@@ -152,6 +166,7 @@ def run_hybrid_prediction():
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
+
 def display_single_result(result, mode_name):
     """単一予測結果表示"""
     print(f"\n{Colors.GREEN}{Colors.BOLD}【予測結果 - {mode_name}モード】{Colors.ENDC}")
@@ -163,14 +178,17 @@ def display_single_result(result, mode_name):
     print(f"予測時間: {result.metadata.get('prediction_time', 0):.3f}秒")
     print(f"使用システム: {result.metadata.get('system_used', 'unknown')}")
 
-    if result.metadata.get('prediction_strategy') == 'balanced_integrated':
+    if result.metadata.get("prediction_strategy") == "balanced_integrated":
         print(f"\n{Colors.CYAN}【統合詳細】{Colors.ENDC}")
         print(f"拡張システム: {result.metadata.get('enhanced_prediction', 'N/A')}")
         print(f"87%システム: {result.metadata.get('precision_prediction', 'N/A')}")
 
+
 def display_batch_results(results, mode_name):
     """バッチ予測結果表示"""
-    print(f"\n{Colors.GREEN}{Colors.BOLD}【バッチ予測結果 - {mode_name}モード】{Colors.ENDC}")
+    print(
+        f"\n{Colors.GREEN}{Colors.BOLD}【バッチ予測結果 - {mode_name}モード】{Colors.ENDC}"
+    )
     print("=" * 60)
     print(f"処理銘柄数: {len(results)}")
     print("-" * 60)
@@ -178,18 +196,23 @@ def display_batch_results(results, mode_name):
     print("-" * 60)
 
     for i, result in enumerate(results, 1):
-        system_short = result.metadata.get('system_used', 'unknown')[:8]
-        print(f"{i:2d}.  {result.symbol:8s} {result.prediction:7.1f}  {result.confidence:6.2f}  {result.accuracy:5.1f}%  {system_short}")
+        system_short = result.metadata.get("system_used", "unknown")[:8]
+        print(
+            f"{i:2d}.  {result.symbol:8s} {result.prediction:7.1f}  {result.confidence:6.2f}  {result.accuracy:5.1f}%  {system_short}"
+        )
+
 
 def display_recommended_results(results, mode_name):
     """Display recommended stock results"""
-    print(f"\n{Colors.GREEN}{Colors.BOLD}【おすすめ3銘柄予測 - {mode_name}モード】{Colors.ENDC}")
+    print(
+        f"\n{Colors.GREEN}{Colors.BOLD}【おすすめ3銘柄予測 - {mode_name}モード】{Colors.ENDC}"
+    )
     print("=" * 60)
 
     symbol_names = {
         "6758.T": "ソニー",
         "7203.T": "トヨタ自動車",
-        "8306.T": "三菱UFJ銀行"
+        "8306.T": "三菱UFJ銀行",
     }
 
     for i, result in enumerate(results, 1):
@@ -200,17 +223,19 @@ def display_recommended_results(results, mode_name):
         print(f"   精度: {result.accuracy:.1f}%")
         print(f"   時間: {result.metadata.get('prediction_time', 0):.3f}秒")
 
+
 def display_system_stats(hybrid_system):
     """システム統計表示"""
     try:
         stats = hybrid_system.get_performance_stats()
-        if 'total_predictions' in stats:
+        if "total_predictions" in stats:
             print(f"\n{Colors.CYAN}【システム統計】{Colors.ENDC}")
             print(f"総予測回数: {stats['total_predictions']}")
             print(f"平均予測時間: {stats.get('avg_prediction_time', 0):.3f}秒")
             print(f"平均信頼度: {stats.get('avg_confidence', 0):.2f}")
     except:
         pass
+
 
 def run_precision_87():
     """87%精度予測システム"""
@@ -221,7 +246,9 @@ def run_precision_87():
     print(f"\n{Colors.YELLOW}87%精度予測実行中...{Colors.ENDC}")
 
     try:
-        from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+        from models_new.precision.precision_87_system import (
+            Precision87BreakthroughSystem,
+        )
 
         system = Precision87BreakthroughSystem()
         result = system.predict_with_87_precision(symbol)
@@ -232,7 +259,7 @@ def run_precision_87():
         print(f"信頼度: {result['final_confidence']:.1%}")
         print(f"推定精度: {result['final_accuracy']:.1f}%")
 
-        if result.get('precision_87_achieved'):
+        if result.get("precision_87_achieved"):
             print(f"87%達成: {Colors.GREEN}YES{Colors.ENDC}")
         else:
             print(f"87%達成: {Colors.YELLOW}調整中{Colors.ENDC}")
@@ -241,6 +268,7 @@ def run_precision_87():
         print(f"\n{Colors.RED}エラー: {str(e)}{Colors.ENDC}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
+
 
 def run_enhanced_ensemble():
     """拡張アンサンブルシステム"""
@@ -270,6 +298,7 @@ def run_enhanced_ensemble():
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
+
 def run_demo_trading():
     """デモ取引シミュレーション"""
     clear_screen()
@@ -278,7 +307,10 @@ def run_demo_trading():
     try:
         print("デモ取引システムを起動中...")
         import subprocess
-        result = subprocess.run(["python", "demo_start.py"], capture_output=True, text=True)
+
+        result = subprocess.run(
+            ["python", "demo_start.py"], capture_output=True, text=True
+        )
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
@@ -286,6 +318,7 @@ def run_demo_trading():
         print(f"エラー: {str(e)}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
+
 
 def run_tse_optimization():
     """TSE4000最適化"""
@@ -295,7 +328,10 @@ def run_tse_optimization():
     try:
         print("TSE4000最適化を実行中...")
         import subprocess
-        result = subprocess.run(["python", "tse_4000_optimizer.py"], capture_output=True, text=True)
+
+        result = subprocess.run(
+            ["python", "tse_4000_optimizer.py"], capture_output=True, text=True
+        )
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
@@ -303,6 +339,7 @@ def run_tse_optimization():
         print(f"エラー: {str(e)}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
+
 
 def run_investment_advisor():
     """投資アドバイザーCUI"""
@@ -312,7 +349,10 @@ def run_investment_advisor():
     try:
         print("投資アドバイザーを起動中...")
         import subprocess
-        result = subprocess.run(["python", "investment_advisor_cui.py"], capture_output=True, text=True)
+
+        result = subprocess.run(
+            ["python", "investment_advisor_cui.py"], capture_output=True, text=True
+        )
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
@@ -320,6 +360,7 @@ def run_investment_advisor():
         print(f"エラー: {str(e)}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
+
 
 def start_dashboard():
     """Webダッシュボード起動"""
@@ -330,6 +371,7 @@ def start_dashboard():
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
+
 def performance_monitor():
     """パフォーマンス監視"""
     clear_screen()
@@ -338,7 +380,10 @@ def performance_monitor():
     try:
         print("システム性能を測定中...")
         import subprocess
-        result = subprocess.run(["python", "performance_test_enhanced.py"], capture_output=True, text=True)
+
+        result = subprocess.run(
+            ["python", "performance_test_enhanced.py"], capture_output=True, text=True
+        )
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
@@ -346,6 +391,7 @@ def performance_monitor():
         print(f"エラー: {str(e)}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
+
 
 def fetch_data():
     """データ取得"""
@@ -356,6 +402,7 @@ def fetch_data():
     # 簡単なデータ取得テスト
     try:
         from data.stock_data import StockDataProvider
+
         provider = StockDataProvider()
         data = provider.get_stock_data("7203", "5d")
         if not data.empty:
@@ -368,6 +415,7 @@ def fetch_data():
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
+
 def run_system_test():
     """システムテスト"""
     clear_screen()
@@ -378,8 +426,10 @@ def run_system_test():
         # test_hybrid_system.pyはarchiveに移動されたため、
         # 新しいテストスイートを使用
         import subprocess
-        result = subprocess.run(["python", "-m", "pytest", "tests/", "-v"],
-                              capture_output=True, text=True)
+
+        result = subprocess.run(
+            ["python", "-m", "pytest", "tests/", "-v"], capture_output=True, text=True
+        )
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
@@ -387,6 +437,7 @@ def run_system_test():
         print(f"エラー: {str(e)}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
+
 
 def show_settings():
     """設定表示"""
@@ -402,6 +453,7 @@ def show_settings():
     print("- 速度目標: 250銘柄/秒")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
+
 
 def show_help():
     """ヘルプ表示"""
@@ -426,6 +478,7 @@ def show_help():
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
+
 def show_optimization_history():
     """最適化履歴"""
     clear_screen()
@@ -446,24 +499,29 @@ def show_optimization_history():
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
+
 def run_full_auto():
     """フルオート - 完全自動投資推奨システム"""
     try:
         print(f"\n{Colors.GREEN}フルオート投資推奨システムを開始します...{Colors.ENDC}")
-        print(f"{Colors.YELLOW}すべて自動で実行されます。しばらくお待ちください...{Colors.ENDC}\n")
-        
+        print(
+            f"{Colors.YELLOW}すべて自動で実行されます。しばらくお待ちください...{Colors.ENDC}\n"
+        )
+
         # フルオートシステムのインポートと実行
         from full_auto_system import FullAutoInvestmentSystem
         import asyncio
-        
+
         async def run_auto():
             auto_system = FullAutoInvestmentSystem()
             recommendations = await auto_system.run_full_auto_analysis()
-            
+
             if recommendations:
-                print(f"\n{Colors.GREEN}{Colors.BOLD}【フルオート投資推奨結果】{Colors.ENDC}")
+                print(
+                    f"\n{Colors.GREEN}{Colors.BOLD}【フルオート投資推奨結果】{Colors.ENDC}"
+                )
                 print("=" * 80)
-                
+
                 for i, rec in enumerate(recommendations, 1):
                     print(f"\n{Colors.CYAN}推奨 {i}: {rec.symbol}{Colors.ENDC}")
                     print(f"  企業名: {rec.company_name}")
@@ -474,21 +532,26 @@ def run_full_auto():
                     print(f"  売り推奨時刻: {rec.sell_timing}")
                     print(f"  理由: {rec.reasoning}")
                     print("-" * 60)
-                
+
                 print(f"\n{Colors.GREEN}フルオート分析が完了しました！{Colors.ENDC}")
             else:
                 print(f"{Colors.YELLOW}現在推奨できる銘柄がありません。{Colors.ENDC}")
-        
+
         # 非同期実行
         asyncio.run(run_auto())
-        
+
     except ImportError as e:
-        print(f"{Colors.RED}フルオートシステムの読み込みに失敗しました: {e}{Colors.ENDC}")
-        print(f"{Colors.YELLOW}システムが完全にインストールされていない可能性があります。{Colors.ENDC}")
+        print(
+            f"{Colors.RED}フルオートシステムの読み込みに失敗しました: {e}{Colors.ENDC}"
+        )
+        print(
+            f"{Colors.YELLOW}システムが完全にインストールされていない可能性があります。{Colors.ENDC}"
+        )
     except Exception as e:
         print(f"{Colors.RED}フルオート実行中にエラーが発生しました: {e}{Colors.ENDC}")
-    
+
     input(f"\n{Colors.BOLD}Enterキーで戻る...{Colors.ENDC}")
+
 
 def main():
     """フルオート基準メインループ"""
@@ -500,7 +563,9 @@ def main():
         choice = input(f"{Colors.BOLD}選択してください (0-6): {Colors.ENDC}").strip()
 
         if choice == "0":
-            print(f"\n{Colors.GREEN}ClStock フルオートシステムを終了します。ありがとうございました！{Colors.ENDC}")
+            print(
+                f"\n{Colors.GREEN}ClStock フルオートシステムを終了します。ありがとうございました！{Colors.ENDC}"
+            )
             break
         elif choice == "1":
             run_full_auto()  # フルオート（メイン機能）
@@ -517,6 +582,7 @@ def main():
         else:
             print(f"{Colors.RED}無効な選択です (0-6を入力してください){Colors.ENDC}")
             time.sleep(1)
+
 
 if __name__ == "__main__":
     main()

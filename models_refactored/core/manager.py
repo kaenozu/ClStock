@@ -22,8 +22,8 @@ class ModelManager:
         try:
             self.models[name] = predictor
             self.model_metadata[name] = {
-                'registered_at': datetime.now(),
-                'model_info': predictor.get_model_info()
+                "registered_at": datetime.now(),
+                "model_info": predictor.get_model_info(),
             }
             self.logger.info(f"Model registered: {name}")
             return True

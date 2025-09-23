@@ -15,6 +15,7 @@ import pandas as pd
 @dataclass
 class PredictionResult:
     """予測結果の標準データ構造"""
+
     prediction: float
     confidence: float
     accuracy: float
@@ -26,6 +27,7 @@ class PredictionResult:
 @dataclass
 class ModelPerformance:
     """モデルパフォーマンス指標"""
+
     accuracy: float
     precision: float
     recall: float
@@ -75,7 +77,7 @@ class DataProvider(ABC):
 @dataclass
 class TickData:
     """株価ティックデータ"""
-    
+
     symbol: str
     timestamp: datetime
     price: float
@@ -85,20 +87,20 @@ class TickData:
     trade_type: str = "unknown"  # buy, sell, unknown
 
 
-@dataclass  
+@dataclass
 class OrderBookData:
     """板情報データ"""
-    
+
     symbol: str
     timestamp: datetime
     bids: List[Tuple[float, int]]  # (price, volume) のリスト
     asks: List[Tuple[float, int]]  # (price, volume) のリスト
-    
+
 
 @dataclass
 class IndexData:
     """指数データ"""
-    
+
     symbol: str  # NIKKEI, TOPIX, etc.
     timestamp: datetime
     value: float
@@ -109,7 +111,7 @@ class IndexData:
 @dataclass
 class NewsData:
     """ニュース・イベントデータ"""
-    
+
     id: str
     timestamp: datetime
     title: str
@@ -122,7 +124,7 @@ class NewsData:
 @dataclass
 class MarketData:
     """市場データの統合形式"""
-    
+
     timestamp: datetime
     tick_data: List[TickData]
     order_books: List[OrderBookData]
@@ -132,52 +134,52 @@ class MarketData:
 
 class RealTimeDataProvider(DataProvider):
     """リアルタイムデータプロバイダーの基底インターフェース"""
-    
+
     @abstractmethod
     async def connect(self) -> bool:
         """データソースに接続"""
         pass
-    
+
     @abstractmethod
     async def disconnect(self) -> None:
         """データソース接続を切断"""
         pass
-    
+
     @abstractmethod
     async def subscribe_ticks(self, symbols: List[str]) -> None:
         """ティックデータの購読を開始"""
         pass
-    
+
     @abstractmethod
     async def subscribe_order_book(self, symbols: List[str]) -> None:
         """板情報の購読を開始"""
         pass
-    
+
     @abstractmethod
     async def subscribe_indices(self, indices: List[str]) -> None:
         """指数データの購読を開始"""
         pass
-    
+
     @abstractmethod
     async def subscribe_news(self, symbols: Optional[List[str]] = None) -> None:
         """ニュースデータの購読を開始"""
         pass
-    
+
     @abstractmethod
     async def get_latest_tick(self, symbol: str) -> Optional[TickData]:
         """最新のティックデータを取得"""
         pass
-    
+
     @abstractmethod
     async def get_latest_order_book(self, symbol: str) -> Optional[OrderBookData]:
         """最新の板情報を取得"""
         pass
-    
+
     @abstractmethod
     async def get_market_status(self) -> Dict[str, Any]:
         """市場状況を取得"""
         pass
-    
+
     @abstractmethod
     async def is_connected(self) -> bool:
         """接続状態を確認"""
@@ -186,17 +188,17 @@ class RealTimeDataProvider(DataProvider):
 
 class DataQualityMonitor(ABC):
     """データ品質監視インターフェース"""
-    
+
     @abstractmethod
     def validate_tick_data(self, tick: TickData) -> bool:
         """ティックデータの品質検証"""
         pass
-    
+
     @abstractmethod
     def validate_order_book(self, order_book: OrderBookData) -> bool:
         """板情報の品質検証"""
         pass
-    
+
     @abstractmethod
     def get_quality_metrics(self) -> Dict[str, float]:
         """データ品質メトリクスを取得"""

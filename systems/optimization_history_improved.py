@@ -28,6 +28,7 @@ UUID_SUFFIX_LENGTH = 8
 @dataclass
 class OptimizationRecord:
     """最適化記録"""
+
     id: str
     timestamp: datetime
     stocks: List[str]
@@ -41,7 +42,11 @@ class OptimizationRecord:
 class OptimizationHistoryManager:
     """最適化履歴管理クラス（改善版）"""
 
-    def __init__(self, history_dir: str = "optimization_history", logger_instance: Optional[logging.Logger] = None):
+    def __init__(
+        self,
+        history_dir: str = "optimization_history",
+        logger_instance: Optional[logging.Logger] = None,
+    ):
         # ロガー設定
         self.logger = logger_instance or logging.getLogger(__name__)
 
@@ -58,27 +63,33 @@ class OptimizationHistoryManager:
         self.current_config_file = config_dir / "optimal_stocks.json"
         self.history: List[OptimizationRecord] = self._load_history()
 
-        self.logger.info(f"OptimizationHistoryManager initialized with {len(self.history)} existing records")
+        self.logger.info(
+            f"OptimizationHistoryManager initialized with {len(self.history)} existing records"
+        )
 
     def _load_history(self) -> List[OptimizationRecord]:
         """履歴を読み込む"""
         if not self.history_file.exists():
-            self.logger.info("No existing history file found. Starting with empty history.")
+            self.logger.info(
+                "No existing history file found. Starting with empty history."
+            )
             return []
 
         try:
-            with open(self.history_file, 'r', encoding='utf-8') as f:
+            with open(self.history_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 records = []
                 for item in data:
                     try:
-                        item['timestamp'] = datetime.fromisoformat(item['timestamp'])
+                        item["timestamp"] = datetime.fromisoformat(item["timestamp"])
                         records.append(OptimizationRecord(**item))
                     except (KeyError, ValueError, TypeError) as e:
                         self.logger.warning(f"Skipping invalid record: {e}")
                         continue
 
-                self.logger.info(f"Successfully loaded {len(records)} records from history")
+                self.logger.info(
+                    f"Successfully loaded {len(records)} records from history"
+                )
                 return records
 
         except json.JSONDecodeError as e:
@@ -93,15 +104,16 @@ class OptimizationHistoryManager:
         data = []
         for record in self.history:
             item = asdict(record)
-            item['timestamp'] = record.timestamp.isoformat()
+            item["timestamp"] = record.timestamp.isoformat()
             data.append(item)
 
-        with open(self.history_file, 'w', encoding='utf-8') as f:
+        with open(self.history_file, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
     def _generate_id(self) -> str:
         """一意のIDを生成"""
         import uuid
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         unique_suffix = str(uuid.uuid4())[:UUID_SUFFIX_LENGTH]
         return f"OPT_{timestamp}_{unique_suffix}"
@@ -117,7 +129,7 @@ class OptimizationHistoryManager:
         stocks: List[str],
         performance_metrics: Dict[str, float],
         description: str = "",
-        auto_apply: bool = False
+        auto_apply: bool = False,
     ) -> str:
         """最適化結果を保存"""
 
@@ -136,7 +148,8 @@ class OptimizationHistoryManager:
             performance_metrics=performance_metrics,
             config_hash=config_hash,
             is_active=auto_apply,
-            description=description or f"最適化実行 {datetime.now().strftime('%Y/%m/%d %H:%M')}"
+            description=description
+            or f"最適化実行 {datetime.now().strftime('%Y/%m/%d %H:%M')}",
         )
 
         # 自動適用の場合、他の記録を非アクティブに
@@ -169,10 +182,10 @@ class OptimizationHistoryManager:
         config = {
             "optimal_stocks": stocks,
             "updated_at": datetime.now().isoformat(),
-            "auto_applied": True
+            "auto_applied": True,
         }
 
-        with open(self.current_config_file, 'w', encoding='utf-8') as f:
+        with open(self.current_config_file, "w", encoding="utf-8") as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
 
         self.logger.info(f"設定を適用しました: {len(stocks)}銘柄")
@@ -194,7 +207,7 @@ class OptimizationHistoryManager:
 
         # アクティブ状態を更新
         for r in self.history:
-            r.is_active = (r.id == record_id)
+            r.is_active = r.id == record_id
         self._save_history()
 
         self.logger.info(f"ID {record_id} にロールバックしました")
@@ -243,7 +256,8 @@ class OptimizationHistoryManager:
                 perf_diff[key] = {
                     "record1": record1.performance_metrics[key],
                     "record2": record2.performance_metrics[key],
-                    "diff": record2.performance_metrics[key] - record1.performance_metrics[key]
+                    "diff": record2.performance_metrics[key]
+                    - record1.performance_metrics[key],
                 }
 
         return {
@@ -252,13 +266,15 @@ class OptimizationHistoryManager:
             "common_stocks": list(common_stocks),
             "only_in_1": list(only_in_1),
             "only_in_2": list(only_in_2),
-            "performance_diff": perf_diff
+            "performance_diff": perf_diff,
         }
 
     def cleanup_old_records(self, keep_count: int = DEFAULT_KEEP_RECORDS):
         """古い記録をクリーンアップ"""
         if len(self.history) <= keep_count:
-            self.logger.info(f"No cleanup needed. Current records: {len(self.history)}, Keep count: {keep_count}")
+            self.logger.info(
+                f"No cleanup needed. Current records: {len(self.history)}, Keep count: {keep_count}"
+            )
             return
 
         # タイムスタンプでソート（新しい順）
@@ -269,21 +285,27 @@ class OptimizationHistoryManager:
         inactive_records = [r for r in sorted_history if not r.is_active]
 
         # 保持する記録を選択
-        keep_records = active_records + inactive_records[:keep_count - len(active_records)]
+        keep_records = (
+            active_records + inactive_records[: keep_count - len(active_records)]
+        )
 
         removed_count = len(self.history) - len(keep_records)
 
         self.history = keep_records
         self._save_history()
 
-        self.logger.info(f"Cleaned up {removed_count} old records. Remaining: {len(self.history)}")
+        self.logger.info(
+            f"Cleaned up {removed_count} old records. Remaining: {len(self.history)}"
+        )
 
     def get_statistics(self) -> Dict[str, Any]:
         """統計情報を取得"""
         if not self.history:
             return {"total_records": 0}
 
-        performances = [r.performance_metrics.get('return_rate', 0) for r in self.history]
+        performances = [
+            r.performance_metrics.get("return_rate", 0) for r in self.history
+        ]
 
         # 最新記録を正しく取得（ソート後の最初の要素）
         sorted_history = sorted(self.history, key=lambda x: x.timestamp, reverse=True)
@@ -291,11 +313,15 @@ class OptimizationHistoryManager:
 
         return {
             "total_records": len(self.history),
-            "active_record": self.get_active_record().id if self.get_active_record() else None,
-            "average_return": sum(performances) / len(performances) if performances else 0,
+            "active_record": (
+                self.get_active_record().id if self.get_active_record() else None
+            ),
+            "average_return": (
+                sum(performances) / len(performances) if performances else 0
+            ),
             "best_return": max(performances) if performances else 0,
             "worst_return": min(performances) if performances else 0,
-            "latest_optimization": latest_record.timestamp if latest_record else None
+            "latest_optimization": latest_record.timestamp if latest_record else None,
         }
 
     def get_optimal_stocks_from_config(self) -> List[str]:
@@ -303,6 +329,7 @@ class OptimizationHistoryManager:
         try:
             # 設定ファイルから読み込み
             from config.settings import get_settings
+
             settings = get_settings()
 
             # デフォルトの最適銘柄を返す
@@ -310,9 +337,9 @@ class OptimizationHistoryManager:
 
             # カスタム設定がある場合はそれを使用
             if self.current_config_file.exists():
-                with open(self.current_config_file, 'r', encoding='utf-8') as f:
+                with open(self.current_config_file, "r", encoding="utf-8") as f:
                     config = json.load(f)
-                    return config.get('optimal_stocks', default_optimal_stocks)
+                    return config.get("optimal_stocks", default_optimal_stocks)
 
             return default_optimal_stocks
 
@@ -336,6 +363,7 @@ def get_history_manager() -> OptimizationHistoryManager:
 if __name__ == "__main__":
     # デモ実行
     import logging
+
     logging.basicConfig(level=logging.INFO)
 
     manager = get_history_manager()
@@ -351,7 +379,7 @@ if __name__ == "__main__":
         stocks=sample_stocks,
         performance_metrics=sample_metrics,
         description="サンプル最適化結果",
-        auto_apply=True
+        auto_apply=True,
     )
 
     # 履歴表示
@@ -359,7 +387,9 @@ if __name__ == "__main__":
     for record in manager.list_history(5):
         status = "✅" if record.is_active else "  "
         logger.info(f"{status} {record.id}: {record.description}")
-        logger.info(f"   収益率: {record.performance_metrics.get('return_rate', 0):.2f}%")
+        logger.info(
+            f"   収益率: {record.performance_metrics.get('return_rate', 0):.2f}%"
+        )
 
     # 統計表示
     stats = manager.get_statistics()

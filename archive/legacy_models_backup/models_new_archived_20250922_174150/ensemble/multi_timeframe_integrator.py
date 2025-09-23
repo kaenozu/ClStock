@@ -13,14 +13,14 @@ class MultiTimeframeIntegrator:
 
     def __init__(self):
         self.timeframes = {
-            'short': '3mo',    # 短期：3ヶ月
-            'medium': '1y',    # 中期：1年
-            'long': '2y'       # 長期：2年
+            "short": "3mo",  # 短期：3ヶ月
+            "medium": "1y",  # 中期：1年
+            "long": "2y",  # 長期：2年
         }
         self.weights = {
-            'short': 0.5,      # 短期重視
-            'medium': 0.3,     # 中期
-            'long': 0.2        # 長期
+            "short": 0.5,  # 短期重視
+            "medium": 0.3,  # 中期
+            "long": 0.2,  # 長期
         }
         self.logger = logging.getLogger(__name__)
 
@@ -42,21 +42,27 @@ class MultiTimeframeIntegrator:
                 self.logger.debug(f"Analyzed {timeframe_name} timeframe for {symbol}")
 
             except Exception as e:
-                self.logger.error(f"Error analyzing {timeframe_name} timeframe for {symbol}: {str(e)}")
+                self.logger.error(
+                    f"Error analyzing {timeframe_name} timeframe for {symbol}: {str(e)}"
+                )
 
         # 統合予測の計算
         integrated_prediction = self._calculate_integrated_prediction(timeframe_results)
 
         return {
-            'integrated_prediction': integrated_prediction,
-            'timeframe_details': timeframe_results,
-            'confidence_adjustment': self._calculate_confidence_adjustment(timeframe_results)
+            "integrated_prediction": integrated_prediction,
+            "timeframe_details": timeframe_results,
+            "confidence_adjustment": self._calculate_confidence_adjustment(
+                timeframe_results
+            ),
         }
 
-    def _analyze_timeframe(self, data: pd.DataFrame, timeframe: str) -> Dict[str, float]:
+    def _analyze_timeframe(
+        self, data: pd.DataFrame, timeframe: str
+    ) -> Dict[str, float]:
         """特定タイムフレームの分析"""
         if data.empty or len(data) < 10:
-            return {'trend': 0.0, 'momentum': 0.0, 'volatility': 0.0, 'strength': 0.0}
+            return {"trend": 0.0, "momentum": 0.0, "volatility": 0.0, "strength": 0.0}
 
         # トレンド分析
         trend_score = self._calculate_trend_score(data)
@@ -71,10 +77,10 @@ class MultiTimeframeIntegrator:
         strength_score = (trend_score + momentum_score - abs(volatility_score)) / 3
 
         return {
-            'trend': trend_score,
-            'momentum': momentum_score,
-            'volatility': volatility_score,
-            'strength': strength_score
+            "trend": trend_score,
+            "momentum": momentum_score,
+            "volatility": volatility_score,
+            "strength": strength_score,
         }
 
     def _calculate_trend_score(self, data: pd.DataFrame) -> float:
@@ -83,9 +89,9 @@ class MultiTimeframeIntegrator:
             return 0.0
 
         # 短期・長期移動平均の関係
-        short_ma = data['Close'].rolling(window=10).mean().iloc[-1]
-        long_ma = data['Close'].rolling(window=20).mean().iloc[-1]
-        current_price = data['Close'].iloc[-1]
+        short_ma = data["Close"].rolling(window=10).mean().iloc[-1]
+        long_ma = data["Close"].rolling(window=20).mean().iloc[-1]
+        current_price = data["Close"].iloc[-1]
 
         # トレンド強度
         if short_ma > long_ma and current_price > short_ma:
@@ -106,7 +112,9 @@ class MultiTimeframeIntegrator:
         price_changes = []
         for period in [1, 3, 5]:
             if len(data) > period:
-                change = (data['Close'].iloc[-1] - data['Close'].iloc[-1-period]) / data['Close'].iloc[-1-period]
+                change = (
+                    data["Close"].iloc[-1] - data["Close"].iloc[-1 - period]
+                ) / data["Close"].iloc[-1 - period]
                 price_changes.append(change)
 
         if price_changes:
@@ -120,7 +128,7 @@ class MultiTimeframeIntegrator:
             return 0.0
 
         # 価格変動率の標準偏差
-        returns = data['Close'].pct_change().dropna()
+        returns = data["Close"].pct_change().dropna()
         if len(returns) > 0:
             volatility = returns.std() * np.sqrt(252) * 100  # 年率化
             return min(100, volatility)
@@ -136,7 +144,7 @@ class MultiTimeframeIntegrator:
 
         for timeframe, weight in self.weights.items():
             if timeframe in timeframe_results:
-                strength = timeframe_results[timeframe]['strength']
+                strength = timeframe_results[timeframe]["strength"]
                 weighted_score += strength * weight * 50 + 50  # 0-100スケールに変換
                 total_weight += weight
 
@@ -151,7 +159,7 @@ class MultiTimeframeIntegrator:
             return 0.0
 
         # 各タイムフレームの強度の一致度
-        strengths = [result['strength'] for result in timeframe_results.values()]
+        strengths = [result["strength"] for result in timeframe_results.values()]
         if len(strengths) > 1:
             # 標準偏差が小さいほど一致度が高い
             consistency = 1.0 - (np.std(strengths) / 100.0)

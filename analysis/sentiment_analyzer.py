@@ -56,37 +56,45 @@ class YahooNewsSource(NewsSource):
 
             # 実際のyfinanceライブラリを使用してニュース取得
             import yfinance as yf
-            
+
             stock = yf.Ticker(ticker)
-            
+
             try:
                 # yfinanceのnewsプロパティを使用
                 news_data = stock.news
-                
+
                 if not news_data:
                     logger.warning(f"Yahoo Finance ニュースなし: {symbol}")
                     return []
 
                 # 過去N日以内のニュースのみ
                 cutoff_date = datetime.now() - timedelta(days=days)
-                
+
                 filtered_news = []
                 for news_item in news_data:
                     # Unix timestampを変換
-                    if 'providerPublishTime' in news_item:
-                        publish_time = datetime.fromtimestamp(news_item['providerPublishTime'])
-                        
-                        if publish_time >= cutoff_date:
-                            filtered_news.append({
-                                'title': news_item.get('title', ''),
-                                'summary': news_item.get('summary', ''),
-                                'published': publish_time,
-                                'source': 'Yahoo Finance',
-                                'url': news_item.get('link', ''),
-                                'relevance': self._calculate_relevance(news_item.get('title', ''), symbol)
-                            })
+                    if "providerPublishTime" in news_item:
+                        publish_time = datetime.fromtimestamp(
+                            news_item["providerPublishTime"]
+                        )
 
-                logger.info(f"Yahoo Finance ニュース取得: {symbol} ({len(filtered_news)}件)")
+                        if publish_time >= cutoff_date:
+                            filtered_news.append(
+                                {
+                                    "title": news_item.get("title", ""),
+                                    "summary": news_item.get("summary", ""),
+                                    "published": publish_time,
+                                    "source": "Yahoo Finance",
+                                    "url": news_item.get("link", ""),
+                                    "relevance": self._calculate_relevance(
+                                        news_item.get("title", ""), symbol
+                                    ),
+                                }
+                            )
+
+                logger.info(
+                    f"Yahoo Finance ニュース取得: {symbol} ({len(filtered_news)}件)"
+                )
                 return filtered_news
 
             except Exception as e:
@@ -100,25 +108,25 @@ class YahooNewsSource(NewsSource):
     def _calculate_relevance(self, title: str, symbol: str) -> float:
         """ニュースの関連度を計算"""
         title_lower = title.lower()
-        
+
         # 銘柄コードが含まれている場合は高関連度
         if symbol in title_lower:
             return 0.9
-        
+
         # 会社名マッピング（簡略版）
         company_names = {
-            '7203': ['toyota', 'トヨタ'],
-            '6758': ['sony', 'ソニー'],
-            '9434': ['softbank', 'ソフトバンク'],
-            '8306': ['mufg', '三菱'],
-            '6861': ['keyence', 'キーエンス']
+            "7203": ["toyota", "トヨタ"],
+            "6758": ["sony", "ソニー"],
+            "9434": ["softbank", "ソフトバンク"],
+            "8306": ["mufg", "三菱"],
+            "6861": ["keyence", "キーエンス"],
         }
-        
+
         if symbol in company_names:
             for name in company_names[symbol]:
                 if name.lower() in title_lower:
                     return 0.8
-        
+
         return 0.5  # デフォルト関連度
 
 
@@ -129,7 +137,7 @@ class JapanNewsSource(NewsSource):
         super().__init__("JapanNews")
         self.search_engines = [
             "https://news.google.com/rss/search",
-            "https://feeds.finance.yahoo.co.jp/rss/2.0/headline"
+            "https://feeds.finance.yahoo.co.jp/rss/2.0/headline",
         ]
 
     def fetch_news(self, symbol: str, days: int = 7) -> List[Dict[str, Any]]:
@@ -139,19 +147,19 @@ class JapanNewsSource(NewsSource):
 
             # 会社名マッピング
             company_names = {
-                '7203': 'トヨタ自動車',
-                '6758': 'ソニーグループ',
-                '9434': 'ソフトバンク',
-                '8306': '三菱UFJフィナンシャル',
-                '6861': 'キーエンス',
-                '6701': '日本電気',
-                '8316': '三井住友フィナンシャル',
-                '8411': 'みずほフィナンシャル',
-                '8058': '三菱商事',
-                '8001': '伊藤忠商事'
+                "7203": "トヨタ自動車",
+                "6758": "ソニーグループ",
+                "9434": "ソフトバンク",
+                "8306": "三菱UFJフィナンシャル",
+                "6861": "キーエンス",
+                "6701": "日本電気",
+                "8316": "三井住友フィナンシャル",
+                "8411": "みずほフィナンシャル",
+                "8058": "三菱商事",
+                "8001": "伊藤忠商事",
             }
 
-            company_name = company_names.get(symbol, f'{symbol}関連企業')
+            company_name = company_names.get(symbol, f"{symbol}関連企業")
             search_query = f"{company_name} OR {symbol}"
 
             all_news = []
@@ -199,14 +207,18 @@ class JapanNewsSource(NewsSource):
                     published_time = datetime(*entry.published_parsed[:6])
 
                     if published_time >= cutoff_date:
-                        news_list.append({
-                            'title': entry.title,
-                            'summary': entry.get('summary', ''),
-                            'published': published_time,
-                            'source': 'Google News',
-                            'url': entry.link,
-                            'relevance': self._calculate_relevance_jp(entry.title, query)
-                        })
+                        news_list.append(
+                            {
+                                "title": entry.title,
+                                "summary": entry.get("summary", ""),
+                                "published": published_time,
+                                "source": "Google News",
+                                "url": entry.link,
+                                "relevance": self._calculate_relevance_jp(
+                                    entry.title, query
+                                ),
+                            }
+                        )
 
                 except Exception as e:
                     logger.debug(f"Google News エントリー解析エラー: {e}")
@@ -215,7 +227,9 @@ class JapanNewsSource(NewsSource):
             return news_list
 
         except ImportError:
-            logger.warning("feedparser not installed. Install with: pip install feedparser")
+            logger.warning(
+                "feedparser not installed. Install with: pip install feedparser"
+            )
             return []
         except Exception as e:
             logger.error(f"Google News取得エラー: {e}")
@@ -228,6 +242,7 @@ class JapanNewsSource(NewsSource):
             rss_url = "https://feeds.finance.yahoo.co.jp/rss/2.0/headline"
 
             import feedparser
+
             feed = feedparser.parse(rss_url)
 
             if not feed.entries:
@@ -244,14 +259,18 @@ class JapanNewsSource(NewsSource):
                     if published_time >= cutoff_date:
                         # クエリに関連するニュースのみ
                         if self._is_relevant_to_query(entry.title, query):
-                            news_list.append({
-                                'title': entry.title,
-                                'summary': entry.get('summary', ''),
-                                'published': published_time,
-                                'source': 'Yahoo Finance Japan',
-                                'url': entry.link,
-                                'relevance': self._calculate_relevance_jp(entry.title, query)
-                            })
+                            news_list.append(
+                                {
+                                    "title": entry.title,
+                                    "summary": entry.get("summary", ""),
+                                    "published": published_time,
+                                    "source": "Yahoo Finance Japan",
+                                    "url": entry.link,
+                                    "relevance": self._calculate_relevance_jp(
+                                        entry.title, query
+                                    ),
+                                }
+                            )
 
                 except Exception as e:
                     logger.debug(f"Yahoo JP エントリー解析エラー: {e}")
@@ -269,7 +288,7 @@ class JapanNewsSource(NewsSource):
     def _is_relevant_to_query(self, title: str, query: str) -> bool:
         """クエリに関連するかチェック"""
         title_lower = title.lower()
-        query_terms = query.lower().split(' or ')
+        query_terms = query.lower().split(" or ")
 
         for term in query_terms:
             term = term.strip()
@@ -281,7 +300,7 @@ class JapanNewsSource(NewsSource):
     def _calculate_relevance_jp(self, title: str, query: str) -> float:
         """日本語ニュースの関連度計算"""
         title_lower = title.lower()
-        query_terms = query.lower().split(' or ')
+        query_terms = query.lower().split(" or ")
 
         relevance_score = 0.0
         for term in query_terms:
@@ -290,20 +309,22 @@ class JapanNewsSource(NewsSource):
                 relevance_score += 0.3
 
         # 株式、証券、投資関連キーワードでボーナス
-        stock_keywords = ['株価', '決算', '業績', '増益', '減益', '投資', '証券']
+        stock_keywords = ["株価", "決算", "業績", "増益", "減益", "投資", "証券"]
         for keyword in stock_keywords:
             if keyword in title:
                 relevance_score += 0.1
 
         return min(relevance_score, 1.0)
 
-    def _remove_duplicates(self, news_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _remove_duplicates(
+        self, news_list: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """重複ニュースを除去"""
         seen_titles = set()
         unique_news = []
 
         for news in news_list:
-            title_key = news['title'].lower().strip()
+            title_key = news["title"].lower().strip()
             if title_key not in seen_titles:
                 seen_titles.add(title_key)
                 unique_news.append(news)
@@ -316,20 +337,52 @@ class SentimentAnalyzer:
 
     def __init__(self):
         self.positive_keywords = [
-            '上昇', '好調', '増益', '増収', '成長', '拡大', '好材料',
-            '買い推奨', 'アップグレード', '目標株価引き上げ', '強気',
-            '過去最高', '記録的', '堅調', '回復', '改善'
+            "上昇",
+            "好調",
+            "増益",
+            "増収",
+            "成長",
+            "拡大",
+            "好材料",
+            "買い推奨",
+            "アップグレード",
+            "目標株価引き上げ",
+            "強気",
+            "過去最高",
+            "記録的",
+            "堅調",
+            "回復",
+            "改善",
         ]
 
         self.negative_keywords = [
-            '下落', '不調', '減益', '減収', '縮小', '悪材料',
-            '売り推奨', 'ダウングレード', '目標株価引き下げ', '弱気',
-            '最安値', '低迷', '悪化', '懸念', 'リスク', '下方修正'
+            "下落",
+            "不調",
+            "減益",
+            "減収",
+            "縮小",
+            "悪材料",
+            "売り推奨",
+            "ダウングレード",
+            "目標株価引き下げ",
+            "弱気",
+            "最安値",
+            "低迷",
+            "悪化",
+            "懸念",
+            "リスク",
+            "下方修正",
         ]
 
         self.neutral_keywords = [
-            '維持', '横ばい', '変わらず', '据え置き', '様子見',
-            '中立', '保留', '継続'
+            "維持",
+            "横ばい",
+            "変わらず",
+            "据え置き",
+            "様子見",
+            "中立",
+            "保留",
+            "継続",
         ]
 
     def analyze_text(self, text: str) -> Dict[str, float]:
@@ -343,18 +396,18 @@ class SentimentAnalyzer:
         total_score = positive_score + negative_score + neutral_score
 
         if total_score == 0:
-            return {'positive': 0.33, 'negative': 0.33, 'neutral': 0.34}
+            return {"positive": 0.33, "negative": 0.33, "neutral": 0.34}
 
         return {
-            'positive': positive_score / total_score,
-            'negative': negative_score / total_score,
-            'neutral': neutral_score / total_score
+            "positive": positive_score / total_score,
+            "negative": negative_score / total_score,
+            "neutral": neutral_score / total_score,
         }
 
     def get_sentiment_score(self, text: str) -> float:
         """センチメントスコア（-1.0 to 1.0）"""
         sentiment = self.analyze_text(text)
-        return sentiment['positive'] - sentiment['negative']
+        return sentiment["positive"] - sentiment["negative"]
 
 
 class MarketSentimentAnalyzer:
@@ -363,10 +416,7 @@ class MarketSentimentAnalyzer:
     def __init__(self):
         self.settings = get_settings()
         self.sentiment_analyzer = SentimentAnalyzer()
-        self.news_sources = [
-            YahooNewsSource(),
-            JapanNewsSource()
-        ]
+        self.news_sources = [YahooNewsSource(), JapanNewsSource()]
 
     def fetch_all_news(self, symbol: str, days: int = 7) -> List[Dict[str, Any]]:
         """全ソースからニュース取得"""
@@ -389,18 +439,20 @@ class MarketSentimentAnalyzer:
 
         # 重複除去と時系列ソート
         all_news = self._deduplicate_news(all_news)
-        all_news.sort(key=lambda x: x['published'], reverse=True)
+        all_news.sort(key=lambda x: x["published"], reverse=True)
 
         logger.info(f"全ニュース取得完了 {symbol}: {len(all_news)}件")
         return all_news
 
-    def _deduplicate_news(self, news_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _deduplicate_news(
+        self, news_list: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """ニュース重複除去"""
         seen_titles = set()
         unique_news = []
 
         for news in news_list:
-            title_key = news['title'].lower().strip()
+            title_key = news["title"].lower().strip()
             if title_key not in seen_titles:
                 seen_titles.add(title_key)
                 unique_news.append(news)
@@ -430,29 +482,33 @@ class MarketSentimentAnalyzer:
                 sentiment_detail = self.sentiment_analyzer.analyze_text(full_text)
 
                 # 時間重み（新しいニュースほど重要）
-                hours_ago = (datetime.now() - news['published']).total_seconds() / 3600
+                hours_ago = (datetime.now() - news["published"]).total_seconds() / 3600
                 time_weight = max(0.1, 1.0 / (1.0 + hours_ago / 24))  # 24時間で半減
 
                 # 関連度重み
-                relevance = news.get('relevance', 0.5)
+                relevance = news.get("relevance", 0.5)
 
                 # 総合重み
                 total_weight = time_weight * relevance
 
-                analyzed_news.append({
-                    **news,
-                    'sentiment_score': sentiment_score,
-                    'sentiment_detail': sentiment_detail,
-                    'time_weight': time_weight,
-                    'total_weight': total_weight
-                })
+                analyzed_news.append(
+                    {
+                        **news,
+                        "sentiment_score": sentiment_score,
+                        "sentiment_detail": sentiment_detail,
+                        "time_weight": time_weight,
+                        "total_weight": total_weight,
+                    }
+                )
 
                 sentiment_scores.append(sentiment_score)
                 relevance_weights.append(total_weight)
 
             # 加重平均でセンチメントスコア計算
             if relevance_weights and sum(relevance_weights) > 0:
-                weighted_sentiment = np.average(sentiment_scores, weights=relevance_weights)
+                weighted_sentiment = np.average(
+                    sentiment_scores, weights=relevance_weights
+                )
             else:
                 weighted_sentiment = np.mean(sentiment_scores)
 
@@ -468,17 +524,17 @@ class MarketSentimentAnalyzer:
                 sentiment_direction = "neutral"
 
             result = {
-                'symbol': symbol,
-                'analysis_time': datetime.now(),
-                'news_count': len(news_list),
-                'sentiment_score': float(weighted_sentiment),  # -1.0 to 1.0
-                'sentiment_strength': float(sentiment_strength),  # 0.0 to 1.0
-                'sentiment_direction': sentiment_direction,
-                'confidence': min(0.9, sentiment_strength + 0.1),
-                'analyzed_news': analyzed_news[:10],  # 最新10件
-                'summary': self._generate_sentiment_summary(
+                "symbol": symbol,
+                "analysis_time": datetime.now(),
+                "news_count": len(news_list),
+                "sentiment_score": float(weighted_sentiment),  # -1.0 to 1.0
+                "sentiment_strength": float(sentiment_strength),  # 0.0 to 1.0
+                "sentiment_direction": sentiment_direction,
+                "confidence": min(0.9, sentiment_strength + 0.1),
+                "analyzed_news": analyzed_news[:10],  # 最新10件
+                "summary": self._generate_sentiment_summary(
                     sentiment_direction, sentiment_strength, len(news_list)
-                )
+                ),
             }
 
             logger.info(
@@ -495,26 +551,30 @@ class MarketSentimentAnalyzer:
     def _default_sentiment_result(self, symbol: str, reason: str) -> Dict[str, Any]:
         """デフォルトセンチメント結果"""
         return {
-            'symbol': symbol,
-            'analysis_time': datetime.now(),
-            'news_count': 0,
-            'sentiment_score': 0.0,
-            'sentiment_strength': 0.0,
-            'sentiment_direction': 'neutral',
-            'confidence': 0.1,
-            'analyzed_news': [],
-            'summary': f"センチメント分析不可: {reason}",
-            'error': reason
+            "symbol": symbol,
+            "analysis_time": datetime.now(),
+            "news_count": 0,
+            "sentiment_score": 0.0,
+            "sentiment_strength": 0.0,
+            "sentiment_direction": "neutral",
+            "confidence": 0.1,
+            "analyzed_news": [],
+            "summary": f"センチメント分析不可: {reason}",
+            "error": reason,
         }
 
-    def _generate_sentiment_summary(self, direction: str, strength: float, news_count: int) -> str:
+    def _generate_sentiment_summary(
+        self, direction: str, strength: float, news_count: int
+    ) -> str:
         """センチメントサマリー生成"""
-        strength_desc = "強い" if strength > 0.6 else "中程度の" if strength > 0.3 else "弱い"
+        strength_desc = (
+            "強い" if strength > 0.6 else "中程度の" if strength > 0.3 else "弱い"
+        )
 
         direction_map = {
-            'positive': 'ポジティブ',
-            'negative': 'ネガティブ',
-            'neutral': '中立'
+            "positive": "ポジティブ",
+            "negative": "ネガティブ",
+            "neutral": "中立",
         }
 
         return (
@@ -526,7 +586,7 @@ class MarketSentimentAnalyzer:
         self,
         symbol: str,
         technical_signal: Dict[str, Any],
-        sentiment_weight: float = 0.3
+        sentiment_weight: float = 0.3,
     ) -> Dict[str, Any]:
         """技術分析とセンチメント分析の統合"""
         try:
@@ -534,18 +594,17 @@ class MarketSentimentAnalyzer:
             sentiment_result = self.analyze_news_sentiment(symbol)
 
             # 技術分析の信頼度と信号
-            tech_confidence = technical_signal.get('confidence', 0.5)
-            tech_signal_value = technical_signal.get('signal', 0)
+            tech_confidence = technical_signal.get("confidence", 0.5)
+            tech_signal_value = technical_signal.get("signal", 0)
 
             # センチメントの影響
-            sentiment_score = sentiment_result['sentiment_score']
-            sentiment_confidence = sentiment_result['confidence']
+            sentiment_score = sentiment_result["sentiment_score"]
+            sentiment_confidence = sentiment_result["confidence"]
 
             # 統合信頼度計算
             tech_weight = 1.0 - sentiment_weight
             integrated_confidence = (
-                tech_confidence * tech_weight +
-                sentiment_confidence * sentiment_weight
+                tech_confidence * tech_weight + sentiment_confidence * sentiment_weight
             )
 
             # センチメントによる信号調整
@@ -555,23 +614,31 @@ class MarketSentimentAnalyzer:
             if tech_signal_value == 1:  # 買いシグナル
                 if sentiment_score > 0.2:  # ポジティブセンチメント
                     final_signal = 1
-                    signal_strength = min(1.0, integrated_confidence + abs(sentiment_adjustment))
+                    signal_strength = min(
+                        1.0, integrated_confidence + abs(sentiment_adjustment)
+                    )
                 elif sentiment_score < -0.3:  # 強いネガティブセンチメント
                     final_signal = 0  # シグナル取り消し
                     signal_strength = 0.0
                 else:
                     final_signal = 1
-                    signal_strength = integrated_confidence * (1.0 + sentiment_adjustment)
+                    signal_strength = integrated_confidence * (
+                        1.0 + sentiment_adjustment
+                    )
             elif tech_signal_value == -1:  # 売りシグナル
                 if sentiment_score < -0.2:  # ネガティブセンチメント
                     final_signal = -1
-                    signal_strength = min(1.0, integrated_confidence + abs(sentiment_adjustment))
+                    signal_strength = min(
+                        1.0, integrated_confidence + abs(sentiment_adjustment)
+                    )
                 elif sentiment_score > 0.3:  # 強いポジティブセンチメント
                     final_signal = 0  # シグナル取り消し
                     signal_strength = 0.0
                 else:
                     final_signal = -1
-                    signal_strength = integrated_confidence * (1.0 + abs(sentiment_adjustment))
+                    signal_strength = integrated_confidence * (
+                        1.0 + abs(sentiment_adjustment)
+                    )
             else:  # 中立
                 if abs(sentiment_score) > 0.4:  # 強いセンチメント
                     final_signal = 1 if sentiment_score > 0 else -1
@@ -582,16 +649,18 @@ class MarketSentimentAnalyzer:
 
             # 結果統合
             integrated_result = {
-                'symbol': symbol,
-                'analysis_time': datetime.now(),
-                'technical_analysis': technical_signal,
-                'sentiment_analysis': sentiment_result,
-                'integrated_signal': final_signal,
-                'integrated_confidence': float(max(0.0, min(1.0, signal_strength))),
-                'sentiment_weight': sentiment_weight,
-                'recommendation': self._generate_recommendation(
-                    final_signal, signal_strength, sentiment_result['sentiment_direction']
-                )
+                "symbol": symbol,
+                "analysis_time": datetime.now(),
+                "technical_analysis": technical_signal,
+                "sentiment_analysis": sentiment_result,
+                "integrated_signal": final_signal,
+                "integrated_confidence": float(max(0.0, min(1.0, signal_strength))),
+                "sentiment_weight": sentiment_weight,
+                "recommendation": self._generate_recommendation(
+                    final_signal,
+                    signal_strength,
+                    sentiment_result["sentiment_direction"],
+                ),
             }
 
             logger.info(
@@ -605,13 +674,15 @@ class MarketSentimentAnalyzer:
         except Exception as e:
             logger.error(f"統合分析エラー {symbol}: {e}")
             return {
-                'symbol': symbol,
-                'error': str(e),
-                'integrated_signal': 0,
-                'integrated_confidence': 0.0
+                "symbol": symbol,
+                "error": str(e),
+                "integrated_signal": 0,
+                "integrated_confidence": 0.0,
             }
 
-    def _generate_recommendation(self, signal: int, confidence: float, sentiment: str) -> str:
+    def _generate_recommendation(
+        self, signal: int, confidence: float, sentiment: str
+    ) -> str:
         """推奨アクション生成"""
         if signal == 1 and confidence > 0.7:
             return f"強い買い推奨 (センチメント: {sentiment})"

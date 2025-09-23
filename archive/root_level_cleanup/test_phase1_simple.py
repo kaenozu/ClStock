@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # プロジェクトパスの追加
 sys.path.append(os.path.dirname(__file__))
 
+
 def main():
     """メインテスト実行"""
     print("=" * 60)
@@ -44,12 +45,15 @@ def main():
     except Exception as e:
         print(f"\n[エラー] テスト失敗: {str(e)}")
         import traceback
+
         traceback.print_exc()
+
 
 def test_imports():
     """インポートテスト"""
     try:
         from models_new.hybrid.intelligent_cache import IntelligentPredictionCache
+
         print("   [OK] IntelligentPredictionCache インポート成功")
 
         cache = IntelligentPredictionCache()
@@ -61,6 +65,7 @@ def test_imports():
     except Exception as e:
         print(f"   [ERROR] インポートエラー: {str(e)}")
         raise
+
 
 def test_cache_standalone():
     """キャッシュ単体テスト"""
@@ -78,7 +83,7 @@ def test_cache_standalone():
             accuracy=90.0,
             timestamp=datetime.now(),
             symbol="TEST.T",
-            metadata={'test': True}
+            metadata={"test": True},
         )
 
         # キャッシュ設定テスト
@@ -100,17 +105,20 @@ def test_cache_standalone():
         print(f"   [ERROR] キャッシュテストエラー: {str(e)}")
         raise
 
+
 def test_prediction_modes():
     """予測モード確認テスト"""
     try:
         # Enumクラス直接インポート
-        sys.path.append(os.path.join(os.path.dirname(__file__), 'models_new', 'hybrid'))
+        sys.path.append(os.path.join(os.path.dirname(__file__), "models_new", "hybrid"))
 
         # ファイル読み込みで次世代モード確認
-        hybrid_file = os.path.join(os.path.dirname(__file__), 'models_new', 'hybrid', 'hybrid_predictor.py')
+        hybrid_file = os.path.join(
+            os.path.dirname(__file__), "models_new", "hybrid", "hybrid_predictor.py"
+        )
 
         if os.path.exists(hybrid_file):
-            with open(hybrid_file, 'r', encoding='utf-8') as f:
+            with open(hybrid_file, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # 次世代モード確認
@@ -120,7 +128,7 @@ def test_prediction_modes():
                 "SWING_TRADE",
                 "SCALPING",
                 "PORTFOLIO_ANALYSIS",
-                "RISK_MANAGEMENT"
+                "RISK_MANAGEMENT",
             ]
 
             found_modes = []
@@ -133,7 +141,9 @@ def test_prediction_modes():
                 print(f"     - {mode}")
 
         # 学習型最適化確認
-        adaptive_file = os.path.join(os.path.dirname(__file__), 'models_new', 'hybrid', 'adaptive_optimizer.py')
+        adaptive_file = os.path.join(
+            os.path.dirname(__file__), "models_new", "hybrid", "adaptive_optimizer.py"
+        )
         if os.path.exists(adaptive_file):
             print("   [OK] 学習型最適化システムファイル確認")
         else:
@@ -142,6 +152,7 @@ def test_prediction_modes():
     except Exception as e:
         print(f"   [ERROR] 予測モードテストエラー: {str(e)}")
         raise
+
 
 if __name__ == "__main__":
     main()

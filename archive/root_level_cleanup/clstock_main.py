@@ -17,7 +17,9 @@ import logging
 
 # ログ設定
 from utils.logger_config import setup_logger
+
 logger = setup_logger(__name__)
+
 
 def run_basic_prediction(symbol: str) -> Dict[str, Any]:
     """基本84.6%精度予測システム実行"""
@@ -43,11 +45,16 @@ def run_basic_prediction(symbol: str) -> Dict[str, Any]:
         logger.error(f"予期しない基本予測エラー: {e}", exc_info=True)
         return {"error": f"予期しないエラー: {str(e)}"}
 
+
 def run_advanced_prediction(symbol: str) -> Dict[str, Any]:
     """個別銘柄特化モデル実行"""
     try:
         from models.stock_specific_predictor import StockSpecificPredictor
-        from utils.exceptions import ModelTrainingError, PredictionError, InvalidSymbolError
+        from utils.exceptions import (
+            ModelTrainingError,
+            PredictionError,
+            InvalidSymbolError,
+        )
 
         predictor = StockSpecificPredictor()
         result = predictor.predict_symbol(symbol)
@@ -65,6 +72,7 @@ def run_advanced_prediction(symbol: str) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"予期しない個別銘柄特化予測エラー: {e}", exc_info=True)
         return {"error": f"予期しないエラー: {str(e)}"}
+
 
 def run_sentiment_analysis(symbol: str) -> Dict[str, Any]:
     """ニュースセンチメント分析実行"""
@@ -87,6 +95,7 @@ def run_sentiment_analysis(symbol: str) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"予期しないセンチメント分析エラー: {e}", exc_info=True)
         return {"error": f"予期しないエラー: {str(e)}"}
+
 
 def run_integrated_analysis(symbol: str) -> Dict[str, Any]:
     """統合分析 (技術分析 + センチメント)"""
@@ -116,7 +125,7 @@ def run_integrated_analysis(symbol: str) -> Dict[str, Any]:
         return {
             "technical": tech_result,
             "sentiment": sentiment,
-            "integrated": integrated
+            "integrated": integrated,
         }
 
     except (PredictionError, DataFetchError) as e:
@@ -125,6 +134,7 @@ def run_integrated_analysis(symbol: str) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"予期しない統合分析エラー: {e}", exc_info=True)
         return {"error": f"予期しないエラー: {str(e)}"}
+
 
 def run_portfolio_backtest() -> Dict[str, Any]:
     """ポートフォリオバックテスト実行"""
@@ -144,6 +154,7 @@ def run_portfolio_backtest() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"予期しないバックテストエラー: {e}", exc_info=True)
         return {"error": f"予期しないエラー: {str(e)}"}
+
 
 def run_auto_retraining_status() -> Dict[str, Any]:
     """自動再学習システム状態確認"""
@@ -166,6 +177,7 @@ def run_auto_retraining_status() -> Dict[str, Any]:
         logger.error(f"予期しない自動再学習状態確認エラー: {e}", exc_info=True)
         return {"error": f"予期しないエラー: {str(e)}"}
 
+
 def main():
     """メイン関数"""
     parser = argparse.ArgumentParser(
@@ -179,19 +191,25 @@ def main():
   python clstock_main.py --integrated 8306     # 統合分析
   python clstock_main.py --backtest             # バックテスト
   python clstock_main.py --retraining-status   # 再学習状態
-        """
+        """,
     )
 
     # 機能選択
-    parser.add_argument('--basic', type=str, help='基本84.6%精度予測 (銘柄コード)')
-    parser.add_argument('--advanced', type=str, help='個別銘柄特化予測 (銘柄コード)')
-    parser.add_argument('--sentiment', type=str, help='ニュースセンチメント分析 (銘柄コード)')
-    parser.add_argument('--integrated', type=str, help='統合分析 (銘柄コード)')
-    parser.add_argument('--backtest', action='store_true', help='ポートフォリオバックテスト')
-    parser.add_argument('--retraining-status', action='store_true', help='自動再学習システム状態')
+    parser.add_argument("--basic", type=str, help="基本84.6%精度予測 (銘柄コード)")
+    parser.add_argument("--advanced", type=str, help="個別銘柄特化予測 (銘柄コード)")
+    parser.add_argument(
+        "--sentiment", type=str, help="ニュースセンチメント分析 (銘柄コード)"
+    )
+    parser.add_argument("--integrated", type=str, help="統合分析 (銘柄コード)")
+    parser.add_argument(
+        "--backtest", action="store_true", help="ポートフォリオバックテスト"
+    )
+    parser.add_argument(
+        "--retraining-status", action="store_true", help="自動再学習システム状態"
+    )
 
     # システム管理
-    parser.add_argument('--verbose', '-v', action='store_true', help='詳細ログ表示')
+    parser.add_argument("--verbose", "-v", action="store_true", help="詳細ログ表示")
 
     args = parser.parse_args()
 
@@ -238,6 +256,7 @@ def main():
     except Exception as e:
         logger.error(f"予期しないエラー: {e}")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

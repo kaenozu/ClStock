@@ -12,8 +12,12 @@ import logging
 # セキュリティと検証機能
 from api.security import security, verify_token
 from utils.validators import (
-    validate_stock_symbol, validate_period, validate_symbols_list,
-    validate_numeric_range, ValidationError, log_validation_error
+    validate_stock_symbol,
+    validate_period,
+    validate_symbols_list,
+    validate_numeric_range,
+    ValidationError,
+    log_validation_error,
 )
 
 # データプロバイダー
@@ -28,8 +32,10 @@ router = APIRouter(prefix="/secure", tags=["secure"])
 @router.get("/stock/{symbol}/data")
 async def get_stock_data(
     symbol: str,
-    period: str = Query("1y", description="期間 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y)"),
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    period: str = Query(
+        "1y", description="期間 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y)"
+    ),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     """
     セキュアな株価データ取得エンドポイント
@@ -48,7 +54,9 @@ async def get_stock_data(
         data = data_provider.get_stock_data(symbol, period)
 
         if data.empty:
-            raise HTTPException(status_code=404, detail=f"No data found for symbol: {symbol}")
+            raise HTTPException(
+                status_code=404, detail=f"No data found for symbol: {symbol}"
+            )
 
         # レスポンス作成
         response = {
@@ -57,11 +65,11 @@ async def get_stock_data(
             "data_points": len(data),
             "date_range": {
                 "start": data.index[0].isoformat(),
-                "end": data.index[-1].isoformat()
+                "end": data.index[-1].isoformat(),
             },
-            "latest_price": float(data['Close'].iloc[-1]),
-            "price_change": float(data['Close'].iloc[-1] - data['Close'].iloc[0]),
-            "user": user_info
+            "latest_price": float(data["Close"].iloc[-1]),
+            "price_change": float(data["Close"].iloc[-1] - data["Close"].iloc[0]),
+            "user": user_info,
         }
 
         # ユーザータイプに応じて詳細データを追加
@@ -72,7 +80,9 @@ async def get_stock_data(
         return response
 
     except ValidationError as e:
-        log_validation_error(e, {"endpoint": "/secure/stock/data", "symbol": symbol, "period": period})
+        log_validation_error(
+            e, {"endpoint": "/secure/stock/data", "symbol": symbol, "period": period}
+        )
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
@@ -84,7 +94,7 @@ async def get_stock_data(
 @router.post("/stocks/batch")
 async def get_batch_stock_data(
     symbols_data: Dict[str, Any] = Body(...),
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     """
     複数銘柄の一括データ取得（セキュア版）
@@ -115,11 +125,11 @@ async def get_batch_stock_data(
                 if not data.empty:
                     results[symbol] = {
                         "data_points": len(data),
-                        "latest_price": float(data['Close'].iloc[-1]),
+                        "latest_price": float(data["Close"].iloc[-1]),
                         "date_range": {
                             "start": data.index[0].isoformat(),
-                            "end": data.index[-1].isoformat()
-                        }
+                            "end": data.index[-1].isoformat(),
+                        },
                     }
                 else:
                     errors[symbol] = "No data available"
@@ -134,7 +144,7 @@ async def get_batch_stock_data(
             "failed": len(errors),
             "results": results,
             "errors": errors,
-            "user": user_info
+            "user": user_info,
         }
 
     except ValidationError as e:
@@ -149,8 +159,7 @@ async def get_batch_stock_data(
 
 @router.get("/analysis/{symbol}")
 async def get_stock_analysis(
-    symbol: str,
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    symbol: str, credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
     """
     株式分析エンドポイント（管理者専用）
@@ -171,7 +180,9 @@ async def get_stock_analysis(
         data = data_provider.get_stock_data(symbol, "1y")
 
         if data.empty:
-            raise HTTPException(status_code=404, detail=f"No data found for symbol: {symbol}")
+            raise HTTPException(
+                status_code=404, detail=f"No data found for symbol: {symbol}"
+            )
 
         # テクニカル指標を計算
         data_with_indicators = data_provider.calculate_technical_indicators(data)
@@ -181,17 +192,29 @@ async def get_stock_analysis(
             "symbol": symbol,
             "analysis_date": datetime.now().isoformat(),
             "price_analysis": {
-                "current_price": float(data['Close'].iloc[-1]),
-                "52_week_high": float(data['Close'].max()),
-                "52_week_low": float(data['Close'].min()),
-                "average_volume": float(data['Volume'].mean())
+                "current_price": float(data["Close"].iloc[-1]),
+                "52_week_high": float(data["Close"].max()),
+                "52_week_low": float(data["Close"].min()),
+                "average_volume": float(data["Volume"].mean()),
             },
             "technical_indicators": {
-                "rsi": float(data_with_indicators['RSI'].iloc[-1]) if 'RSI' in data_with_indicators else None,
-                "sma_20": float(data_with_indicators['SMA_20'].iloc[-1]) if 'SMA_20' in data_with_indicators else None,
-                "sma_50": float(data_with_indicators['SMA_50'].iloc[-1]) if 'SMA_50' in data_with_indicators else None
+                "rsi": (
+                    float(data_with_indicators["RSI"].iloc[-1])
+                    if "RSI" in data_with_indicators
+                    else None
+                ),
+                "sma_20": (
+                    float(data_with_indicators["SMA_20"].iloc[-1])
+                    if "SMA_20" in data_with_indicators
+                    else None
+                ),
+                "sma_50": (
+                    float(data_with_indicators["SMA_50"].iloc[-1])
+                    if "SMA_50" in data_with_indicators
+                    else None
+                ),
             },
-            "analyst": user_info
+            "analyst": user_info,
         }
 
         logger.info(f"Advanced analysis request: {symbol} by {user_info}")
@@ -215,5 +238,5 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "service": "ClStock Secure API"
+        "service": "ClStock Secure API",
     }

@@ -21,32 +21,38 @@ from .deep_learning.deep_predictor import RefactoredDeepLearningPredictor
 from .advanced.market_sentiment_analyzer import MarketSentimentAnalyzer
 from .advanced.prediction_dashboard import PredictionDashboard
 from .advanced.risk_management_framework import RiskManager
-from .advanced.trading_strategy_generator import AutoTradingStrategyGenerator as TradingStrategyGenerator
+from .advanced.trading_strategy_generator import (
+    AutoTradingStrategyGenerator as TradingStrategyGenerator,
+)
 
 # Monitoring modules
-from .monitoring.performance_monitor import ModelPerformanceMonitor as PerformanceMonitor
+from .monitoring.performance_monitor import (
+    ModelPerformanceMonitor as PerformanceMonitor,
+)
 from .monitoring.cache_manager import RealTimeCacheManager as CacheManager
 
 # Precision modules
-from .precision.precision_87_system import Precision87BreakthroughSystem as Precision87System
+from .precision.precision_87_system import (
+    Precision87BreakthroughSystem as Precision87System,
+)
 
 __all__ = [
-    'StockPredictor',
-    'PredictionResult',
-    'DataProvider',
-    'PredictorFactory',
-    'ModelManager',
-    'RefactoredEnsemblePredictor',
-    'RefactoredHybridPredictor',
-    'RefactoredDeepLearningPredictor',
+    "StockPredictor",
+    "PredictionResult",
+    "DataProvider",
+    "PredictorFactory",
+    "ModelManager",
+    "RefactoredEnsemblePredictor",
+    "RefactoredHybridPredictor",
+    "RefactoredDeepLearningPredictor",
     # Advanced features
-    'MarketSentimentAnalyzer',
-    'PredictionDashboard',
-    'RiskManager',
-    'TradingStrategyGenerator',
+    "MarketSentimentAnalyzer",
+    "PredictionDashboard",
+    "RiskManager",
+    "TradingStrategyGenerator",
     # Monitoring features
-    'PerformanceMonitor',
-    'CacheManager',
+    "PerformanceMonitor",
+    "CacheManager",
     # Precision features
-    'Precision87System'
+    "Precision87System",
 ]

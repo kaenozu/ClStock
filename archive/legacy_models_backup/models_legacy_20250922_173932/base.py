@@ -11,6 +11,7 @@ from datetime import datetime
 @dataclass
 class PredictionResult:
     """Prediction result with metadata."""
+
     prediction: float
     confidence: float
     timestamp: datetime
@@ -21,7 +22,9 @@ class PredictorInterface(ABC):
     """Interface for all stock predictors."""
 
     @abstractmethod
-    def predict(self, symbol: str, data: Optional[pd.DataFrame] = None) -> PredictionResult:
+    def predict(
+        self, symbol: str, data: Optional[pd.DataFrame] = None
+    ) -> PredictionResult:
         """Predict stock performance for given symbol."""
         pass
 
@@ -58,7 +61,7 @@ class StockPredictor(PredictorInterface):
         if data is None or data.empty:
             return False
 
-        required_columns = ['open', 'high', 'low', 'close', 'volume']
+        required_columns = ["open", "high", "low", "close", "volume"]
         return all(col in data.columns for col in required_columns)
 
     def prepare_features(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -69,7 +72,9 @@ class StockPredictor(PredictorInterface):
         """Train the model. To be implemented by subclasses."""
         raise NotImplementedError("Subclasses must implement train")
 
-    def predict(self, symbol: str, data: Optional[pd.DataFrame] = None) -> PredictionResult:
+    def predict(
+        self, symbol: str, data: Optional[pd.DataFrame] = None
+    ) -> PredictionResult:
         """Default prediction implementation."""
         if not self.is_trained():
             raise ValueError("Model must be trained before making predictions")
@@ -82,7 +87,7 @@ class StockPredictor(PredictorInterface):
             prediction=0.0,
             confidence=self.get_confidence(),
             timestamp=datetime.now(),
-            metadata={'model_type': self.model_type, 'symbol': symbol}
+            metadata={"model_type": self.model_type, "symbol": symbol},
         )
 
 
@@ -137,12 +142,16 @@ class CacheablePredictor(StockPredictor):
             return "empty"
         return str(hash(tuple(data.iloc[-1].values)))
 
-    def get_cached_prediction(self, symbol: str, data: pd.DataFrame) -> Optional[PredictionResult]:
+    def get_cached_prediction(
+        self, symbol: str, data: pd.DataFrame
+    ) -> Optional[PredictionResult]:
         """Get cached prediction if available."""
         cache_key = self._get_cache_key(symbol, self._get_data_hash(data))
         return self._prediction_cache.get(cache_key)
 
-    def cache_prediction(self, symbol: str, data: pd.DataFrame, result: PredictionResult) -> None:
+    def cache_prediction(
+        self, symbol: str, data: pd.DataFrame, result: PredictionResult
+    ) -> None:
         """Cache prediction result."""
         if len(self._prediction_cache) >= self.cache_size:
             # Remove oldest entry

@@ -16,17 +16,32 @@ from typing import Dict, List, Tuple, Any
 import logging
 from utils.logger_config import setup_logger
 import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 
 # ログ設定
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = setup_logger(__name__)
+
 
 class MAPEMeasurementSystem:
     """MAPE計測システム"""
 
     def __init__(self):
-        self.test_symbols = ['7203', '6758', '9984', '8306', '6861', '4661', '9433', '4519', '6367', '8035']
+        self.test_symbols = [
+            "7203",
+            "6758",
+            "9984",
+            "8306",
+            "6861",
+            "4661",
+            "9433",
+            "4519",
+            "6367",
+            "8035",
+        ]
         self.results = {}
 
     def calculate_mape(self, actual: np.ndarray, predicted: np.ndarray) -> float:
@@ -34,7 +49,7 @@ class MAPEMeasurementSystem:
         # ゼロ除算を避ける
         mask = actual != 0
         if not np.any(mask):
-            return float('inf')
+            return float("inf")
 
         mape = np.mean(np.abs((actual[mask] - predicted[mask]) / actual[mask])) * 100
         return mape
@@ -50,7 +65,7 @@ class MAPEMeasurementSystem:
             data = ticker.history(period="1y")
 
             if len(data) < 60:
-                return {'error': 'Insufficient data'}
+                return {"error": "Insufficient data"}
 
             # 84.6%精度予測システム
             predictor = TrendFollowingPredictor()
@@ -67,22 +82,28 @@ class MAPEMeasurementSystem:
                     continue
 
                 historical_data = data.iloc[:end_date]
-                actual_price = data.iloc[end_date]['Close']
+                actual_price = data.iloc[end_date]["Close"]
 
                 # 一時的に古いデータで予測
                 try:
                     # trend_following_predictorを古いデータで実行
-                    prediction_result = predictor.predict_stock(symbol, data=historical_data)
+                    prediction_result = predictor.predict_stock(
+                        symbol, data=historical_data
+                    )
 
                     # 価格予測（簡易版：現在価格からの変化率予測）
-                    current_price = historical_data['Close'].iloc[-1]
-                    if prediction_result['direction'] == 1:
+                    current_price = historical_data["Close"].iloc[-1]
+                    if prediction_result["direction"] == 1:
                         # 上昇予測：信頼度に応じた上昇率
-                        price_change = current_price * 0.02 * prediction_result['confidence']
+                        price_change = (
+                            current_price * 0.02 * prediction_result["confidence"]
+                        )
                         predicted_price = current_price + price_change
                     else:
                         # 下降予測
-                        price_change = current_price * 0.02 * prediction_result['confidence']
+                        price_change = (
+                            current_price * 0.02 * prediction_result["confidence"]
+                        )
                         predicted_price = current_price - price_change
 
                     actual_prices.append(actual_price)
@@ -93,7 +114,7 @@ class MAPEMeasurementSystem:
                     continue
 
             if len(actual_prices) < 10:
-                return {'error': 'Insufficient predictions'}
+                return {"error": "Insufficient predictions"}
 
             # MAPE計算
             actual_array = np.array(actual_prices)
@@ -106,19 +127,19 @@ class MAPEMeasurementSystem:
             rmse = np.sqrt(np.mean((actual_array - predicted_array) ** 2))
 
             return {
-                'symbol': symbol,
-                'mape': mape,
-                'mae': mae,
-                'rmse': rmse,
-                'actual_prices': actual_prices,
-                'predicted_prices': predicted_prices,
-                'predictions_count': len(actual_prices),
-                'data_points': len(data)
+                "symbol": symbol,
+                "mape": mape,
+                "mae": mae,
+                "rmse": rmse,
+                "actual_prices": actual_prices,
+                "predicted_prices": predicted_prices,
+                "predictions_count": len(actual_prices),
+                "data_points": len(data),
             }
 
         except Exception as e:
             logger.error(f"Error processing {symbol}: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     def run_comprehensive_mape_test(self) -> Dict[str, Any]:
         """包括的MAPE計測"""
@@ -136,17 +157,19 @@ class MAPEMeasurementSystem:
 
             result = self.get_stock_data_and_predict(symbol)
 
-            if 'error' in result:
+            if "error" in result:
                 logger.error(f"{symbol}: {result['error']}")
                 all_results[symbol] = result
                 continue
 
-            mape = result['mape']
-            mae = result['mae']
-            rmse = result['rmse']
-            predictions_count = result['predictions_count']
+            mape = result["mape"]
+            mae = result["mae"]
+            rmse = result["rmse"]
+            predictions_count = result["predictions_count"]
 
-            logger.info(f"{symbol}: MAPE={mape:.2f}%, MAE={mae:.2f}, RMSE={rmse:.2f}, 予測数={predictions_count}")
+            logger.info(
+                f"{symbol}: MAPE={mape:.2f}%, MAE={mae:.2f}, RMSE={rmse:.2f}, 予測数={predictions_count}"
+            )
 
             all_results[symbol] = result
             successful_measurements += 1
@@ -163,17 +186,17 @@ class MAPEMeasurementSystem:
             average_mape = median_mape = min_mape = max_mape = std_mape = 0.0
 
         summary = {
-            'timestamp': datetime.now().isoformat(),
-            'total_symbols_tested': len(self.test_symbols),
-            'successful_measurements': successful_measurements,
-            'success_rate': successful_measurements / len(self.test_symbols) * 100,
-            'average_mape': average_mape,
-            'median_mape': median_mape,
-            'min_mape': min_mape,
-            'max_mape': max_mape,
-            'std_mape': std_mape,
-            'individual_results': all_results,
-            'mape_distribution': self._analyze_mape_distribution(total_mape_values)
+            "timestamp": datetime.now().isoformat(),
+            "total_symbols_tested": len(self.test_symbols),
+            "successful_measurements": successful_measurements,
+            "success_rate": successful_measurements / len(self.test_symbols) * 100,
+            "average_mape": average_mape,
+            "median_mape": median_mape,
+            "min_mape": min_mape,
+            "max_mape": max_mape,
+            "std_mape": std_mape,
+            "individual_results": all_results,
+            "mape_distribution": self._analyze_mape_distribution(total_mape_values),
         }
 
         # 結果表示
@@ -204,19 +227,19 @@ class MAPEMeasurementSystem:
             return {}
 
         # MAPE範囲別分析
-        excellent = sum(1 for x in mape_values if x <= 5.0)    # 5%以下
+        excellent = sum(1 for x in mape_values if x <= 5.0)  # 5%以下
         good = sum(1 for x in mape_values if 5.0 < x <= 10.0)  # 5-10%
         acceptable = sum(1 for x in mape_values if 10.0 < x <= 20.0)  # 10-20%
-        poor = sum(1 for x in mape_values if x > 20.0)         # 20%超
+        poor = sum(1 for x in mape_values if x > 20.0)  # 20%超
 
         return {
-            'excellent_5pct': excellent,
-            'good_5_10pct': good,
-            'acceptable_10_20pct': acceptable,
-            'poor_20pct_plus': poor,
-            'percentile_25': np.percentile(mape_values, 25),
-            'percentile_75': np.percentile(mape_values, 75),
-            'percentile_90': np.percentile(mape_values, 90)
+            "excellent_5pct": excellent,
+            "good_5_10pct": good,
+            "acceptable_10_20pct": acceptable,
+            "poor_20pct_plus": poor,
+            "percentile_25": np.percentile(mape_values, 25),
+            "percentile_75": np.percentile(mape_values, 75),
+            "percentile_90": np.percentile(mape_values, 90),
         }
 
     def _evaluate_mape_performance(self, average_mape: float) -> str:
@@ -231,6 +254,7 @@ class MAPEMeasurementSystem:
             return "許容 (15-20%) - 一般的精度"
         else:
             return "要改善 (20%超) - 精度向上が必要"
+
 
 def main():
     """メイン実行関数"""
@@ -248,7 +272,10 @@ def main():
 
         # 結果保存
         import json
-        output_file = f"mape_measurement_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+        output_file = (
+            f"mape_measurement_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
 
         # JSON serializable変換
         serializable_results = {}
@@ -258,17 +285,20 @@ def main():
                 serializable_results[key] = value
             except:
                 if isinstance(value, (np.ndarray, list)):
-                    serializable_results[key] = [float(x) if isinstance(x, (np.integer, np.floating)) else x for x in value]
+                    serializable_results[key] = [
+                        float(x) if isinstance(x, (np.integer, np.floating)) else x
+                        for x in value
+                    ]
                 else:
                     serializable_results[key] = str(value)
 
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             json.dump(serializable_results, f, indent=2, ensure_ascii=False)
 
         print(f"\n📊 詳細結果を保存: {output_file}")
 
         # 最終評価
-        avg_mape = results.get('average_mape', 0)
+        avg_mape = results.get("average_mape", 0)
         print(f"\n🎯 最終MAPE評価")
         print(f"平均MAPE: {avg_mape:.2f}%")
 
@@ -287,6 +317,7 @@ def main():
     except Exception as e:
         logger.error(f"MAPE計測エラー: {e}")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

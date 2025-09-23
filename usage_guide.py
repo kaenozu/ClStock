@@ -7,10 +7,12 @@
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(__file__))
 
 from models_new.hybrid.hybrid_predictor import HybridStockPredictor, PredictionMode
 from data.stock_data import StockDataProvider
+
 
 def demo_basic_usage():
     """基本的な使い方デモ"""
@@ -32,6 +34,7 @@ def demo_basic_usage():
     print(f"使用システム: {result.metadata.get('system_used', 'unknown')}")
     print(f"処理時間: {result.metadata.get('prediction_time', 0):.3f}秒")
 
+
 def demo_mode_selection():
     """モード選択デモ"""
     print("\n" + "=" * 60)
@@ -46,7 +49,7 @@ def demo_mode_selection():
         (PredictionMode.SPEED_PRIORITY, "[SPEED] 高速取引向け"),
         (PredictionMode.ACCURACY_PRIORITY, "[ACCURACY] 精密分析向け"),
         (PredictionMode.BALANCED, "[BALANCED] バランス重視"),
-        (PredictionMode.AUTO, "[AUTO] 自動最適化")
+        (PredictionMode.AUTO, "[AUTO] 自動最適化"),
     ]
 
     for mode, description in modes:
@@ -55,6 +58,7 @@ def demo_mode_selection():
         print(f"  予測値: {result.prediction:.1f}円")
         print(f"  信頼度: {result.confidence:.2f}")
         print(f"  処理時間: {result.metadata.get('prediction_time', 0):.3f}秒")
+
 
 def demo_batch_processing():
     """バッチ処理デモ"""
@@ -70,6 +74,7 @@ def demo_batch_processing():
 
     # バッチ予測実行
     import time
+
     start_time = time.time()
 
     results = hybrid_system.predict_batch(symbols)
@@ -82,7 +87,10 @@ def demo_batch_processing():
 
     print("\n個別結果:")
     for i, result in enumerate(results):
-        print(f"  {symbols[i]}: {result.prediction:.1f}円 (信頼度{result.confidence:.2f})")
+        print(
+            f"  {symbols[i]}: {result.prediction:.1f}円 (信頼度{result.confidence:.2f})"
+        )
+
 
 def demo_real_time_scenario():
     """リアルタイム取引シナリオ"""
@@ -99,6 +107,7 @@ def demo_real_time_scenario():
     total_time = 0
     for symbol in symbols:
         import time
+
         start = time.time()
 
         result = hybrid_system.predict(symbol, PredictionMode.SPEED_PRIORITY)
@@ -110,6 +119,7 @@ def demo_real_time_scenario():
 
     print(f"総処理時間: {total_time*1000:.1f}ms")
     print(f"平均レスポンス: {total_time*1000/len(symbols):.1f}ms/銘柄")
+
 
 def demo_analysis_scenario():
     """深度分析シナリオ"""
@@ -135,10 +145,11 @@ def demo_analysis_scenario():
     print(f"  使用システム: {metadata.get('system_used', 'unknown')}")
     print(f"  予測戦略: {metadata.get('prediction_strategy', 'unknown')}")
 
-    if 'meta_learning_contribution' in metadata:
+    if "meta_learning_contribution" in metadata:
         print(f"  メタ学習貢献度: {metadata.get('meta_learning_contribution', 0):.2f}")
-    if 'dqn_contribution' in metadata:
+    if "dqn_contribution" in metadata:
         print(f"  DQN貢献度: {metadata.get('dqn_contribution', 0):.2f}")
+
 
 def demo_monitoring():
     """システム監視デモ"""
@@ -163,11 +174,12 @@ def demo_monitoring():
 
     # パフォーマンス統計
     stats = hybrid_system.get_performance_stats()
-    if 'error' not in stats:
+    if "error" not in stats:
         print(f"\n[PERF] パフォーマンス統計:")
         print(f"  総予測回数: {stats['total_predictions']}")
         print(f"  平均処理時間: {stats['avg_prediction_time']:.3f}秒")
         print(f"  平均信頼度: {stats['avg_confidence']:.2f}")
+
 
 def main():
     """デモ実行"""
@@ -194,7 +206,9 @@ def main():
     except Exception as e:
         print(f"[ERROR] エラー: {str(e)}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     main()

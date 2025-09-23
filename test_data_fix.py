@@ -5,9 +5,11 @@
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(__file__))
 
 from data.stock_data import StockDataProvider
+
 
 def test_data_provider():
     """データプロバイダーをテスト"""
@@ -19,7 +21,9 @@ def test_data_provider():
     print("=== データ取得テスト ===")
     for symbol in test_symbols:
         try:
-            print(f"\n{symbol} ({provider.jp_stock_codes.get(symbol, 'Unknown')}) のデータ取得中...")
+            print(
+                f"\n{symbol} ({provider.jp_stock_codes.get(symbol, 'Unknown')}) のデータ取得中..."
+            )
             data = provider.get_stock_data(symbol, period="1mo")
 
             if not data.empty:
@@ -35,6 +39,7 @@ def test_data_provider():
             print(f"[ERROR] エラー: {str(e)}")
 
     print("\n=== テスト完了 ===")
+
 
 if __name__ == "__main__":
     test_data_provider()

@@ -20,6 +20,7 @@ from data.stock_data import StockDataProvider
 
 class SignalType(Enum):
     """取引シグナルタイプ"""
+
     BUY = "BUY"
     SELL = "SELL"
     HOLD = "HOLD"
@@ -30,6 +31,7 @@ class SignalType(Enum):
 @dataclass
 class TradingSignal:
     """取引シグナル"""
+
     symbol: str
     signal_type: SignalType
     confidence: float
@@ -47,6 +49,7 @@ class TradingSignal:
 @dataclass
 class MarketConditions:
     """市場環境状況"""
+
     volatility: float
     trend_strength: float
     market_sentiment: float
@@ -61,11 +64,13 @@ class TradingStrategy:
     実際の株価予測に基づく高精度取引システム
     """
 
-    def __init__(self,
-                 initial_capital: float = 1000000,
-                 max_position_size: float = 0.1,
-                 precision_threshold: float = 85.0,
-                 confidence_threshold: float = 0.7):
+    def __init__(
+        self,
+        initial_capital: float = 1000000,
+        max_position_size: float = 0.1,
+        precision_threshold: float = 85.0,
+        confidence_threshold: float = 0.7,
+    ):
         """
         Args:
             initial_capital: 初期資本
@@ -94,9 +99,9 @@ class TradingStrategy:
 
         self.logger = logging.getLogger(__name__)
 
-    def generate_trading_signal(self,
-                               symbol: str,
-                               current_capital: float) -> Optional[TradingSignal]:
+    def generate_trading_signal(
+        self, symbol: str, current_capital: float
+    ) -> Optional[TradingSignal]:
         """
         87%精度システムによる取引シグナル生成
 
@@ -111,24 +116,30 @@ class TradingStrategy:
             # 87%精度システムで予測実行
             prediction_result = self.precision_system.predict_with_87_precision(symbol)
 
-            if 'error' in prediction_result:
-                self.logger.warning(f"予測エラー {symbol}: {prediction_result['error']}")
+            if "error" in prediction_result:
+                self.logger.warning(
+                    f"予測エラー {symbol}: {prediction_result['error']}"
+                )
                 return None
 
             # 基本データ取得
-            predicted_price = prediction_result['final_prediction']
-            current_price = prediction_result.get('current_price', 100.0)
-            confidence = prediction_result['final_confidence']
-            accuracy = prediction_result['final_accuracy']
-            change_rate = prediction_result.get('predicted_change_rate', 0.0)
+            predicted_price = prediction_result["final_prediction"]
+            current_price = prediction_result.get("current_price", 100.0)
+            confidence = prediction_result["final_confidence"]
+            accuracy = prediction_result["final_accuracy"]
+            change_rate = prediction_result.get("predicted_change_rate", 0.0)
 
             # 精度・信頼度チェック
             if accuracy < self.precision_threshold:
-                self.logger.info(f"精度不足 {symbol}: {accuracy:.1f}% < {self.precision_threshold}%")
+                self.logger.info(
+                    f"精度不足 {symbol}: {accuracy:.1f}% < {self.precision_threshold}%"
+                )
                 return None
 
             if confidence < self.confidence_threshold:
-                self.logger.info(f"信頼度不足 {symbol}: {confidence:.2f} < {self.confidence_threshold}")
+                self.logger.info(
+                    f"信頼度不足 {symbol}: {confidence:.2f} < {self.confidence_threshold}"
+                )
                 return None
 
             # 期待リターン計算
@@ -150,7 +161,11 @@ class TradingStrategy:
 
             # ポジションサイズ計算
             position_size = self._calculate_position_size(
-                current_capital, expected_return, confidence, accuracy, market_conditions
+                current_capital,
+                expected_return,
+                confidence,
+                accuracy,
+                market_conditions,
             )
 
             if position_size <= 0:
@@ -178,12 +193,16 @@ class TradingStrategy:
                 reasoning=reasoning,
                 stop_loss_price=stop_loss_price,
                 take_profit_price=take_profit_price,
-                precision_87_achieved=prediction_result.get('precision_87_achieved', False)
+                precision_87_achieved=prediction_result.get(
+                    "precision_87_achieved", False
+                ),
             )
 
-            self.logger.info(f"取引シグナル生成: {symbol} {signal_type.value} "
-                           f"精度:{accuracy:.1f}% 信頼度:{confidence:.2f} "
-                           f"期待リターン:{expected_return:.3f}")
+            self.logger.info(
+                f"取引シグナル生成: {symbol} {signal_type.value} "
+                f"精度:{accuracy:.1f}% 信頼度:{confidence:.2f} "
+                f"期待リターン:{expected_return:.3f}"
+            )
 
             return signal
 
@@ -204,20 +223,21 @@ class TradingStrategy:
                     trend_strength=0.5,
                     market_sentiment=0.5,
                     volume_profile=0.5,
-                    risk_level="MEDIUM"
+                    risk_level="MEDIUM",
                 )
 
             # ボラティリティ計算（過去20日の標準偏差）
-            returns = historical_data['Close'].pct_change().dropna()
+            returns = historical_data["Close"].pct_change().dropna()
             volatility = returns.rolling(20).std().iloc[-1] * np.sqrt(252)
 
             # トレンド強度（過去20日の価格変化）
-            price_change = (historical_data['Close'].iloc[-1] -
-                          historical_data['Close'].iloc[-20]) / historical_data['Close'].iloc[-20]
+            price_change = (
+                historical_data["Close"].iloc[-1] - historical_data["Close"].iloc[-20]
+            ) / historical_data["Close"].iloc[-20]
             trend_strength = abs(price_change)
 
             # 市場センチメント（RSI近似）
-            close_prices = historical_data['Close']
+            close_prices = historical_data["Close"]
             delta = close_prices.diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
@@ -226,8 +246,8 @@ class TradingStrategy:
             market_sentiment = rsi.iloc[-1] / 100.0
 
             # ボリュームプロファイル
-            volume_avg = historical_data['Volume'].rolling(20).mean().iloc[-1]
-            current_volume = historical_data['Volume'].iloc[-1]
+            volume_avg = historical_data["Volume"].rolling(20).mean().iloc[-1]
+            current_volume = historical_data["Volume"].iloc[-1]
             volume_profile = min(current_volume / volume_avg, 2.0) / 2.0
 
             # リスクレベル決定
@@ -243,7 +263,7 @@ class TradingStrategy:
                 trend_strength=float(np.clip(trend_strength, 0, 1)),
                 market_sentiment=float(np.clip(market_sentiment, 0, 1)),
                 volume_profile=float(np.clip(volume_profile, 0, 1)),
-                risk_level=risk_level
+                risk_level=risk_level,
             )
 
         except Exception as e:
@@ -253,14 +273,16 @@ class TradingStrategy:
                 trend_strength=0.5,
                 market_sentiment=0.5,
                 volume_profile=0.5,
-                risk_level="MEDIUM"
+                risk_level="MEDIUM",
             )
 
-    def _determine_signal_type(self,
-                             expected_return: float,
-                             confidence: float,
-                             accuracy: float,
-                             market_conditions: MarketConditions) -> SignalType:
+    def _determine_signal_type(
+        self,
+        expected_return: float,
+        confidence: float,
+        accuracy: float,
+        market_conditions: MarketConditions,
+    ) -> SignalType:
         """シグナルタイプ決定"""
 
         # 87%達成時は積極的
@@ -287,12 +309,14 @@ class TradingStrategy:
 
         return SignalType.HOLD
 
-    def _calculate_position_size(self,
-                               current_capital: float,
-                               expected_return: float,
-                               confidence: float,
-                               accuracy: float,
-                               market_conditions: MarketConditions) -> float:
+    def _calculate_position_size(
+        self,
+        current_capital: float,
+        expected_return: float,
+        confidence: float,
+        accuracy: float,
+        market_conditions: MarketConditions,
+    ) -> float:
         """ポジションサイズ計算（Kelly基準＋リスク調整）"""
 
         # 基本ポジションサイズ（資本の割合）
@@ -321,19 +345,26 @@ class TradingStrategy:
             risk_multiplier = 0.8
 
         # 最終ポジションサイズ
-        position_ratio = (base_size * accuracy_multiplier *
-                         confidence_multiplier * return_multiplier * risk_multiplier)
+        position_ratio = (
+            base_size
+            * accuracy_multiplier
+            * confidence_multiplier
+            * return_multiplier
+            * risk_multiplier
+        )
 
         # 最大10%、最小1%に制限
         position_ratio = np.clip(position_ratio, 0.01, 0.1)
 
         return current_capital * position_ratio
 
-    def _calculate_exit_prices(self,
-                             current_price: float,
-                             predicted_price: float,
-                             signal_type: SignalType,
-                             confidence: float) -> Tuple[Optional[float], Optional[float]]:
+    def _calculate_exit_prices(
+        self,
+        current_price: float,
+        predicted_price: float,
+        signal_type: SignalType,
+        confidence: float,
+    ) -> Tuple[Optional[float], Optional[float]]:
         """ストップロス・利確価格計算"""
 
         if signal_type == SignalType.BUY:
@@ -358,12 +389,14 @@ class TradingStrategy:
 
         return stop_loss_price, take_profit_price
 
-    def _generate_reasoning(self,
-                          symbol: str,
-                          accuracy: float,
-                          confidence: float,
-                          expected_return: float,
-                          market_conditions: MarketConditions) -> str:
+    def _generate_reasoning(
+        self,
+        symbol: str,
+        accuracy: float,
+        confidence: float,
+        expected_return: float,
+        market_conditions: MarketConditions,
+    ) -> str:
         """取引理由生成"""
 
         reasons = []
@@ -392,9 +425,9 @@ class TradingStrategy:
 
         return " | ".join(reasons)
 
-    def calculate_trading_costs(self,
-                              position_value: float,
-                              signal_type: SignalType) -> Dict[str, float]:
+    def calculate_trading_costs(
+        self, position_value: float, signal_type: SignalType
+    ) -> Dict[str, float]:
         """取引コスト計算"""
 
         commission = position_value * self.commission_rate
@@ -404,17 +437,16 @@ class TradingStrategy:
         total_cost = commission + spread + slippage
 
         return {
-            'commission': commission,
-            'spread': spread,
-            'slippage': slippage,
-            'total_cost': total_cost,
-            'cost_ratio': total_cost / position_value
+            "commission": commission,
+            "spread": spread,
+            "slippage": slippage,
+            "total_cost": total_cost,
+            "cost_ratio": total_cost / position_value,
         }
 
-    def evaluate_signal_performance(self,
-                                  signal: TradingSignal,
-                                  actual_price: float,
-                                  days_elapsed: int) -> Dict[str, Any]:
+    def evaluate_signal_performance(
+        self, signal: TradingSignal, actual_price: float, days_elapsed: int
+    ) -> Dict[str, Any]:
         """シグナル性能評価"""
 
         if signal.signal_type == SignalType.BUY:
@@ -428,44 +460,48 @@ class TradingStrategy:
 
         # 予測精度
         prediction_error = abs(actual_return - predicted_return)
-        prediction_accuracy = max(0, 1 - prediction_error / abs(predicted_return)) if predicted_return != 0 else 0
+        prediction_accuracy = (
+            max(0, 1 - prediction_error / abs(predicted_return))
+            if predicted_return != 0
+            else 0
+        )
 
         # 取引コスト考慮後リターン
         costs = self.calculate_trading_costs(signal.position_size, signal.signal_type)
-        net_return = actual_return - costs['cost_ratio']
+        net_return = actual_return - costs["cost_ratio"]
 
         return {
-            'signal_id': f"{signal.symbol}_{signal.timestamp.strftime('%Y%m%d_%H%M%S')}",
-            'symbol': signal.symbol,
-            'predicted_return': predicted_return,
-            'actual_return': actual_return,
-            'net_return': net_return,
-            'prediction_accuracy': prediction_accuracy,
-            'days_elapsed': days_elapsed,
-            'profit_loss': signal.position_size * net_return,
-            'costs': costs,
-            'precision_87_achieved': signal.precision_87_achieved
+            "signal_id": f"{signal.symbol}_{signal.timestamp.strftime('%Y%m%d_%H%M%S')}",
+            "symbol": signal.symbol,
+            "predicted_return": predicted_return,
+            "actual_return": actual_return,
+            "net_return": net_return,
+            "prediction_accuracy": prediction_accuracy,
+            "days_elapsed": days_elapsed,
+            "profit_loss": signal.position_size * net_return,
+            "costs": costs,
+            "precision_87_achieved": signal.precision_87_achieved,
         }
 
     def get_strategy_info(self) -> Dict[str, Any]:
         """戦略情報取得"""
         return {
-            'name': '87%精度統合戦略',
-            'version': '1.0.0',
-            'precision_threshold': self.precision_threshold,
-            'confidence_threshold': self.confidence_threshold,
-            'max_position_size': self.max_position_size,
-            'stop_loss_pct': self.stop_loss_pct,
-            'take_profit_pct': self.take_profit_pct,
-            'min_expected_return': self.min_expected_return,
-            'trading_costs': {
-                'commission_rate': self.commission_rate,
-                'spread_rate': self.spread_rate,
-                'slippage_rate': self.slippage_rate
+            "name": "87%精度統合戦略",
+            "version": "1.0.0",
+            "precision_threshold": self.precision_threshold,
+            "confidence_threshold": self.confidence_threshold,
+            "max_position_size": self.max_position_size,
+            "stop_loss_pct": self.stop_loss_pct,
+            "take_profit_pct": self.take_profit_pct,
+            "min_expected_return": self.min_expected_return,
+            "trading_costs": {
+                "commission_rate": self.commission_rate,
+                "spread_rate": self.spread_rate,
+                "slippage_rate": self.slippage_rate,
             },
-            'integrated_systems': [
-                'Precision87BreakthroughSystem',
-                'MetaLearningOptimizer',
-                'DQNReinforcementLearner'
-            ]
+            "integrated_systems": [
+                "Precision87BreakthroughSystem",
+                "MetaLearningOptimizer",
+                "DQNReinforcementLearner",
+            ],
         }

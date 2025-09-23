@@ -16,15 +16,15 @@ import threading
 from datetime import datetime, timedelta
 import logging
 from utils.logger_config import setup_logger
+
 logger = setup_logger(__name__)
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from data.stock_data import StockDataProvider
 from config.settings import get_settings
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 import json
-
 
 
 class RealTimeDataProvider:
@@ -80,10 +80,10 @@ class Pattern846Detector:
     def detect_846_pattern(self, data: pd.DataFrame) -> Dict:
         """
         84.6%パターン検出
-        
+
         Args:
             data: 株価データ（OHLCV形式）
-            
+
         Returns:
             検出結果辞書
         """
@@ -172,9 +172,7 @@ class RiskManager:
             return {"size": 0, "reason": "日次取引上限"}
 
         # 総エクスポージャー確認
-        total_exposure = sum(
-            float(pos["value"]) for pos in self.positions.values()
-        )
+        total_exposure = sum(float(pos["value"]) for pos in self.positions.values())
         max_exposure = (
             self.current_capital * self.settings.realtime.max_total_exposure_pct
         )
@@ -207,7 +205,9 @@ class RiskManager:
             "reason": f"Kelly基準: {confidence:.1%}",
         }
 
-    def update_positions(self, symbol: str, action: str, size: int, price: float) -> None:
+    def update_positions(
+        self, symbol: str, action: str, size: int, price: float
+    ) -> None:
         """ポジション更新"""
         if action == "BUY":
             if symbol in self.positions:

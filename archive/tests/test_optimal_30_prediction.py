@@ -16,6 +16,7 @@ except ImportError:
     # まだ実装されていないので、テストは失敗する（Red）
     Optimal30PredictionTDD = None
 
+
 class TestOptimal30PredictionTDD(unittest.TestCase):
     """TDD: 最適30銘柄予測システムのテスト"""
 
@@ -33,16 +34,20 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
 
         # Assert
         self.assertEqual(len(symbols), 30, "銘柄数は30個である必要があります")
-        self.assertIn('9984.T', symbols, "ソフトバンクGが含まれている必要があります")
-        self.assertIn('4004.T', symbols, "化学セクター最高スコア銘柄が含まれている必要があります")
+        self.assertIn("9984.T", symbols, "ソフトバンクGが含まれている必要があります")
+        self.assertIn(
+            "4004.T", symbols, "化学セクター最高スコア銘柄が含まれている必要があります"
+        )
 
         # 重複チェック
-        self.assertEqual(len(symbols), len(set(symbols)), "銘柄に重複があってはいけません")
+        self.assertEqual(
+            len(symbols), len(set(symbols)), "銘柄に重複があってはいけません"
+        )
 
     def test_prediction_score_valid_range(self):
         """テスト2: 予測スコアが0-100の範囲内である"""
         # Arrange
-        test_symbol = '9984.T'
+        test_symbol = "9984.T"
 
         # Act
         score = self.system.predict_score(test_symbol)
@@ -56,11 +61,11 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
         """テスト3: スコアから価格変化率への変換が正しい"""
         # Arrange
         test_cases = [
-            (50, 0.0),    # 中立
-            (60, 1.0),    # 上昇
-            (40, -1.0),   # 下降
-            (75, 2.5),    # 強い上昇
-            (25, -2.5),   # 強い下降
+            (50, 0.0),  # 中立
+            (60, 1.0),  # 上昇
+            (40, -1.0),  # 下降
+            (75, 2.5),  # 強い上昇
+            (25, -2.5),  # 強い下降
         ]
 
         for score, expected_rate in test_cases:
@@ -69,18 +74,22 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
                 change_rate = self.system.convert_score_to_change_rate(score)
 
                 # Assert
-                self.assertAlmostEqual(change_rate, expected_rate, places=1,
-                                     msg=f"スコア{score}は変化率{expected_rate}%に変換されるべきです")
+                self.assertAlmostEqual(
+                    change_rate,
+                    expected_rate,
+                    places=1,
+                    msg=f"スコア{score}は変化率{expected_rate}%に変換されるべきです",
+                )
 
     def test_confidence_calculation(self):
         """テスト4: 信頼度計算が正しい"""
         # Arrange
         test_cases = [
-            (50, 0),      # 中立 = 信頼度最低
-            (75, 50),     # 25ポイント離れている = 信頼度50%
-            (25, 50),     # 25ポイント離れている = 信頼度50%
-            (100, 100),   # 最大 = 信頼度最高
-            (0, 100),     # 最小 = 信頼度最高
+            (50, 0),  # 中立 = 信頼度最低
+            (75, 50),  # 25ポイント離れている = 信頼度50%
+            (25, 50),  # 25ポイント離れている = 信頼度50%
+            (100, 100),  # 最大 = 信頼度最高
+            (0, 100),  # 最小 = 信頼度最高
         ]
 
         for score, expected_confidence in test_cases:
@@ -89,13 +98,17 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
                 confidence = self.system.calculate_confidence(score)
 
                 # Assert
-                self.assertAlmostEqual(confidence, expected_confidence, places=0,
-                                     msg=f"スコア{score}の信頼度は{expected_confidence}%であるべきです")
+                self.assertAlmostEqual(
+                    confidence,
+                    expected_confidence,
+                    places=0,
+                    msg=f"スコア{score}の信頼度は{expected_confidence}%であるべきです",
+                )
 
     def test_prediction_result_structure(self):
         """テスト5: 予測結果の構造が正しい"""
         # Arrange
-        test_symbol = '9984.T'
+        test_symbol = "9984.T"
 
         # Act
         result = self.system.predict_single_stock(test_symbol)
@@ -103,18 +116,24 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
         # Assert
         self.assertIsInstance(result, dict, "予測結果は辞書である必要があります")
 
-        required_keys = ['symbol', 'current_price', 'predicted_price',
-                        'change_rate', 'confidence', 'prediction_score']
+        required_keys = [
+            "symbol",
+            "current_price",
+            "predicted_price",
+            "change_rate",
+            "confidence",
+            "prediction_score",
+        ]
         for key in required_keys:
             self.assertIn(key, result, f"予測結果に{key}が含まれている必要があります")
 
         # 型チェック
-        self.assertIsInstance(result['symbol'], str)
-        self.assertIsInstance(result['current_price'], (int, float))
-        self.assertIsInstance(result['predicted_price'], (int, float))
-        self.assertIsInstance(result['change_rate'], (int, float))
-        self.assertIsInstance(result['confidence'], (int, float))
-        self.assertIsInstance(result['prediction_score'], (int, float))
+        self.assertIsInstance(result["symbol"], str)
+        self.assertIsInstance(result["current_price"], (int, float))
+        self.assertIsInstance(result["predicted_price"], (int, float))
+        self.assertIsInstance(result["change_rate"], (int, float))
+        self.assertIsInstance(result["confidence"], (int, float))
+        self.assertIsInstance(result["prediction_score"], (int, float))
 
     def test_batch_prediction_all_symbols(self):
         """テスト6: 全30銘柄の一括予測が正常動作する"""
@@ -129,34 +148,38 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
         if results:
             for result in results:
                 self.assertIsInstance(result, dict)
-                self.assertIn('symbol', result)
-                self.assertIn(result['symbol'], self.system.get_optimal_symbols())
+                self.assertIn("symbol", result)
+                self.assertIn(result["symbol"], self.system.get_optimal_symbols())
 
     def test_ranking_functionality(self):
         """テスト7: ランキング機能が正常動作する"""
         # Arrange
         mock_results = [
-            {'symbol': 'A', 'change_rate': 2.5, 'confidence': 80},
-            {'symbol': 'B', 'change_rate': 1.0, 'confidence': 60},
-            {'symbol': 'C', 'change_rate': -1.0, 'confidence': 90},
+            {"symbol": "A", "change_rate": 2.5, "confidence": 80},
+            {"symbol": "B", "change_rate": 1.0, "confidence": 60},
+            {"symbol": "C", "change_rate": -1.0, "confidence": 90},
         ]
 
         # Act
         ranked = self.system.rank_predictions(mock_results)
 
         # Assert
-        self.assertIsInstance(ranked, list, "ランキング結果はリストである必要があります")
+        self.assertIsInstance(
+            ranked, list, "ランキング結果はリストである必要があります"
+        )
         self.assertEqual(len(ranked), 3, "入力と同じ数の結果が返される必要があります")
 
         # 上位は高スコア（変化率×信頼度）
-        score_0 = ranked[0]['change_rate'] * ranked[0]['confidence']
-        score_1 = ranked[1]['change_rate'] * ranked[1]['confidence']
-        self.assertGreaterEqual(score_0, score_1, "ランキングは降順である必要があります")
+        score_0 = ranked[0]["change_rate"] * ranked[0]["confidence"]
+        score_1 = ranked[1]["change_rate"] * ranked[1]["confidence"]
+        self.assertGreaterEqual(
+            score_0, score_1, "ランキングは降順である必要があります"
+        )
 
     def test_error_handling_invalid_symbol(self):
         """テスト8: 無効な銘柄に対するエラーハンドリング"""
         # Arrange
-        invalid_symbol = 'INVALID.T'
+        invalid_symbol = "INVALID.T"
 
         # Act & Assert
         with self.assertRaises(ValueError):
@@ -165,9 +188,9 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
     def test_error_handling_data_unavailable(self):
         """テスト9: データ取得失敗時のエラーハンドリング"""
         # Arrange
-        with patch.object(self.system, '_get_stock_data', return_value=pd.DataFrame()):
+        with patch.object(self.system, "_get_stock_data", return_value=pd.DataFrame()):
             # Act
-            result = self.system.predict_single_stock('9984.T')
+            result = self.system.predict_single_stock("9984.T")
 
             # Assert
             self.assertIsNone(result, "データ取得失敗時はNoneを返すべきです")
@@ -177,7 +200,7 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
         import time
 
         # Arrange
-        test_symbol = '9984.T'
+        test_symbol = "9984.T"
 
         # Act
         start_time = time.time()
@@ -186,7 +209,10 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
 
         # Assert
         execution_time = end_time - start_time
-        self.assertLess(execution_time, 5.0, "1銘柄の予測は5秒以内に完了する必要があります")
+        self.assertLess(
+            execution_time, 5.0, "1銘柄の予測は5秒以内に完了する必要があります"
+        )
+
 
 class TestTDDIntegration(unittest.TestCase):
     """統合テスト"""
@@ -221,7 +247,8 @@ class TestTDDIntegration(unittest.TestCase):
         # Assert: 統合テスト成功
         self.assertTrue(True, "統合テストが完了しました")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     print("[RED] TDD Red フェーズ: テストファースト実行")
     print("=" * 60)
     print("期待：全テストが失敗する（実装がまだ存在しないため）")

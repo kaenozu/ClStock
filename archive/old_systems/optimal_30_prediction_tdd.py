@@ -10,12 +10,14 @@ from datetime import datetime
 from typing import List, Dict, Optional, Any
 import logging
 from utils.logger_config import setup_logger
+
 logger = setup_logger(__name__)
 
 # 実際のシステムコンポーネントをインポート
 try:
     from data.stock_data import StockDataProvider
     from models.ml_models import UltraHighPerformancePredictor
+
     PRODUCTION_MODE = True
 except ImportError:
     # テスト環境では模擬データを使用
@@ -55,8 +57,10 @@ class Optimal30PredictionTDD:
         """
         self._initialize_dependencies(data_provider, predictor)
         self._optimal_symbols = self._get_optimal_symbols_list()
-        
-        logging.info(f"最適30銘柄予測システム初期化完了 (PRODUCTION_MODE: {PRODUCTION_MODE})")
+
+        logging.info(
+            f"最適30銘柄予測システム初期化完了 (PRODUCTION_MODE: {PRODUCTION_MODE})"
+        )
 
     def _initialize_dependencies(self, data_provider, predictor):
         """依存関係の初期化"""
@@ -74,14 +78,36 @@ class Optimal30PredictionTDD:
     def _get_optimal_symbols_list(self) -> List[str]:
         """TSE4000最適化で発見された最適30銘柄を取得"""
         return [
-            '9984.T',  # ソフトバンクG（テストで期待）
-            '4004.T',  # 化学セクター最高スコア（テストで期待）
-            '4005.T', '6701.T', '8411.T', '6501.T', '1332.T',
-            '8035.T', '6861.T', '4519.T', '4502.T', '8001.T',
-            '8002.T', '8031.T', '7203.T', '6902.T', '7269.T',
-            '8306.T', '2914.T', '6770.T', '4324.T', '2282.T',
-            '9101.T', '4503.T', '1803.T', '5101.T', '1605.T',
-            '5020.T', '9022.T', '7261.T'
+            "9984.T",  # ソフトバンクG（テストで期待）
+            "4004.T",  # 化学セクター最高スコア（テストで期待）
+            "4005.T",
+            "6701.T",
+            "8411.T",
+            "6501.T",
+            "1332.T",
+            "8035.T",
+            "6861.T",
+            "4519.T",
+            "4502.T",
+            "8001.T",
+            "8002.T",
+            "8031.T",
+            "7203.T",
+            "6902.T",
+            "7269.T",
+            "8306.T",
+            "2914.T",
+            "6770.T",
+            "4324.T",
+            "2282.T",
+            "9101.T",
+            "4503.T",
+            "1803.T",
+            "5101.T",
+            "1605.T",
+            "5020.T",
+            "9022.T",
+            "7261.T",
         ]
 
     def get_optimal_symbols(self) -> List[str]:
@@ -96,7 +122,7 @@ class Optimal30PredictionTDD:
             score = self._get_prediction_score(symbol)
             if score is not None:
                 return float(score)
-            
+
             return self._calculate_fallback_score(symbol)
 
         except Exception as e:
@@ -128,7 +154,9 @@ class Optimal30PredictionTDD:
 
     def calculate_confidence(self, score: float) -> float:
         """信頼度を計算"""
-        confidence = min(MAX_CONFIDENCE, abs(score - NEUTRAL_SCORE) * CONFIDENCE_MULTIPLIER)
+        confidence = min(
+            MAX_CONFIDENCE, abs(score - NEUTRAL_SCORE) * CONFIDENCE_MULTIPLIER
+        )
         return confidence
 
     def predict_single_stock(self, symbol: str) -> Optional[Dict[str, Any]]:
@@ -146,31 +174,35 @@ class Optimal30PredictionTDD:
             logging.error(f"予測エラー {symbol}: {str(e)}")
             return None
 
-    def _create_prediction_result(self, symbol: str, stock_data: pd.DataFrame) -> Dict[str, Any]:
+    def _create_prediction_result(
+        self, symbol: str, stock_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """予測結果の作成"""
         prediction_score = self.predict_score(symbol)
         current_price = self._get_current_price(symbol, stock_data)
-        
+
         change_rate = self.convert_score_to_change_rate(prediction_score)
         predicted_price = current_price * (1 + change_rate / 100)
         confidence = self.calculate_confidence(prediction_score)
 
         result = {
-            'symbol': symbol,
-            'current_price': float(current_price),
-            'predicted_price': float(predicted_price),
-            'change_rate': change_rate,
-            'confidence': confidence,
-            'prediction_score': prediction_score
+            "symbol": symbol,
+            "current_price": float(current_price),
+            "predicted_price": float(predicted_price),
+            "change_rate": change_rate,
+            "confidence": confidence,
+            "prediction_score": prediction_score,
         }
 
-        logging.info(f"予測完了 {symbol}: {change_rate:+.2f}% (スコア: {prediction_score:.1f})")
+        logging.info(
+            f"予測完了 {symbol}: {change_rate:+.2f}% (スコア: {prediction_score:.1f})"
+        )
         return result
 
     def _get_current_price(self, symbol: str, stock_data: pd.DataFrame) -> float:
         """現在価格の取得"""
-        if PRODUCTION_MODE and 'Close' in stock_data.columns and len(stock_data) > 0:
-            return float(stock_data['Close'].iloc[-1])
+        if PRODUCTION_MODE and "Close" in stock_data.columns and len(stock_data) > 0:
+            return float(stock_data["Close"].iloc[-1])
         else:
             # テスト環境では模擬価格
             return MOCK_PRICE_BASE + (abs(hash(symbol)) % MOCK_PRICE_RANGE)
@@ -194,7 +226,7 @@ class Optimal30PredictionTDD:
 
         # 変化率×信頼度でスコア算出し降順ソート
         def calculate_ranking_score(result):
-            return result['change_rate'] * result['confidence']
+            return result["change_rate"] * result["confidence"]
 
         ranked = sorted(results, key=calculate_ranking_score, reverse=True)
         return ranked
@@ -214,7 +246,9 @@ class Optimal30PredictionTDD:
         """プロダクション環境でのデータ取得"""
         if PRODUCTION_MODE and self.data_provider:
             try:
-                stock_data = self.data_provider.get_stock_data(symbol, DEFAULT_DATA_PERIOD)
+                stock_data = self.data_provider.get_stock_data(
+                    symbol, DEFAULT_DATA_PERIOD
+                )
                 if stock_data is not None and not stock_data.empty:
                     return stock_data
             except Exception as e:
@@ -228,28 +262,25 @@ class Optimal30PredictionTDD:
             return pd.DataFrame()
 
         # フォールバック：模擬データ
-        dates = pd.date_range(start='2023-01-01', periods=100, freq='D')
+        dates = pd.date_range(start="2023-01-01", periods=100, freq="D")
         base_price = MOCK_PRICE_BASE + (abs(hash(symbol)) % 5000)
         price_variation = np.random.normal(0, 0.02, 100)
         prices = [base_price]
 
         for i in range(1, 100):
-            change = prices[i-1] * price_variation[i]
-            new_price = max(prices[i-1] + change, base_price * 0.5)
+            change = prices[i - 1] * price_variation[i]
+            new_price = max(prices[i - 1] + change, base_price * 0.5)
             prices.append(new_price)
 
-        data = {
-            'Close': prices,
-            'Volume': np.random.randint(100000, 1000000, 100)
-        }
+        data = {"Close": prices, "Volume": np.random.randint(100000, 1000000, 100)}
         return pd.DataFrame(data, index=dates)
 
     def get_system_info(self) -> Dict[str, Any]:
         """システム情報を取得"""
         return {
-            'production_mode': PRODUCTION_MODE,
-            'has_data_provider': self.data_provider is not None,
-            'has_predictor': self.predictor is not None,
-            'optimal_symbols_count': len(self._optimal_symbols),
-            'system_version': '1.0.0-TDD'
+            "production_mode": PRODUCTION_MODE,
+            "has_data_provider": self.data_provider is not None,
+            "has_predictor": self.predictor is not None,
+            "optimal_symbols_count": len(self._optimal_symbols),
+            "system_version": "1.0.0-TDD",
         }

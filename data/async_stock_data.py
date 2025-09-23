@@ -34,10 +34,7 @@ class AsyncStockDataProvider:
             # we would integrate with the connection pool
             connector = aiohttp.TCPConnector(limit=20, limit_per_host=5)
             timeout = aiohttp.ClientTimeout(total=30)
-            self._session = aiohttp.ClientSession(
-                connector=connector,
-                timeout=timeout
-            )
+            self._session = aiohttp.ClientSession(connector=connector, timeout=timeout)
         return self._session
 
     async def close(self):
@@ -65,7 +62,7 @@ class AsyncStockDataProvider:
                 ticker = symbol
 
             logger.info(f"Fetching data for {symbol} (period: {period})")
-            
+
             # Use yfinance with async wrapper
             data = await self._fetch_with_yfinance_async(ticker, period)
 
@@ -86,16 +83,19 @@ class AsyncStockDataProvider:
             logger.error(f"Error fetching data for {symbol}: {str(e)}")
             raise DataFetchError(symbol, "Unexpected error during data fetch", str(e))
 
-    async def _fetch_with_yfinance_async(self, ticker: str, period: str) -> pd.DataFrame:
+    async def _fetch_with_yfinance_async(
+        self, ticker: str, period: str
+    ) -> pd.DataFrame:
         """Fetch data using yfinance with async wrapper"""
         # yfinance is not async by nature, so we'll run it in a thread pool
         loop = asyncio.get_event_loop()
-        
+
         def fetch_data():
             import yfinance as yf
+
             stock = yf.Ticker(ticker)
             return stock.history(period=period)
-        
+
         # Run in thread pool to avoid blocking
         data = await loop.run_in_executor(None, fetch_data)
         return data
@@ -110,11 +110,8 @@ class AsyncStockDataProvider:
         failed_symbols: List[str] = []
 
         # Create tasks for all symbols
-        tasks = [
-            self._fetch_single_stock_async(symbol, period) 
-            for symbol in symbols
-        ]
-        
+        tasks = [self._fetch_single_stock_async(symbol, period) for symbol in symbols]
+
         # Wait for all tasks to complete
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -131,7 +128,9 @@ class AsyncStockDataProvider:
 
         return result
 
-    async def _fetch_single_stock_async(self, symbol: str, period: str) -> Optional[pd.DataFrame]:
+    async def _fetch_single_stock_async(
+        self, symbol: str, period: str
+    ) -> Optional[pd.DataFrame]:
         """Fetch data for a single stock asynchronously"""
         try:
             return await self.get_stock_data(symbol, period)
@@ -142,7 +141,9 @@ class AsyncStockDataProvider:
             logger.error(f"Unexpected error for {symbol}: {e}")
             return None
 
-    async def calculate_technical_indicators_async(self, data: pd.DataFrame) -> pd.DataFrame:
+    async def calculate_technical_indicators_async(
+        self, data: pd.DataFrame
+    ) -> pd.DataFrame:
         """Asynchronously calculate technical indicators"""
         from utils.cache import get_cache
 

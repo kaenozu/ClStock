@@ -17,13 +17,19 @@ class ParallelFeatureCalculator:
         self.n_jobs = n_jobs if n_jobs != -1 else min(8, os.cpu_count())
         self.logger = logging.getLogger(__name__)
 
-    def calculate_features_parallel(self, symbols: List[str], data_provider) -> pd.DataFrame:
+    def calculate_features_parallel(
+        self, symbols: List[str], data_provider
+    ) -> pd.DataFrame:
         """複数銘柄の特徴量を並列計算"""
 
-        self.logger.info(f"Calculating features for {len(symbols)} symbols using {self.n_jobs} threads")
+        self.logger.info(
+            f"Calculating features for {len(symbols)} symbols using {self.n_jobs} threads"
+        )
 
         # 並列処理関数の準備
-        calculate_single = partial(self._calculate_single_symbol_features, data_provider=data_provider)
+        calculate_single = partial(
+            self._calculate_single_symbol_features, data_provider=data_provider
+        )
 
         # 特徴量データを格納
         all_features = []
@@ -31,8 +37,7 @@ class ParallelFeatureCalculator:
         with ThreadPoolExecutor(max_workers=self.n_jobs) as executor:
             # 全銘柄の処理を並列開始
             future_to_symbol = {
-                executor.submit(calculate_single, symbol): symbol
-                for symbol in symbols
+                executor.submit(calculate_single, symbol): symbol for symbol in symbols
             }
 
             completed_count = 0
@@ -41,12 +46,14 @@ class ParallelFeatureCalculator:
                 try:
                     features = future.result(timeout=30)  # 30秒タイムアウト
                     if features is not None and not features.empty:
-                        features['symbol'] = symbol
+                        features["symbol"] = symbol
                         all_features.append(features)
 
                     completed_count += 1
                     if completed_count % 10 == 0:
-                        self.logger.info(f"Processed {completed_count}/{len(symbols)} symbols")
+                        self.logger.info(
+                            f"Processed {completed_count}/{len(symbols)} symbols"
+                        )
 
                 except Exception as e:
                     self.logger.error(f"Error processing {symbol}: {str(e)}")
@@ -56,11 +63,15 @@ class ParallelFeatureCalculator:
 
         # 全特徴量を結合
         combined_features = pd.concat(all_features, ignore_index=True)
-        self.logger.info(f"Parallel feature calculation completed: {len(combined_features)} samples")
+        self.logger.info(
+            f"Parallel feature calculation completed: {len(combined_features)} samples"
+        )
 
         return combined_features
 
-    def _calculate_single_symbol_features(self, symbol: str, data_provider) -> pd.DataFrame:
+    def _calculate_single_symbol_features(
+        self, symbol: str, data_provider
+    ) -> pd.DataFrame:
         """単一銘柄の特徴量計算（並列処理用）"""
         try:
             # データ取得
@@ -89,31 +100,31 @@ class ParallelFeatureCalculator:
         features = pd.DataFrame(index=data.index)
 
         # 基本価格特徴量
-        features['close'] = data['Close']
-        features['volume'] = data['Volume']
-        features['high_low_ratio'] = data['High'] / data['Low']
-        features['close_open_ratio'] = data['Close'] / data['Open']
+        features["close"] = data["Close"]
+        features["volume"] = data["Volume"]
+        features["high_low_ratio"] = data["High"] / data["Low"]
+        features["close_open_ratio"] = data["Close"] / data["Open"]
 
         # 移動平均（ベクトル化）
         for period in [5, 10, 20, 50]:
-            ma = data['Close'].rolling(window=period, min_periods=1).mean()
-            features[f'ma_{period}'] = ma
-            features[f'close_ma_{period}_ratio'] = data['Close'] / ma
+            ma = data["Close"].rolling(window=period, min_periods=1).mean()
+            features[f"ma_{period}"] = ma
+            features[f"close_ma_{period}_ratio"] = data["Close"] / ma
 
         # RSI（高速化版）
-        features['rsi_14'] = self._calculate_rsi_fast(data['Close'], 14)
+        features["rsi_14"] = self._calculate_rsi_fast(data["Close"], 14)
 
         # MACD（高速化版）
-        macd_line, signal_line = self._calculate_macd_fast(data['Close'])
-        features['macd'] = macd_line
-        features['macd_signal'] = signal_line
-        features['macd_histogram'] = macd_line - signal_line
+        macd_line, signal_line = self._calculate_macd_fast(data["Close"])
+        features["macd"] = macd_line
+        features["macd_signal"] = signal_line
+        features["macd_histogram"] = macd_line - signal_line
 
         # ボリンジャーバンド
-        bb_upper, bb_lower = self._calculate_bollinger_bands_fast(data['Close'], 20, 2)
-        features['bb_upper'] = bb_upper
-        features['bb_lower'] = bb_lower
-        features['bb_position'] = (data['Close'] - bb_lower) / (bb_upper - bb_lower)
+        bb_upper, bb_lower = self._calculate_bollinger_bands_fast(data["Close"], 20, 2)
+        features["bb_upper"] = bb_upper
+        features["bb_lower"] = bb_lower
+        features["bb_position"] = (data["Close"] - bb_lower) / (bb_upper - bb_lower)
 
         return features
 
@@ -123,19 +134,23 @@ class ParallelFeatureCalculator:
 
         # 価格モメンタム（複数期間）
         for period in [1, 3, 5, 10]:
-            features[f'price_momentum_{period}'] = data['Close'].pct_change(period)
+            features[f"price_momentum_{period}"] = data["Close"].pct_change(period)
 
         # ボラティリティ（複数期間）
         for period in [5, 10, 20]:
-            features[f'volatility_{period}'] = data['Close'].pct_change().rolling(period).std()
+            features[f"volatility_{period}"] = (
+                data["Close"].pct_change().rolling(period).std()
+            )
 
         # 出来高関連指標
-        features['volume_ma_ratio'] = data['Volume'] / data['Volume'].rolling(20).mean()
-        features['price_volume_correlation'] = data['Close'].rolling(20).corr(data['Volume'])
+        features["volume_ma_ratio"] = data["Volume"] / data["Volume"].rolling(20).mean()
+        features["price_volume_correlation"] = (
+            data["Close"].rolling(20).corr(data["Volume"])
+        )
 
         # サポート・レジスタンス指標
-        features['high_20_ratio'] = data['Close'] / data['High'].rolling(20).max()
-        features['low_20_ratio'] = data['Close'] / data['Low'].rolling(20).min()
+        features["high_20_ratio"] = data["Close"] / data["High"].rolling(20).max()
+        features["low_20_ratio"] = data["Close"] / data["Low"].rolling(20).min()
 
         return features
 
@@ -160,7 +175,9 @@ class ParallelFeatureCalculator:
         signal_line = macd_line.ewm(span=signal).mean()
         return macd_line, signal_line
 
-    def _calculate_bollinger_bands_fast(self, prices: pd.Series, period: int = 20, std_dev: int = 2):
+    def _calculate_bollinger_bands_fast(
+        self, prices: pd.Series, period: int = 20, std_dev: int = 2
+    ):
         """高速ボリンジャーバンド計算（ベクトル化）"""
         ma = prices.rolling(window=period).mean()
         std = prices.rolling(window=period).std()

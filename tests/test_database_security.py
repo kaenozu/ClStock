@@ -17,7 +17,7 @@ class TestSecureDatabase:
     def setup_method(self):
         """各テストメソッドの前に実行"""
         # 一時的なデータベースファイルを作成
-        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
         self.temp_db.close()
         self.db = SecureDatabase(self.temp_db.name)
 
@@ -46,7 +46,9 @@ class TestSecureDatabase:
 
         # データ挿入
         query = "INSERT INTO stocks (symbol, name, sector) VALUES (?, ?, ?)"
-        result = self.db.execute_safe_update(query, ("TEST", "Test Company", "Technology"))
+        result = self.db.execute_safe_update(
+            query, ("TEST", "Test Company", "Technology")
+        )
         assert result == 1
 
         # データ取得
@@ -63,7 +65,7 @@ class TestSecureDatabase:
             "DELETE FROM stocks; DROP TABLE stocks;",
             "SELECT * FROM stocks UNION SELECT * FROM sqlite_master",
             "INSERT INTO stocks VALUES ('test', 'name', 'sector'); DROP TABLE stocks;",
-            "SELECT * FROM stocks WHERE symbol = 'test'--'"
+            "SELECT * FROM stocks WHERE symbol = 'test'--'",
         ]
 
         for query in dangerous_queries:
@@ -86,7 +88,7 @@ class TestSecureDatabase:
             high=105.0,
             low=95.0,
             close=102.0,
-            volume=1000000
+            volume=1000000,
         )
         assert result == 1
 
@@ -107,7 +109,7 @@ class TestSecureDatabase:
         stocks = [
             ("AAPL", "Apple Inc.", "Technology"),
             ("GOOGL", "Alphabet Inc.", "Technology"),
-            ("TSLA", "Tesla Inc.", "Automotive")
+            ("TSLA", "Tesla Inc.", "Automotive"),
         ]
 
         for symbol, name, sector in stocks:
@@ -139,7 +141,7 @@ class TestSecureDatabase:
                 high=105.0,
                 low=95.0,
                 close=102.0,
-                volume=1000000
+                volume=1000000,
             )
 
     def test_connection_context_manager(self):
@@ -167,7 +169,7 @@ class TestSecureDatabase:
         valid_queries = [
             "INSERT INTO stocks (symbol, name) VALUES (?, ?)",
             "UPDATE stocks SET name = ? WHERE symbol = ?",
-            "DELETE FROM stocks WHERE symbol = ?"
+            "DELETE FROM stocks WHERE symbol = ?",
         ]
 
         for query in valid_queries:
@@ -193,7 +195,7 @@ class TestGlobalDatabaseInstance:
         # 同じインスタンスが返されることを確認
         assert db1 is db2
 
-    @patch('utils.database_security.SecureDatabase')
+    @patch("utils.database_security.SecureDatabase")
     def test_database_initialization(self, mock_db_class):
         """データベース初期化のテスト"""
         mock_instance = MagicMock()
@@ -201,6 +203,7 @@ class TestGlobalDatabaseInstance:
 
         # グローバルインスタンスをリセット
         import utils.database_security
+
         utils.database_security._db_instance = None
 
         # インスタンス取得

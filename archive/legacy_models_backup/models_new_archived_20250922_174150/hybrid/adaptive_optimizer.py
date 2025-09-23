@@ -16,15 +16,18 @@ from dataclasses import dataclass
 
 # PredictionModeは文字列として処理（循環インポート回避）
 
+
 @dataclass
 class UsagePattern:
     """使用パターンデータクラス"""
+
     frequent_symbols: List[str]
     time_based_preferences: Dict[str, str]
     mode_performance: Dict[str, Dict[str, float]]
     symbol_mode_correlation: Dict[str, str]
     peak_usage_hours: List[int]
     average_session_length: float
+
 
 class UsagePatternAnalyzer:
     """使用パターン分析器"""
@@ -47,7 +50,9 @@ class UsagePatternAnalyzer:
         mode_performance = self._analyze_mode_performance(prediction_history)
 
         # 銘柄とモードの相関
-        symbol_mode_correlation = self._analyze_symbol_mode_correlation(prediction_history)
+        symbol_mode_correlation = self._analyze_symbol_mode_correlation(
+            prediction_history
+        )
 
         # ピーク使用時間
         peak_usage_hours = self._analyze_peak_hours(prediction_history)
@@ -61,12 +66,14 @@ class UsagePatternAnalyzer:
             mode_performance=mode_performance,
             symbol_mode_correlation=symbol_mode_correlation,
             peak_usage_hours=peak_usage_hours,
-            average_session_length=average_session_length
+            average_session_length=average_session_length,
         )
 
-    def _analyze_frequent_symbols(self, history: List[Dict], top_n: int = 10) -> List[str]:
+    def _analyze_frequent_symbols(
+        self, history: List[Dict], top_n: int = 10
+    ) -> List[str]:
         """頻繁使用銘柄分析"""
-        symbol_counts = Counter([h['symbol'] for h in history])
+        symbol_counts = Counter([h["symbol"] for h in history])
         return [symbol for symbol, count in symbol_counts.most_common(top_n)]
 
     def _analyze_time_preferences(self, history: List[Dict]) -> Dict[str, str]:
@@ -74,9 +81,13 @@ class UsagePatternAnalyzer:
         time_mode_counts = defaultdict(Counter)
 
         for h in history:
-            hour = h['timestamp'].hour if isinstance(h['timestamp'], datetime) else datetime.now().hour
+            hour = (
+                h["timestamp"].hour
+                if isinstance(h["timestamp"], datetime)
+                else datetime.now().hour
+            )
             time_slot = self._get_time_slot(hour)
-            mode = h['mode']
+            mode = h["mode"]
             time_mode_counts[time_slot][mode] += 1
 
         preferences = {}
@@ -103,26 +114,38 @@ class UsagePatternAnalyzer:
         else:
             return "off_hours"
 
-    def _analyze_mode_performance(self, history: List[Dict]) -> Dict[str, Dict[str, float]]:
+    def _analyze_mode_performance(
+        self, history: List[Dict]
+    ) -> Dict[str, Dict[str, float]]:
         """モード別パフォーマンス分析"""
         mode_stats = defaultdict(list)
 
         for h in history:
-            mode = h['mode']
-            mode_stats[mode].append({
-                'prediction_time': h['prediction_time'],
-                'confidence': h['confidence'],
-                'accuracy': h['accuracy']
-            })
+            mode = h["mode"]
+            mode_stats[mode].append(
+                {
+                    "prediction_time": h["prediction_time"],
+                    "confidence": h["confidence"],
+                    "accuracy": h["accuracy"],
+                }
+            )
 
         performance = {}
         for mode, stats in mode_stats.items():
             if stats:
                 performance[mode] = {
-                    'avg_prediction_time': np.mean([s['prediction_time'] for s in stats]),
-                    'avg_confidence': np.mean([s['confidence'] for s in stats]),
-                    'avg_accuracy': np.mean([s['accuracy'] for s in stats]),
-                    'consistency': 1.0 - np.std([s['confidence'] for s in stats]) / np.mean([s['confidence'] for s in stats]) if np.mean([s['confidence'] for s in stats]) > 0 else 0.5
+                    "avg_prediction_time": np.mean(
+                        [s["prediction_time"] for s in stats]
+                    ),
+                    "avg_confidence": np.mean([s["confidence"] for s in stats]),
+                    "avg_accuracy": np.mean([s["accuracy"] for s in stats]),
+                    "consistency": (
+                        1.0
+                        - np.std([s["confidence"] for s in stats])
+                        / np.mean([s["confidence"] for s in stats])
+                        if np.mean([s["confidence"] for s in stats]) > 0
+                        else 0.5
+                    ),
                 }
 
         return performance
@@ -132,8 +155,8 @@ class UsagePatternAnalyzer:
         symbol_mode_counts = defaultdict(Counter)
 
         for h in history:
-            symbol = h['symbol']
-            mode = h['mode']
+            symbol = h["symbol"]
+            mode = h["mode"]
             symbol_mode_counts[symbol][mode] += 1
 
         correlations = {}
@@ -152,7 +175,11 @@ class UsagePatternAnalyzer:
         hour_counts = Counter()
 
         for h in history:
-            hour = h['timestamp'].hour if isinstance(h['timestamp'], datetime) else datetime.now().hour
+            hour = (
+                h["timestamp"].hour
+                if isinstance(h["timestamp"], datetime)
+                else datetime.now().hour
+            )
             hour_counts[hour] += 1
 
         # 上位3時間帯
@@ -164,7 +191,9 @@ class UsagePatternAnalyzer:
         if len(history) < 2:
             return 30.0  # デフォルト30分
 
-        timestamps = [h['timestamp'] for h in history if isinstance(h['timestamp'], datetime)]
+        timestamps = [
+            h["timestamp"] for h in history if isinstance(h["timestamp"], datetime)
+        ]
         if len(timestamps) < 2:
             return 30.0
 
@@ -173,16 +202,22 @@ class UsagePatternAnalyzer:
         current_session_start = timestamps[0]
 
         for i in range(1, len(timestamps)):
-            time_gap = (timestamps[i] - timestamps[i-1]).total_seconds() / 60  # 分単位
+            time_gap = (
+                timestamps[i] - timestamps[i - 1]
+            ).total_seconds() / 60  # 分単位
 
             if time_gap > 30:  # 30分以上の間隔でセッション区切り
-                session_length = (timestamps[i-1] - current_session_start).total_seconds() / 60
+                session_length = (
+                    timestamps[i - 1] - current_session_start
+                ).total_seconds() / 60
                 sessions.append(session_length)
                 current_session_start = timestamps[i]
 
         # 最後のセッション
         if timestamps:
-            session_length = (timestamps[-1] - current_session_start).total_seconds() / 60
+            session_length = (
+                timestamps[-1] - current_session_start
+            ).total_seconds() / 60
             sessions.append(session_length)
 
         return np.mean(sessions) if sessions else 30.0
@@ -196,13 +231,14 @@ class UsagePatternAnalyzer:
                 "afternoon_session": "balanced",
                 "closing_session": "accuracy",
                 "evening_analysis": "research",
-                "off_hours": "auto"
+                "off_hours": "auto",
             },
             mode_performance={},
             symbol_mode_correlation={},
             peak_usage_hours=[9, 13, 15],
-            average_session_length=45.0
+            average_session_length=45.0,
         )
+
 
 class PerformanceMonitor:
     """パフォーマンス監視器"""
@@ -215,27 +251,27 @@ class PerformanceMonitor:
     def record_performance(self, metrics: Dict[str, float]):
         """パフォーマンス記録"""
         timestamp = datetime.now()
-        metrics['timestamp'] = timestamp
+        metrics["timestamp"] = timestamp
         self.metrics_history.append(metrics)
 
         # ウィンドウサイズ制限
         if len(self.metrics_history) > self.window_size:
-            self.metrics_history = self.metrics_history[-self.window_size:]
+            self.metrics_history = self.metrics_history[-self.window_size :]
 
     def get_performance_trends(self) -> Dict[str, Any]:
         """パフォーマンストレンド取得"""
         if len(self.metrics_history) < 10:
-            return {'insufficient_data': True}
+            return {"insufficient_data": True}
 
         recent_metrics = self.metrics_history[-50:]  # 直近50件
 
         trends = {}
-        for key in ['prediction_time', 'confidence', 'cache_hit_rate']:
+        for key in ["prediction_time", "confidence", "cache_hit_rate"]:
             if key in recent_metrics[0]:
                 values = [m[key] for m in recent_metrics if key in m]
                 if values:
-                    trends[f'{key}_trend'] = self._calculate_trend(values)
-                    trends[f'{key}_current'] = np.mean(values[-10:])  # 直近10件の平均
+                    trends[f"{key}_trend"] = self._calculate_trend(values)
+                    trends[f"{key}_current"] = np.mean(values[-10:])  # 直近10件の平均
 
         return trends
 
@@ -251,6 +287,7 @@ class PerformanceMonitor:
         except Exception:
             return 0.0
 
+
 class OptimizationEngine:
     """最適化エンジン"""
 
@@ -258,54 +295,64 @@ class OptimizationEngine:
         self.logger = logging.getLogger(__name__)
         self.optimization_history = []
 
-    def generate_optimizations(self, usage_pattern: UsagePattern,
-                             performance_trends: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def generate_optimizations(
+        self, usage_pattern: UsagePattern, performance_trends: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """最適化提案生成"""
         optimizations = []
 
         # 頻繁使用銘柄の事前ロード提案
         if usage_pattern.frequent_symbols:
-            optimizations.append({
-                'type': 'preload_models',
-                'priority': 'high',
-                'symbols': usage_pattern.frequent_symbols[:5],
-                'description': 'Preload models for frequently used symbols',
-                'expected_improvement': 0.3  # 30%高速化期待
-            })
+            optimizations.append(
+                {
+                    "type": "preload_models",
+                    "priority": "high",
+                    "symbols": usage_pattern.frequent_symbols[:5],
+                    "description": "Preload models for frequently used symbols",
+                    "expected_improvement": 0.3,  # 30%高速化期待
+                }
+            )
 
         # 時間帯別デフォルトモード設定提案
         if usage_pattern.time_based_preferences:
-            optimizations.append({
-                'type': 'time_based_defaults',
-                'priority': 'medium',
-                'preferences': usage_pattern.time_based_preferences,
-                'description': 'Set time-based default prediction modes',
-                'expected_improvement': 0.15  # 15%効率化期待
-            })
+            optimizations.append(
+                {
+                    "type": "time_based_defaults",
+                    "priority": "medium",
+                    "preferences": usage_pattern.time_based_preferences,
+                    "description": "Set time-based default prediction modes",
+                    "expected_improvement": 0.15,  # 15%効率化期待
+                }
+            )
 
         # パフォーマンス低下検出と対策提案
-        if 'prediction_time_trend' in performance_trends:
-            if performance_trends['prediction_time_trend'] > 0.001:  # 予測時間増加傾向
-                optimizations.append({
-                    'type': 'performance_tuning',
-                    'priority': 'high',
-                    'action': 'cache_optimization',
-                    'description': 'Optimize cache settings due to performance degradation',
-                    'expected_improvement': 0.25
-                })
+        if "prediction_time_trend" in performance_trends:
+            if performance_trends["prediction_time_trend"] > 0.001:  # 予測時間増加傾向
+                optimizations.append(
+                    {
+                        "type": "performance_tuning",
+                        "priority": "high",
+                        "action": "cache_optimization",
+                        "description": "Optimize cache settings due to performance degradation",
+                        "expected_improvement": 0.25,
+                    }
+                )
 
         # キャッシュヒット率改善提案
-        if 'cache_hit_rate_current' in performance_trends:
-            if performance_trends['cache_hit_rate_current'] < 0.7:
-                optimizations.append({
-                    'type': 'cache_tuning',
-                    'priority': 'medium',
-                    'action': 'extend_ttl',
-                    'description': 'Extend cache TTL to improve hit rate',
-                    'expected_improvement': 0.2
-                })
+        if "cache_hit_rate_current" in performance_trends:
+            if performance_trends["cache_hit_rate_current"] < 0.7:
+                optimizations.append(
+                    {
+                        "type": "cache_tuning",
+                        "priority": "medium",
+                        "action": "extend_ttl",
+                        "description": "Extend cache TTL to improve hit rate",
+                        "expected_improvement": 0.2,
+                    }
+                )
 
         return optimizations
+
 
 class AdaptivePerformanceOptimizer:
     """
@@ -348,21 +395,27 @@ class AdaptivePerformanceOptimizer:
 
         # 結果レポート
         optimization_report = {
-            'usage_pattern': {
-                'frequent_symbols': usage_pattern.frequent_symbols,
-                'peak_hours': usage_pattern.peak_usage_hours,
-                'session_length': usage_pattern.average_session_length
+            "usage_pattern": {
+                "frequent_symbols": usage_pattern.frequent_symbols,
+                "peak_hours": usage_pattern.peak_usage_hours,
+                "session_length": usage_pattern.average_session_length,
             },
-            'performance_trends': performance_trends,
-            'optimizations_applied': applied_optimizations,
-            'expected_improvements': sum([opt.get('expected_improvement', 0) for opt in applied_optimizations]),
-            'timestamp': datetime.now()
+            "performance_trends": performance_trends,
+            "optimizations_applied": applied_optimizations,
+            "expected_improvements": sum(
+                [opt.get("expected_improvement", 0) for opt in applied_optimizations]
+            ),
+            "timestamp": datetime.now(),
         }
 
-        self.logger.info(f"Optimization cycle completed: {len(applied_optimizations)} optimizations applied")
+        self.logger.info(
+            f"Optimization cycle completed: {len(applied_optimizations)} optimizations applied"
+        )
         return optimization_report
 
-    def _apply_optimizations(self, optimizations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _apply_optimizations(
+        self, optimizations: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """最適化適用"""
         applied = []
 
@@ -372,42 +425,44 @@ class AdaptivePerformanceOptimizer:
                     success = self._execute_optimization(opt)
                     if success:
                         applied.append(opt)
-                        self.active_optimizations[opt['type']] = opt
+                        self.active_optimizations[opt["type"]] = opt
                         self.logger.info(f"Applied optimization: {opt['type']}")
             except Exception as e:
-                self.logger.error(f"Failed to apply optimization {opt['type']}: {str(e)}")
+                self.logger.error(
+                    f"Failed to apply optimization {opt['type']}: {str(e)}"
+                )
 
         return applied
 
     def _should_apply_optimization(self, optimization: Dict[str, Any]) -> bool:
         """最適化適用判定"""
         # 既に同じタイプの最適化が適用されているかチェック
-        if optimization['type'] in self.active_optimizations:
+        if optimization["type"] in self.active_optimizations:
             return False
 
         # 優先度チェック
-        if optimization.get('priority') == 'low':
+        if optimization.get("priority") == "low":
             return False
 
         # 期待改善効果チェック
-        if optimization.get('expected_improvement', 0) < 0.1:
+        if optimization.get("expected_improvement", 0) < 0.1:
             return False
 
         return True
 
     def _execute_optimization(self, optimization: Dict[str, Any]) -> bool:
         """最適化実行"""
-        opt_type = optimization['type']
+        opt_type = optimization["type"]
 
         try:
-            if opt_type == 'preload_models':
-                return self._preload_models(optimization['symbols'])
-            elif opt_type == 'time_based_defaults':
-                return self._configure_time_defaults(optimization['preferences'])
-            elif opt_type == 'performance_tuning':
-                return self._tune_performance(optimization['action'])
-            elif opt_type == 'cache_tuning':
-                return self._tune_cache(optimization['action'])
+            if opt_type == "preload_models":
+                return self._preload_models(optimization["symbols"])
+            elif opt_type == "time_based_defaults":
+                return self._configure_time_defaults(optimization["preferences"])
+            elif opt_type == "performance_tuning":
+                return self._tune_performance(optimization["action"])
+            elif opt_type == "cache_tuning":
+                return self._tune_cache(optimization["action"])
             else:
                 self.logger.warning(f"Unknown optimization type: {opt_type}")
                 return False
@@ -440,13 +495,14 @@ class AdaptivePerformanceOptimizer:
         self.logger.info(f"Cache tuning action: {action}")
         return True
 
-    def record_performance_metrics(self, prediction_time: float, confidence: float,
-                                 cache_hit: bool = False):
+    def record_performance_metrics(
+        self, prediction_time: float, confidence: float, cache_hit: bool = False
+    ):
         """パフォーマンスメトリクス記録"""
         metrics = {
-            'prediction_time': prediction_time,
-            'confidence': confidence,
-            'cache_hit_rate': 1.0 if cache_hit else 0.0
+            "prediction_time": prediction_time,
+            "confidence": confidence,
+            "cache_hit_rate": 1.0 if cache_hit else 0.0,
         }
 
         self.performance_monitor.record_performance(metrics)
@@ -454,10 +510,10 @@ class AdaptivePerformanceOptimizer:
     def get_optimization_status(self) -> Dict[str, Any]:
         """最適化状況取得"""
         return {
-            'active_optimizations': list(self.active_optimizations.keys()),
-            'total_applied': len(self.active_optimizations),
-            'performance_trends': self.performance_monitor.get_performance_trends(),
-            'next_optimization_due': self._calculate_next_optimization_time()
+            "active_optimizations": list(self.active_optimizations.keys()),
+            "total_applied": len(self.active_optimizations),
+            "performance_trends": self.performance_monitor.get_performance_trends(),
+            "next_optimization_due": self._calculate_next_optimization_time(),
         }
 
     def _calculate_next_optimization_time(self) -> datetime:

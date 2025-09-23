@@ -70,7 +70,9 @@ class StockDataProvider:
 
             if data.empty:
                 # 最終的にデモデータを生成
-                logger.warning(f"No real data available for {symbol}, generating demo data")
+                logger.warning(
+                    f"No real data available for {symbol}, generating demo data"
+                )
                 data = self._generate_demo_data(symbol, period)
                 successful_ticker = "demo_data"
 
@@ -79,7 +81,9 @@ class StockDataProvider:
             data["CompanyName"] = self.jp_stock_codes.get(symbol, symbol)
             data["ActualTicker"] = successful_ticker
 
-            logger.info(f"Successfully processed {len(data)} data points for {symbol} using {successful_ticker}")
+            logger.info(
+                f"Successfully processed {len(data)} data points for {symbol} using {successful_ticker}"
+            )
 
             # キャッシュに保存（30分）
             cache.set(cache_key, data, ttl=1800)

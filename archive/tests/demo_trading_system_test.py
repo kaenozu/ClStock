@@ -18,15 +18,19 @@ sys.path.insert(0, str(project_root))
 
 # デモ運用システムインポート
 from trading import (
-    DemoTrader, TradingStrategy, DemoPortfolioManager,
-    DemoRiskManager, TradeRecorder, PerformanceTracker,
-    BacktestEngine, BacktestConfig
+    DemoTrader,
+    TradingStrategy,
+    DemoPortfolioManager,
+    DemoRiskManager,
+    TradeRecorder,
+    PerformanceTracker,
+    BacktestEngine,
+    BacktestConfig,
 )
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = setup_logger(__name__)
 
@@ -38,9 +42,7 @@ def test_trading_strategy():
     try:
         # 戦略初期化
         strategy = TradingStrategy(
-            initial_capital=1000000,
-            precision_threshold=85.0,
-            confidence_threshold=0.7
+            initial_capital=1000000, precision_threshold=85.0, confidence_threshold=0.7
         )
 
         # テスト銘柄でシグナル生成
@@ -51,7 +53,9 @@ def test_trading_strategy():
                 signal = strategy.generate_trading_signal(symbol, 1000000)
 
                 # アサーション追加
-                assert signal is not None or signal is None, f"シグナル生成結果が異常: {signal}"
+                assert (
+                    signal is not None or signal is None
+                ), f"シグナル生成結果が異常: {signal}"
 
                 if signal:
                     logger.info(f"取引シグナル生成成功: {symbol}")
@@ -61,11 +65,21 @@ def test_trading_strategy():
                     logger.info(f"  87%精度達成: {signal.precision_87_achieved}")
 
                     # シグナルの妥当性を検証
-                    assert hasattr(signal, 'signal_type'), "シグナルにsignal_typeが存在しません"
-                    assert hasattr(signal, 'confidence'), "シグナルにconfidenceが存在しません"
-                    assert 0 <= signal.confidence <= 1, f"信頼度が範囲外: {signal.confidence}"
-                    assert hasattr(signal, 'expected_return'), "シグナルにexpected_returnが存在しません"
-                    assert isinstance(signal.precision_87_achieved, bool), "precision_87_achievedがboolではありません"
+                    assert hasattr(
+                        signal, "signal_type"
+                    ), "シグナルにsignal_typeが存在しません"
+                    assert hasattr(
+                        signal, "confidence"
+                    ), "シグナルにconfidenceが存在しません"
+                    assert (
+                        0 <= signal.confidence <= 1
+                    ), f"信頼度が範囲外: {signal.confidence}"
+                    assert hasattr(
+                        signal, "expected_return"
+                    ), "シグナルにexpected_returnが存在しません"
+                    assert isinstance(
+                        signal.precision_87_achieved, bool
+                    ), "precision_87_achievedがboolではありません"
                 else:
                     logger.info(f"シグナル生成なし: {symbol}")
                     # シグナルがNoneの場合も正常な状態
@@ -142,20 +156,14 @@ def test_risk_manager():
 
         # ポジション開設可能性テスト
         can_open = risk_manager.can_open_position(
-            symbol="6758.T",
-            position_size=100000,
-            confidence=0.8,
-            precision=87.0
+            symbol="6758.T", position_size=100000, confidence=0.8, precision=87.0
         )
 
         logger.info(f"ポジション開設可能: {can_open}")
 
         # 最適ポジションサイズ計算
         optimal_size = risk_manager.calculate_optimal_position_size(
-            symbol="6758.T",
-            expected_return=0.05,
-            confidence=0.8,
-            precision=87.0
+            symbol="6758.T", expected_return=0.05, confidence=0.8, precision=87.0
         )
 
         logger.info(f"最適ポジションサイズ: {optimal_size:,.0f}円")
@@ -163,7 +171,7 @@ def test_risk_manager():
         # VaR計算テスト
         test_positions = {
             "6758.T": {"market_value": 250000},
-            "7203.T": {"market_value": 180000}
+            "7203.T": {"market_value": 180000},
         }
 
         var_value = risk_manager.calculate_var(test_positions)
@@ -195,25 +203,21 @@ def test_trade_recorder():
 
         # テスト取引記録
         test_trade_data = {
-            'trade_id': 'TEST_001',
-            'session_id': 'test_session',
-            'symbol': '6758.T',
-            'action': 'OPEN',
-            'quantity': 100,
-            'price': 2500.0,
-            'timestamp': datetime.now().isoformat(),
-            'signal_type': 'BUY',
-            'confidence': 0.85,
-            'precision': 87.0,
-            'precision_87_achieved': True,
-            'expected_return': 0.05,
-            'position_size': 250000,
-            'trading_costs': {
-                'commission': 250,
-                'spread': 125,
-                'total_cost': 375
-            },
-            'reasoning': 'テスト取引'
+            "trade_id": "TEST_001",
+            "session_id": "test_session",
+            "symbol": "6758.T",
+            "action": "OPEN",
+            "quantity": 100,
+            "price": 2500.0,
+            "timestamp": datetime.now().isoformat(),
+            "signal_type": "BUY",
+            "confidence": 0.85,
+            "precision": 87.0,
+            "precision_87_achieved": True,
+            "expected_return": 0.05,
+            "position_size": 250000,
+            "trading_costs": {"commission": 250, "spread": 125, "total_cost": 375},
+            "reasoning": "テスト取引",
         }
 
         # 取引記録
@@ -222,12 +226,14 @@ def test_trade_recorder():
 
         # クローズ取引記録
         close_trade_data = test_trade_data.copy()
-        close_trade_data.update({
-            'trade_id': 'TEST_001_CLOSE',
-            'action': 'CLOSE',
-            'actual_return': 0.04,
-            'profit_loss': 9625  # 4%リターン - 取引コスト
-        })
+        close_trade_data.update(
+            {
+                "trade_id": "TEST_001_CLOSE",
+                "action": "CLOSE",
+                "actual_return": 0.04,
+                "profit_loss": 9625,  # 4%リターン - 取引コスト
+            }
+        )
 
         recorder.record_trade(close_trade_data)
 
@@ -271,13 +277,14 @@ def test_performance_tracker():
         for day in range(test_days):
             # ランダムな価格変動シミュレーション
             import random
+
             daily_change = random.uniform(-0.02, 0.03)  # -2%から+3%
-            current_value *= (1 + daily_change)
+            current_value *= 1 + daily_change
 
             success = tracker.update_performance(
                 current_portfolio_value=current_value,
                 active_positions=random.randint(3, 8),
-                trades_count=random.randint(0, 3)
+                trades_count=random.randint(0, 3),
             )
 
             if success:
@@ -325,7 +332,7 @@ def test_backtest_engine():
             initial_capital=1000000,
             precision_threshold=85.0,
             confidence_threshold=0.7,
-            target_symbols=["6758.T", "7203.T"]
+            target_symbols=["6758.T", "7203.T"],
         )
 
         # バックテストエンジン初期化
@@ -370,7 +377,7 @@ def test_demo_trader_integration():
             target_symbols=["6758.T", "7203.T", "8306.T"],
             precision_threshold=85.0,
             confidence_threshold=0.7,
-            update_interval=60  # 1分間隔（テスト用）
+            update_interval=60,  # 1分間隔（テスト用）
         )
 
         # 短期間のデモ取引開始
@@ -380,6 +387,7 @@ def test_demo_trader_integration():
 
         # 少し待機（実際の取引処理をシミュレーション）
         import time
+
         time.sleep(5)
 
         # 現在状況確認
@@ -403,7 +411,9 @@ def test_demo_trader_integration():
             logger.info(f"取引統計:")
             logger.info(f"  勝率: {statistics.get('win_rate', 0):.1f}%")
             logger.info(f"  平均リターン: {statistics.get('average_return', 0):.3f}")
-            logger.info(f"  87%精度取引率: {statistics.get('precision_87_rate', 0):.1f}%")
+            logger.info(
+                f"  87%精度取引率: {statistics.get('precision_87_rate', 0):.1f}%"
+            )
 
         logger.info("デモトレーダー統合テスト完了")
         return True
@@ -425,11 +435,15 @@ def sample_demo_trading_usage():
         demo_trader = DemoTrader(
             initial_capital=1000000,  # 100万円
             target_symbols=[
-                "6758.T", "7203.T", "8306.T", "9984.T", "6861.T"  # 主要5銘柄
+                "6758.T",
+                "7203.T",
+                "8306.T",
+                "9984.T",
+                "6861.T",  # 主要5銘柄
             ],
             precision_threshold=87.0,  # 87%精度以上で取引
             confidence_threshold=0.8,  # 80%信頼度以上で取引
-            update_interval=300  # 5分間隔
+            update_interval=300,  # 5分間隔
         )
 
         # 2. 1週間のデモ取引開始
@@ -508,7 +522,7 @@ def main():
         ("パフォーマンストラッカー", test_performance_tracker),
         ("バックテストエンジン", test_backtest_engine),
         ("デモトレーダー統合", test_demo_trader_integration),
-        ("使用サンプル", sample_demo_trading_usage)
+        ("使用サンプル", sample_demo_trading_usage),
     ]
 
     for test_name, test_func in test_functions:

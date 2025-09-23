@@ -14,15 +14,17 @@ import numpy as np
 
 class PredictionMode(Enum):
     """予測モード"""
-    CONSERVATIVE = "conservative"    # 保守的予測
-    BALANCED = "balanced"           # バランス予測
-    AGGRESSIVE = "aggressive"       # 積極的予測
-    ULTRA_FAST = "ultra_fast"      # 超高速予測
+
+    CONSERVATIVE = "conservative"  # 保守的予測
+    BALANCED = "balanced"  # バランス予測
+    AGGRESSIVE = "aggressive"  # 積極的予測
+    ULTRA_FAST = "ultra_fast"  # 超高速予測
     HIGH_PRECISION = "high_precision"  # 高精度予測
 
 
 class ModelType(Enum):
     """モデルタイプ"""
+
     ENSEMBLE = "ensemble"
     DEEP_LEARNING = "deep_learning"
     HYBRID = "hybrid"
@@ -33,14 +35,15 @@ class ModelType(Enum):
 @dataclass
 class PredictionResult:
     """統一された予測結果クラス"""
-    prediction: float                    # 予測値 (0-100)
-    confidence: float                    # 信頼度 (0-1)
-    accuracy: float                      # 推定精度 (0-100)
-    timestamp: datetime                  # 予測実行時刻
-    symbol: str                         # 銘柄コード
+
+    prediction: float  # 予測値 (0-100)
+    confidence: float  # 信頼度 (0-1)
+    accuracy: float  # 推定精度 (0-100)
+    timestamp: datetime  # 予測実行時刻
+    symbol: str  # 銘柄コード
     model_type: ModelType = ModelType.ENSEMBLE  # 使用モデルタイプ（デフォルト値追加）
-    execution_time: float = 0.0         # 実行時間(秒)（デフォルト値追加）
-    metadata: Dict[str, Any] = None     # 追加メタデータ（デフォルト値追加）
+    execution_time: float = 0.0  # 実行時間(秒)（デフォルト値追加）
+    metadata: Dict[str, Any] = None  # 追加メタデータ（デフォルト値追加）
 
     def __post_init__(self):
         """データクラス初期化後の処理"""
@@ -50,23 +53,24 @@ class PredictionResult:
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式での出力"""
         return {
-            'prediction': self.prediction,
-            'confidence': self.confidence,
-            'accuracy': self.accuracy,
-            'timestamp': self.timestamp.isoformat(),
-            'symbol': self.symbol,
-            'model_type': self.model_type.value,
-            'execution_time': self.execution_time,
-            'metadata': self.metadata
+            "prediction": self.prediction,
+            "confidence": self.confidence,
+            "accuracy": self.accuracy,
+            "timestamp": self.timestamp.isoformat(),
+            "symbol": self.symbol,
+            "model_type": self.model_type.value,
+            "execution_time": self.execution_time,
+            "metadata": self.metadata,
         }
 
 
 @dataclass
 class BatchPredictionResult:
     """バッチ予測結果クラス"""
-    predictions: Dict[str, float]       # 銘柄ごとの予測値
-    errors: Dict[str, str]              # エラーが発生した銘柄とエラーメッセージ
-    metadata: Dict[str, Any] = None     # 追加メタデータ
+
+    predictions: Dict[str, float]  # 銘柄ごとの予測値
+    errors: Dict[str, str]  # エラーが発生した銘柄とエラーメッセージ
+    metadata: Dict[str, Any] = None  # 追加メタデータ
 
     def __post_init__(self):
         """データクラス初期化後の処理"""
@@ -77,6 +81,7 @@ class BatchPredictionResult:
 @dataclass
 class ModelConfiguration:
     """モデル設定クラス"""
+
     model_type: ModelType = ModelType.ENSEMBLE
     prediction_mode: PredictionMode = PredictionMode.BALANCED
     cache_enabled: bool = True
@@ -94,15 +99,16 @@ class ModelConfiguration:
 @dataclass
 class PerformanceMetrics:
     """性能指標クラス"""
-    accuracy: float                      # 精度
-    precision: float                     # 適合率
-    recall: float                        # 再現率
-    f1_score: float                      # F1スコア
-    execution_time: float                # 実行時間
-    memory_usage: float                  # メモリ使用量
-    cache_hit_rate: float                # キャッシュヒット率
-    total_predictions: int               # 総予測数
-    successful_predictions: int          # 成功予測数
+
+    accuracy: float  # 精度
+    precision: float  # 適合率
+    recall: float  # 再現率
+    f1_score: float  # F1スコア
+    execution_time: float  # 実行時間
+    memory_usage: float  # メモリ使用量
+    cache_hit_rate: float  # キャッシュヒット率
+    total_predictions: int  # 総予測数
+    successful_predictions: int  # 成功予測数
 
 
 class DataProvider(Protocol):

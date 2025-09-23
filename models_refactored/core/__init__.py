@@ -7,7 +7,7 @@ from .interfaces import (
     PredictionResult,
     DataProvider,
     ModelConfiguration,
-    PerformanceMetrics
+    PerformanceMetrics,
 )
 
 from .factory import PredictorFactory
@@ -15,12 +15,12 @@ from .manager import ModelManager
 from .base_predictor import BaseStockPredictor
 
 __all__ = [
-    'StockPredictor',
-    'PredictionResult',
-    'DataProvider',
-    'ModelConfiguration',
-    'PerformanceMetrics',
-    'PredictorFactory',
-    'ModelManager',
-    'BaseStockPredictor'
+    "StockPredictor",
+    "PredictionResult",
+    "DataProvider",
+    "ModelConfiguration",
+    "PerformanceMetrics",
+    "PredictorFactory",
+    "ModelManager",
+    "BaseStockPredictor",
 ]

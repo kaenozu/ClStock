@@ -11,7 +11,9 @@ from datetime import datetime
 
 from models_refactored.hybrid.hybrid_predictor import RefactoredHybridPredictor
 from models_refactored.core.interfaces import (
-    ModelConfiguration, DataProvider, PredictionResult
+    ModelConfiguration,
+    DataProvider,
+    PredictionResult,
 )
 
 
@@ -26,7 +28,7 @@ class TestHybridPredictorIssue9:
             config=self.config,
             data_provider=self.mock_data_provider,
             enable_real_time_learning=True,
-            enable_batch_optimization=True
+            enable_batch_optimization=True,
         )
 
     def test_batch_prediction_returns_deterministic_data(self):
@@ -36,10 +38,13 @@ class TestHybridPredictorIssue9:
         """
         # モックデータの設定
         import pandas as pd
-        mock_data = pd.DataFrame({
-            'Close': [100.0, 101.0, 102.0, 103.0, 104.0],
-            'Volume': [1000, 1100, 1200, 1300, 1400]
-        })
+
+        mock_data = pd.DataFrame(
+            {
+                "Close": [100.0, 101.0, 102.0, 103.0, 104.0],
+                "Volume": [1000, 1100, 1200, 1300, 1400],
+            }
+        )
         self.mock_data_provider.get_stock_data.return_value = mock_data
 
         # 大規模バッチ（100銘柄以上）でテスト
@@ -76,10 +81,7 @@ class TestHybridPredictorIssue9:
         predicted_price = 105.0
         actual_price = 110.0
 
-        mock_data = pd.DataFrame({
-            'Close': [actual_price],
-            'Volume': [1000]
-        })
+        mock_data = pd.DataFrame({"Close": [actual_price], "Volume": [1000]})
         self.mock_data_provider.get_stock_data.return_value = mock_data
 
         # 予測を実行
@@ -91,11 +93,11 @@ class TestHybridPredictorIssue9:
             last_entry = self.predictor.learning_history[-1]
 
             # 実際の価格が記録されていることを確認
-            assert last_entry['actual'] == actual_price
+            assert last_entry["actual"] == actual_price
             # 予測値と実際値が異なることを確認（同じ値でないこと）
-            assert last_entry['prediction'] != last_entry['actual']
+            assert last_entry["prediction"] != last_entry["actual"]
             # エラーが正しく計算されていることを確認
-            assert last_entry['error'] > 0
+            assert last_entry["error"] > 0
 
     def test_large_batch_does_not_use_random_uniform(self):
         """
@@ -104,17 +106,14 @@ class TestHybridPredictorIssue9:
         import pandas as pd
 
         # モックデータ設定
-        mock_data = pd.DataFrame({
-            'Close': [100.0] * 10,
-            'Volume': [1000] * 10
-        })
+        mock_data = pd.DataFrame({"Close": [100.0] * 10, "Volume": [1000] * 10})
         self.mock_data_provider.get_stock_data.return_value = mock_data
 
         # 500銘柄の大規模バッチ
         symbols = [f"STOCK{i:03d}" for i in range(500)]
 
         # np.random.uniformをモック化して呼ばれないことを確認
-        with patch('numpy.random.uniform') as mock_uniform:
+        with patch("numpy.random.uniform") as mock_uniform:
             result = self.predictor.predict_batch(symbols)
 
             # np.random.uniformが呼ばれていないことを確認
@@ -136,20 +135,17 @@ class TestHybridPredictorIssue9:
 
         # 完全に一致する予測をシミュレート
         exact_price = 100.0
-        mock_data = pd.DataFrame({
-            'Close': [exact_price],
-            'Volume': [1000]
-        })
+        mock_data = pd.DataFrame({"Close": [exact_price], "Volume": [1000]})
         self.mock_data_provider.get_stock_data.return_value = mock_data
 
         # エンサンブル予測器をモック化して正確な予測を返す
-        with patch.object(self.predictor.ensemble_predictor, 'predict') as mock_predict:
+        with patch.object(self.predictor.ensemble_predictor, "predict") as mock_predict:
             mock_predict.return_value = PredictionResult(
                 prediction=exact_price,  # 実際の価格と完全一致
                 confidence=0.95,
                 accuracy=0.90,
                 timestamp=datetime.now(),
-                symbol="TEST001"
+                symbol="TEST001",
             )
 
             # 予測実行
@@ -159,9 +155,9 @@ class TestHybridPredictorIssue9:
             if self.predictor.learning_history:
                 last_entry = self.predictor.learning_history[-1]
                 # エラーが0（完璧な予測）であることを確認
-                assert last_entry['error'] == 0
-                assert last_entry['prediction'] == exact_price
-                assert last_entry['actual'] == exact_price
+                assert last_entry["error"] == 0
+                assert last_entry["prediction"] == exact_price
+                assert last_entry["actual"] == exact_price
 
     def test_batch_processing_with_errors(self):
         """
@@ -170,13 +166,10 @@ class TestHybridPredictorIssue9:
         import pandas as pd
 
         # 一部の銘柄でエラーを発生させる
-        def get_stock_data_with_errors(symbol, period='1M'):
-            if 'ERROR' in symbol:
+        def get_stock_data_with_errors(symbol, period="1M"):
+            if "ERROR" in symbol:
                 raise Exception(f"Data fetch failed for {symbol}")
-            return pd.DataFrame({
-                'Close': [100.0],
-                'Volume': [1000]
-            })
+            return pd.DataFrame({"Close": [100.0], "Volume": [1000]})
 
         self.mock_data_provider.get_stock_data.side_effect = get_stock_data_with_errors
 
@@ -208,19 +201,18 @@ class TestHybridPredictorIssue9:
         ]
 
         for symbol, predicted, actual in test_data:
-            mock_data = pd.DataFrame({
-                'Close': [actual],
-                'Volume': [1000]
-            })
+            mock_data = pd.DataFrame({"Close": [actual], "Volume": [1000]})
             self.mock_data_provider.get_stock_data.return_value = mock_data
 
-            with patch.object(self.predictor.ensemble_predictor, 'predict') as mock_predict:
+            with patch.object(
+                self.predictor.ensemble_predictor, "predict"
+            ) as mock_predict:
                 mock_predict.return_value = PredictionResult(
                     prediction=predicted,
                     confidence=0.8,
                     accuracy=0.85,
                     timestamp=datetime.now(),
-                    symbol=symbol
+                    symbol=symbol,
                 )
                 self.predictor._predict_implementation(symbol)
 
@@ -228,7 +220,7 @@ class TestHybridPredictorIssue9:
         stats = self.predictor.get_learning_statistics()
 
         # 統計が正しく計算されていることを確認
-        assert stats['total_predictions'] == 3
-        assert 0 < stats['average_error'] < 0.15  # 平均エラーが妥当な範囲内
-        assert stats['min_error'] < stats['max_error']
-        assert len(stats['recent_predictions']) <= 10
+        assert stats["total_predictions"] == 3
+        assert 0 < stats["average_error"] < 0.15  # 平均エラーが妥当な範囲内
+        assert stats["min_error"] < stats["max_error"]
+        assert len(stats["recent_predictions"]) <= 10

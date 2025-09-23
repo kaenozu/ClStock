@@ -17,8 +17,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 import logging
 from utils.logger_config import setup_logger
-logger = setup_logger(__name__)
 
+logger = setup_logger(__name__)
 
 
 class Enhanced846System:

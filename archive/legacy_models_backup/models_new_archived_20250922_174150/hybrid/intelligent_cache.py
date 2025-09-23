@@ -18,12 +18,14 @@ import threading
 
 try:
     import redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
 
 from ..base.interfaces import PredictionResult
 from .prediction_modes import PredictionMode
+
 
 class MarketVolatilityCalculator:
     """市場ボラティリティ計算器"""
@@ -72,16 +74,17 @@ class MarketVolatilityCalculator:
         except Exception:
             return 0.5  # デフォルトボラティリティ
 
+
 class AdaptiveCacheStrategy:
     """アダプティブキャッシュ戦略"""
 
     def __init__(self):
         self.volatility_calculator = MarketVolatilityCalculator()
         self.base_ttl = {
-            PredictionMode.SPEED_PRIORITY: 30,      # 30秒
+            PredictionMode.SPEED_PRIORITY: 30,  # 30秒
             PredictionMode.ACCURACY_PRIORITY: 300,  # 5分
-            PredictionMode.BALANCED: 120,           # 2分
-            PredictionMode.AUTO: 60                 # 1分
+            PredictionMode.BALANCED: 120,  # 2分
+            PredictionMode.AUTO: 60,  # 1分
         }
 
     def calculate_ttl(self, symbol: str, mode: PredictionMode) -> int:
@@ -103,6 +106,7 @@ class AdaptiveCacheStrategy:
         max_ttl = base_ttl * 3  # 最大3倍
 
         return max(min_ttl, min(max_ttl, adjusted_ttl))
+
 
 class CacheInvalidationEngine:
     """キャッシュ無効化エンジン"""
@@ -134,6 +138,7 @@ class CacheInvalidationEngine:
         except Exception:
             return False  # エラー時は無効化しない
 
+
 class IntelligentPredictionCache:
     """
     インテリジェント予測キャッシュシステム
@@ -145,8 +150,13 @@ class IntelligentPredictionCache:
     - 90%以上のキャッシュヒット率目標
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, 
-                 cleanup_interval: int = 300, max_cache_size: int = 1000):
+    def __init__(
+        self,
+        redis_host: str = "localhost",
+        redis_port: int = 6379,
+        cleanup_interval: int = 300,
+        max_cache_size: int = 1000,
+    ):
         self.logger = logging.getLogger(__name__)
 
         # Redis接続（利用可能な場合）
@@ -158,13 +168,15 @@ class IntelligentPredictionCache:
                     port=redis_port,
                     decode_responses=False,
                     socket_connect_timeout=5,
-                    socket_timeout=5
+                    socket_timeout=5,
                 )
                 # 接続テスト
                 self.redis_client.ping()
                 self.logger.info("Redis cache connected successfully")
             except Exception as e:
-                self.logger.warning(f"Redis connection failed: {str(e)}, using in-memory cache")
+                self.logger.warning(
+                    f"Redis connection failed: {str(e)}, using in-memory cache"
+                )
                 self.redis_client = None
 
         # インメモリキャッシュ（フォールバック）
@@ -177,27 +189,33 @@ class IntelligentPredictionCache:
 
         # 統計情報
         self.cache_stats = {
-            'hits': 0,
-            'misses': 0,
-            'invalidations': 0,
-            'redis_hits': 0,
-            'memory_hits': 0
+            "hits": 0,
+            "misses": 0,
+            "invalidations": 0,
+            "redis_hits": 0,
+            "memory_hits": 0,
         }
-        
+
         # 自動クリーンアップ設定
         self.auto_cleanup_enabled = True
-        self.cleanup_interval = cleanup_interval  # 5分ごとにクリーンアップ（デフォルト）
-        self.max_cache_size = max_cache_size   # 最大キャッシュサイズ
+        self.cleanup_interval = (
+            cleanup_interval  # 5分ごとにクリーンアップ（デフォルト）
+        )
+        self.max_cache_size = max_cache_size  # 最大キャッシュサイズ
         self._shutdown_event = threading.Event()
         self.cleanup_thread = None
         self._start_cleanup_thread()
 
-        self.logger.info(f"IntelligentPredictionCache initialized with cleanup_interval={cleanup_interval}s, max_cache_size={max_cache_size}")
+        self.logger.info(
+            f"IntelligentPredictionCache initialized with cleanup_interval={cleanup_interval}s, max_cache_size={max_cache_size}"
+        )
 
     def _start_cleanup_thread(self):
         """自動クリーンアップスレッドを開始"""
         if self.auto_cleanup_enabled and self.cleanup_thread is None:
-            self.cleanup_thread = threading.Thread(target=self._cleanup_worker, daemon=True)
+            self.cleanup_thread = threading.Thread(
+                target=self._cleanup_worker, daemon=True
+            )
             self.cleanup_thread.start()
             self.logger.info("Automatic cache cleanup thread started")
 
@@ -208,14 +226,14 @@ class IntelligentPredictionCache:
                 # クリーンアップ間隔待機
                 if self._shutdown_event.wait(self.cleanup_interval):
                     break
-                    
+
                 # 自動クリーンアップ実行
                 self._perform_auto_cleanup()
-                
+
             except Exception as e:
                 self.logger.error(f"Cache cleanup worker error: {e}")
                 # エラーでも継続
-                
+
         self.logger.info("Cache cleanup worker stopped")
 
     def _perform_auto_cleanup(self):
@@ -223,13 +241,15 @@ class IntelligentPredictionCache:
         try:
             # 期限切れキャッシュのクリーンアップ
             self._cleanup_memory_cache()
-            
+
             # サイズ制限による追加クリーンアップ
             if len(self.memory_cache) > self.max_cache_size:
                 self._cleanup_by_size_limit()
-                
-            self.logger.debug(f"Cache cleanup completed. Memory cache size: {len(self.memory_cache)}")
-            
+
+            self.logger.debug(
+                f"Cache cleanup completed. Memory cache size: {len(self.memory_cache)}"
+            )
+
         except Exception as e:
             self.logger.error(f"Auto cache cleanup failed: {e}")
 
@@ -237,13 +257,13 @@ class IntelligentPredictionCache:
         """キャッシュをシャットダウン"""
         self.logger.info("Shutting down intelligent prediction cache")
         self._shutdown_event.set()
-        
+
         # クリーンアップスレッドの終了を待機
         if self.cleanup_thread and self.cleanup_thread.is_alive():
             self.cleanup_thread.join(timeout=5.0)  # 5秒でタイムアウト
             if self.cleanup_thread.is_alive():
                 self.logger.warning("Cache cleanup thread did not terminate gracefully")
-        
+
         # Redisキャッシュをクリア
         if self.redis_client:
             try:
@@ -258,10 +278,9 @@ class IntelligentPredictionCache:
         """サイズ制限に基づくキャッシュクリーンアップ"""
         # タイムスタンプでソートして古いものから削除
         sorted_items = sorted(
-            self.cache_timestamps.items(),
-            key=lambda x: x[1][0]  # timestampでソート
+            self.cache_timestamps.items(), key=lambda x: x[1][0]  # timestampでソート
         )
-        
+
         # サイズ制限に合わせて削除
         items_to_remove = len(self.memory_cache) - self.max_cache_size
         removed_count = 0
@@ -270,11 +289,15 @@ class IntelligentPredictionCache:
             self.memory_cache.pop(key_to_remove, None)
             self.cache_timestamps.pop(key_to_remove, None)
             removed_count += 1
-            
-        self.logger.info(f"Removed {removed_count} oldest cache entries due to size limit")
+
+        self.logger.info(
+            f"Removed {removed_count} oldest cache entries due to size limit"
+        )
         return removed_count
 
-    def get_cache_key(self, symbol: str, mode: PredictionMode, data_hash: str = None) -> str:
+    def get_cache_key(
+        self, symbol: str, mode: PredictionMode, data_hash: str = None
+    ) -> str:
         """キャッシュキー生成"""
         if data_hash is None:
             data_hash = self._generate_data_hash(symbol)
@@ -288,34 +311,38 @@ class IntelligentPredictionCache:
         hash_input = f"{symbol}:{current_minute}"
         return hashlib.md5(hash_input.encode()).hexdigest()[:8]
 
-    def get_cached_prediction(self, symbol: str, mode: PredictionMode) -> Optional[PredictionResult]:
+    def get_cached_prediction(
+        self, symbol: str, mode: PredictionMode
+    ) -> Optional[PredictionResult]:
         """キャッシュから予測結果取得"""
         cache_key = self.get_cache_key(symbol, mode)
 
         # 無効化チェック
         if self.invalidation_engine.should_invalidate(symbol):
             self._invalidate_symbol(symbol)
-            self.cache_stats['invalidations'] += 1
+            self.cache_stats["invalidations"] += 1
             return None
 
         # Redis優先でキャッシュチェック
         cached_result = self._get_from_redis(cache_key)
         if cached_result is not None:
-            self.cache_stats['hits'] += 1
-            self.cache_stats['redis_hits'] += 1
+            self.cache_stats["hits"] += 1
+            self.cache_stats["redis_hits"] += 1
             return cached_result
 
         # インメモリキャッシュチェック
         cached_result = self._get_from_memory(cache_key)
         if cached_result is not None:
-            self.cache_stats['hits'] += 1
-            self.cache_stats['memory_hits'] += 1
+            self.cache_stats["hits"] += 1
+            self.cache_stats["memory_hits"] += 1
             return cached_result
 
-        self.cache_stats['misses'] += 1
+        self.cache_stats["misses"] += 1
         return None
 
-    def cache_prediction(self, symbol: str, mode: PredictionMode, result: PredictionResult):
+    def cache_prediction(
+        self, symbol: str, mode: PredictionMode, result: PredictionResult
+    ):
         """予測結果をキャッシュ"""
         cache_key = self.get_cache_key(symbol, mode)
         ttl = self.cache_strategy.calculate_ttl(symbol, mode)
@@ -326,7 +353,9 @@ class IntelligentPredictionCache:
         # インメモリにもキャッシュ
         self._set_to_memory(cache_key, result, ttl)
 
-        self.logger.debug(f"Cached prediction for {symbol} ({mode.value}) with TTL {ttl}s")
+        self.logger.debug(
+            f"Cached prediction for {symbol} ({mode.value}) with TTL {ttl}s"
+        )
 
     def _get_from_redis(self, cache_key: str) -> Optional[PredictionResult]:
         """Redisからデータ取得"""
@@ -382,7 +411,7 @@ class IntelligentPredictionCache:
         """メモリキャッシュクリーンアップ"""
         current_time = time.time()
         expired_keys = []
-        
+
         # 期限切れエントリを特定
         for cache_key, (cached_time, ttl) in self.cache_timestamps.items():
             if current_time - cached_time > ttl:
@@ -394,10 +423,10 @@ class IntelligentPredictionCache:
             self.memory_cache.pop(key, None)
             self.cache_timestamps.pop(key, None)
             removed_count += 1
-            
+
         if removed_count > 0:
             self.logger.debug(f"Cleaned up {removed_count} expired cache entries")
-            
+
         return removed_count
 
     def _invalidate_symbol(self, symbol: str):
@@ -413,26 +442,30 @@ class IntelligentPredictionCache:
                 self.logger.warning(f"Redis invalidation error: {str(e)}")
 
         # インメモリ削除
-        keys_to_delete = [key for key in self.memory_cache.keys() if key.startswith(f"pred:{symbol}:")]
+        keys_to_delete = [
+            key for key in self.memory_cache.keys() if key.startswith(f"pred:{symbol}:")
+        ]
         for key in keys_to_delete:
             self.memory_cache.pop(key, None)
             self.cache_timestamps.pop(key, None)
 
     def get_cache_statistics(self) -> Dict[str, Any]:
         """キャッシュ統計取得"""
-        total_requests = self.cache_stats['hits'] + self.cache_stats['misses']
-        hit_rate = self.cache_stats['hits'] / total_requests if total_requests > 0 else 0
+        total_requests = self.cache_stats["hits"] + self.cache_stats["misses"]
+        hit_rate = (
+            self.cache_stats["hits"] / total_requests if total_requests > 0 else 0
+        )
 
         return {
-            'hit_rate': hit_rate,
-            'total_requests': total_requests,
-            'cache_hits': self.cache_stats['hits'],
-            'cache_misses': self.cache_stats['misses'],
-            'invalidations': self.cache_stats['invalidations'],
-            'redis_hits': self.cache_stats['redis_hits'],
-            'memory_hits': self.cache_stats['memory_hits'],
-            'redis_available': self.redis_client is not None,
-            'memory_cache_size': len(self.memory_cache)
+            "hit_rate": hit_rate,
+            "total_requests": total_requests,
+            "cache_hits": self.cache_stats["hits"],
+            "cache_misses": self.cache_stats["misses"],
+            "invalidations": self.cache_stats["invalidations"],
+            "redis_hits": self.cache_stats["redis_hits"],
+            "memory_hits": self.cache_stats["memory_hits"],
+            "redis_available": self.redis_client is not None,
+            "memory_cache_size": len(self.memory_cache),
         }
 
     def clear_cache(self):

@@ -80,7 +80,9 @@ class StockPredictor:
 
         # ルールベースのスコア計算（フォールバック）
         try:
-            data = self.data_provider.get_stock_data(symbol, self.settings.trading.recommendation_data_period)
+            data = self.data_provider.get_stock_data(
+                symbol, self.settings.trading.recommendation_data_period
+            )
             if data.empty:
                 return 0
 
@@ -195,7 +197,10 @@ class StockPredictor:
             elif macd < macd_signal:
                 score -= 4
 
-            return min(max(score, self.settings.trading.min_score), self.settings.trading.max_score)
+            return min(
+                max(score, self.settings.trading.min_score),
+                self.settings.trading.max_score,
+            )
 
         except Exception as e:
             logger.error(f"Error calculating score for {symbol}: {str(e)}")

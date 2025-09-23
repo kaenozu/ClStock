@@ -76,7 +76,9 @@ class MLStockPredictor(StockPredictor):
 
         # ゼロ除算を防ぐ安全チェック
         bb_range = bb_upper - bb_lower
-        features["bb_position"] = (data["Close"] - bb_lower) / bb_range.where(bb_range != 0, 1)
+        features["bb_position"] = (data["Close"] - bb_lower) / bb_range.where(
+            bb_range != 0, 1
+        )
         features["bb_squeeze"] = bb_range / bb_middle.where(bb_middle != 0, 1)
         features["bb_breakout_up"] = (data["Close"] > bb_upper).astype(int)
         features["bb_breakout_down"] = (data["Close"] < bb_lower).astype(int)
@@ -318,21 +320,15 @@ class MLStockPredictor(StockPredictor):
         features = self.prepare_features(data)
 
         # Create targets based on the type of target provided
-        if target.dtype == 'float64':
+        if target.dtype == "float64":
             # Regression task
             self.model = xgb.XGBRegressor(
-                n_estimators=100,
-                max_depth=6,
-                learning_rate=0.1,
-                random_state=42
+                n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42
             )
         else:
             # Classification task
             self.model = xgb.XGBClassifier(
-                n_estimators=100,
-                max_depth=6,
-                learning_rate=0.1,
-                random_state=42
+                n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42
             )
 
         # Scale features
@@ -343,7 +339,9 @@ class MLStockPredictor(StockPredictor):
         self._is_trained = True
         self.feature_names = features.columns.tolist()
 
-    def predict(self, symbol: str, data: Optional[pd.DataFrame] = None) -> PredictionResult:
+    def predict(
+        self, symbol: str, data: Optional[pd.DataFrame] = None
+    ) -> PredictionResult:
         """Predict stock performance"""
         if not self.is_trained():
             raise ValueError("Model must be trained before making predictions")
@@ -380,7 +378,7 @@ class MLStockPredictor(StockPredictor):
             prediction = self.model.predict(features_scaled)[0]
 
             # Calculate confidence based on prediction
-            if hasattr(self.model, 'predict_proba'):
+            if hasattr(self.model, "predict_proba"):
                 proba = self.model.predict_proba(features_scaled)[0]
                 confidence = max(proba)
             else:
@@ -391,10 +389,10 @@ class MLStockPredictor(StockPredictor):
                 confidence=confidence,
                 timestamp=datetime.now(),
                 metadata={
-                    'model_type': self.model_type,
-                    'symbol': symbol,
-                    'feature_count': len(self.feature_names)
-                }
+                    "model_type": self.model_type,
+                    "symbol": symbol,
+                    "feature_count": len(self.feature_names),
+                },
             )
 
         except Exception as e:
@@ -403,7 +401,7 @@ class MLStockPredictor(StockPredictor):
                 prediction=0.0,
                 confidence=0.0,
                 timestamp=datetime.now(),
-                metadata={'error': str(e)}
+                metadata={"error": str(e)},
             )
 
     def predict_score(self, symbol: str) -> float:
@@ -488,7 +486,9 @@ class EnsembleStockPredictor(EnsemblePredictor):
             model.train(data, target)
         self._is_trained = True
 
-    def predict(self, symbol: str, data: Optional[pd.DataFrame] = None) -> PredictionResult:
+    def predict(
+        self, symbol: str, data: Optional[pd.DataFrame] = None
+    ) -> PredictionResult:
         """Ensemble prediction"""
         if not self.is_trained():
             raise ValueError("Ensemble must be trained before making predictions")
@@ -511,7 +511,7 @@ class EnsembleStockPredictor(EnsemblePredictor):
         if not predictions:
             raise ValueError("All models failed to make predictions")
 
-        total_weight = sum(self.weights[:len(predictions)])
+        total_weight = sum(self.weights[: len(predictions)])
         ensemble_prediction = sum(predictions) / total_weight
         ensemble_confidence = sum(confidences) / total_weight
 
@@ -520,8 +520,8 @@ class EnsembleStockPredictor(EnsemblePredictor):
             confidence=ensemble_confidence,
             timestamp=datetime.now(),
             metadata={
-                'model_type': 'ensemble',
-                'symbol': symbol,
-                'models_used': len(predictions)
-            }
+                "model_type": "ensemble",
+                "symbol": symbol,
+                "models_used": len(predictions),
+            },
         )

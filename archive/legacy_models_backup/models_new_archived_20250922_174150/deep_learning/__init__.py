@@ -6,4 +6,4 @@ LSTM/Transformer技術による時系列予測システム
 
 from .deep_predictor import DeepLearningPredictor
 
-__all__ = ['DeepLearningPredictor']
+__all__ = ["DeepLearningPredictor"]

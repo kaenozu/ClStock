@@ -24,7 +24,9 @@ class ConnectionPool:
 
     def _initialize_pool(self):
         """Initialize the connection pool"""
-        logger.info(f"Initializing connection pool with {self.max_connections} connections")
+        logger.info(
+            f"Initializing connection pool with {self.max_connections} connections"
+        )
 
     def _create_connection(self) -> Any:
         """Create a new connection - to be implemented by subclasses"""
@@ -32,7 +34,9 @@ class ConnectionPool:
 
     def _validate_connection(self, connection: Any) -> bool:
         """Validate if a connection is still alive - to be implemented by subclasses"""
-        raise NotImplementedError("Subclasses must implement _validate_connection method")
+        raise NotImplementedError(
+            "Subclasses must implement _validate_connection method"
+        )
 
     def _close_connection(self, connection: Any) -> None:
         """Close a connection - to be implemented by subclasses"""
@@ -103,8 +107,13 @@ class ConnectionPool:
 class HTTPConnectionPool(ConnectionPool):
     """Connection pool for HTTP connections"""
 
-    def __init__(self, max_connections: int = 10, connection_timeout: int = 30, 
-                 base_url: str = "", headers: Optional[Dict[str, str]] = None):
+    def __init__(
+        self,
+        max_connections: int = 10,
+        connection_timeout: int = 30,
+        base_url: str = "",
+        headers: Optional[Dict[str, str]] = None,
+    ):
         self.base_url = base_url
         self.headers = headers or {}
         super().__init__(max_connections, connection_timeout)
@@ -115,23 +124,23 @@ class HTTPConnectionPool(ConnectionPool):
             import requests
             from requests.adapters import HTTPAdapter
             from urllib3.util.retry import Retry
-            
+
             session = requests.Session()
-            
+
             # Configure retry strategy
             retry_strategy = Retry(
                 total=3,
                 backoff_factor=1,
                 status_forcelist=[429, 500, 502, 503, 504],
             )
-            
+
             adapter = HTTPAdapter(max_retries=retry_strategy)
             session.mount("http://", adapter)
             session.mount("https://", adapter)
-            
+
             # Set default headers
             session.headers.update(self.headers)
-            
+
             return session
         except ImportError:
             logger.error("requests library not available for HTTP connection pool")
@@ -154,18 +163,22 @@ _http_pool: Optional[HTTPConnectionPool] = None
 _pool_lock = threading.Lock()
 
 
-def get_http_pool(max_connections: int = 10, connection_timeout: int = 30,
-                  base_url: str = "", headers: Optional[Dict[str, str]] = None) -> HTTPConnectionPool:
+def get_http_pool(
+    max_connections: int = 10,
+    connection_timeout: int = 30,
+    base_url: str = "",
+    headers: Optional[Dict[str, str]] = None,
+) -> HTTPConnectionPool:
     """Get or create a global HTTP connection pool"""
     global _http_pool
-    
+
     with _pool_lock:
         if _http_pool is None:
             _http_pool = HTTPConnectionPool(
                 max_connections=max_connections,
                 connection_timeout=connection_timeout,
                 base_url=base_url,
-                headers=headers
+                headers=headers,
             )
         return _http_pool
 
@@ -173,7 +186,7 @@ def get_http_pool(max_connections: int = 10, connection_timeout: int = 30,
 def close_all_pools() -> None:
     """Close all connection pools"""
     global _http_pool
-    
+
     with _pool_lock:
         if _http_pool:
             _http_pool.close_all_connections()

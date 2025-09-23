@@ -4,9 +4,15 @@
 
 import pytest
 from utils.validators import (
-    validate_stock_symbol, validate_period, validate_numeric_range,
-    validate_email, sanitize_string, validate_api_key,
-    validate_symbols_list, validate_date_range, ValidationError
+    validate_stock_symbol,
+    validate_period,
+    validate_numeric_range,
+    validate_email,
+    sanitize_string,
+    validate_api_key,
+    validate_symbols_list,
+    validate_date_range,
+    ValidationError,
 )
 
 
@@ -124,7 +130,9 @@ class TestStringValidation:
         """文字列サニタイズ"""
         assert sanitize_string("normal text") == "normal text"
         assert sanitize_string("  spaced  ") == "spaced"  # トリム
-        assert sanitize_string("text\x00with\x1fcontrol") == "textwithcontrol"  # 制御文字除去
+        assert (
+            sanitize_string("text\x00with\x1fcontrol") == "textwithcontrol"
+        )  # 制御文字除去
 
     def test_string_too_long(self):
         """長すぎる文字列"""

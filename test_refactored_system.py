@@ -11,14 +11,17 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent
 sys.path.append(str(PROJECT_ROOT))
 
-from models_refactored.core.interfaces import ModelType, PredictionMode, ModelConfiguration
+from models_refactored.core.interfaces import (
+    ModelType,
+    PredictionMode,
+    ModelConfiguration,
+)
 from models_refactored.core.factory import PredictorFactory, create_predictor
 from data.stock_data import StockDataProvider
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 
@@ -28,7 +31,7 @@ class RefactoredSystemTest:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.data_provider = StockDataProvider()
-        self.test_symbols = ['7203', '9984', '8306']  # トヨタ、ソフトバンクG、三菱UFJ
+        self.test_symbols = ["7203", "9984", "8306"]  # トヨタ、ソフトバンクG、三菱UFJ
 
     def test_factory_pattern(self):
         """ファクトリパターンのテスト"""
@@ -38,20 +41,22 @@ class RefactoredSystemTest:
         try:
             # 利用可能なモデルタイプの確認
             available_types = PredictorFactory.list_available_types()
-            self.logger.info(f"利用可能なモデルタイプ: {[t.value for t in available_types]}")
+            self.logger.info(
+                f"利用可能なモデルタイプ: {[t.value for t in available_types]}"
+            )
 
             # エンサンブル予測器の作成
             config = ModelConfiguration(
                 model_type=ModelType.ENSEMBLE,
                 prediction_mode=PredictionMode.BALANCED,
                 cache_enabled=True,
-                parallel_enabled=True
+                parallel_enabled=True,
             )
 
             predictor = create_predictor(
                 model_type=ModelType.ENSEMBLE,
                 config=config,
-                data_provider=self.data_provider
+                data_provider=self.data_provider,
             )
 
             self.logger.info(f"予測器作成成功: {predictor.__class__.__name__}")
@@ -74,8 +79,7 @@ class RefactoredSystemTest:
         try:
             # エンサンブル予測器の作成
             predictor = create_predictor(
-                model_type=ModelType.ENSEMBLE,
-                data_provider=self.data_provider
+                model_type=ModelType.ENSEMBLE, data_provider=self.data_provider
             )
 
             # 単一予測テスト
@@ -94,7 +98,9 @@ class RefactoredSystemTest:
             batch_results = predictor.predict_batch(self.test_symbols)
 
             for result in batch_results:
-                self.logger.info(f"  {result.symbol}: {result.prediction:.1f} (信頼度: {result.confidence:.3f})")
+                self.logger.info(
+                    f"  {result.symbol}: {result.prediction:.1f} (信頼度: {result.confidence:.3f})"
+                )
 
             # 性能指標テスト
             metrics = predictor.get_performance_metrics()
@@ -112,7 +118,9 @@ class RefactoredSystemTest:
         self.logger.info("並列特徴量計算テスト開始")
 
         try:
-            from models_refactored.ensemble.parallel_feature_calculator import ParallelFeatureCalculator
+            from models_refactored.ensemble.parallel_feature_calculator import (
+                ParallelFeatureCalculator,
+            )
 
             calculator = ParallelFeatureCalculator(n_jobs=4)
 
@@ -122,7 +130,9 @@ class RefactoredSystemTest:
             )
 
             if not features_df.empty:
-                self.logger.info(f"特徴量計算成功: {len(features_df)} 行, {len(features_df.columns)} 列")
+                self.logger.info(
+                    f"特徴量計算成功: {len(features_df)} 行, {len(features_df.columns)} 列"
+                )
                 self.logger.info(f"特徴量名（一部）: {list(features_df.columns[:10])}")
 
                 # 性能統計
@@ -152,8 +162,7 @@ class RefactoredSystemTest:
             for model_type in available_types:
                 try:
                     predictor = create_predictor(
-                        model_type=model_type,
-                        data_provider=self.data_provider
+                        model_type=model_type, data_provider=self.data_provider
                     )
                     predictors.append((model_type, predictor))
                     self.logger.info(f"{model_type.value} 予測器作成成功")
@@ -183,7 +192,9 @@ class RefactoredSystemTest:
                         )
 
                 except Exception as e:
-                    self.logger.warning(f"{model_type.value} インターフェーステスト失敗: {str(e)}")
+                    self.logger.warning(
+                        f"{model_type.value} インターフェーステスト失敗: {str(e)}"
+                    )
 
             return len(predictors) > 0
 
@@ -205,12 +216,11 @@ class RefactoredSystemTest:
 
             # エンサンブル予測器でストレステスト
             predictor = create_predictor(
-                model_type=ModelType.ENSEMBLE,
-                data_provider=self.data_provider
+                model_type=ModelType.ENSEMBLE, data_provider=self.data_provider
             )
 
             # 大量予測テスト
-            test_symbols = ['7203', '9984', '8306', '9433', '8316'] * 10  # 50銘柄
+            test_symbols = ["7203", "9984", "8306", "9433", "8316"] * 10  # 50銘柄
 
             start_time = time.time()
             batch_results = predictor.predict_batch(test_symbols)
@@ -222,7 +232,9 @@ class RefactoredSystemTest:
             self.logger.info(f"パフォーマンステスト結果:")
             self.logger.info(f"  処理銘柄数: {len(test_symbols)}")
             self.logger.info(f"  総実行時間: {execution_time:.2f}秒")
-            self.logger.info(f"  銘柄あたり実行時間: {execution_time/len(test_symbols):.3f}秒")
+            self.logger.info(
+                f"  銘柄あたり実行時間: {execution_time/len(test_symbols):.3f}秒"
+            )
             self.logger.info(f"  メモリ使用量増加: {memory_increase:.1f}MB")
 
             # 成功結果の確認
@@ -248,7 +260,7 @@ class RefactoredSystemTest:
             ("エンサンブル予測器", self.test_ensemble_predictor),
             ("並列特徴量計算", self.test_parallel_feature_calculator),
             ("統一インターフェース", self.test_unified_interfaces),
-            ("メモリ・パフォーマンス", self.test_memory_and_performance)
+            ("メモリ・パフォーマンス", self.test_memory_and_performance),
         ]
 
         results = {}
@@ -278,7 +290,9 @@ class RefactoredSystemTest:
         self.logger.info(f"\n総合結果: {passed}/{total} パス ({passed/total*100:.1f}%)")
 
         if passed == total:
-            self.logger.info("🎉 全テスト成功！統合リファクタリングは正常に動作しています。")
+            self.logger.info(
+                "🎉 全テスト成功！統合リファクタリングは正常に動作しています。"
+            )
         else:
             self.logger.warning("⚠️  一部テストが失敗しました。改善が必要です。")
 

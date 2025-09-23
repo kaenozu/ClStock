@@ -26,6 +26,7 @@ from .trade_recorder import TradeRecorder, PerformanceMetrics
 @dataclass
 class DailyPerformance:
     """日次パフォーマンス"""
+
     date: datetime
     portfolio_value: float
     daily_return: float
@@ -42,6 +43,7 @@ class DailyPerformance:
 @dataclass
 class PeriodPerformance:
     """期間パフォーマンス"""
+
     start_date: datetime
     end_date: datetime
     total_return: float
@@ -66,6 +68,7 @@ class PeriodPerformance:
 @dataclass
 class BenchmarkComparison:
     """ベンチマーク比較"""
+
     benchmark_symbol: str
     portfolio_return: float
     benchmark_return: float
@@ -83,6 +86,7 @@ class BenchmarkComparison:
 @dataclass
 class RiskMetrics:
     """リスクメトリクス"""
+
     volatility: float
     downside_volatility: float
     max_drawdown: float
@@ -102,9 +106,9 @@ class PerformanceTracker:
     87%精度システムと統合されたパフォーマンス分析
     """
 
-    def __init__(self,
-                 initial_capital: float = 1000000,
-                 benchmark_symbol: str = "^N225"):
+    def __init__(
+        self, initial_capital: float = 1000000, benchmark_symbol: str = "^N225"
+    ):
         """
         Args:
             initial_capital: 初期資本
@@ -131,10 +135,12 @@ class PerformanceTracker:
 
         self.logger = logging.getLogger(__name__)
 
-    def update_performance(self,
-                          current_portfolio_value: float,
-                          active_positions: int,
-                          trades_count: int = 0) -> bool:
+    def update_performance(
+        self,
+        current_portfolio_value: float,
+        active_positions: int,
+        trades_count: int = 0,
+    ) -> bool:
         """
         パフォーマンス更新
 
@@ -157,11 +163,15 @@ class PerformanceTracker:
             daily_pnl = 0.0
             if self.portfolio_values:
                 previous_value = self.portfolio_values[-1][1]
-                daily_return = (current_portfolio_value - previous_value) / previous_value
+                daily_return = (
+                    current_portfolio_value - previous_value
+                ) / previous_value
                 daily_pnl = current_portfolio_value - previous_value
             else:
                 # 初回
-                daily_return = (current_portfolio_value - self.initial_capital) / self.initial_capital
+                daily_return = (
+                    current_portfolio_value - self.initial_capital
+                ) / self.initial_capital
                 daily_pnl = current_portfolio_value - self.initial_capital
 
             # ベンチマークリターン取得
@@ -171,7 +181,9 @@ class PerformanceTracker:
             excess_return = daily_return - benchmark_return
 
             # 累積リターン
-            cumulative_return = (current_portfolio_value - self.initial_capital) / self.initial_capital
+            cumulative_return = (
+                current_portfolio_value - self.initial_capital
+            ) / self.initial_capital
 
             # ドローダウン計算
             drawdown = self._calculate_current_drawdown(current_portfolio_value)
@@ -191,7 +203,7 @@ class PerformanceTracker:
                 drawdown=drawdown,
                 volatility=volatility,
                 active_positions=active_positions,
-                trades_count=trades_count
+                trades_count=trades_count,
             )
 
             self.daily_performance.append(daily_perf)
@@ -215,9 +227,9 @@ class PerformanceTracker:
             self.logger.error(f"パフォーマンス更新エラー: {e}")
             return False
 
-    def get_period_performance(self,
-                             start_date: Optional[datetime] = None,
-                             end_date: Optional[datetime] = None) -> PeriodPerformance:
+    def get_period_performance(
+        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
+    ) -> PeriodPerformance:
         """
         期間パフォーマンス取得
 
@@ -230,7 +242,9 @@ class PerformanceTracker:
         """
         try:
             # 期間フィルタリング
-            filtered_performance = self._filter_performance_by_date(start_date, end_date)
+            filtered_performance = self._filter_performance_by_date(
+                start_date, end_date
+            )
 
             if not filtered_performance:
                 return self._empty_period_performance()
@@ -246,24 +260,34 @@ class PerformanceTracker:
 
             # 基本リターン計算
             total_return = (end_value - start_value) / start_value
-            annualized_return = (1 + total_return) ** (252 / days) - 1 if days > 0 else 0.0
+            annualized_return = (
+                (1 + total_return) ** (252 / days) - 1 if days > 0 else 0.0
+            )
 
             # リスクメトリクス
             volatility = np.std(returns) * np.sqrt(252) if returns else 0.0
             downside_returns = [r for r in returns if r < 0]
-            downside_volatility = np.std(downside_returns) * np.sqrt(252) if downside_returns else 0.0
+            downside_volatility = (
+                np.std(downside_returns) * np.sqrt(252) if downside_returns else 0.0
+            )
 
             # シャープレシオ（リスクフリーレート = 0と仮定）
             sharpe_ratio = annualized_return / volatility if volatility > 0 else 0.0
 
             # ソルティーノレシオ
-            sortino_ratio = annualized_return / downside_volatility if downside_volatility > 0 else 0.0
+            sortino_ratio = (
+                annualized_return / downside_volatility
+                if downside_volatility > 0
+                else 0.0
+            )
 
             # 最大ドローダウン
             max_drawdown = max([p.drawdown for p in filtered_performance], default=0.0)
 
             # カルマーレシオ
-            calmar_ratio = annualized_return / abs(max_drawdown) if max_drawdown != 0 else 0.0
+            calmar_ratio = (
+                annualized_return / abs(max_drawdown) if max_drawdown != 0 else 0.0
+            )
 
             # VaR計算
             var_95 = np.percentile(returns, 5) if returns else 0.0
@@ -274,15 +298,25 @@ class PerformanceTracker:
             kurtosis = stats.kurtosis(returns) if len(returns) > 2 else 0.0
 
             # ベンチマーク関連
-            beta, alpha, correlation, r_squared = self._calculate_beta_alpha(returns, benchmark_returns)
+            beta, alpha, correlation, r_squared = self._calculate_beta_alpha(
+                returns, benchmark_returns
+            )
 
             # 情報レシオ
             excess_returns = [p.excess_return for p in filtered_performance]
-            tracking_error = np.std(excess_returns) * np.sqrt(252) if excess_returns else 0.0
-            information_ratio = np.mean(excess_returns) * 252 / tracking_error if tracking_error > 0 else 0.0
+            tracking_error = (
+                np.std(excess_returns) * np.sqrt(252) if excess_returns else 0.0
+            )
+            information_ratio = (
+                np.mean(excess_returns) * 252 / tracking_error
+                if tracking_error > 0
+                else 0.0
+            )
 
             # アップ・ダウンキャプチャー
-            up_capture, down_capture = self._calculate_capture_ratios(returns, benchmark_returns)
+            up_capture, down_capture = self._calculate_capture_ratios(
+                returns, benchmark_returns
+            )
 
             return PeriodPerformance(
                 start_date=filtered_performance[0].date,
@@ -303,16 +337,16 @@ class PerformanceTracker:
                 information_ratio=information_ratio,
                 tracking_error=tracking_error,
                 up_capture=up_capture,
-                down_capture=down_capture
+                down_capture=down_capture,
             )
 
         except Exception as e:
             self.logger.error(f"期間パフォーマンス計算エラー: {e}")
             return self._empty_period_performance()
 
-    def get_benchmark_comparison(self,
-                               start_date: Optional[datetime] = None,
-                               end_date: Optional[datetime] = None) -> BenchmarkComparison:
+    def get_benchmark_comparison(
+        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
+    ) -> BenchmarkComparison:
         """
         ベンチマーク比較分析
 
@@ -324,7 +358,9 @@ class PerformanceTracker:
             ベンチマーク比較結果
         """
         try:
-            filtered_performance = self._filter_performance_by_date(start_date, end_date)
+            filtered_performance = self._filter_performance_by_date(
+                start_date, end_date
+            )
 
             if not filtered_performance:
                 return self._empty_benchmark_comparison()
@@ -339,19 +375,31 @@ class PerformanceTracker:
             excess_return = portfolio_cumulative - benchmark_cumulative
 
             # 相関・ベータ・アルファ
-            correlation = np.corrcoef(portfolio_returns, benchmark_returns)[0, 1] if len(portfolio_returns) > 1 else 0.0
-            beta, alpha, _, r_squared = self._calculate_beta_alpha(portfolio_returns, benchmark_returns)
+            correlation = (
+                np.corrcoef(portfolio_returns, benchmark_returns)[0, 1]
+                if len(portfolio_returns) > 1
+                else 0.0
+            )
+            beta, alpha, _, r_squared = self._calculate_beta_alpha(
+                portfolio_returns, benchmark_returns
+            )
 
             # トラッキングエラー
             excess_returns = [p.excess_return for p in filtered_performance]
-            tracking_error = np.std(excess_returns) * np.sqrt(252) if excess_returns else 0.0
+            tracking_error = (
+                np.std(excess_returns) * np.sqrt(252) if excess_returns else 0.0
+            )
 
             # 情報レシオ
-            information_ratio = np.mean(excess_returns) * 252 / tracking_error if tracking_error > 0 else 0.0
+            information_ratio = (
+                np.mean(excess_returns) * 252 / tracking_error
+                if tracking_error > 0
+                else 0.0
+            )
 
             # アップ・ダウンマーケットパフォーマンス
-            up_market_performance, down_market_performance = self._calculate_market_performance(
-                portfolio_returns, benchmark_returns
+            up_market_performance, down_market_performance = (
+                self._calculate_market_performance(portfolio_returns, benchmark_returns)
             )
 
             return BenchmarkComparison(
@@ -366,7 +414,7 @@ class PerformanceTracker:
                 tracking_error=tracking_error,
                 information_ratio=information_ratio,
                 up_market_performance=up_market_performance,
-                down_market_performance=down_market_performance
+                down_market_performance=down_market_performance,
             )
 
         except Exception as e:
@@ -376,29 +424,32 @@ class PerformanceTracker:
     def get_monthly_summary(self) -> List[Dict[str, Any]]:
         """月次サマリー取得"""
         try:
-            monthly_data = defaultdict(lambda: {
-                'month': '',
-                'total_return': 0.0,
-                'volatility': 0.0,
-                'max_drawdown': 0.0,
-                'trades_count': 0,
-                'win_rate': 0.0,
-                'sharpe_ratio': 0.0,
-                'benchmark_return': 0.0,
-                'excess_return': 0.0
-            })
+            monthly_data = defaultdict(
+                lambda: {
+                    "month": "",
+                    "total_return": 0.0,
+                    "volatility": 0.0,
+                    "max_drawdown": 0.0,
+                    "trades_count": 0,
+                    "win_rate": 0.0,
+                    "sharpe_ratio": 0.0,
+                    "benchmark_return": 0.0,
+                    "excess_return": 0.0,
+                }
+            )
 
             # 月別データ集計
             for perf in self.daily_performance:
-                month_key = perf.date.strftime('%Y-%m')
-                monthly_data[month_key]['month'] = month_key
-                monthly_data[month_key]['trades_count'] += perf.trades_count
+                month_key = perf.date.strftime("%Y-%m")
+                monthly_data[month_key]["month"] = month_key
+                monthly_data[month_key]["trades_count"] += perf.trades_count
 
             # 月別計算
             for month_key in monthly_data.keys():
                 month_performance = [
-                    p for p in self.daily_performance
-                    if p.date.strftime('%Y-%m') == month_key
+                    p
+                    for p in self.daily_performance
+                    if p.date.strftime("%Y-%m") == month_key
                 ]
 
                 if month_performance:
@@ -407,21 +458,35 @@ class PerformanceTracker:
 
                     # 月次リターン
                     monthly_return = np.prod([1 + r for r in returns]) - 1
-                    benchmark_monthly_return = np.prod([1 + r for r in benchmark_returns]) - 1
+                    benchmark_monthly_return = (
+                        np.prod([1 + r for r in benchmark_returns]) - 1
+                    )
 
-                    monthly_data[month_key]['total_return'] = monthly_return
-                    monthly_data[month_key]['benchmark_return'] = benchmark_monthly_return
-                    monthly_data[month_key]['excess_return'] = monthly_return - benchmark_monthly_return
-                    monthly_data[month_key]['volatility'] = np.std(returns) * np.sqrt(252)
-                    monthly_data[month_key]['max_drawdown'] = max([p.drawdown for p in month_performance])
+                    monthly_data[month_key]["total_return"] = monthly_return
+                    monthly_data[month_key][
+                        "benchmark_return"
+                    ] = benchmark_monthly_return
+                    monthly_data[month_key]["excess_return"] = (
+                        monthly_return - benchmark_monthly_return
+                    )
+                    monthly_data[month_key]["volatility"] = np.std(returns) * np.sqrt(
+                        252
+                    )
+                    monthly_data[month_key]["max_drawdown"] = max(
+                        [p.drawdown for p in month_performance]
+                    )
 
                     # 勝率計算（正のリターンの日数比率）
                     positive_days = len([r for r in returns if r > 0])
-                    monthly_data[month_key]['win_rate'] = positive_days / len(returns) * 100
+                    monthly_data[month_key]["win_rate"] = (
+                        positive_days / len(returns) * 100
+                    )
 
                     # シャープレシオ
                     if np.std(returns) > 0:
-                        monthly_data[month_key]['sharpe_ratio'] = np.mean(returns) / np.std(returns) * np.sqrt(252)
+                        monthly_data[month_key]["sharpe_ratio"] = (
+                            np.mean(returns) / np.std(returns) * np.sqrt(252)
+                        )
 
             return list(monthly_data.values())
 
@@ -434,9 +499,16 @@ class PerformanceTracker:
         try:
             if not self.daily_returns:
                 return RiskMetrics(
-                    volatility=0.0, downside_volatility=0.0, max_drawdown=0.0,
-                    max_drawdown_duration=0, var_95=0.0, var_99=0.0,
-                    expected_shortfall=0.0, skewness=0.0, kurtosis=0.0, tail_ratio=0.0
+                    volatility=0.0,
+                    downside_volatility=0.0,
+                    max_drawdown=0.0,
+                    max_drawdown_duration=0,
+                    var_95=0.0,
+                    var_99=0.0,
+                    expected_shortfall=0.0,
+                    skewness=0.0,
+                    kurtosis=0.0,
+                    tail_ratio=0.0,
                 )
 
             returns = self.daily_returns
@@ -446,10 +518,14 @@ class PerformanceTracker:
 
             # ダウンサイドボラティリティ
             downside_returns = [r for r in returns if r < 0]
-            downside_volatility = np.std(downside_returns) * np.sqrt(252) if downside_returns else 0.0
+            downside_volatility = (
+                np.std(downside_returns) * np.sqrt(252) if downside_returns else 0.0
+            )
 
             # 最大ドローダウンと期間
-            max_drawdown = max([p.drawdown for p in self.daily_performance], default=0.0)
+            max_drawdown = max(
+                [p.drawdown for p in self.daily_performance], default=0.0
+            )
             max_drawdown_duration = self._calculate_max_drawdown_duration()
 
             # VaR
@@ -465,7 +541,11 @@ class PerformanceTracker:
             kurtosis = stats.kurtosis(returns) if len(returns) > 2 else 0.0
 
             # テールレシオ（95パーセンタイル / 5パーセンタイル）
-            tail_ratio = abs(np.percentile(returns, 95) / np.percentile(returns, 5)) if np.percentile(returns, 5) != 0 else 0.0
+            tail_ratio = (
+                abs(np.percentile(returns, 95) / np.percentile(returns, 5))
+                if np.percentile(returns, 5) != 0
+                else 0.0
+            )
 
             return RiskMetrics(
                 volatility=volatility,
@@ -477,15 +557,22 @@ class PerformanceTracker:
                 expected_shortfall=expected_shortfall,
                 skewness=skewness,
                 kurtosis=kurtosis,
-                tail_ratio=tail_ratio
+                tail_ratio=tail_ratio,
             )
 
         except Exception as e:
             self.logger.error(f"リスクメトリクスエラー: {e}")
             return RiskMetrics(
-                volatility=0.0, downside_volatility=0.0, max_drawdown=0.0,
-                max_drawdown_duration=0, var_95=0.0, var_99=0.0,
-                expected_shortfall=0.0, skewness=0.0, kurtosis=0.0, tail_ratio=0.0
+                volatility=0.0,
+                downside_volatility=0.0,
+                max_drawdown=0.0,
+                max_drawdown_duration=0,
+                var_95=0.0,
+                var_99=0.0,
+                expected_shortfall=0.0,
+                skewness=0.0,
+                kurtosis=0.0,
+                tail_ratio=0.0,
             )
 
     def generate_performance_charts(self) -> Dict[str, str]:
@@ -497,19 +584,19 @@ class PerformanceTracker:
                 return charts
 
             # 1. 累積リターン比較
-            charts['cumulative_returns'] = self._create_cumulative_returns_chart()
+            charts["cumulative_returns"] = self._create_cumulative_returns_chart()
 
             # 2. 月次リターン
-            charts['monthly_returns'] = self._create_monthly_returns_chart()
+            charts["monthly_returns"] = self._create_monthly_returns_chart()
 
             # 3. リスクリターン散布図
-            charts['risk_return'] = self._create_risk_return_chart()
+            charts["risk_return"] = self._create_risk_return_chart()
 
             # 4. ドローダウンチャート
-            charts['drawdown'] = self._create_drawdown_chart()
+            charts["drawdown"] = self._create_drawdown_chart()
 
             # 5. ローリングシャープレシオ
-            charts['rolling_sharpe'] = self._create_rolling_sharpe_chart()
+            charts["rolling_sharpe"] = self._create_rolling_sharpe_chart()
 
         except Exception as e:
             self.logger.error(f"チャート生成エラー: {e}")
@@ -527,19 +614,26 @@ class PerformanceTracker:
 
             # レポートデータ作成
             report_data = {
-                'report_date': datetime.now().isoformat(),
-                'initial_capital': self.initial_capital,
-                'current_value': self.portfolio_values[-1][1] if self.portfolio_values else self.initial_capital,
-                'period_performance': self._dataclass_to_dict(period_perf),
-                'benchmark_comparison': self._dataclass_to_dict(benchmark_comp),
-                'risk_metrics': self._dataclass_to_dict(risk_metrics),
-                'monthly_summary': monthly_summary,
-                'daily_performance': [self._dataclass_to_dict(p) for p in self.daily_performance]
+                "report_date": datetime.now().isoformat(),
+                "initial_capital": self.initial_capital,
+                "current_value": (
+                    self.portfolio_values[-1][1]
+                    if self.portfolio_values
+                    else self.initial_capital
+                ),
+                "period_performance": self._dataclass_to_dict(period_perf),
+                "benchmark_comparison": self._dataclass_to_dict(benchmark_comp),
+                "risk_metrics": self._dataclass_to_dict(risk_metrics),
+                "monthly_summary": monthly_summary,
+                "daily_performance": [
+                    self._dataclass_to_dict(p) for p in self.daily_performance
+                ],
             }
 
             # JSON出力
             import json
-            with open(filepath, 'w', encoding='utf-8') as f:
+
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(report_data, f, ensure_ascii=False, indent=2, default=str)
 
             return True
@@ -576,9 +670,11 @@ class PerformanceTracker:
                 return 0.0
 
             # 最新の2日分でリターン計算（簡略化）
-            recent_prices = self.benchmark_data['Close'].tail(2)
+            recent_prices = self.benchmark_data["Close"].tail(2)
             if len(recent_prices) >= 2:
-                return (recent_prices.iloc[-1] - recent_prices.iloc[-2]) / recent_prices.iloc[-2]
+                return (
+                    recent_prices.iloc[-1] - recent_prices.iloc[-2]
+                ) / recent_prices.iloc[-2]
 
             return 0.0
 
@@ -597,26 +693,33 @@ class PerformanceTracker:
     def _calculate_rolling_volatility(self, window: int = 30) -> float:
         """ローリングボラティリティ計算"""
         if len(self.daily_returns) < window:
-            return np.std(self.daily_returns) * np.sqrt(252) if self.daily_returns else 0.0
+            return (
+                np.std(self.daily_returns) * np.sqrt(252) if self.daily_returns else 0.0
+            )
 
         recent_returns = self.daily_returns[-window:]
         return np.std(recent_returns) * np.sqrt(252)
 
-    def _calculate_beta_alpha(self,
-                            portfolio_returns: List[float],
-                            benchmark_returns: List[float]) -> Tuple[float, float, float, float]:
+    def _calculate_beta_alpha(
+        self, portfolio_returns: List[float], benchmark_returns: List[float]
+    ) -> Tuple[float, float, float, float]:
         """ベータ・アルファ計算"""
         try:
-            if len(portfolio_returns) != len(benchmark_returns) or len(portfolio_returns) < 2:
+            if (
+                len(portfolio_returns) != len(benchmark_returns)
+                or len(portfolio_returns) < 2
+            ):
                 return 0.0, 0.0, 0.0, 0.0
 
             # 線形回帰
-            slope, intercept, r_value, p_value, std_err = stats.linregress(benchmark_returns, portfolio_returns)
+            slope, intercept, r_value, p_value, std_err = stats.linregress(
+                benchmark_returns, portfolio_returns
+            )
 
             beta = slope
             alpha = intercept * 252  # 年率化
             correlation = r_value
-            r_squared = r_value ** 2
+            r_squared = r_value**2
 
             return beta, alpha, correlation, r_squared
 
@@ -624,22 +727,30 @@ class PerformanceTracker:
             self.logger.error(f"ベータ・アルファ計算エラー: {e}")
             return 0.0, 0.0, 0.0, 0.0
 
-    def _calculate_capture_ratios(self,
-                                portfolio_returns: List[float],
-                                benchmark_returns: List[float]) -> Tuple[float, float]:
+    def _calculate_capture_ratios(
+        self, portfolio_returns: List[float], benchmark_returns: List[float]
+    ) -> Tuple[float, float]:
         """アップ・ダウンキャプチャー計算"""
         try:
             if len(portfolio_returns) != len(benchmark_returns):
                 return 0.0, 0.0
 
-            up_market_days = [(p, b) for p, b in zip(portfolio_returns, benchmark_returns) if b > 0]
-            down_market_days = [(p, b) for p, b in zip(portfolio_returns, benchmark_returns) if b < 0]
+            up_market_days = [
+                (p, b) for p, b in zip(portfolio_returns, benchmark_returns) if b > 0
+            ]
+            down_market_days = [
+                (p, b) for p, b in zip(portfolio_returns, benchmark_returns) if b < 0
+            ]
 
             # アップキャプチャー
             if up_market_days:
                 up_portfolio_avg = np.mean([p for p, b in up_market_days])
                 up_benchmark_avg = np.mean([b for p, b in up_market_days])
-                up_capture = up_portfolio_avg / up_benchmark_avg if up_benchmark_avg != 0 else 0.0
+                up_capture = (
+                    up_portfolio_avg / up_benchmark_avg
+                    if up_benchmark_avg != 0
+                    else 0.0
+                )
             else:
                 up_capture = 0.0
 
@@ -647,7 +758,11 @@ class PerformanceTracker:
             if down_market_days:
                 down_portfolio_avg = np.mean([p for p, b in down_market_days])
                 down_benchmark_avg = np.mean([b for p, b in down_market_days])
-                down_capture = down_portfolio_avg / down_benchmark_avg if down_benchmark_avg != 0 else 0.0
+                down_capture = (
+                    down_portfolio_avg / down_benchmark_avg
+                    if down_benchmark_avg != 0
+                    else 0.0
+                )
             else:
                 down_capture = 0.0
 
@@ -657,16 +772,24 @@ class PerformanceTracker:
             self.logger.error(f"キャプチャー比率計算エラー: {e}")
             return 0.0, 0.0
 
-    def _calculate_market_performance(self,
-                                    portfolio_returns: List[float],
-                                    benchmark_returns: List[float]) -> Tuple[float, float]:
+    def _calculate_market_performance(
+        self, portfolio_returns: List[float], benchmark_returns: List[float]
+    ) -> Tuple[float, float]:
         """上昇・下落市場でのパフォーマンス"""
         try:
-            up_market_portfolio = [p for p, b in zip(portfolio_returns, benchmark_returns) if b > 0]
-            down_market_portfolio = [p for p, b in zip(portfolio_returns, benchmark_returns) if b < 0]
+            up_market_portfolio = [
+                p for p, b in zip(portfolio_returns, benchmark_returns) if b > 0
+            ]
+            down_market_portfolio = [
+                p for p, b in zip(portfolio_returns, benchmark_returns) if b < 0
+            ]
 
-            up_performance = np.mean(up_market_portfolio) if up_market_portfolio else 0.0
-            down_performance = np.mean(down_market_portfolio) if down_market_portfolio else 0.0
+            up_performance = (
+                np.mean(up_market_portfolio) if up_market_portfolio else 0.0
+            )
+            down_performance = (
+                np.mean(down_market_portfolio) if down_market_portfolio else 0.0
+            )
 
             return up_performance, down_performance
 
@@ -693,9 +816,9 @@ class PerformanceTracker:
 
         return max_duration
 
-    def _filter_performance_by_date(self,
-                                  start_date: Optional[datetime],
-                                  end_date: Optional[datetime]) -> List[DailyPerformance]:
+    def _filter_performance_by_date(
+        self, start_date: Optional[datetime], end_date: Optional[datetime]
+    ) -> List[DailyPerformance]:
         """日付でパフォーマンスフィルタリング"""
         filtered = self.daily_performance
 
@@ -715,28 +838,47 @@ class PerformanceTracker:
     def _empty_period_performance(self) -> PeriodPerformance:
         """空の期間パフォーマンス"""
         return PeriodPerformance(
-            start_date=datetime.now(), end_date=datetime.now(),
-            total_return=0.0, annualized_return=0.0, volatility=0.0,
-            sharpe_ratio=0.0, sortino_ratio=0.0, calmar_ratio=0.0,
-            max_drawdown=0.0, var_95=0.0, var_99=0.0,
-            skewness=0.0, kurtosis=0.0, beta=0.0, alpha=0.0,
-            information_ratio=0.0, tracking_error=0.0,
-            up_capture=0.0, down_capture=0.0
+            start_date=datetime.now(),
+            end_date=datetime.now(),
+            total_return=0.0,
+            annualized_return=0.0,
+            volatility=0.0,
+            sharpe_ratio=0.0,
+            sortino_ratio=0.0,
+            calmar_ratio=0.0,
+            max_drawdown=0.0,
+            var_95=0.0,
+            var_99=0.0,
+            skewness=0.0,
+            kurtosis=0.0,
+            beta=0.0,
+            alpha=0.0,
+            information_ratio=0.0,
+            tracking_error=0.0,
+            up_capture=0.0,
+            down_capture=0.0,
         )
 
     def _empty_benchmark_comparison(self) -> BenchmarkComparison:
         """空のベンチマーク比較"""
         return BenchmarkComparison(
             benchmark_symbol=self.benchmark_symbol,
-            portfolio_return=0.0, benchmark_return=0.0, excess_return=0.0,
-            correlation=0.0, beta=0.0, alpha=0.0, r_squared=0.0,
-            tracking_error=0.0, information_ratio=0.0,
-            up_market_performance=0.0, down_market_performance=0.0
+            portfolio_return=0.0,
+            benchmark_return=0.0,
+            excess_return=0.0,
+            correlation=0.0,
+            beta=0.0,
+            alpha=0.0,
+            r_squared=0.0,
+            tracking_error=0.0,
+            information_ratio=0.0,
+            up_market_performance=0.0,
+            down_market_performance=0.0,
         )
 
     def _dataclass_to_dict(self, obj) -> Dict[str, Any]:
         """データクラスを辞書に変換"""
-        if hasattr(obj, '__dataclass_fields__'):
+        if hasattr(obj, "__dataclass_fields__"):
             result = {}
             for field_name, field_value in obj.__dict__.items():
                 if isinstance(field_value, datetime):
@@ -753,9 +895,9 @@ class PerformanceTracker:
         dates = [p.date for p in self.daily_performance]
         cumulative_returns = [p.cumulative_return * 100 for p in self.daily_performance]
 
-        ax.plot(dates, cumulative_returns, label='ポートフォリオ', linewidth=2)
-        ax.set_title('累積リターン', fontweight='bold')
-        ax.set_ylabel('リターン (%)')
+        ax.plot(dates, cumulative_returns, label="ポートフォリオ", linewidth=2)
+        ax.set_title("累積リターン", fontweight="bold")
+        ax.set_ylabel("リターン (%)")
         ax.legend()
         ax.grid(True, alpha=0.3)
         plt.xticks(rotation=45)
@@ -768,14 +910,14 @@ class PerformanceTracker:
         fig, ax = plt.subplots(figsize=(12, 6))
         monthly_data = self.get_monthly_summary()
 
-        months = [m['month'] for m in monthly_data]
-        returns = [m['total_return'] * 100 for m in monthly_data]
+        months = [m["month"] for m in monthly_data]
+        returns = [m["total_return"] * 100 for m in monthly_data]
 
-        colors = ['green' if r >= 0 else 'red' for r in returns]
+        colors = ["green" if r >= 0 else "red" for r in returns]
         ax.bar(months, returns, color=colors, alpha=0.7)
-        ax.set_title('月次リターン', fontweight='bold')
-        ax.set_ylabel('リターン (%)')
-        ax.axhline(y=0, color='black', linestyle='-', alpha=0.5)
+        ax.set_title("月次リターン", fontweight="bold")
+        ax.set_ylabel("リターン (%)")
+        ax.axhline(y=0, color="black", linestyle="-", alpha=0.5)
         plt.xticks(rotation=45)
         plt.tight_layout()
 
@@ -786,13 +928,13 @@ class PerformanceTracker:
         fig, ax = plt.subplots(figsize=(10, 8))
         monthly_data = self.get_monthly_summary()
 
-        returns = [m['total_return'] * 100 for m in monthly_data]
-        volatilities = [m['volatility'] for m in monthly_data]
+        returns = [m["total_return"] * 100 for m in monthly_data]
+        volatilities = [m["volatility"] for m in monthly_data]
 
         ax.scatter(volatilities, returns, alpha=0.7, s=50)
-        ax.set_xlabel('ボラティリティ')
-        ax.set_ylabel('リターン (%)')
-        ax.set_title('リスク・リターン分析', fontweight='bold')
+        ax.set_xlabel("ボラティリティ")
+        ax.set_ylabel("リターン (%)")
+        ax.set_title("リスク・リターン分析", fontweight="bold")
         ax.grid(True, alpha=0.3)
         plt.tight_layout()
 
@@ -804,10 +946,10 @@ class PerformanceTracker:
         dates = [p.date for p in self.daily_performance]
         drawdowns = [-p.drawdown * 100 for p in self.daily_performance]
 
-        ax.fill_between(dates, drawdowns, 0, alpha=0.3, color='red')
-        ax.plot(dates, drawdowns, color='red', linewidth=1)
-        ax.set_title('ドローダウン', fontweight='bold')
-        ax.set_ylabel('ドローダウン (%)')
+        ax.fill_between(dates, drawdowns, 0, alpha=0.3, color="red")
+        ax.plot(dates, drawdowns, color="red", linewidth=1)
+        ax.set_title("ドローダウン", fontweight="bold")
+        ax.set_ylabel("ドローダウン (%)")
         ax.grid(True, alpha=0.3)
         plt.xticks(rotation=45)
         plt.tight_layout()
@@ -825,16 +967,20 @@ class PerformanceTracker:
             dates = []
 
             for i in range(window, len(self.daily_returns)):
-                window_returns = self.daily_returns[i-window:i]
-                sharpe = np.mean(window_returns) / np.std(window_returns) * np.sqrt(252) if np.std(window_returns) > 0 else 0
+                window_returns = self.daily_returns[i - window : i]
+                sharpe = (
+                    np.mean(window_returns) / np.std(window_returns) * np.sqrt(252)
+                    if np.std(window_returns) > 0
+                    else 0
+                )
                 rolling_sharpe.append(sharpe)
                 dates.append(self.daily_performance[i].date)
 
             ax.plot(dates, rolling_sharpe, linewidth=2)
-            ax.axhline(y=0, color='red', linestyle='--', alpha=0.5)
+            ax.axhline(y=0, color="red", linestyle="--", alpha=0.5)
 
-        ax.set_title('30日ローリングシャープレシオ', fontweight='bold')
-        ax.set_ylabel('シャープレシオ')
+        ax.set_title("30日ローリングシャープレシオ", fontweight="bold")
+        ax.set_ylabel("シャープレシオ")
         ax.grid(True, alpha=0.3)
         plt.xticks(rotation=45)
         plt.tight_layout()
@@ -844,7 +990,7 @@ class PerformanceTracker:
     def _fig_to_base64(self, fig) -> str:
         """図をBase64エンコード"""
         buffer = BytesIO()
-        fig.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+        fig.savefig(buffer, format="png", dpi=100, bbox_inches="tight")
         buffer.seek(0)
         image_base64 = base64.b64encode(buffer.getvalue()).decode()
         plt.close(fig)

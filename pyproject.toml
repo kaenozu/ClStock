@@ -1,12 +1,17 @@
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = [
+    "setuptools>=45",
+    "wheel",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "clstock"
 version = "1.0.0"
 description = "84.6%精度達成の株式投資システム"
-authors = [{name = "ClStock Team", email = "team@clstock.com"}]
+authors = [
+    { name = "ClStock Team", email = "team@clstock.com" },
+]
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
@@ -39,30 +44,21 @@ dev = [
 
 [tool.black]
 line-length = 88
-target-version = ['py38', 'py39', 'py310', 'py311']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-  | __pycache__
-)/
-'''
+target-version = [
+    "py38",
+    "py39",
+    "py310",
+    "py311",
+]
+include = "\\.pyi?$"
+exclude = "/(\n    \\.eggs\n  | \\.git\n  | \\.hg\n  | \\.mypy_cache\n  | \\.tox\n  | \\.venv\n  | _build\n  | buck-out\n  | build\n  | dist\n  | __pycache__\n)/\n"
 
 [tool.flake8]
 max-line-length = 88
 extend-ignore = [
-    "E203",  # whitespace before ':'
-    "E501",  # line too long (handled by black)
-    "W503",  # line break before binary operator
+    "E203",
+    "E501",
+    "W503",
 ]
 exclude = [
     ".git",
@@ -73,6 +69,7 @@ exclude = [
     "*.egg",
     ".venv",
     ".mypy_cache",
+    "archive",
 ]
 
 [tool.mypy]
@@ -105,13 +102,24 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q --cov=. --cov-report=term-missing --cov-report=html"
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
+testpaths = [
+    "tests",
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+]
+python_classes = [
+    "Test*",
+]
+python_functions = [
+    "test_*",
+]
 
 [tool.coverage.run]
-source = ["."]
+source = [
+    ".",
+]
 omit = [
     "tests/*",
     "venv/*",
@@ -139,8 +147,17 @@ exclude_lines = [
 ]
 
 [tool.bandit]
-exclude_dirs = ["tests", "venv"]
-skips = ["B101", "B601"]  # Skip assert_used, shell injection (we use shell commands intentionally)
+exclude_dirs = [
+    "tests",
+    "venv",
+]
+skips = [
+    "B101",
+    "B601",
+]
 
 [tool.bandit.assert_used]
-skips = ["**/test_*.py", "**/*_test.py"]
+skips = [
+    "**/test_*.py",
+    "**/*_test.py",
+]

@@ -29,6 +29,7 @@ from .ultra_fast_streaming import UltraFastStreamingPredictor
 from .multi_gpu_processor import MultiGPUParallelPredictor
 from config.settings import get_settings
 
+
 class HybridStockPredictor(StockPredictor):
     """
     ハイブリッド予測システム
@@ -40,18 +41,27 @@ class HybridStockPredictor(StockPredictor):
     - インテリジェントな自動最適化
     """
 
-    def __init__(self, data_provider=None, default_mode: PredictionMode = PredictionMode.AUTO,
-                 enable_streaming: bool = True, enable_multi_gpu: bool = True,
-                 enable_real_time_learning: bool = True,
-                 enable_cache: bool = True, enable_adaptive_optimization: bool = True,
-                 max_prediction_history_size: Optional[int] = None):
+    def __init__(
+        self,
+        data_provider=None,
+        default_mode: PredictionMode = PredictionMode.AUTO,
+        enable_streaming: bool = True,
+        enable_multi_gpu: bool = True,
+        enable_real_time_learning: bool = True,
+        enable_cache: bool = True,
+        enable_adaptive_optimization: bool = True,
+        max_prediction_history_size: Optional[int] = None,
+    ):
         self.data_provider = data_provider or StockDataProvider()
         self.default_mode = default_mode
         self.logger = logging.getLogger(__name__)
-        
+
         # 予測履歴サイズの設定（設定ファイルから取得または引数から指定）
         settings = get_settings()
-        self.max_prediction_history_size = max_prediction_history_size or settings.prediction.max_prediction_history_size
+        self.max_prediction_history_size = (
+            max_prediction_history_size
+            or settings.prediction.max_prediction_history_size
+        )
 
         # サブシステム初期化
         self._initialize_subsystems()
@@ -63,7 +73,9 @@ class HybridStockPredictor(StockPredictor):
                 self.intelligent_cache = IntelligentPredictionCache()
                 self.logger.info("Intelligent prediction cache initialized")
             except Exception as e:
-                self.logger.warning(f"Cache initialization failed: {str(e)}, proceeding without cache")
+                self.logger.warning(
+                    f"Cache initialization failed: {str(e)}, proceeding without cache"
+                )
                 self.intelligent_cache = None
                 self.cache_enabled = False
         else:
@@ -76,7 +88,9 @@ class HybridStockPredictor(StockPredictor):
                 self.adaptive_optimizer = AdaptivePerformanceOptimizer()
                 self.logger.info("Adaptive performance optimizer initialized")
             except Exception as e:
-                self.logger.warning(f"Adaptive optimizer initialization failed: {str(e)}")
+                self.logger.warning(
+                    f"Adaptive optimizer initialization failed: {str(e)}"
+                )
                 self.adaptive_optimizer = None
                 self.adaptive_optimization_enabled = False
         else:
@@ -89,7 +103,9 @@ class HybridStockPredictor(StockPredictor):
                 self.streaming_predictor = UltraFastStreamingPredictor()
                 self.logger.info("Ultra-fast streaming predictor initialized")
             except Exception as e:
-                self.logger.warning(f"Streaming predictor initialization failed: {str(e)}")
+                self.logger.warning(
+                    f"Streaming predictor initialization failed: {str(e)}"
+                )
                 self.streaming_predictor = None
                 self.streaming_enabled = False
         else:
@@ -102,7 +118,9 @@ class HybridStockPredictor(StockPredictor):
                 self.multi_gpu_predictor = MultiGPUParallelPredictor()
                 self.logger.info("Multi-GPU parallel predictor initialized")
             except Exception as e:
-                self.logger.warning(f"Multi-GPU predictor initialization failed: {str(e)}")
+                self.logger.warning(
+                    f"Multi-GPU predictor initialization failed: {str(e)}"
+                )
                 self.multi_gpu_predictor = None
                 self.multi_gpu_enabled = False
         else:
@@ -113,10 +131,13 @@ class HybridStockPredictor(StockPredictor):
         if self.real_time_learning_enabled:
             try:
                 from .multi_gpu_processor import RealTimeLearningSystem
+
                 self.real_time_learner = RealTimeLearningSystem()
                 self.logger.info("Real-time learning system initialized")
             except Exception as e:
-                self.logger.warning(f"Real-time learning system initialization failed: {str(e)}")
+                self.logger.warning(
+                    f"Real-time learning system initialization failed: {str(e)}"
+                )
                 self.real_time_learner = None
                 self.real_time_learning_enabled = False
         else:
@@ -124,21 +145,25 @@ class HybridStockPredictor(StockPredictor):
 
         # ハイブリッド制御パラメータ
         self.performance_thresholds = {
-            'speed_threshold': 0.1,      # 0.1秒以下なら高速モード
-            'accuracy_threshold': 0.8,   # 信頼度0.8以上なら精度モード
-            'batch_size_threshold': 10,  # 10銘柄以上ならバッチ処理
-            'ultra_speed_threshold': 0.001,  # 0.001秒以下ならストリーミング
-            'massive_batch_threshold': 100   # 100銘柄以上ならGPU並列
+            "speed_threshold": 0.1,  # 0.1秒以下なら高速モード
+            "accuracy_threshold": 0.8,  # 信頼度0.8以上なら精度モード
+            "batch_size_threshold": 10,  # 10銘柄以上ならバッチ処理
+            "ultra_speed_threshold": 0.001,  # 0.001秒以下ならストリーミング
+            "massive_batch_threshold": 100,  # 100銘柄以上ならGPU並列
         }
 
         # 予測履歴（学習用）
-        self.prediction_history = deque(maxlen=self.max_prediction_history_size)  # 自動サイズ制限付きdequeを使用
+        self.prediction_history = deque(
+            maxlen=self.max_prediction_history_size
+        )  # 自動サイズ制限付きdequeを使用
 
         # 最適化カウンター
         self.optimization_counter = 0
         self.optimization_interval = 50  # 50回予測ごとに最適化実行
 
-        self.logger.info("HybridStockPredictor with Phase 2 features (including real-time learning) initialized successfully")
+        self.logger.info(
+            "HybridStockPredictor with Phase 2 features (including real-time learning) initialized successfully"
+        )
 
     def _initialize_subsystems(self):
         """サブシステムの初期化"""
@@ -161,7 +186,9 @@ class HybridStockPredictor(StockPredictor):
         if not self.enhanced_system and not self.precision_system:
             raise RuntimeError("Both subsystems failed to initialize")
 
-    def predict(self, symbol: str, mode: Optional[PredictionMode] = None) -> PredictionResult:
+    def predict(
+        self, symbol: str, mode: Optional[PredictionMode] = None
+    ) -> PredictionResult:
         """
         統合予測実行（インテリジェントキャッシュ対応）
 
@@ -182,15 +209,19 @@ class HybridStockPredictor(StockPredictor):
         # キャッシュチェック
         cached_result = None
         if self.cache_enabled and self.intelligent_cache:
-            cached_result = self.intelligent_cache.get_cached_prediction(symbol, active_mode)
+            cached_result = self.intelligent_cache.get_cached_prediction(
+                symbol, active_mode
+            )
             if cached_result:
                 # キャッシュヒット
                 cache_time = time.time() - start_time
-                cached_result.metadata['prediction_time'] = cache_time
-                cached_result.metadata['cache_hit'] = True
-                cached_result.metadata['mode_used'] = active_mode.value
+                cached_result.metadata["prediction_time"] = cache_time
+                cached_result.metadata["cache_hit"] = True
+                cached_result.metadata["mode_used"] = active_mode.value
 
-                self.logger.debug(f"Cache hit for {symbol} ({active_mode.value}) in {cache_time:.6f}s")
+                self.logger.debug(
+                    f"Cache hit for {symbol} ({active_mode.value}) in {cache_time:.6f}s"
+                )
                 return cached_result
 
         # キャッシュミス - 実際の予測実行
@@ -198,9 +229,9 @@ class HybridStockPredictor(StockPredictor):
 
         # 予測時間記録
         prediction_time = time.time() - start_time
-        result.metadata['prediction_time'] = prediction_time
-        result.metadata['cache_hit'] = False
-        result.metadata['mode_used'] = active_mode.value
+        result.metadata["prediction_time"] = prediction_time
+        result.metadata["cache_hit"] = False
+        result.metadata["mode_used"] = active_mode.value
 
         # 結果をキャッシュ
         if self.cache_enabled and self.intelligent_cache:
@@ -210,7 +241,9 @@ class HybridStockPredictor(StockPredictor):
         self._record_prediction(symbol, result, active_mode, prediction_time)
 
         # 学習型最適化実行（定期的）
-        self._check_and_run_optimization(result, prediction_time, cached_result is not None)
+        self._check_and_run_optimization(
+            result, prediction_time, cached_result is not None
+        )
 
         return result
 
@@ -221,24 +254,31 @@ class HybridStockPredictor(StockPredictor):
             recent_history = list(self.prediction_history)[-10:]  # 直近10件
 
             # 最近の平均予測時間
-            avg_time = np.mean([h['prediction_time'] for h in recent_history])
-            
+            avg_time = np.mean([h["prediction_time"] for h in recent_history])
+
             # 時間ベースのモード選択
-            if avg_time <= self.performance_thresholds['ultra_speed_threshold']:
+            if avg_time <= self.performance_thresholds["ultra_speed_threshold"]:
                 return PredictionMode.ULTRA_SPEED
-            elif avg_time <= self.performance_thresholds['speed_threshold']:
+            elif avg_time <= self.performance_thresholds["speed_threshold"]:
                 return PredictionMode.SPEED_PRIORITY
             else:
                 # 精度ベースの判定
                 if self.prediction_history:
-                    recent_accuracy = np.mean([h['accuracy'] for h in recent_history[-5:]])
-                    if recent_accuracy >= self.performance_thresholds['accuracy_threshold']:
+                    recent_accuracy = np.mean(
+                        [h["accuracy"] for h in recent_history[-5:]]
+                    )
+                    if (
+                        recent_accuracy
+                        >= self.performance_thresholds["accuracy_threshold"]
+                    ):
                         return PredictionMode.ACCURACY_PRIORITY
-                        
+
         # デフォルト: バランスモード
         return PredictionMode.BALANCED
 
-    def _execute_prediction(self, symbol: str, mode: PredictionMode) -> PredictionResult:
+    def _execute_prediction(
+        self, symbol: str, mode: PredictionMode
+    ) -> PredictionResult:
         """モード別予測実行（次世代モード対応）"""
         try:
             # 既存モード
@@ -273,36 +313,44 @@ class HybridStockPredictor(StockPredictor):
     def _speed_priority_prediction(self, symbol: str) -> PredictionResult:
         """速度優先予測（拡張システム使用）"""
         if not self.enhanced_system:
-            return self._fallback_prediction(symbol, error="Enhanced system not available")
+            return self._fallback_prediction(
+                symbol, error="Enhanced system not available"
+            )
 
         result = self.enhanced_system.predict(symbol)
-        result.metadata['prediction_strategy'] = 'speed_priority'
-        result.metadata['system_used'] = 'enhanced_ensemble'
+        result.metadata["prediction_strategy"] = "speed_priority"
+        result.metadata["system_used"] = "enhanced_ensemble"
 
         return result
 
     def _accuracy_priority_prediction(self, symbol: str) -> PredictionResult:
         """精度優先予測（87%システム使用）"""
         if not self.precision_system:
-            return self._fallback_prediction(symbol, error="Precision system not available")
+            return self._fallback_prediction(
+                symbol, error="Precision system not available"
+            )
 
         try:
             precision_result = self.precision_system.predict_with_87_precision(symbol)
 
             # 87%システムの結果をPredictionResult形式に変換
             result = PredictionResult(
-                prediction=float(precision_result.get('final_prediction', 50.0)),
-                confidence=float(precision_result.get('final_confidence', 0.5)),
-                accuracy=float(precision_result.get('final_accuracy', 87.0)),
+                prediction=float(precision_result.get("final_prediction", 50.0)),
+                confidence=float(precision_result.get("final_confidence", 0.5)),
+                accuracy=float(precision_result.get("final_accuracy", 87.0)),
                 timestamp=datetime.now(),
                 symbol=symbol,
                 metadata={
-                    'prediction_strategy': 'accuracy_priority',
-                    'system_used': '87_precision',
-                    'meta_learning': precision_result.get('meta_learning_contribution', 0),
-                    'dqn_contribution': precision_result.get('dqn_contribution', 0),
-                    'ensemble_contribution': precision_result.get('ensemble_contribution', 0)
-                }
+                    "prediction_strategy": "accuracy_priority",
+                    "system_used": "87_precision",
+                    "meta_learning": precision_result.get(
+                        "meta_learning_contribution", 0
+                    ),
+                    "dqn_contribution": precision_result.get("dqn_contribution", 0),
+                    "ensemble_contribution": precision_result.get(
+                        "ensemble_contribution", 0
+                    ),
+                },
             )
 
             return result
@@ -321,63 +369,76 @@ class HybridStockPredictor(StockPredictor):
             try:
                 enhanced_result = self.enhanced_system.predict(symbol)
             except Exception as e:
-                self.logger.warning(f"Enhanced system failed in balanced mode: {str(e)}")
+                self.logger.warning(
+                    f"Enhanced system failed in balanced mode: {str(e)}"
+                )
 
         # 87%システム予測
         if self.precision_system:
             try:
                 precision_raw = self.precision_system.predict_with_87_precision(symbol)
                 precision_result = {
-                    'prediction': float(precision_raw.get('final_prediction', 50.0)),
-                    'confidence': float(precision_raw.get('final_confidence', 0.5)),
-                    'accuracy': float(precision_raw.get('final_accuracy', 87.0))
+                    "prediction": float(precision_raw.get("final_prediction", 50.0)),
+                    "confidence": float(precision_raw.get("final_confidence", 0.5)),
+                    "accuracy": float(precision_raw.get("final_accuracy", 87.0)),
                 }
             except Exception as e:
-                self.logger.warning(f"Precision system failed in balanced mode: {str(e)}")
+                self.logger.warning(
+                    f"Precision system failed in balanced mode: {str(e)}"
+                )
 
         # 統合計算
         if enhanced_result and precision_result:
-            return self._integrate_predictions(symbol, enhanced_result, precision_result)
+            return self._integrate_predictions(
+                symbol, enhanced_result, precision_result
+            )
         elif enhanced_result:
-            enhanced_result.metadata['prediction_strategy'] = 'balanced_enhanced_only'
+            enhanced_result.metadata["prediction_strategy"] = "balanced_enhanced_only"
             return enhanced_result
         elif precision_result:
             return PredictionResult(
-                prediction=precision_result['prediction'],
-                confidence=precision_result['confidence'],
-                accuracy=precision_result['accuracy'],
+                prediction=precision_result["prediction"],
+                confidence=precision_result["confidence"],
+                accuracy=precision_result["accuracy"],
                 timestamp=datetime.now(),
                 symbol=symbol,
-                metadata={'prediction_strategy': 'balanced_precision_only'}
+                metadata={"prediction_strategy": "balanced_precision_only"},
             )
         else:
             return self._fallback_prediction(symbol, error="Both systems failed")
 
-    def _integrate_predictions(self, symbol: str, enhanced_result: PredictionResult,
-                             precision_result: Dict) -> PredictionResult:
+    def _integrate_predictions(
+        self, symbol: str, enhanced_result: PredictionResult, precision_result: Dict
+    ) -> PredictionResult:
         """両システムの予測統合"""
         # 重み計算（信頼度ベース）
         enhanced_weight = enhanced_result.confidence
-        precision_weight = precision_result['confidence']
+        precision_weight = precision_result["confidence"]
         total_weight = enhanced_weight + precision_weight
 
         if total_weight > 0:
             # 加重平均
             integrated_prediction = (
-                enhanced_result.prediction * enhanced_weight +
-                precision_result['prediction'] * precision_weight
+                enhanced_result.prediction * enhanced_weight
+                + precision_result["prediction"] * precision_weight
             ) / total_weight
 
             # 統合信頼度（平均）
             integrated_confidence = (enhanced_weight + precision_weight) / 2
 
             # 統合精度（最大値）
-            integrated_accuracy = max(enhanced_result.accuracy, precision_result['accuracy'])
+            integrated_accuracy = max(
+                enhanced_result.accuracy, precision_result["accuracy"]
+            )
         else:
             # フォールバック
-            integrated_prediction = (enhanced_result.prediction + precision_result['prediction']) / 2
+            integrated_prediction = (
+                enhanced_result.prediction + precision_result["prediction"]
+            ) / 2
             integrated_confidence = 0.5
-            integrated_accuracy = (enhanced_result.accuracy + precision_result['accuracy']) / 2
+            integrated_accuracy = (
+                enhanced_result.accuracy + precision_result["accuracy"]
+            ) / 2
 
         return PredictionResult(
             prediction=integrated_prediction,
@@ -386,25 +447,33 @@ class HybridStockPredictor(StockPredictor):
             timestamp=datetime.now(),
             symbol=symbol,
             metadata={
-                'prediction_strategy': 'balanced_integrated',
-                'enhanced_prediction': enhanced_result.prediction,
-                'precision_prediction': precision_result['prediction'],
-                'enhanced_weight': enhanced_weight,
-                'precision_weight': precision_weight,
-                'integration_method': 'weighted_average'
-            }
+                "prediction_strategy": "balanced_integrated",
+                "enhanced_prediction": enhanced_result.prediction,
+                "precision_prediction": precision_result["prediction"],
+                "enhanced_weight": enhanced_weight,
+                "precision_weight": precision_weight,
+                "integration_method": "weighted_average",
+            },
         )
 
-    def predict_batch(self, symbols: List[str], mode: Optional[PredictionMode] = None) -> List[PredictionResult]:
+    def predict_batch(
+        self, symbols: List[str], mode: Optional[PredictionMode] = None
+    ) -> List[PredictionResult]:
         """バッチ予測（Phase 2最適化）"""
         batch_size = len(symbols)
 
         # 大規模バッチ: GPU並列処理（Phase 2追加）
-        if (batch_size >= self.performance_thresholds['massive_batch_threshold'] and
-            self.multi_gpu_enabled and self.multi_gpu_predictor):
-            self.logger.info(f"Massive batch ({batch_size} symbols) - using multi-GPU parallel processing")
+        if (
+            batch_size >= self.performance_thresholds["massive_batch_threshold"]
+            and self.multi_gpu_enabled
+            and self.multi_gpu_predictor
+        ):
+            self.logger.info(
+                f"Massive batch ({batch_size} symbols) - using multi-GPU parallel processing"
+            )
             try:
                 import asyncio
+
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
@@ -416,11 +485,15 @@ class HybridStockPredictor(StockPredictor):
                 finally:
                     loop.close()
             except Exception as e:
-                self.logger.error(f"Multi-GPU batch prediction failed: {str(e)}, falling back")
+                self.logger.error(
+                    f"Multi-GPU batch prediction failed: {str(e)}, falling back"
+                )
 
         # 大量バッチ: 拡張システム並列処理
-        elif batch_size >= self.performance_thresholds['batch_size_threshold']:
-            self.logger.info(f"Large batch ({batch_size} symbols) - using enhanced system")
+        elif batch_size >= self.performance_thresholds["batch_size_threshold"]:
+            self.logger.info(
+                f"Large batch ({batch_size} symbols) - using enhanced system"
+            )
             if self.enhanced_system:
                 return self.enhanced_system.predict_batch(symbols)
 
@@ -459,46 +532,51 @@ class HybridStockPredictor(StockPredictor):
     def get_model_info(self) -> Dict[str, Any]:
         """ハイブリッドシステム情報"""
         info = {
-            'name': 'HybridStockPredictor',
-            'version': '1.0.0',
-            'type': 'hybrid_system',
-            'default_mode': self.default_mode.value,
-            'subsystems': {},
-            'capabilities': {
-                'speed_optimization': True,
-                'accuracy_optimization': True,
-                'adaptive_mode_selection': True,
-                'batch_processing': True,
-                'parallel_execution': True
+            "name": "HybridStockPredictor",
+            "version": "1.0.0",
+            "type": "hybrid_system",
+            "default_mode": self.default_mode.value,
+            "subsystems": {},
+            "capabilities": {
+                "speed_optimization": True,
+                "accuracy_optimization": True,
+                "adaptive_mode_selection": True,
+                "batch_processing": True,
+                "parallel_execution": True,
             },
-            'performance_thresholds': self.performance_thresholds,
-            'prediction_history_size': len(self.prediction_history)
+            "performance_thresholds": self.performance_thresholds,
+            "prediction_history_size": len(self.prediction_history),
         }
 
         # サブシステム情報
         if self.enhanced_system:
-            info['subsystems']['enhanced'] = self.enhanced_system.get_model_info()
+            info["subsystems"]["enhanced"] = self.enhanced_system.get_model_info()
 
         if self.precision_system:
-            info['subsystems']['precision'] = {
-                'name': '87%_precision_system',
-                'target_accuracy': 87.0,
-                'features': ['meta_learning', 'dqn_reinforcement', 'ensemble']
+            info["subsystems"]["precision"] = {
+                "name": "87%_precision_system",
+                "target_accuracy": 87.0,
+                "features": ["meta_learning", "dqn_reinforcement", "ensemble"],
             }
 
         return info
 
-    def _record_prediction(self, symbol: str, result: PredictionResult,
-                          mode: PredictionMode, prediction_time: float):
+    def _record_prediction(
+        self,
+        symbol: str,
+        result: PredictionResult,
+        mode: PredictionMode,
+        prediction_time: float,
+    ):
         """予測履歴記録"""
         history_entry = {
-            'symbol': symbol,
-            'prediction': result.prediction,
-            'confidence': result.confidence,
-            'accuracy': result.accuracy,
-            'mode': mode.value,
-            'prediction_time': prediction_time,
-            'timestamp': datetime.now()
+            "symbol": symbol,
+            "prediction": result.prediction,
+            "confidence": result.confidence,
+            "accuracy": result.accuracy,
+            "mode": mode.value,
+            "prediction_time": prediction_time,
+            "timestamp": datetime.now(),
         }
 
         self.prediction_history.append(history_entry)
@@ -509,7 +587,7 @@ class HybridStockPredictor(StockPredictor):
             self.real_time_learner.add_prediction_feedback(
                 prediction=result.prediction,
                 actual=result.prediction,  # 実際の実装では実際の市場価格を使用
-                symbol=symbol
+                symbol=symbol,
             )
 
         # 履歴サイズ制限（最新1000件）
@@ -524,68 +602,74 @@ class HybridStockPredictor(StockPredictor):
             timestamp=datetime.now(),
             symbol=symbol,
             metadata={
-                'prediction_strategy': 'fallback',
-                'error': error,
-                'system_used': 'fallback'
-            }
+                "prediction_strategy": "fallback",
+                "error": error,
+                "system_used": "fallback",
+            },
         )
 
     def get_performance_stats(self) -> Dict[str, Any]:
         """パフォーマンス統計（キャッシュ統計含む）"""
         if not self.prediction_history:
-            return {'error': 'No prediction history available'}
+            return {"error": "No prediction history available"}
 
         recent_history = list(self.prediction_history)[-100:]  # 直近100件
 
         # モード別統計
         mode_stats = {}
         for mode in PredictionMode:
-            mode_predictions = [h for h in recent_history if h['mode'] == mode.value]
+            mode_predictions = [h for h in recent_history if h["mode"] == mode.value]
             if mode_predictions:
                 mode_stats[mode.value] = {
-                    'count': len(mode_predictions),
-                    'avg_time': np.mean([p['prediction_time'] for p in mode_predictions]),
-                    'avg_confidence': np.mean([p['confidence'] for p in mode_predictions]),
-                    'avg_accuracy': np.mean([p['accuracy'] for p in mode_predictions])
+                    "count": len(mode_predictions),
+                    "avg_time": np.mean(
+                        [p["prediction_time"] for p in mode_predictions]
+                    ),
+                    "avg_confidence": np.mean(
+                        [p["confidence"] for p in mode_predictions]
+                    ),
+                    "avg_accuracy": np.mean([p["accuracy"] for p in mode_predictions]),
                 }
 
         # 基本統計
         stats = {
-            'total_predictions': len(self.prediction_history),
-            'recent_predictions': len(recent_history),
-            'avg_prediction_time': np.mean([h['prediction_time'] for h in recent_history]),
-            'avg_confidence': np.mean([h['confidence'] for h in recent_history]),
-            'mode_statistics': mode_stats,
-            'performance_trends': self._calculate_performance_trends(recent_history)
+            "total_predictions": len(self.prediction_history),
+            "recent_predictions": len(recent_history),
+            "avg_prediction_time": np.mean(
+                [h["prediction_time"] for h in recent_history]
+            ),
+            "avg_confidence": np.mean([h["confidence"] for h in recent_history]),
+            "mode_statistics": mode_stats,
+            "performance_trends": self._calculate_performance_trends(recent_history),
         }
 
         # キャッシュ統計追加
         if self.cache_enabled and self.intelligent_cache:
             cache_stats = self.intelligent_cache.get_cache_statistics()
-            stats['cache_statistics'] = cache_stats
+            stats["cache_statistics"] = cache_stats
 
             # キャッシュ効果分析
-            cache_hits = cache_stats.get('cache_hits', 0)
-            total_requests = cache_stats.get('total_requests', 0)
+            cache_hits = cache_stats.get("cache_hits", 0)
+            total_requests = cache_stats.get("total_requests", 0)
             if total_requests > 0:
-                stats['cache_acceleration'] = {
-                    'hit_rate': cache_stats.get('hit_rate', 0),
-                    'estimated_time_saved': cache_hits * 0.1,  # 平均0.1秒節約と仮定
-                    'performance_improvement': f"{cache_stats.get('hit_rate', 0) * 100:.1f}% faster"
+                stats["cache_acceleration"] = {
+                    "hit_rate": cache_stats.get("hit_rate", 0),
+                    "estimated_time_saved": cache_hits * 0.1,  # 平均0.1秒節約と仮定
+                    "performance_improvement": f"{cache_stats.get('hit_rate', 0) * 100:.1f}% faster",
                 }
         else:
-            stats['cache_statistics'] = {'enabled': False}
+            stats["cache_statistics"] = {"enabled": False}
 
         return stats
 
     def _calculate_performance_trends(self, history: List[Dict]) -> Dict[str, float]:
         """パフォーマンストレンド計算"""
         if len(history) < 10:
-            return {'trend_data_insufficient': True}
+            return {"trend_data_insufficient": True}
 
         # 時系列データ
-        times = [h['prediction_time'] for h in history]
-        confidences = [h['confidence'] for h in history]
+        times = [h["prediction_time"] for h in history]
+        confidences = [h["confidence"] for h in history]
 
         # トレンド計算（線形回帰）
         x = np.arange(len(times))
@@ -597,9 +681,9 @@ class HybridStockPredictor(StockPredictor):
         confidence_trend = np.polyfit(x, confidences, 1)[0]
 
         return {
-            'time_trend': time_trend,  # 正の値なら遅くなっている
-            'confidence_trend': confidence_trend,  # 正の値なら信頼度向上
-            'performance_stability': np.std(times)  # 小さいほど安定
+            "time_trend": time_trend,  # 正の値なら遅くなっている
+            "confidence_trend": confidence_trend,  # 正の値なら信頼度向上
+            "performance_stability": np.std(times),  # 小さいほど安定
         }
 
     # =============================================================================
@@ -613,30 +697,35 @@ class HybridStockPredictor(StockPredictor):
             try:
                 # 非同期ストリーミング予測を同期的に実行
                 import asyncio
+
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
                     result = loop.run_until_complete(
                         self.streaming_predictor.predict_streaming(symbol)
                     )
-                    result.metadata['prediction_strategy'] = 'ultra_speed_streaming'
-                    result.metadata['system_used'] = 'streaming_predictor'
-                    result.metadata['optimization'] = 'hft_streaming_optimized'
+                    result.metadata["prediction_strategy"] = "ultra_speed_streaming"
+                    result.metadata["system_used"] = "streaming_predictor"
+                    result.metadata["optimization"] = "hft_streaming_optimized"
                     return result
                 finally:
                     loop.close()
             except Exception as e:
-                self.logger.warning(f"Streaming prediction failed, falling back to enhanced system: {str(e)}")
+                self.logger.warning(
+                    f"Streaming prediction failed, falling back to enhanced system: {str(e)}"
+                )
 
         # フォールバック: 従来の拡張システム使用
         if self.enhanced_system:
             result = self.enhanced_system.predict(symbol)
-            result.metadata['prediction_strategy'] = 'ultra_speed_fallback'
-            result.metadata['system_used'] = 'enhanced_ensemble_ultra'
-            result.metadata['optimization'] = 'hft_optimized'
+            result.metadata["prediction_strategy"] = "ultra_speed_fallback"
+            result.metadata["system_used"] = "enhanced_ensemble_ultra"
+            result.metadata["optimization"] = "hft_optimized"
             return result
 
-        return self._fallback_prediction(symbol, error="No ultra speed systems available")
+        return self._fallback_prediction(
+            symbol, error="No ultra speed systems available"
+        )
 
     def _research_mode_prediction(self, symbol: str) -> PredictionResult:
         """研究モード予測（95%精度目標）"""
@@ -649,36 +738,44 @@ class HybridStockPredictor(StockPredictor):
             try:
                 enhanced_result = self.enhanced_system.predict(symbol)
             except Exception as e:
-                self.logger.warning(f"Enhanced system failed in research mode: {str(e)}")
+                self.logger.warning(
+                    f"Enhanced system failed in research mode: {str(e)}"
+                )
 
         # 87%システム予測（最高精度）
         if self.precision_system:
             try:
                 precision_raw = self.precision_system.predict_with_87_precision(symbol)
                 precision_result = {
-                    'prediction': float(precision_raw.get('final_prediction', 50.0)),
-                    'confidence': float(precision_raw.get('final_confidence', 0.5)),
-                    'accuracy': float(precision_raw.get('final_accuracy', 87.0))
+                    "prediction": float(precision_raw.get("final_prediction", 50.0)),
+                    "confidence": float(precision_raw.get("final_confidence", 0.5)),
+                    "accuracy": float(precision_raw.get("final_accuracy", 87.0)),
                 }
             except Exception as e:
-                self.logger.warning(f"Precision system failed in research mode: {str(e)}")
+                self.logger.warning(
+                    f"Precision system failed in research mode: {str(e)}"
+                )
 
         # 研究級統合計算（重み調整強化）
         if enhanced_result and precision_result:
             # 研究モードでは精度システムを重視
             enhanced_weight = enhanced_result.confidence * 0.3
-            precision_weight = precision_result['confidence'] * 0.7
+            precision_weight = precision_result["confidence"] * 0.7
             total_weight = enhanced_weight + precision_weight
 
             if total_weight > 0:
                 integrated_prediction = (
-                    enhanced_result.prediction * enhanced_weight +
-                    precision_result['prediction'] * precision_weight
+                    enhanced_result.prediction * enhanced_weight
+                    + precision_result["prediction"] * precision_weight
                 ) / total_weight
 
                 # 研究モードでは信頼度を保守的に
-                integrated_confidence = min(0.95, (enhanced_weight + precision_weight) / 2 * 1.1)
-                integrated_accuracy = max(enhanced_result.accuracy, precision_result['accuracy']) * 1.05
+                integrated_confidence = min(
+                    0.95, (enhanced_weight + precision_weight) / 2 * 1.1
+                )
+                integrated_accuracy = (
+                    max(enhanced_result.accuracy, precision_result["accuracy"]) * 1.05
+                )
 
                 return PredictionResult(
                     prediction=integrated_prediction,
@@ -687,12 +784,12 @@ class HybridStockPredictor(StockPredictor):
                     timestamp=datetime.now(),
                     symbol=symbol,
                     metadata={
-                        'prediction_strategy': 'research_mode',
-                        'system_used': 'dual_system_research',
-                        'research_optimization': True,
-                        'enhanced_weight': enhanced_weight,
-                        'precision_weight': precision_weight
-                    }
+                        "prediction_strategy": "research_mode",
+                        "system_used": "dual_system_research",
+                        "research_optimization": True,
+                        "enhanced_weight": enhanced_weight,
+                        "precision_weight": precision_weight,
+                    },
                 )
 
         # フォールバック
@@ -708,9 +805,9 @@ class HybridStockPredictor(StockPredictor):
         swing_adjustment = 1.02 if result.confidence > 0.7 else 0.98
 
         result.prediction *= swing_adjustment
-        result.metadata['prediction_strategy'] = 'swing_trade'
-        result.metadata['optimization'] = 'medium_term_trend'
-        result.metadata['swing_adjustment'] = swing_adjustment
+        result.metadata["prediction_strategy"] = "swing_trade"
+        result.metadata["optimization"] = "medium_term_trend"
+        result.metadata["swing_adjustment"] = swing_adjustment
 
         return result
 
@@ -721,13 +818,15 @@ class HybridStockPredictor(StockPredictor):
 
         # スキャルピング特化調整
         # 短期ボラティリティを考慮
-        scalping_volatility = np.random.normal(1.0, 0.05)  # 実際は短期ボラティリティ計算
+        scalping_volatility = np.random.normal(
+            1.0, 0.05
+        )  # 実際は短期ボラティリティ計算
 
         result.prediction *= scalping_volatility
         result.confidence *= 0.9  # スキャルピングは保守的信頼度
-        result.metadata['prediction_strategy'] = 'scalping'
-        result.metadata['optimization'] = 'ultra_short_term'
-        result.metadata['volatility_adjustment'] = scalping_volatility
+        result.metadata["prediction_strategy"] = "scalping"
+        result.metadata["optimization"] = "ultra_short_term"
+        result.metadata["volatility_adjustment"] = scalping_volatility
 
         return result
 
@@ -741,10 +840,10 @@ class HybridStockPredictor(StockPredictor):
         portfolio_factor = 0.98  # 分散投資では個別銘柄リスクを下方調整
 
         result.prediction *= portfolio_factor
-        result.metadata['prediction_strategy'] = 'portfolio_analysis'
-        result.metadata['optimization'] = 'portfolio_risk_adjusted'
-        result.metadata['portfolio_factor'] = portfolio_factor
-        result.metadata['analysis_scope'] = 'portfolio_wide'
+        result.metadata["prediction_strategy"] = "portfolio_analysis"
+        result.metadata["optimization"] = "portfolio_risk_adjusted"
+        result.metadata["portfolio_factor"] = portfolio_factor
+        result.metadata["analysis_scope"] = "portfolio_wide"
 
         return result
 
@@ -760,15 +859,17 @@ class HybridStockPredictor(StockPredictor):
 
         result.prediction *= risk_adjustment
         result.confidence *= confidence_penalty
-        result.metadata['prediction_strategy'] = 'risk_management'
-        result.metadata['optimization'] = 'downside_risk_focused'
-        result.metadata['risk_adjustment'] = risk_adjustment
-        result.metadata['confidence_penalty'] = confidence_penalty
-        result.metadata['risk_buffer'] = 0.05
+        result.metadata["prediction_strategy"] = "risk_management"
+        result.metadata["optimization"] = "downside_risk_focused"
+        result.metadata["risk_adjustment"] = risk_adjustment
+        result.metadata["confidence_penalty"] = confidence_penalty
+        result.metadata["risk_buffer"] = 0.05
 
         return result
 
-    def _check_and_run_optimization(self, result: PredictionResult, prediction_time: float, cache_hit: bool):
+    def _check_and_run_optimization(
+        self, result: PredictionResult, prediction_time: float, cache_hit: bool
+    ):
         """学習型最適化チェックと実行"""
         if not self.adaptive_optimization_enabled or not self.adaptive_optimizer:
             return
@@ -784,8 +885,12 @@ class HybridStockPredictor(StockPredictor):
         # 定期的な最適化実行
         if self.optimization_counter >= self.optimization_interval:
             try:
-                optimization_report = self.adaptive_optimizer.learn_and_optimize(list(self.prediction_history))
-                self.logger.info(f"Adaptive optimization completed: {optimization_report.get('expected_improvements', 0):.2f} total improvement expected")
+                optimization_report = self.adaptive_optimizer.learn_and_optimize(
+                    list(self.prediction_history)
+                )
+                self.logger.info(
+                    f"Adaptive optimization completed: {optimization_report.get('expected_improvements', 0):.2f} total improvement expected"
+                )
                 self.optimization_counter = 0  # カウンターリセット
             except Exception as e:
                 self.logger.error(f"Adaptive optimization failed: {str(e)}")
@@ -793,14 +898,17 @@ class HybridStockPredictor(StockPredictor):
     def get_adaptive_optimization_status(self) -> Dict[str, Any]:
         """学習型最適化状況取得"""
         if not self.adaptive_optimization_enabled or not self.adaptive_optimizer:
-            return {'enabled': False}
+            return {"enabled": False}
 
         status = self.adaptive_optimizer.get_optimization_status()
-        status.update({
-            'enabled': True,
-            'predictions_until_next_optimization': self.optimization_interval - self.optimization_counter,
-            'optimization_interval': self.optimization_interval
-        })
+        status.update(
+            {
+                "enabled": True,
+                "predictions_until_next_optimization": self.optimization_interval
+                - self.optimization_counter,
+                "optimization_interval": self.optimization_interval,
+            }
+        )
 
         return status
 
@@ -808,7 +916,9 @@ class HybridStockPredictor(StockPredictor):
     # Phase 2: ストリーミング機能
     # =============================================================================
 
-    async def start_streaming(self, symbols: List[str], endpoint: str = "mock://market_data"):
+    async def start_streaming(
+        self, symbols: List[str], endpoint: str = "mock://market_data"
+    ):
         """ストリーミング開始"""
         if not self.streaming_enabled or not self.streaming_predictor:
             raise RuntimeError("Streaming is not enabled or predictor not initialized")
@@ -822,7 +932,9 @@ class HybridStockPredictor(StockPredictor):
             # ストリーミング停止処理（実装に応じて）
             self.logger.info("Streaming stopped")
 
-    async def predict_streaming_batch(self, symbols: List[str]) -> List[PredictionResult]:
+    async def predict_streaming_batch(
+        self, symbols: List[str]
+    ) -> List[PredictionResult]:
         """ストリーミングバッチ予測"""
         if not self.streaming_enabled or not self.streaming_predictor:
             # フォールバック: 通常のバッチ予測
@@ -833,42 +945,49 @@ class HybridStockPredictor(StockPredictor):
     def get_streaming_statistics(self) -> Dict[str, Any]:
         """ストリーミング統計取得"""
         if not self.streaming_enabled or not self.streaming_predictor:
-            return {'enabled': False}
+            return {"enabled": False}
 
         stats = self.streaming_predictor.get_streaming_statistics()
-        stats['enabled'] = True
+        stats["enabled"] = True
         return stats
 
-    async def process_real_time_market_data(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_real_time_market_data(
+        self, market_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """リアルタイム市場データ処理（Phase 2機能）"""
         if not self.real_time_learning_enabled or not self.real_time_learner:
-            return {'status': 'learning_disabled'}
-        
+            return {"status": "learning_disabled"}
+
         try:
-            learning_result = await self.real_time_learner.process_real_time_data(market_data)
+            learning_result = await self.real_time_learner.process_real_time_data(
+                market_data
+            )
             return learning_result
         except Exception as e:
             self.logger.error(f"Real-time market data processing failed: {str(e)}")
-            return {'status': 'error', 'error': str(e)}
+            return {"status": "error", "error": str(e)}
 
-    def add_actual_market_feedback(self, symbol: str, predicted_price: float, actual_price: float):
+    def add_actual_market_feedback(
+        self, symbol: str, predicted_price: float, actual_price: float
+    ):
         """実際の市場価格フィードバック追加"""
         if self.real_time_learning_enabled and self.real_time_learner:
             self.real_time_learner.add_prediction_feedback(
-                prediction=predicted_price,
-                actual=actual_price,
-                symbol=symbol
+                prediction=predicted_price, actual=actual_price, symbol=symbol
             )
 
     def get_real_time_learning_status(self) -> Dict[str, Any]:
         """実時間学習状況取得"""
         if not self.real_time_learning_enabled or not self.real_time_learner:
-            return {'enabled': False, 'reason': 'Real-time learning system not initialized'}
-        
+            return {
+                "enabled": False,
+                "reason": "Real-time learning system not initialized",
+            }
+
         return {
-            'enabled': True,
-            'status': self.real_time_learner.get_learning_status(),
-            'should_retrain': self.real_time_learner.should_trigger_full_retrain()
+            "enabled": True,
+            "status": self.real_time_learner.get_learning_status(),
+            "should_retrain": self.real_time_learner.should_trigger_full_retrain(),
         }
 
     def reset_real_time_learning(self):
@@ -880,32 +999,32 @@ class HybridStockPredictor(StockPredictor):
     def get_comprehensive_system_status(self) -> Dict[str, Any]:
         """包括的システム状況取得（全Phase 2機能統合）"""
         status = {
-            'hybrid_predictor': {
-                'cache_enabled': self.cache_enabled,
-                'adaptive_optimization_enabled': self.adaptive_optimization_enabled,
-                'streaming_enabled': self.streaming_enabled,
-                'multi_gpu_enabled': self.multi_gpu_enabled,
-                'real_time_learning_enabled': self.real_time_learning_enabled
+            "hybrid_predictor": {
+                "cache_enabled": self.cache_enabled,
+                "adaptive_optimization_enabled": self.adaptive_optimization_enabled,
+                "streaming_enabled": self.streaming_enabled,
+                "multi_gpu_enabled": self.multi_gpu_enabled,
+                "real_time_learning_enabled": self.real_time_learning_enabled,
             },
-            'performance_stats': self.get_performance_stats(),
-            'prediction_history_size': len(self.prediction_history)
+            "performance_stats": self.get_performance_stats(),
+            "prediction_history_size": len(self.prediction_history),
         }
 
         # ストリーミング統計
         if self.streaming_enabled and self.streaming_predictor:
-            status['streaming_stats'] = self.get_streaming_statistics()
+            status["streaming_stats"] = self.get_streaming_statistics()
 
         # GPU統計
         if self.multi_gpu_enabled and self.multi_gpu_predictor:
-            status['gpu_stats'] = self.multi_gpu_predictor.get_performance_statistics()
+            status["gpu_stats"] = self.multi_gpu_predictor.get_performance_statistics()
 
         # 実時間学習統計
         if self.real_time_learning_enabled and self.real_time_learner:
-            status['learning_stats'] = self.get_real_time_learning_status()
+            status["learning_stats"] = self.get_real_time_learning_status()
 
         # 適応最適化統計
         if self.adaptive_optimization_enabled and self.adaptive_optimizer:
-            status['optimization_stats'] = self.get_adaptive_optimization_status()
+            status["optimization_stats"] = self.get_adaptive_optimization_status()
 
         return status
 

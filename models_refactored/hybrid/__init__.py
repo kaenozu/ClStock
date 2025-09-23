@@ -5,4 +5,4 @@ Hybrid Prediction Module - 統合リファクタリング版
 
 from .hybrid_predictor import RefactoredHybridPredictor
 
-__all__ = ['RefactoredHybridPredictor']
+__all__ = ["RefactoredHybridPredictor"]

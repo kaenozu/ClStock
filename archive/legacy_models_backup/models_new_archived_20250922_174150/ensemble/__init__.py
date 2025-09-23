@@ -6,4 +6,4 @@
 
 from .ensemble_predictor import EnsembleStockPredictor
 
-__all__ = ['EnsembleStockPredictor']
+__all__ = ["EnsembleStockPredictor"]
