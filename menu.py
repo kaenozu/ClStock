@@ -28,7 +28,15 @@ class Colors:
 
 def clear_screen():
     """画面クリア"""
-    os.system('cls' if os.name == 'nt' else 'clear')
+    import subprocess
+    try:
+        if os.name == 'nt':
+            subprocess.run(['cls'], shell=True, check=True)
+        else:
+            subprocess.run(['clear'], check=True)
+    except subprocess.CalledProcessError:
+        # フォールバック: コンソール制御文字で画面クリア
+        print('\033[2J\033[H')
 
 def print_header():
     """最新ヘッダー表示"""
@@ -420,6 +428,91 @@ def show_optimization_history():
     print("✓ マルチタイムフレーム統合")
     print("✓ 動的モード選択")
     print("✓ インテリジェント統合")
+
+    input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
+
+def optimization_history_menu():
+    """最適化履歴管理メニュー"""
+    clear_screen()
+    print(f"{Colors.MAGENTA}【最適化履歴管理】{Colors.ENDC}\n")
+
+    print("1. 履歴一覧表示")
+    print("2. 特定レコードにロールバック")
+    print("3. 履歴統計表示")
+    print("0. メインメニューに戻る")
+
+    choice = input(f"\n{Colors.BOLD}選択してください (0-3): {Colors.ENDC}").strip()
+
+    if choice == "1":
+        show_history_list()
+    elif choice == "2":
+        record_id = input("ロールバック先のレコードID: ").strip()
+        if record_id:
+            rollback_to_record(record_id)
+    elif choice == "3":
+        show_history_statistics()
+    elif choice == "0":
+        return
+    else:
+        print(f"{Colors.RED}無効な選択です{Colors.ENDC}")
+        time.sleep(1)
+
+def show_history_list():
+    """履歴一覧表示"""
+    try:
+        from systems.optimization_history import OptimizationHistoryManager
+        manager = OptimizationHistoryManager()
+        records = manager.list_optimization_records()
+
+        if not records:
+            print(f"{Colors.YELLOW}保存された最適化履歴がありません。{Colors.ENDC}")
+            return
+
+        print(f"\n{Colors.GREEN}【最適化履歴一覧】{Colors.ENDC}")
+        print("-" * 80)
+        print("ID              日時                     精度     銘柄数")
+        print("-" * 80)
+
+        for record in records:
+            print(f"{record['record_id']:15s} {record['timestamp']:20s} {record.get('accuracy', 0):.1f}%   {len(record.get('stocks', []))} 銘柄")
+
+    except Exception as e:
+        print(f"{Colors.RED}履歴表示エラー: {e}{Colors.ENDC}")
+
+    input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
+
+def rollback_to_record(record_id: str):
+    """指定レコードにロールバック"""
+    try:
+        from systems.optimization_history import OptimizationHistoryManager
+        manager = OptimizationHistoryManager()
+
+        if manager.rollback_to_configuration(record_id):
+            print(f"{Colors.GREEN}レコード {record_id} への復元が完了しました。{Colors.ENDC}")
+        else:
+            print(f"{Colors.RED}レコード {record_id} が見つかりません。{Colors.ENDC}")
+
+    except Exception as e:
+        print(f"{Colors.RED}ロールバックエラー: {e}{Colors.ENDC}")
+
+    input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
+
+def show_history_statistics():
+    """履歴統計表示"""
+    try:
+        from systems.optimization_history import OptimizationHistoryManager
+        manager = OptimizationHistoryManager()
+        stats = manager.get_optimization_statistics()
+
+        print(f"\n{Colors.GREEN}【最適化履歴統計】{Colors.ENDC}")
+        print("-" * 50)
+        print(f"総実行回数: {stats.get('total_runs', 0)} 回")
+        print(f"平均精度: {stats.get('average_accuracy', 0):.1f}%")
+        print(f"最高精度: {stats.get('max_accuracy', 0):.1f}%")
+        print(f"最新実行: {stats.get('latest_run', 'N/A')}")
+
+    except Exception as e:
+        print(f"{Colors.RED}統計表示エラー: {e}{Colors.ENDC}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 

@@ -1296,8 +1296,10 @@ class AdvancedEnsemblePredictor:
             from transformers import BertTokenizer, BertForSequenceClassification
             # 日本語BERT事前学習モデル
             model_name = "cl-tohoku/bert-base-japanese-whole-word-masking"
-            self.tokenizer = BertTokenizer.from_pretrained(model_name)
-            self.bert_model = BertForSequenceClassification.from_pretrained(model_name)
+            # セキュリティ向上: 特定のリビジョンを指定
+            revision = "main"  # または特定のコミットハッシュ
+            self.tokenizer = BertTokenizer.from_pretrained(model_name, revision=revision)
+            self.bert_model = BertForSequenceClassification.from_pretrained(model_name, revision=revision)
             self.logger.info("BERT センチメント分析器初期化完了")
         except ImportError:
             self.logger.warning("transformersライブラリが利用不可 - 簡易センチメント分析を使用")

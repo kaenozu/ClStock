@@ -80,7 +80,7 @@ class DataCache:
     def _get_cache_key(self, *args, **kwargs) -> str:
         """キャッシュキーを生成"""
         key_data = str(args) + str(sorted(kwargs.items()))
-        return hashlib.md5(key_data.encode()).hexdigest()
+        return hashlib.sha256(key_data.encode()).hexdigest()[:32]
 
     def _get_cache_path(self, cache_key: str) -> Path:
         """キャッシュファイルパスを取得"""
