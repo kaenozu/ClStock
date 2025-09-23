@@ -277,7 +277,11 @@ def run_demo_trading():
 
     try:
         print("デモ取引システムを起動中...")
-        os.system("python demo_start.py")
+        import subprocess
+        result = subprocess.run(["python", "demo_start.py"], capture_output=True, text=True)
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
     except Exception as e:
         print(f"エラー: {str(e)}")
 
@@ -290,7 +294,11 @@ def run_tse_optimization():
 
     try:
         print("TSE4000最適化を実行中...")
-        os.system("python tse_4000_optimizer.py")
+        import subprocess
+        result = subprocess.run(["python", "tse_4000_optimizer.py"], capture_output=True, text=True)
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
     except Exception as e:
         print(f"エラー: {str(e)}")
 
@@ -303,7 +311,11 @@ def run_investment_advisor():
 
     try:
         print("投資アドバイザーを起動中...")
-        os.system("python investment_advisor_cui.py")
+        import subprocess
+        result = subprocess.run(["python", "investment_advisor_cui.py"], capture_output=True, text=True)
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
     except Exception as e:
         print(f"エラー: {str(e)}")
 
@@ -325,7 +337,11 @@ def performance_monitor():
 
     try:
         print("システム性能を測定中...")
-        os.system("python performance_test_enhanced.py")
+        import subprocess
+        result = subprocess.run(["python", "performance_test_enhanced.py"], capture_output=True, text=True)
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
     except Exception as e:
         print(f"エラー: {str(e)}")
 
@@ -359,7 +375,14 @@ def run_system_test():
 
     try:
         print("システムテストを実行中...")
-        os.system("python test_hybrid_system.py")
+        # test_hybrid_system.pyはarchiveに移動されたため、
+        # 新しいテストスイートを使用
+        import subprocess
+        result = subprocess.run(["python", "-m", "pytest", "tests/", "-v"],
+                              capture_output=True, text=True)
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
     except Exception as e:
         print(f"エラー: {str(e)}")
 
