@@ -143,12 +143,10 @@ class PersonalDashboard:
         conn = sqlite3.connect(self.db_path)
         query = """
         SELECT * FROM predictions
-        WHERE prediction_date >= date('now', '-{} days')
+        WHERE prediction_date >= date('now', '-? days')
         ORDER BY prediction_date DESC
-        """.format(
-            days
-        )
-        df = pd.read_sql_query(query, conn)
+        """
+        df = pd.read_sql_query(query, conn, params=(days,))
         conn.close()
 
         return df.to_dict("records")

@@ -309,7 +309,7 @@ class IntelligentPredictionCache:
         # 実際は最新の市場データのハッシュを使用
         current_minute = datetime.now().strftime("%Y%m%d%H%M")
         hash_input = f"{symbol}:{current_minute}"
-        return hashlib.md5(hash_input.encode()).hexdigest()[:8]
+        return hashlib.sha256(hash_input.encode()).hexdigest()[:8]
 
     def get_cached_prediction(
         self, symbol: str, mode: PredictionMode

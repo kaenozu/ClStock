@@ -112,7 +112,7 @@ class OptimizationHistoryManager:
     def _calculate_config_hash(self, stocks: List[str]) -> str:
         """設定のハッシュ値を計算"""
         content = json.dumps(sorted(stocks))
-        return hashlib.md5(content.encode()).hexdigest()[:CONFIG_HASH_LENGTH]
+        return hashlib.sha256(content.encode()).hexdigest()[:CONFIG_HASH_LENGTH]
 
     def save_optimization_result(
         self,

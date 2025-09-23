@@ -52,4 +52,4 @@ types-requests>=2.32.0
 # redis>=4.5.0  # 高速キャッシュ
 # line-bot-sdk>=3.0.0  # LINE通知
 # transformers>=4.30.0  # ニュースセンチメント分析
-# torch>=2.0.0  # PyTorch
+torch>=2.0.0  # PyTorch
