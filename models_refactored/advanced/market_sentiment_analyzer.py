@@ -317,7 +317,7 @@ class MarketSentimentAnalyzer:
     def _calculate_confidence(self, sentiment_sources: Dict[str, float]) -> float:
         """信頼度計算"""
         # データソースの一致度に基づく信頼度
-        sentiments = [s for s in sentiment_sources.values() if s != 0.0]
+        sentiments = list(sentiment_sources.values())
 
         if len(sentiments) < 2:
             return 0.3  # データ不足時は低信頼度
