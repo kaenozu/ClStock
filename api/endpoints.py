@@ -1,10 +1,23 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi.security import HTTPAuthorizationCredentials
 from typing import List, Optional
 from datetime import datetime
 import pandas as pd
 
-from models.recommendation import RecommendationResponse, StockRecommendation
-from models.predictor import StockPredictor
+# セキュリティと検証機能
+from api.security import security, verify_token
+from utils.validators import (
+    validate_stock_symbol, validate_period, validate_symbols_list,
+    ValidationError, log_validation_error
+)
+
+# 古いmodelsディレクトリは廃止されました
+# from models.recommendation import RecommendationResponse, StockRecommendation
+# from models.predictor import StockPredictor
+
+# 新しいインポートパス
+from models_refactored.core.interfaces import StockPredictor, PredictionResult as RecommendationResponse
+# StockRecommendationクラスは削除されたため、一時的にコメントアウト
 from data.stock_data import StockDataProvider
 
 router = APIRouter()
@@ -12,9 +25,17 @@ router = APIRouter()
 
 @router.get("/recommendations", response_model=RecommendationResponse)
 async def get_recommendations(
-    top_n: int = Query(5, ge=1, le=10, description="推奨銘柄の上位N件を取得")
+    top_n: int = Query(5, ge=1, le=10, description="推奨銘柄の上位N件を取得"),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
     try:
+        # Authentication verification
+        verify_token(credentials.credentials)
+
+        # Input validation
+        if not (1 <= top_n <= 50):  # Stricter limit for security
+            raise ValidationError("top_n must be between 1 and 50")
+
         predictor = StockPredictor()
         recommendations = predictor.get_top_recommendations(top_n)
 
@@ -27,18 +48,32 @@ async def get_recommendations(
                 else "市場営業中"
             ),
         )
+    except ValidationError as e:
+        log_validation_error(e, {"endpoint": "/recommendations", "top_n": top_n})
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"推奨銘柄の取得に失敗しました: {str(e)}"
+            status_code=500, detail=f"Failed to fetch recommendations: {str(e)}"
         )
 
 
-@router.get("/recommendation/{symbol}", response_model=StockRecommendation)
-async def get_single_recommendation(symbol: str):
-    """特定の銘柄の推奨情報を取得"""
+@router.get("/recommendation/{symbol}")
+async def get_single_recommendation(
+    symbol: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Get recommendation information for a specific symbol"""
     from utils.exceptions import InvalidSymbolError, PredictionError
 
     try:
+        # Authentication verification
+        verify_token(credentials.credentials)
+
+        # Input validation
+        symbol = validate_stock_symbol(symbol)
+
         predictor = StockPredictor()
         data_provider = StockDataProvider()
 

@@ -1,0 +1,205 @@
+"""Comprehensive tests for the configuration system."""
+
+import os
+import pytest
+from unittest.mock import patch
+from pathlib import Path
+
+from config.settings import (
+    AppSettings, DatabaseConfig, PredictionConfig, ModelConfig,
+    BacktestConfig, TradingConfig, APIConfig, LoggingConfig,
+    ProcessConfig, RealTimeConfig, get_settings, load_from_env
+)
+
+
+class TestConfigurationSystem:
+    """Comprehensive configuration system tests."""
+
+    def test_settings_singleton_pattern(self):
+        """Test that get_settings implements singleton pattern correctly."""
+        settings1 = get_settings()
+        settings2 = get_settings()
+        assert settings1 is settings2
+        assert isinstance(settings1, AppSettings)
+
+    def test_all_config_dataclasses_initialization(self):
+        """Test that all configuration dataclasses initialize with correct defaults."""
+        # Test each config class individually
+        configs = [
+            DatabaseConfig(),
+            PredictionConfig(),
+            ModelConfig(),
+            BacktestConfig(),
+            TradingConfig(),
+            APIConfig(),
+            LoggingConfig(),
+            ProcessConfig(),
+            RealTimeConfig()
+        ]
+        
+        for config in configs:
+            assert config is not None
+
+    def test_app_settings_complete_structure(self):
+        """Test that AppSettings contains all required sub-configurations."""
+        settings = AppSettings()
+        
+        # Verify all sub-configurations exist
+        assert hasattr(settings, 'database')
+        assert hasattr(settings, 'prediction')
+        assert hasattr(settings, 'model')
+        assert hasattr(settings, 'backtest')
+        assert hasattr(settings, 'trading')
+        assert hasattr(settings, 'api')
+        assert hasattr(settings, 'logging')
+        assert hasattr(settings, 'realtime')
+        assert hasattr(settings, 'process')
+        assert hasattr(settings, 'target_stocks')
+        
+        # Verify types
+        assert isinstance(settings.database, DatabaseConfig)
+        assert isinstance(settings.prediction, PredictionConfig)
+        assert isinstance(settings.model, ModelConfig)
+        assert isinstance(settings.backtest, BacktestConfig)
+        assert isinstance(settings.trading, TradingConfig)
+        assert isinstance(settings.api, APIConfig)
+        assert isinstance(settings.logging, LoggingConfig)
+        assert isinstance(settings.realtime, RealTimeConfig)
+        assert isinstance(settings.process, ProcessConfig)
+        assert isinstance(settings.target_stocks, dict)
+
+    def test_database_config_paths(self):
+        """Test that database configuration paths are correctly set."""
+        config = DatabaseConfig()
+        
+        # Check that paths are pathlib.Path objects
+        assert isinstance(config.personal_portfolio_db, Path)
+        assert isinstance(config.prediction_history_db, Path)
+        assert isinstance(config.backtest_results_db, Path)
+        
+        # Check that paths contain expected filenames
+        assert "personal_portfolio.db" in str(config.personal_portfolio_db)
+        assert "prediction_history.db" in str(config.prediction_history_db)
+        assert "backtest_results.db" in str(config.backtest_results_db)
+
+    def test_target_stocks_completeness(self):
+        """Test that target stocks configuration is complete."""
+        settings = get_settings()
+        
+        # Should have at least 50 stocks (as mentioned in requirements)
+        assert len(settings.target_stocks) >= 50
+        
+        # Check specific well-known stocks
+        expected_stocks = {
+            "7203": "トヨタ自動車",
+            "6758": "ソニーグループ",
+            "9432": "NTT",
+            "8316": "三井住友フィナンシャルグループ"
+        }
+        
+        for code, name in expected_stocks.items():
+            assert code in settings.target_stocks
+            assert settings.target_stocks[code] == name
+
+    @patch.dict(os.environ, {
+        "CLSTOCK_API_TITLE": "Test API Title",
+        "CLSTOCK_LOG_LEVEL": "DEBUG",
+        "CLSTOCK_INITIAL_CAPITAL": "2500000",
+        "CLSTOCK_SCORE_THRESHOLD": "70"
+    })
+    def test_environment_variable_loading_comprehensive(self):
+        """Test comprehensive environment variable loading functionality."""
+        settings = get_settings()
+        
+        # Store original values for restoration
+        original_values = {
+            'api_title': settings.api.title,
+            'log_level': settings.logging.level,
+            'initial_capital': settings.backtest.default_initial_capital,
+            'score_threshold': settings.backtest.default_score_threshold
+        }
+        
+        try:
+            # Load from environment
+            load_from_env()
+            
+            # Verify all environment variables were loaded correctly
+            assert settings.api.title == "Test API Title"
+            assert settings.logging.level == "DEBUG"
+            assert settings.backtest.default_initial_capital == 2500000
+            assert settings.backtest.default_score_threshold == 70
+        finally:
+            # Restore original values
+            settings.api.title = original_values['api_title']
+            settings.logging.level = original_values['log_level']
+            settings.backtest.default_initial_capital = original_values['initial_capital']
+            settings.backtest.default_score_threshold = original_values['score_threshold']
+
+    def test_environment_variable_partial_loading(self):
+        """Test partial environment variable loading (some variables set, others not)."""
+        settings = get_settings()
+        
+        # Store original values
+        original_api_title = settings.api.title
+        original_log_level = settings.logging.level
+        
+        try:
+            with patch.dict(os.environ, {
+                "CLSTOCK_API_TITLE": "Partial Test API"
+                # Note: Not setting LOG_LEVEL, so it should remain unchanged
+            }):
+                load_from_env()
+                
+                # API title should change
+                assert settings.api.title == "Partial Test API"
+                # Log level should remain unchanged
+                assert settings.logging.level == original_log_level
+        finally:
+            # Restore original values
+            settings.api.title = original_api_title
+            settings.logging.level = original_log_level
+
+    def test_config_dataclass_immutability(self):
+        """Test that config dataclasses maintain their structure."""
+        settings = get_settings()
+        
+        # Verify that we can access nested attributes without errors
+        assert hasattr(settings.api, 'title')
+        assert hasattr(settings.database, 'personal_portfolio_db')
+        assert hasattr(settings.prediction, 'target_accuracy')
+        assert hasattr(settings.model, 'xgb_n_estimators')
+        assert hasattr(settings.backtest, 'default_initial_capital')
+        assert hasattr(settings.trading, 'market_open_hour')
+        assert hasattr(settings.logging, 'level')
+        assert hasattr(settings.process, 'max_concurrent_processes')
+        assert hasattr(settings.realtime, 'update_interval_seconds')
+
+    def test_api_config_post_init_behavior(self):
+        """Test APIConfig post-initialization behavior."""
+        config = APIConfig()
+        
+        # Verify that available_periods is properly initialized in __post_init__
+        assert config.available_periods is not None
+        assert isinstance(config.available_periods, list)
+        assert "1mo" in config.available_periods
+        assert "3y" in config.available_periods
+
+    def test_process_config_priorities(self):
+        """Test ProcessConfig priority settings."""
+        config = ProcessConfig()
+        
+        # Verify process priorities dictionary exists and has expected keys
+        assert isinstance(config.process_priorities, dict)
+        expected_services = ["dashboard", "demo_trading", "investment_system", "deep_learning"]
+        for service in expected_services:
+            assert service in config.process_priorities
+
+    def test_realtime_config_defaults(self):
+        """Test RealTimeConfig default values."""
+        config = RealTimeConfig()
+        
+        # Verify key realtime configuration values
+        assert config.update_interval_seconds == 60
+        assert config.market_open_time == "09:00"
+        assert config.market_close_time == "15:00"
+        assert config.pattern_confidence_threshold == 0.846

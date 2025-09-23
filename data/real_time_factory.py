@@ -10,9 +10,9 @@ from typing import Dict, Optional, Protocol, Type, Any
 from abc import ABC, abstractmethod
 
 from config.settings import get_settings, RealTimeConfig
-from models_new.monitoring.cache_manager import RealTimeCacheManager
-from models_new.monitoring.performance_monitor import PerformanceMonitor
-from models_new.base.interfaces import RealTimeDataProvider
+from models_refactored.monitoring.cache_manager import RealTimeCacheManager
+from models_refactored.monitoring.performance_monitor import ModelPerformanceMonitor as PerformanceMonitor
+from models_refactored.core.interfaces import DataProvider as RealTimeDataProvider
 from data.real_time_provider import WebSocketRealTimeProvider, RealTimeDataQualityMonitor
 
 logger = logging.getLogger(__name__)

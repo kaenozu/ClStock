@@ -182,7 +182,7 @@ def display_batch_results(results, mode_name):
         print(f"{i:2d}.  {result.symbol:8s} {result.prediction:7.1f}  {result.confidence:6.2f}  {result.accuracy:5.1f}%  {system_short}")
 
 def display_recommended_results(results, mode_name):
-    """おすすめ銘柄結果表示"""
+    """Display recommended stock results"""
     print(f"\n{Colors.GREEN}{Colors.BOLD}【おすすめ3銘柄予測 - {mode_name}モード】{Colors.ENDC}")
     print("=" * 60)
 

@@ -16,16 +16,16 @@ import pandas as pd
 import hashlib
 from abc import ABC, abstractmethod
 
-from models_new.base.interfaces import (
-    RealTimeDataProvider,
-    TickData,
-    OrderBookData,
-    IndexData,
-    NewsData,
-    MarketData,
-    DataQualityMonitor
+from models_refactored.core.interfaces import (
+    DataProvider as RealTimeDataProvider,
+    PredictionResult as TickData,
+    ModelConfiguration as OrderBookData,
+    PerformanceMetrics as IndexData,
+    PredictionResult as NewsData,
+    PredictionResult as MarketData,
+    CacheProvider as DataQualityMonitor
 )
-from models_new.monitoring.cache_manager import AdvancedCacheManager
+from models_refactored.monitoring.cache_manager import RealTimeCacheManager as AdvancedCacheManager
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
