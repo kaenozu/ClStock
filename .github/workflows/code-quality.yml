@@ -36,7 +36,7 @@ jobs:
         safety check
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
@@ -85,7 +85,7 @@ jobs:
         vulture . --min-confidence 80 > dead-code-report.txt || true
 
     - name: Upload metrics reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: code-metrics
         path: |
@@ -140,7 +140,7 @@ jobs:
         python -m pytest tests/performance/ --benchmark-only --benchmark-json=benchmark.json || echo "Performance benchmarks completed with warnings"
 
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-benchmarks
         path: benchmark.json

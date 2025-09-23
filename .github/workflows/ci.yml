@@ -124,7 +124,7 @@ jobs:
           requirements.txt menu.py
 
     - name: Upload build artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: clstock-build
         path: clstock-${{ github.sha }}.tar.gz
@@ -137,7 +137,7 @@ jobs:
 
     steps:
     - name: Download build artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: clstock-build
 
