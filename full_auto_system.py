@@ -13,7 +13,9 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
+from pathlib import Path
 import asyncio
+import sys
 
 # 既存システムのインポート
 from tse_4000_optimizer import TSE4000Optimizer
@@ -65,6 +67,9 @@ class FullAutoInvestmentSystem:
     - 売買タイミング自動算出
     """
 
+    _model_preparation_attempted = False
+    _model_preparation_success = False
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
@@ -81,6 +86,13 @@ class FullAutoInvestmentSystem:
         self.strategy_generator = AutoTradingStrategyGenerator()
         self.risk_manager = RiskManager()
         self.data_provider = StockDataProvider()
+
+        if not FullAutoInvestmentSystem._model_preparation_attempted:
+            FullAutoInvestmentSystem._model_preparation_success = self._ensure_models_ready()
+            FullAutoInvestmentSystem._model_preparation_attempted = True
+        elif not FullAutoInvestmentSystem._model_preparation_success:
+            FullAutoInvestmentSystem._model_preparation_success = self._ensure_models_ready()
+
 
         # 自動化設定
         self.auto_settings = {
@@ -690,6 +702,89 @@ class FullAutoInvestmentSystem:
         risk_component = 1.0 - normalized_risk
         score = (expected_component * 4.0) + (confidence_component * 4.0) + (risk_component * 2.0)
         return round(max(0.0, min(score, 10.0)), 2)
+
+    def _ensure_models_ready(self) -> bool:
+        ensemble_ready = False
+        enhanced_system = getattr(self.hybrid_predictor, "enhanced_system", None)
+
+        if enhanced_system:
+            try:
+                if enhanced_system.is_trained or enhanced_system.load_ensemble():
+                    self.logger.info("既存のアンサンブルモデルを検出しました")
+                    return True
+            except Exception as load_error:
+                self.logger.warning(f"既存モデルの読み込みに失敗: {load_error}")
+
+        ensemble_file = Path('models/saved_models/ensemble_models.joblib')
+        if ensemble_file.exists() and enhanced_system:
+            try:
+                if enhanced_system.load_ensemble():
+                    self.logger.info("保存済みのアンサンブルモデルを読み込みました")
+                    return True
+            except Exception as e:
+                self.logger.warning(f"モデル読み込み警告: {e}")
+
+        self.logger.info("アンサンブルモデルが見つからないため、自動学習を実行します")
+
+        import sys
+        os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+        if hasattr(sys.stdout, "reconfigure"):
+            try:
+                sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            except Exception as reconfig_error:
+                self.logger.debug(f"stdout reconfigure skipped: {reconfig_error}")
+
+        try:
+            from train_enhanced_ensemble import (
+                run_enhanced_ensemble_training,
+                evaluate_trained_model,
+            )
+        except ImportError as e:
+            self.logger.error(f"学習モジュールの読み込みに失敗: {e}")
+            return False
+
+        training_result = run_enhanced_ensemble_training()
+        if not training_result.get('success'):
+            self.logger.error(f"自動学習に失敗: {training_result.get('error', '理由不明')}")
+            return False
+
+        predictor = training_result.get('predictor')
+        if predictor is not None:
+            try:
+                predictor.save_ensemble()
+            except Exception as save_error:
+                self.logger.warning(f"アンサンブル保存に失敗: {save_error}")
+        else:
+            self.logger.warning("学習結果に predictor が含まれていません")
+
+        try:
+            evaluate_trained_model()
+        except Exception as eval_error:
+            self.logger.warning(f"モデル評価で警告: {eval_error}")
+
+        if predictor is not None:
+            try:
+                predictor.is_trained = True
+                self.hybrid_predictor.enhanced_system = predictor
+                self.logger.info("自動学習したアンサンブルモデルを適用しました")
+                return True
+            except Exception as attach_error:
+                self.logger.warning(f"学習モデルの適用に失敗: {attach_error}")
+
+        if enhanced_system:
+            try:
+                enhanced_system.is_trained = False
+                if enhanced_system.load_ensemble():
+                    self.logger.info("保存済みモデルを再読み込みしました")
+                    return True
+            except Exception as reload_error:
+                self.logger.warning(f"再読み込みに失敗: {reload_error}")
+
+        if ensemble_file.exists():
+            self.logger.info("アンサンブルモデルファイルは生成されましたが読み込みに失敗しました")
+            return True
+
+        return False
 
     def _get_company_name(self, symbol: str) -> str:
         """企業名取得"""
