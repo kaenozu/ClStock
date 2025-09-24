@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-フルオート投資システム
-完全自動化：TSE4000最適化 → 学習・訓練 → 売買タイミング提示
+繝輔Ν繧ｪ繝ｼ繝域兜雉・す繧ｹ繝・Β
+螳悟・閾ｪ蜍募喧・啜SE4000譛驕ｩ蛹・竊・蟄ｦ鄙偵・險鍋ｷｴ 竊・螢ｲ雋ｷ繧ｿ繧､繝溘Φ繧ｰ謠千､ｺ
 """
 
 import logging
@@ -17,7 +17,7 @@ from pathlib import Path
 import asyncio
 import sys
 
-# 既存システムのインポート
+# 譌｢蟄倥す繧ｹ繝・Β縺ｮ繧､繝ｳ繝昴・繝・
 from tse_4000_optimizer import TSE4000Optimizer
 from models_new.hybrid.hybrid_predictor import HybridStockPredictor
 from models_new.hybrid.prediction_modes import PredictionMode
@@ -32,7 +32,7 @@ from data.stock_data import StockDataProvider
 
 @dataclass
 class AutoRecommendation:
-    """自動投資推奨"""
+    """閾ｪ蜍墓兜雉・耳螂ｨ"""
 
     symbol: str
     company_name: str
@@ -58,13 +58,13 @@ class AutoRecommendation:
 
 class FullAutoInvestmentSystem:
     """
-    フルオート投資システム
+    繝輔Ν繧ｪ繝ｼ繝域兜雉・す繧ｹ繝・Β
 
-    特徴:
-    - 完全自動化（ユーザー判断不要）
-    - TSE4000最適化自動実行
-    - 学習・訓練自動実施
-    - 売買タイミング自動算出
+    迚ｹ蠕ｴ:
+    - 螳悟・閾ｪ蜍募喧・医Θ繝ｼ繧ｶ繝ｼ蛻､譁ｭ荳崎ｦ・ｼ・
+    - TSE4000譛驕ｩ蛹冶・蜍募ｮ溯｡・
+    - 蟄ｦ鄙偵・險鍋ｷｴ閾ｪ蜍募ｮ滓命
+    - 螢ｲ雋ｷ繧ｿ繧､繝溘Φ繧ｰ閾ｪ蜍慕ｮ怜・
     """
 
     _model_preparation_attempted = False
@@ -73,7 +73,7 @@ class FullAutoInvestmentSystem:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-        # サブシステム初期化
+        # 繧ｵ繝悶す繧ｹ繝・Β蛻晄悄蛹・
         self.tse_optimizer = TSE4000Optimizer()
         self.hybrid_predictor = HybridStockPredictor(
             enable_cache=True,
@@ -87,34 +87,35 @@ class FullAutoInvestmentSystem:
         self.risk_manager = RiskManager()
         self.data_provider = StockDataProvider()
 
+
+        # 閾ｪ蜍募喧險ｭ螳・
+        self.auto_settings = {
+            "portfolio_size": 10,  # 謗ｨ螂ｨ驫俶氛謨ｰ
+            "investment_period_days": 30,  # 謚戊ｳ・悄髢難ｼ域律・・
+            "min_confidence": 0.7,  # 譛蟆丈ｿ｡鬆ｼ蠎ｦ
+            "max_risk_score": 2.5,  # 譛螟ｧ繝ｪ繧ｹ繧ｯ繧ｹ繧ｳ繧｢
+            "rebalance_threshold": 0.1,  # 繝ｪ繝舌Λ繝ｳ繧ｹ髢ｾ蛟､
+            "model_refresh_days": 30,  # 繝｢繝・Ν蟷ｴ逧・繧､繝ｳ繝悶Ν繧ｯ逕ｻ驛ｨ
+        }
+
         if not FullAutoInvestmentSystem._model_preparation_attempted:
             FullAutoInvestmentSystem._model_preparation_success = self._ensure_models_ready()
             FullAutoInvestmentSystem._model_preparation_attempted = True
         elif not FullAutoInvestmentSystem._model_preparation_success:
             FullAutoInvestmentSystem._model_preparation_success = self._ensure_models_ready()
 
-
-        # 自動化設定
-        self.auto_settings = {
-            "portfolio_size": 10,  # 推奨銘柄数
-            "investment_period_days": 30,  # 投資期間（日）
-            "min_confidence": 0.7,  # 最小信頼度
-            "max_risk_score": 2.5,  # 最大リスクスコア
-            "rebalance_threshold": 0.1,  # リバランス閾値
-        }
-
         self.logger.info("FullAutoInvestmentSystem initialized")
 
     async def run_full_auto_analysis(self) -> List[AutoRecommendation]:
-        """フルオート分析実行"""
-        self.logger.info("🚀 フルオート投資システム開始")
+        """繝輔Ν繧ｪ繝ｼ繝亥・譫仙ｮ溯｡・""
+        self.logger.info("噫 繝輔Ν繧ｪ繝ｼ繝域兜雉・す繧ｹ繝・Β髢句ｧ・)
 
-        # 市場時間チェック
+        # 蟶ょｴ譎る俣繝√ぉ繝・け
         if not self._show_market_hours_warning():
-            print("処理を中断しました。")
+            print("蜃ｦ逅・ｒ荳ｭ譁ｭ縺励∪縺励◆縲・)
             return []
 
-        # 進捗表示の初期化
+        # 騾ｲ謐苓｡ｨ遉ｺ縺ｮ蛻晄悄蛹・
         total_steps = 4
         current_step = 0
 
@@ -123,65 +124,65 @@ class FullAutoInvestmentSystem:
             current_step = step_num
             progress = (current_step / total_steps) * 100
             print(
-                f"\n[進捗] [{current_step}/{total_steps}] ({progress:.0f}%) - {step_name}"
+                f"\n[騾ｲ謐余 [{current_step}/{total_steps}] ({progress:.0f}%) - {step_name}"
             )
             print("=" * 60)
 
         try:
-            # Step 1: TSE4000最適化（必要に応じて）
-            show_progress("TSE4000最適化実行中...", 1)
+            # Step 1: TSE4000譛驕ｩ蛹厄ｼ亥ｿ・ｦ√↓蠢懊§縺ｦ・・
+            show_progress("TSE4000譛驕ｩ蛹門ｮ溯｡御ｸｭ...", 1)
             optimized_symbols = await self._auto_tse4000_optimization()
-            print(f"[完了] 最適化完了: {len(optimized_symbols)}銘柄選出")
+            print(f"[螳御ｺ・ 譛驕ｩ蛹門ｮ御ｺ・ {len(optimized_symbols)}驫俶氛驕ｸ蜃ｺ")
 
-            # Step 2: 学習・訓練自動実施
-            show_progress("学習・訓練実行中...", 2)
+            # Step 2: 蟄ｦ鄙偵・險鍋ｷｴ閾ｪ蜍募ｮ滓命
+            show_progress("蟄ｦ鄙偵・險鍋ｷｴ螳溯｡御ｸｭ...", 2)
             await self._auto_learning_and_training(optimized_symbols)
-            print("[完了] 学習・訓練完了")
+            print("[螳御ｺ・ 蟄ｦ鄙偵・險鍋ｷｴ螳御ｺ・)
 
-            # Step 3: 総合分析と推奨生成
-            show_progress("総合分析・推奨生成中...", 3)
+            # Step 3: 邱丞粋蛻・梵縺ｨ謗ｨ螂ｨ逕滓・
+            show_progress("邱丞粋蛻・梵繝ｻ謗ｨ螂ｨ逕滓・荳ｭ...", 3)
             recommendations = await self._generate_auto_recommendations(
                 optimized_symbols
             )
-            print(f"[完了] 推奨生成完了: {len(recommendations)}件")
+            print(f"[螳御ｺ・ 謗ｨ螂ｨ逕滓・螳御ｺ・ {len(recommendations)}莉ｶ")
 
-            # Step 4: 結果表示
-            show_progress("結果表示", 4)
+            # Step 4: 邨先棡陦ｨ遉ｺ
+            show_progress("邨先棡陦ｨ遉ｺ", 4)
             self._display_recommendations(recommendations)
-            print("[完了] フルオート分析完了！")
+            print("[螳御ｺ・ 繝輔Ν繧ｪ繝ｼ繝亥・譫仙ｮ御ｺ・ｼ・)
 
             return recommendations
 
         except Exception as e:
-            print(f"\n[エラー] フルオート分析失敗: {str(e)}")
-            self.logger.error(f"フルオート分析失敗: {str(e)}")
+            print(f"\n[繧ｨ繝ｩ繝ｼ] 繝輔Ν繧ｪ繝ｼ繝亥・譫仙､ｱ謨・ {str(e)}")
+            self.logger.error(f"繝輔Ν繧ｪ繝ｼ繝亥・譫仙､ｱ謨・ {str(e)}")
             return []
 
     async def _auto_tse4000_optimization(self) -> List[str]:
-        """TSE4000自動最適化（強化版エラーハンドリング）"""
-        self.logger.info("📊 TSE4000最適化実行中...")
+        """TSE4000 auto optimization with enhanced error handling"""
+        self.logger.info("投 TSE4000譛驕ｩ蛹門ｮ溯｡御ｸｭ...")
         max_retries = 3
         retry_count = 0
 
         while retry_count < max_retries:
             try:
-                # 前回最適化からの経過時間チェック
+                # 蜑榊屓譛驕ｩ蛹悶°繧峨・邨碁℃譎る俣繝√ぉ繝・け
                 need_optimization = self._check_optimization_necessity()
 
                 if need_optimization:
                     print(
-                        f"[実行] 最適化が必要です。実行中... (試行 {retry_count + 1}/{max_retries})"
+                        f"[螳溯｡珪 譛驕ｩ蛹悶′蠢・ｦ√〒縺吶ょｮ溯｡御ｸｭ... (隧ｦ陦・{retry_count + 1}/{max_retries})"
                     )
 
-                    # TSE4000最適化実行（タイムアウト付き）
+                    # TSE4000譛驕ｩ蛹門ｮ溯｡鯉ｼ医ち繧､繝繧｢繧ｦ繝井ｻ倥″・・
                     try:
                         optimization_result = await asyncio.wait_for(
                             asyncio.create_task(self._run_tse_optimization_async()),
-                            timeout=300,  # 5分タイムアウト
+                            timeout=300,  # 5蛻・ち繧､繝繧｢繧ｦ繝・
                         )
                     except asyncio.TimeoutError:
-                        print("[タイムアウト] TSE4000最適化がタイムアウトしました")
-                        raise Exception("TSE4000最適化タイムアウト")
+                        print("[繧ｿ繧､繝繧｢繧ｦ繝・ TSE4000譛驕ｩ蛹悶′繧ｿ繧､繝繧｢繧ｦ繝医＠縺ｾ縺励◆")
+                        raise Exception("TSE4000譛驕ｩ蛹悶ち繧､繝繧｢繧ｦ繝・)
 
                     if (
                         optimization_result
@@ -195,146 +196,146 @@ class FullAutoInvestmentSystem:
                             : self.auto_settings["portfolio_size"]
                         ]
 
-                        if len(selected_symbols) >= 5:  # 最低5銘柄は必要
-                            # 最適化履歴を記録
+                        if len(selected_symbols) >= 5:  # 譛菴・驫俶氛縺ｯ蠢・ｦ・
+                            # 譛驕ｩ蛹門ｱ･豁ｴ繧定ｨ倬鹸
                             self._save_optimization_history(selected_symbols)
 
-                            print(f"[完了] 最適化完了: {len(selected_symbols)}銘柄選出")
+                            print(f"[螳御ｺ・ 譛驕ｩ蛹門ｮ御ｺ・ {len(selected_symbols)}驫俶氛驕ｸ蜃ｺ")
                             self.logger.info(
-                                f"✅ 最適化完了: {len(selected_symbols)}銘柄選出"
+                                f"笨・譛驕ｩ蛹門ｮ御ｺ・ {len(selected_symbols)}驫俶氛驕ｸ蜃ｺ"
                             )
                             return selected_symbols
                         else:
                             raise Exception(
-                                f"選出銘柄数不足: {len(selected_symbols)}銘柄"
+                                f"驕ｸ蜃ｺ驫俶氛謨ｰ荳崎ｶｳ: {len(selected_symbols)}驫俶氛"
                             )
                     else:
-                        raise Exception("最適化結果が無効または空です")
+                        raise Exception("譛驕ｩ蛹也ｵ先棡縺檎┌蜉ｹ縺ｾ縺溘・遨ｺ縺ｧ縺・)
 
                 else:
-                    print("[使用] 前回の最適化結果を使用")
-                    self.logger.info("📋 前回の最適化結果を使用")
-                    # 前回の結果を読み込み
+                    print("[菴ｿ逕ｨ] 蜑榊屓縺ｮ譛驕ｩ蛹也ｵ先棡繧剃ｽｿ逕ｨ")
+                    self.logger.info("搭 蜑榊屓縺ｮ譛驕ｩ蛹也ｵ先棡繧剃ｽｿ逕ｨ")
+                    # 蜑榊屓縺ｮ邨先棡繧定ｪｭ縺ｿ霎ｼ縺ｿ
                     previous_symbols = self._load_previous_optimization()
                     if len(previous_symbols) >= 5:
                         return previous_symbols
                     else:
-                        print("[警告] 前回結果も不足。デフォルト銘柄使用")
+                        print("[隴ｦ蜻馨 蜑榊屓邨先棡繧ゆｸ崎ｶｳ縲ゅョ繝輔か繝ｫ繝磯釜譟・ｽｿ逕ｨ")
                         return self._get_default_symbols()
 
             except Exception as e:
                 retry_count += 1
                 error_msg = str(e)
                 print(
-                    f"[エラー] 最適化エラー (試行 {retry_count}/{max_retries}): {error_msg}"
+                    f"[繧ｨ繝ｩ繝ｼ] 譛驕ｩ蛹悶お繝ｩ繝ｼ (隧ｦ陦・{retry_count}/{max_retries}): {error_msg}"
                 )
                 self.logger.warning(
-                    f"TSE4000最適化エラー (試行 {retry_count}): {error_msg}"
+                    f"TSE4000譛驕ｩ蛹悶お繝ｩ繝ｼ (隧ｦ陦・{retry_count}): {error_msg}"
                 )
 
                 if retry_count < max_retries:
-                    print(f"[待機] {5}秒後に再試行します...")
+                    print(f"[蠕・ｩ歉 {5}遘貞ｾ後↓蜀崎ｩｦ陦後＠縺ｾ縺・..")
                     await asyncio.sleep(5)
                 else:
-                    print("[安全] 最大試行回数到達。デフォルト銘柄を使用します")
-                    self.logger.error(f"TSE4000最適化最終失敗: {error_msg}")
+                    print("[螳牙・] 譛螟ｧ隧ｦ陦悟屓謨ｰ蛻ｰ驕斐ゅョ繝輔か繝ｫ繝磯釜譟・ｒ菴ｿ逕ｨ縺励∪縺・)
+                    self.logger.error(f"TSE4000譛驕ｩ蛹匁怙邨ょ､ｱ謨・ {error_msg}")
                     return self._get_default_symbols()
 
         return self._get_default_symbols()
 
     async def _run_tse_optimization_async(self):
-        """TSE4000最適化の非同期実行"""
-        # 同期的なTSE4000最適化を非同期で実行
+        """TSE4000譛驕ｩ蛹悶・髱槫酔譛溷ｮ溯｡・""
+        # 蜷梧悄逧・↑TSE4000譛驕ｩ蛹悶ｒ髱槫酔譛溘〒螳溯｡・
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
             None, self.tse_optimizer.run_comprehensive_optimization
         )
 
     def _check_market_hours(self) -> Tuple[bool, str]:
-        """市場時間チェック"""
+        """蟶ょｴ譎る俣繝√ぉ繝・け"""
         try:
             current_time = datetime.now()
-            weekday = current_time.weekday()  # 0=月曜, 6=日曜
+            weekday = current_time.weekday()  # 0=譛域屆, 6=譌･譖・
             hour = current_time.hour
             minute = current_time.minute
 
-            # 土日は市場休業
-            if weekday >= 5:  # 土曜日・日曜日
+            # 蝨滓律縺ｯ蟶ょｴ莨第･ｭ
+            if weekday >= 5:  # 蝨滓屆譌･繝ｻ譌･譖懈律
                 next_monday = current_time + timedelta(days=(7 - weekday))
                 return (
                     False,
-                    f"市場休業日です。次回開場: {next_monday.strftime('%m/%d（月）9:00')}",
+                    f"蟶ょｴ莨第･ｭ譌･縺ｧ縺吶よｬ｡蝗樣幕蝣ｴ: {next_monday.strftime('%m/%d・域怦・・:00')}",
                 )
 
-            # 平日の取引時間チェック
-            # 東証: 9:00-11:30（前場）、12:30-15:00（後場）
+            # 蟷ｳ譌･縺ｮ蜿門ｼ墓凾髢薙メ繧ｧ繝・け
+            # 譚ｱ險ｼ: 9:00-11:30・亥燕蝣ｴ・峨・2:30-15:00・亥ｾ悟ｴ・・
             current_minutes = hour * 60 + minute
 
-            # 前場: 9:00-11:30 (540-690分)
-            morning_start = 9 * 60  # 540分
-            morning_end = 11 * 60 + 30  # 690分
+            # 蜑榊ｴ: 9:00-11:30 (540-690蛻・
+            morning_start = 9 * 60  # 540蛻・
+            morning_end = 11 * 60 + 30  # 690蛻・
 
-            # 後場: 12:30-15:00 (750-900分)
-            afternoon_start = 12 * 60 + 30  # 750分
-            afternoon_end = 15 * 60  # 900分
+            # 蠕悟ｴ: 12:30-15:00 (750-900蛻・
+            afternoon_start = 12 * 60 + 30  # 750蛻・
+            afternoon_end = 15 * 60  # 900蛻・
 
             if morning_start <= current_minutes <= morning_end:
-                return True, "前場取引時間中"
+                return True, "蜑榊ｴ蜿門ｼ墓凾髢謎ｸｭ"
             elif afternoon_start <= current_minutes <= afternoon_end:
-                return True, "後場取引時間中"
+                return True, "蠕悟ｴ蜿門ｼ墓凾髢謎ｸｭ"
             elif current_minutes < morning_start:
-                return False, f"市場開場前です。開場時刻: 9:00"
+                return False, f"蟶ょｴ髢句ｴ蜑阪〒縺吶る幕蝣ｴ譎ょ綾: 9:00"
             elif morning_end < current_minutes < afternoon_start:
-                return False, f"昼休み時間です。後場開始: 12:30"
+                return False, f"譏ｼ莨代∩譎る俣縺ｧ縺吶ょｾ悟ｴ髢句ｧ・ 12:30"
             else:  # current_minutes > afternoon_end
                 next_day = current_time + timedelta(days=1)
-                if next_day.weekday() >= 5:  # 翌日が土日
+                if next_day.weekday() >= 5:  # 鄙梧律縺悟悄譌･
                     next_monday = current_time + timedelta(
                         days=(7 - current_time.weekday())
                     )
                     return (
                         False,
-                        f"市場終了後です。次回開場: {next_monday.strftime('%m/%d（月）9:00')}",
+                        f"蟶ょｴ邨ゆｺ・ｾ後〒縺吶よｬ｡蝗樣幕蝣ｴ: {next_monday.strftime('%m/%d・域怦・・:00')}",
                     )
                 else:
                     return (
                         False,
-                        f"市場終了後です。次回開場: {next_day.strftime('%m/%d 9:00')}",
+                        f"蟶ょｴ邨ゆｺ・ｾ後〒縺吶よｬ｡蝗樣幕蝣ｴ: {next_day.strftime('%m/%d 9:00')}",
                     )
 
         except Exception as e:
-            self.logger.warning(f"市場時間チェックエラー: {e}")
-            return True, "市場時間チェック無効（処理継続）"
+            self.logger.warning(f"蟶ょｴ譎る俣繝√ぉ繝・け繧ｨ繝ｩ繝ｼ: {e}")
+            return True, "蟶ょｴ譎る俣繝√ぉ繝・け辟｡蜉ｹ・亥・逅・ｶ咏ｶ夲ｼ・
 
     def _show_market_hours_warning(self) -> bool:
-        """市場時間外の警告表示"""
+        """蟶ょｴ譎る俣螟悶・隴ｦ蜻願｡ｨ遉ｺ"""
         is_open, message = self._check_market_hours()
 
         if not is_open:
-            print(f"\n[警告] {message}")
-            print("[注意] 市場時間外でも分析は実行できますが、")
-            print("       実際の取引は市場開場時間内に行ってください。")
+            print(f"\n[隴ｦ蜻馨 {message}")
+            print("[豕ｨ諢従 蟶ょｴ譎る俣螟悶〒繧ょ・譫舌・螳溯｡後〒縺阪∪縺吶′縲・)
+            print("       螳滄圀縺ｮ蜿門ｼ輔・蟶ょｴ髢句ｴ譎る俣蜀・↓陦後▲縺ｦ縺上□縺輔＞縲・)
 
             while True:
-                choice = input("\n続行しますか？ (y/n): ").strip().lower()
-                if choice in ["y", "yes", "はい"]:
+                choice = input("\n邯夊｡後＠縺ｾ縺吶°・・(y/n): ").strip().lower()
+                if choice in ["y", "yes", "縺ｯ縺・]:
                     return True
-                elif choice in ["n", "no", "いいえ"]:
+                elif choice in ["n", "no", "縺・＞縺・]:
                     return False
                 else:
-                    print("yまたはnで入力してください。")
+                    print("y縺ｾ縺溘・n縺ｧ蜈･蜉帙＠縺ｦ縺上□縺輔＞縲・)
         else:
             print(f"[OK] {message}")
             return True
 
     def _check_optimization_necessity(self) -> bool:
-        """最適化必要性判定"""
+        """譛驕ｩ蛹門ｿ・ｦ∵ｧ蛻､螳・""
         try:
-            # 最適化履歴ファイルを確認
+            # 譛驕ｩ蛹門ｱ･豁ｴ繝輔ぃ繧､繝ｫ繧堤｢ｺ隱・
             history_file = "tse4000_optimization_history.json"
 
             if not os.path.exists(history_file):
-                # 履歴ファイルがない場合は最適化実行
+                # 螻･豁ｴ繝輔ぃ繧､繝ｫ縺後↑縺・ｴ蜷医・譛驕ｩ蛹門ｮ溯｡・
                 return True
 
             with open(history_file, "r", encoding="utf-8") as f:
@@ -343,33 +344,33 @@ class FullAutoInvestmentSystem:
             if not history or "last_optimization" not in history:
                 return True
 
-            # 前回最適化日時を取得
+            # 蜑榊屓譛驕ｩ蛹匁律譎ゅｒ蜿門ｾ・
             last_optimization = datetime.fromisoformat(history["last_optimization"])
             current_time = datetime.now()
 
-            # 前回最適化から経過日数
+            # 蜑榊屓譛驕ｩ蛹悶°繧臥ｵ碁℃譌･謨ｰ
             days_since_last = (current_time - last_optimization).days
 
-            # 3日以上経過している場合は最適化実行
+            # 3譌･莉･荳顔ｵ碁℃縺励※縺・ｋ蝣ｴ蜷医・譛驕ｩ蛹門ｮ溯｡・
             if days_since_last >= 3:
                 return True
 
-            # 月曜日または金曜日で前日以降に最適化していない場合
+            # 譛域屆譌･縺ｾ縺溘・驥第屆譌･縺ｧ蜑肴律莉･髯阪↓譛驕ｩ蛹悶＠縺ｦ縺・↑縺・ｴ蜷・
             weekday = current_time.weekday()
-            if weekday in [0, 4]:  # 月曜・金曜
-                # 前回最適化が昨日より前なら実行
+            if weekday in [0, 4]:  # 譛域屆繝ｻ驥第屆
+                # 蜑榊屓譛驕ｩ蛹悶′譏ｨ譌･繧医ｊ蜑阪↑繧牙ｮ溯｡・
                 if days_since_last >= 1:
                     return True
 
             return False
 
         except Exception as e:
-            self.logger.warning(f"最適化履歴確認エラー: {e}")
-            # エラー時は安全のため最適化実行
-            return True  # 月曜・金曜
+            self.logger.warning(f"譛驕ｩ蛹門ｱ･豁ｴ遒ｺ隱阪お繝ｩ繝ｼ: {e}")
+            # 繧ｨ繝ｩ繝ｼ譎ゅ・螳牙・縺ｮ縺溘ａ譛驕ｩ蛹門ｮ溯｡・
+            return True  # 譛域屆繝ｻ驥第屆
 
     def _save_optimization_history(self, symbols: List[str]):
-        """最適化履歴を保存"""
+        """譛驕ｩ蛹門ｱ･豁ｴ繧剃ｿ晏ｭ・""
         try:
             history = {
                 "last_optimization": datetime.now().isoformat(),
@@ -382,18 +383,18 @@ class FullAutoInvestmentSystem:
             with open(history_file, "w", encoding="utf-8") as f:
                 json.dump(history, f, ensure_ascii=False, indent=2)
 
-            self.logger.info(f"最適化履歴保存: {len(symbols)}銘柄")
+            self.logger.info(f"譛驕ｩ蛹門ｱ･豁ｴ菫晏ｭ・ {len(symbols)}驫俶氛")
 
         except Exception as e:
-            self.logger.error(f"履歴保存エラー: {e}")
+            self.logger.error(f"螻･豁ｴ菫晏ｭ倥お繝ｩ繝ｼ: {e}")
 
     def _load_previous_optimization(self) -> List[str]:
-        """前回の最適化結果を読み込み"""
+        """蜑榊屓縺ｮ譛驕ｩ蛹也ｵ先棡繧定ｪｭ縺ｿ霎ｼ縺ｿ"""
         try:
             history_file = "tse4000_optimization_history.json"
 
             if not os.path.exists(history_file):
-                self.logger.info("履歴ファイルなし。デフォルト銘柄使用")
+                self.logger.info("螻･豁ｴ繝輔ぃ繧､繝ｫ縺ｪ縺励ゅョ繝輔か繝ｫ繝磯釜譟・ｽｿ逕ｨ")
                 return self._get_default_symbols()
 
             with open(history_file, "r", encoding="utf-8") as f:
@@ -401,42 +402,42 @@ class FullAutoInvestmentSystem:
 
             if "symbols" in history and history["symbols"]:
                 symbols = history["symbols"]
-                self.logger.info(f"前回最適化結果読み込み: {len(symbols)}銘柄")
+                self.logger.info(f"蜑榊屓譛驕ｩ蛹也ｵ先棡隱ｭ縺ｿ霎ｼ縺ｿ: {len(symbols)}驫俶氛")
                 return symbols
 
         except Exception as e:
-            self.logger.error(f"履歴読み込みエラー: {e}")
+            self.logger.error(f"螻･豁ｴ隱ｭ縺ｿ霎ｼ縺ｿ繧ｨ繝ｩ繝ｼ: {e}")
 
         return self._get_default_symbols()
 
     def _get_default_symbols(self) -> List[str]:
-        """デフォルト銘柄リスト"""
+        """繝・ヵ繧ｩ繝ｫ繝磯釜譟・Μ繧ｹ繝・""
         return [
-            "6758.T",  # ソニーグループ
-            "7203.T",  # トヨタ自動車
-            "8306.T",  # 三菱UFJ銀行
-            "4502.T",  # 武田薬品工業
-            "9984.T",  # ソフトバンクグループ
-            "6861.T",  # キーエンス
-            "7974.T",  # 任天堂
-            "4689.T",  # ヤフー
-            "8035.T",  # 東京エレクトロン
-            "6098.T",  # リクルートホールディングス
+            "6758.T",  # 繧ｽ繝九・繧ｰ繝ｫ繝ｼ繝・
+            "7203.T",  # 繝医Κ繧ｿ閾ｪ蜍戊ｻ・
+            "8306.T",  # 荳芽廠UFJ驫陦・
+            "4502.T",  # 豁ｦ逕ｰ阮ｬ蜩∝ｷ･讌ｭ
+            "9984.T",  # 繧ｽ繝輔ヨ繝舌Φ繧ｯ繧ｰ繝ｫ繝ｼ繝・
+            "6861.T",  # 繧ｭ繝ｼ繧ｨ繝ｳ繧ｹ
+            "7974.T",  # 莉ｻ螟ｩ蝣・
+            "4689.T",  # 繝､繝輔・
+            "8035.T",  # 譚ｱ莠ｬ繧ｨ繝ｬ繧ｯ繝医Ο繝ｳ
+            "6098.T",  # 繝ｪ繧ｯ繝ｫ繝ｼ繝医・繝ｼ繝ｫ繝・ぅ繝ｳ繧ｰ繧ｹ
         ]
 
     async def _auto_learning_and_training(self, symbols: List[str]):
-        """自動学習・訓練実施"""
-        self.logger.info("🧠 学習・訓練自動実施中...")
+        """閾ｪ蜍募ｭｦ鄙偵・險鍋ｷｴ螳滓命"""
+        self.logger.info("ｧ 蟄ｦ鄙偵・險鍋ｷｴ閾ｪ蜍募ｮ滓命荳ｭ...")
 
         try:
-            # 並列で各銘柄の学習実行
+            # 荳ｦ蛻励〒蜷・釜譟・・蟄ｦ鄙貞ｮ溯｡・
             learning_tasks = []
 
             for symbol in symbols:
                 task = self._learn_single_symbol(symbol)
                 learning_tasks.append(task)
 
-            # 並列実行
+            # 荳ｦ蛻怜ｮ溯｡・
             learning_results = await asyncio.gather(
                 *learning_tasks, return_exceptions=True
             )
@@ -444,21 +445,21 @@ class FullAutoInvestmentSystem:
             successful_learning = len(
                 [r for r in learning_results if not isinstance(r, Exception)]
             )
-            self.logger.info(f"✅ 学習完了: {successful_learning}/{len(symbols)}銘柄")
+            self.logger.info(f"笨・蟄ｦ鄙貞ｮ御ｺ・ {successful_learning}/{len(symbols)}驫俶氛")
 
         except Exception as e:
-            self.logger.error(f"学習・訓練エラー: {str(e)}")
+            self.logger.error(f"蟄ｦ鄙偵・險鍋ｷｴ繧ｨ繝ｩ繝ｼ: {str(e)}")
 
     async def _learn_single_symbol(self, symbol: str) -> Dict[str, Any]:
-        """単一銘柄学習"""
+        """蜊倅ｸ驫俶氛蟄ｦ鄙・""
         try:
-            # 価格データ取得
+            # 萓｡譬ｼ繝・・繧ｿ蜿門ｾ・
             price_data = self.data_provider.get_stock_data(symbol)
 
             if price_data.empty:
                 return {"symbol": symbol, "status": "no_data"}
 
-            # 予測実行（学習効果込み）- 非同期で実行
+            # 莠域ｸｬ螳溯｡鯉ｼ亥ｭｦ鄙貞柑譫懆ｾｼ縺ｿ・・ 髱槫酔譛溘〒螳溯｡・
             loop = asyncio.get_event_loop()
             prediction_result = await loop.run_in_executor(
                 None,
@@ -467,7 +468,7 @@ class FullAutoInvestmentSystem:
                 PredictionMode.RESEARCH_MODE,
             )
 
-            # 実時間学習システムにデータ追加
+            # 螳滓凾髢灘ｭｦ鄙偵す繧ｹ繝・Β縺ｫ繝・・繧ｿ霑ｽ蜉
             if (
                 hasattr(self.hybrid_predictor, "real_time_learning_enabled")
                 and self.hybrid_predictor.real_time_learning_enabled
@@ -484,7 +485,7 @@ class FullAutoInvestmentSystem:
                     ),
                     "timestamp": datetime.now(),
                 }
-                # 実時間学習も非同期で実行
+                # 螳滓凾髢灘ｭｦ鄙偵ｂ髱槫酔譛溘〒螳溯｡・
                 if hasattr(self.hybrid_predictor, "process_real_time_market_data"):
                     try:
                         await loop.run_in_executor(
@@ -493,7 +494,7 @@ class FullAutoInvestmentSystem:
                             market_data,
                         )
                     except Exception as rt_error:
-                        self.logger.warning(f"実時間学習エラー {symbol}: {rt_error}")
+                        self.logger.warning(f"螳滓凾髢灘ｭｦ鄙偵お繝ｩ繝ｼ {symbol}: {rt_error}")
 
             return {
                 "symbol": symbol,
@@ -504,14 +505,14 @@ class FullAutoInvestmentSystem:
             }
 
         except Exception as e:
-            self.logger.error(f"銘柄{symbol}学習エラー: {str(e)}")
+            self.logger.error(f"驫俶氛{symbol}蟄ｦ鄙偵お繝ｩ繝ｼ: {str(e)}")
             return {"symbol": symbol, "status": "error", "error": str(e)}
 
     async def _generate_auto_recommendations(
         self, symbols: List[str]
     ) -> List[AutoRecommendation]:
-        """自動推奨生成"""
-        self.logger.info("🎯 投資推奨自動生成中...")
+        """閾ｪ蜍墓耳螂ｨ逕滓・"""
+        self.logger.info("識 謚戊ｳ・耳螂ｨ閾ｪ蜍慕函謌蝉ｸｭ...")
 
         recommendations = []
 
@@ -521,20 +522,20 @@ class FullAutoInvestmentSystem:
                 if recommendation:
                     recommendations.append(recommendation)
 
-            # リスク・リターンでソート
+            # 繝ｪ繧ｹ繧ｯ繝ｻ繝ｪ繧ｿ繝ｼ繝ｳ縺ｧ繧ｽ繝ｼ繝・
             recommendations.sort(key=lambda x: x.expected_return, reverse=True)
 
-            self.logger.info(f"✅ 推奨生成完了: {len(recommendations)}銘柄")
+            self.logger.info(f"笨・謗ｨ螂ｨ逕滓・螳御ｺ・ {len(recommendations)}驫俶氛")
             return recommendations
 
         except Exception as e:
-            self.logger.error(f"推奨生成エラー: {str(e)}")
+            self.logger.error(f"謗ｨ螂ｨ逕滓・繧ｨ繝ｩ繝ｼ: {str(e)}")
             return recommendations
 
     async def _analyze_single_symbol(self, symbol: str) -> Optional[AutoRecommendation]:
-        """単一銘柄分析"""
+        """蜊倅ｸ驫俶氛蛻・梵"""
         try:
-            # 価格データ取得
+            # 萓｡譬ｼ繝・・繧ｿ蜿門ｾ・
             price_data = self.data_provider.get_stock_data(symbol)
 
             if price_data.empty:
@@ -542,7 +543,7 @@ class FullAutoInvestmentSystem:
 
             current_price = price_data["Close"].iloc[-1]
 
-            # 1. 予測実行 - 非同期で実行
+            # 1. 莠域ｸｬ螳溯｡・- 髱槫酔譛溘〒螳溯｡・
             loop = asyncio.get_event_loop()
             prediction_result = await loop.run_in_executor(
                 None, self.hybrid_predictor.predict, symbol, PredictionMode.AUTO
@@ -551,12 +552,12 @@ class FullAutoInvestmentSystem:
             if not prediction_result:
                 return None
 
-            # 2. センチメント分析
+            # 2. 繧ｻ繝ｳ繝√Γ繝ｳ繝亥・譫・
             sentiment_result = self.sentiment_analyzer.analyze_comprehensive_sentiment(
                 symbol=symbol, price_data=price_data
             )
 
-            # 3. 戦略生成
+            # 3. 謌ｦ逡･逕滓・
             strategies = self.strategy_generator.generate_comprehensive_strategy(
                 symbol, price_data
             )
@@ -568,18 +569,18 @@ class FullAutoInvestmentSystem:
                 },
             )
 
-            # 4. リスク分析
+            # 4. 繝ｪ繧ｹ繧ｯ蛻・梵
             portfolio_data = {"positions": {symbol: 100000}, "total_value": 100000}
             risk_analysis = self.risk_manager.analyze_portfolio_risk(
                 portfolio_data, {symbol: price_data}
             )
 
-            # 5. 売買タイミング計算
+            # 5. 螢ｲ雋ｷ繧ｿ繧､繝溘Φ繧ｰ險育ｮ・
             buy_timing, sell_timing = self._calculate_optimal_timing(
                 prediction_result, sentiment_result, signals
             )
 
-            # 6. 総合判定
+            # 6. 邱丞粋蛻､螳・
             if self._should_recommend(
                 prediction_result, sentiment_result, risk_analysis
             ):
@@ -596,34 +597,34 @@ class FullAutoInvestmentSystem:
             return None
 
         except Exception as e:
-            self.logger.error(f"銘柄{symbol}分析エラー: {str(e)}")
+            self.logger.error(f"驫俶氛{symbol}蛻・梵繧ｨ繝ｩ繝ｼ: {str(e)}")
             return None
 
     def _calculate_optimal_timing(
         self, prediction, sentiment, signals
     ) -> Tuple[datetime, datetime]:
-        """最適売買タイミング計算"""
+        """譛驕ｩ螢ｲ雋ｷ繧ｿ繧､繝溘Φ繧ｰ險育ｮ・""
         current_time = datetime.now()
 
-        # 買いタイミング
+        # 雋ｷ縺・ち繧､繝溘Φ繧ｰ
         if sentiment.sentiment_score > 0.3 and prediction.confidence > 0.7:
-            # ポジティブな場合は早めのエントリー
+            # 繝昴ず繝・ぅ繝悶↑蝣ｴ蜷医・譌ｩ繧√・繧ｨ繝ｳ繝医Μ繝ｼ
             buy_date = current_time + timedelta(days=1)
         elif sentiment.sentiment_score > 0:
-            # 軽微ポジティブなら2-3日様子見
+            # 霆ｽ蠕ｮ繝昴ず繝・ぅ繝悶↑繧・-3譌･讒伜ｭ占ｦ・
             buy_date = current_time + timedelta(days=2)
         else:
-            # ネガティブなら1週間待機
+            # 繝阪ぎ繝・ぅ繝悶↑繧・騾ｱ髢灘ｾ・ｩ・
             buy_date = current_time + timedelta(days=7)
 
-        # 売りタイミング（投資期間ベース）
+        # 螢ｲ繧翫ち繧､繝溘Φ繧ｰ・域兜雉・悄髢薙・繝ｼ繧ｹ・・
         base_hold_period = self.auto_settings["investment_period_days"]
 
-        # 信頼度による調整
+        # 菫｡鬆ｼ蠎ｦ縺ｫ繧医ｋ隱ｿ謨ｴ
         if prediction.confidence > 0.8:
-            hold_period = base_hold_period + 10  # 高信頼度なら長期保有
+            hold_period = base_hold_period + 10  # 鬮倅ｿ｡鬆ｼ蠎ｦ縺ｪ繧蛾聞譛滉ｿ晄怏
         elif prediction.confidence < 0.6:
-            hold_period = base_hold_period - 10  # 低信頼度なら早期売却
+            hold_period = base_hold_period - 10  # 菴惹ｿ｡鬆ｼ蠎ｦ縺ｪ繧画掠譛溷｣ｲ蜊ｴ
         else:
             hold_period = base_hold_period
 
@@ -632,16 +633,16 @@ class FullAutoInvestmentSystem:
         return buy_date, sell_date
 
     def _should_recommend(self, prediction, sentiment, risk_analysis) -> bool:
-        """推奨判定"""
-        # 最小信頼度チェック
+        """謗ｨ螂ｨ蛻､螳・""
+        # 譛蟆丈ｿ｡鬆ｼ蠎ｦ繝√ぉ繝・け
         if prediction.confidence < self.auto_settings["min_confidence"]:
             return False
 
-        # リスクスコアチェック
+        # 繝ｪ繧ｹ繧ｯ繧ｹ繧ｳ繧｢繝√ぉ繝・け
         if risk_analysis.total_risk_score > self.auto_settings["max_risk_score"]:
             return False
 
-        # 予測価格上昇チェック
+        # 莠域ｸｬ萓｡譬ｼ荳頑・繝√ぉ繝・け
         if prediction.prediction <= 0:
             return False
 
@@ -657,21 +658,21 @@ class FullAutoInvestmentSystem:
         sell_timing: datetime,
         risk_analysis,
     ) -> AutoRecommendation:
-        """推奨情報作成"""
+        """謗ｨ螂ｨ諠・ｱ菴懈・"""
 
-        # 目標価格（予測価格ベース）
+        # 逶ｮ讓吩ｾ｡譬ｼ・井ｺ域ｸｬ萓｡譬ｼ繝吶・繧ｹ・・
         target_price = prediction.prediction
 
-        # ストップロス（5%下）
+        # 繧ｹ繝医ャ繝励Ο繧ｹ・・%荳具ｼ・
         stop_loss = current_price * 0.95
 
-        # 期待リターン計算
+        # 譛溷ｾ・Μ繧ｿ繝ｼ繝ｳ險育ｮ・
         expected_return = (target_price - current_price) / current_price
 
-        # 企業名取得（簡略化）
+        # 莨∵･ｭ蜷榊叙蠕暦ｼ育ｰ｡逡･蛹厄ｼ・
         company_name = self._get_company_name(symbol)
 
-        # 推奨理由生成
+        # 謗ｨ螂ｨ逅・罰逕滓・
         reasoning = self._generate_reasoning(prediction, sentiment, risk_analysis)
 
         risk_score = getattr(risk_analysis, 'total_risk_score', 0.0)
@@ -709,22 +710,40 @@ class FullAutoInvestmentSystem:
 
         if enhanced_system:
             try:
-                if enhanced_system.is_trained or enhanced_system.load_ensemble():
-                    self.logger.info("既存のアンサンブルモデルを検出しました")
+                if enhanced_system.is_trained:
+                    self.logger.info("譌｢蟄倥・繧｢繝ｳ繧ｵ繝ｳ繝悶Ν繝｢繝・Ν縺悟茜逕ｨ蜿ｯ閭ｽ縺ｧ縺・)
+                    return True
+                if enhanced_system.load_ensemble():
+                    self.logger.info("菫晏ｭ俶ｸ医∩縺ｮ繧｢繝ｳ繧ｵ繝ｳ繝悶Ν繝｢繝・Ν繧定ｪｭ縺ｿ霎ｼ縺ｿ縺ｾ縺励◆")
                     return True
             except Exception as load_error:
-                self.logger.warning(f"既存モデルの読み込みに失敗: {load_error}")
+                self.logger.warning(f"譌｢蟄倥Δ繝・Ν縺ｮ隱ｭ縺ｿ霎ｼ縺ｿ縺ｫ螟ｱ謨・ {load_error}")
 
         ensemble_file = Path('models/saved_models/ensemble_models.joblib')
-        if ensemble_file.exists() and enhanced_system:
-            try:
-                if enhanced_system.load_ensemble():
-                    self.logger.info("保存済みのアンサンブルモデルを読み込みました")
-                    return True
-            except Exception as e:
-                self.logger.warning(f"モデル読み込み警告: {e}")
+        refresh_days = self.auto_settings.get("model_refresh_days", 30)
+        file_stale = False
 
-        self.logger.info("アンサンブルモデルが見つからないため、自動学習を実行します")
+        if ensemble_file.exists():
+            if refresh_days and refresh_days > 0:
+                try:
+                    file_age = datetime.now() - datetime.fromtimestamp(ensemble_file.stat().st_mtime)
+                    if file_age >= timedelta(days=refresh_days):
+                        file_stale = True
+                        self.logger.info(
+                            f"繧｢繝ｳ繧ｵ繝ｳ繝悶Ν繝｢繝・Ν縺鶏file_age.days}譌･髢捺峩譁ｰ縺輔ｌ縺ｦ縺・↑縺・◆繧∝・蟄ｦ鄙偵＠縺ｾ縺・
+                        )
+                except Exception as age_error:
+                    self.logger.warning(f"繝｢繝・Ν繝輔ぃ繧､繝ｫ縺ｮ譖ｴ譁ｰ譌･譎ょ叙蠕励↓螟ｱ謨・ {age_error}")
+
+            if enhanced_system and not file_stale:
+                try:
+                    if enhanced_system.load_ensemble():
+                        self.logger.info("菫晏ｭ俶ｸ医∩縺ｮ繧｢繝ｳ繧ｵ繝ｳ繝悶Ν繝｢繝・Ν繧定ｪｭ縺ｿ霎ｼ縺ｿ縺ｾ縺励◆")
+                        return True
+                except Exception as e:
+                    self.logger.warning(f"繝｢繝・Ν隱ｭ縺ｿ霎ｼ縺ｿ縺ｧ隴ｦ蜻・ {e}")
+
+        self.logger.info("繧｢繝ｳ繧ｵ繝ｳ繝悶Ν繝｢繝・Ν縺瑚ｦ九▽縺九ｉ縺ｪ縺・°蜀榊ｭｦ鄙偵′蠢・ｦ√↑縺溘ａ閾ｪ蜍募ｭｦ鄙偵ｒ螳溯｡後＠縺ｾ縺・)
 
         import sys
         os.environ.setdefault("PYTHONIOENCODING", "utf-8")
@@ -740,12 +759,12 @@ class FullAutoInvestmentSystem:
                 evaluate_trained_model,
             )
         except ImportError as e:
-            self.logger.error(f"学習モジュールの読み込みに失敗: {e}")
+            self.logger.error(f"蟄ｦ鄙偵Δ繧ｸ繝･繝ｼ繝ｫ縺ｮ隱ｭ縺ｿ霎ｼ縺ｿ縺ｫ螟ｱ謨・ {e}")
             return False
 
         training_result = run_enhanced_ensemble_training()
         if not training_result.get('success'):
-            self.logger.error(f"自動学習に失敗: {training_result.get('error', '理由不明')}")
+            self.logger.error(f"閾ｪ蜍募ｭｦ鄙偵↓螟ｱ謨・ {training_result.get('error', '逅・罰荳肴・')}")
             return False
 
         predictor = training_result.get('predictor')
@@ -753,106 +772,106 @@ class FullAutoInvestmentSystem:
             try:
                 predictor.save_ensemble()
             except Exception as save_error:
-                self.logger.warning(f"アンサンブル保存に失敗: {save_error}")
+                self.logger.warning(f"繧｢繝ｳ繧ｵ繝ｳ繝悶Ν菫晏ｭ倥↓螟ｱ謨・ {save_error}")
         else:
-            self.logger.warning("学習結果に predictor が含まれていません")
+            self.logger.warning("蟄ｦ鄙堤ｵ先棡縺ｫ predictor 縺悟性縺ｾ繧後※縺・∪縺帙ｓ")
 
         try:
             evaluate_trained_model()
         except Exception as eval_error:
-            self.logger.warning(f"モデル評価で警告: {eval_error}")
+            self.logger.warning(f"繝｢繝・Ν隧穂ｾ｡縺ｧ隴ｦ蜻・ {eval_error}")
 
         if predictor is not None:
             try:
                 predictor.is_trained = True
                 self.hybrid_predictor.enhanced_system = predictor
-                self.logger.info("自動学習したアンサンブルモデルを適用しました")
+                self.logger.info("閾ｪ蜍募ｭｦ鄙偵＠縺溘い繝ｳ繧ｵ繝ｳ繝悶Ν繝｢繝・Ν繧帝←逕ｨ縺励∪縺励◆")
                 return True
             except Exception as attach_error:
-                self.logger.warning(f"学習モデルの適用に失敗: {attach_error}")
+                self.logger.warning(f"蟄ｦ鄙偵Δ繝・Ν縺ｮ驕ｩ逕ｨ縺ｫ螟ｱ謨・ {attach_error}")
 
         if enhanced_system:
             try:
                 enhanced_system.is_trained = False
                 if enhanced_system.load_ensemble():
-                    self.logger.info("保存済みモデルを再読み込みしました")
+                    self.logger.info("菫晏ｭ俶ｸ医∩繝｢繝・Ν繧貞・隱ｭ縺ｿ霎ｼ縺ｿ縺励∪縺励◆")
                     return True
             except Exception as reload_error:
-                self.logger.warning(f"再読み込みに失敗: {reload_error}")
+                self.logger.warning(f"蜀崎ｪｭ縺ｿ霎ｼ縺ｿ縺ｫ螟ｱ謨・ {reload_error}")
 
         if ensemble_file.exists():
-            self.logger.info("アンサンブルモデルファイルは生成されましたが読み込みに失敗しました")
+            self.logger.info("繧｢繝ｳ繧ｵ繝ｳ繝悶Ν繝｢繝・Ν繝輔ぃ繧､繝ｫ縺ｯ蟄伜惠縺励∪縺吶′隱ｭ縺ｿ霎ｼ縺ｿ縺ｫ螟ｱ謨励＠縺ｾ縺励◆")
             return True
 
         return False
 
     def _get_company_name(self, symbol: str) -> str:
-        """企業名取得"""
+        """莨∵･ｭ蜷榊叙蠕・""
         company_map = {
-            "6758.T": "ソニーグループ",
-            "7203.T": "トヨタ自動車",
-            "8306.T": "三菱UFJ銀行",
-            "4502.T": "武田薬品工業",
-            "9984.T": "ソフトバンクグループ",
-            "6861.T": "キーエンス",
-            "7974.T": "任天堂",
-            "4689.T": "ヤフー",
-            "8035.T": "東京エレクトロン",
-            "6098.T": "リクルートホールディングス",
+            "6758.T": "繧ｽ繝九・繧ｰ繝ｫ繝ｼ繝・,
+            "7203.T": "繝医Κ繧ｿ閾ｪ蜍戊ｻ・,
+            "8306.T": "荳芽廠UFJ驫陦・,
+            "4502.T": "豁ｦ逕ｰ阮ｬ蜩∝ｷ･讌ｭ",
+            "9984.T": "繧ｽ繝輔ヨ繝舌Φ繧ｯ繧ｰ繝ｫ繝ｼ繝・,
+            "6861.T": "繧ｭ繝ｼ繧ｨ繝ｳ繧ｹ",
+            "7974.T": "莉ｻ螟ｩ蝣・,
+            "4689.T": "繝､繝輔・",
+            "8035.T": "譚ｱ莠ｬ繧ｨ繝ｬ繧ｯ繝医Ο繝ｳ",
+            "6098.T": "繝ｪ繧ｯ繝ｫ繝ｼ繝医・繝ｼ繝ｫ繝・ぅ繝ｳ繧ｰ繧ｹ",
         }
         return company_map.get(symbol, symbol)
 
     def _generate_reasoning(self, prediction, sentiment, risk_analysis) -> str:
-        """推奨理由生成"""
+        """謗ｨ螂ｨ逅・罰逕滓・"""
         reasons = []
 
-        # 予測ベースの理由
+        # 莠域ｸｬ繝吶・繧ｹ縺ｮ逅・罰
         if prediction.confidence > 0.8:
-            reasons.append(f"高信頼度予測({prediction.confidence:.1%})")
+            reasons.append(f"鬮倅ｿ｡鬆ｼ蠎ｦ莠域ｸｬ({prediction.confidence:.1%})")
 
-        # センチメントベースの理由
+        # 繧ｻ繝ｳ繝√Γ繝ｳ繝医・繝ｼ繧ｹ縺ｮ逅・罰
         if sentiment.sentiment_score > 0.5:
-            reasons.append("強いポジティブセンチメント")
+            reasons.append("蠑ｷ縺・・繧ｸ繝・ぅ繝悶そ繝ｳ繝√Γ繝ｳ繝・)
         elif sentiment.sentiment_score > 0.2:
-            reasons.append("ポジティブセンチメント")
+            reasons.append("繝昴ず繝・ぅ繝悶そ繝ｳ繝√Γ繝ｳ繝・)
 
-        # リスクベースの理由
+        # 繝ｪ繧ｹ繧ｯ繝吶・繧ｹ縺ｮ逅・罰
         if risk_analysis.risk_level.value == "low":
-            reasons.append("低リスク")
+            reasons.append("菴弱Μ繧ｹ繧ｯ")
         elif risk_analysis.risk_level.value == "medium":
-            reasons.append("中程度リスク")
+            reasons.append("荳ｭ遞句ｺｦ繝ｪ繧ｹ繧ｯ")
 
         if not reasons:
-            reasons.append("総合的判断により推奨")
+            reasons.append("邱丞粋逧・愛譁ｭ縺ｫ繧医ｊ謗ｨ螂ｨ")
 
         return " + ".join(reasons)
 
     def _display_recommendations(self, recommendations: List[AutoRecommendation]):
-        """推奨結果表示"""
+        """謗ｨ螂ｨ邨先棡陦ｨ遉ｺ"""
         if not recommendations:
-            print("\n[結果] 現在推奨できる銘柄がありません")
+            print("\n[邨先棡] 迴ｾ蝨ｨ謗ｨ螂ｨ縺ｧ縺阪ｋ驫俶氛縺後≠繧翫∪縺帙ｓ")
             return
 
-        print(f"\n[結果] フルオート投資推奨 ({len(recommendations)}銘柄)")
+        print(f"\n[邨先棡] 繝輔Ν繧ｪ繝ｼ繝域兜雉・耳螂ｨ ({len(recommendations)}驫俶氛)")
         print("=" * 80)
 
         for i, rec in enumerate(recommendations, 1):
-            print(f"\n【推奨 #{i}】{rec.company_name} ({rec.symbol})")
-            print(f"  買い価格: ¥{rec.entry_price:,.0f}")
-            print(f"  目標価格: ¥{rec.target_price:,.0f}")
-            print(f"  ストップロス: ¥{rec.stop_loss:,.0f}")
-            print(f"  買い時期: {rec.buy_date.strftime('%Y年%m月%d日 %H時頃')}")
-            print(f"  売り時期: {rec.sell_date.strftime('%Y年%m月%d日 %H時頃')}")
-            print(f"  期待リターン: {rec.expected_return:.1%}")
-            print(f"  信頼度: {rec.confidence:.1%}")
-            print(f"  リスクレベル: {rec.risk_level}")
-            print(f"  理由: {rec.reasoning}")
+            print(f"\n縲先耳螂ｨ #{i}縲捜rec.company_name} ({rec.symbol})")
+            print(f"  雋ｷ縺・ｾ｡譬ｼ: ﾂ･{rec.entry_price:,.0f}")
+            print(f"  逶ｮ讓吩ｾ｡譬ｼ: ﾂ･{rec.target_price:,.0f}")
+            print(f"  繧ｹ繝医ャ繝励Ο繧ｹ: ﾂ･{rec.stop_loss:,.0f}")
+            print(f"  雋ｷ縺・凾譛・ {rec.buy_date.strftime('%Y蟷ｴ%m譛・d譌･ %H譎る・)}")
+            print(f"  螢ｲ繧頑凾譛・ {rec.sell_date.strftime('%Y蟷ｴ%m譛・d譌･ %H譎る・)}")
+            print(f"  譛溷ｾ・Μ繧ｿ繝ｼ繝ｳ: {rec.expected_return:.1%}")
+            print(f"  菫｡鬆ｼ蠎ｦ: {rec.confidence:.1%}")
+            print(f"  繝ｪ繧ｹ繧ｯ繝ｬ繝吶Ν: {rec.risk_level}")
+            print(f"  逅・罰: {rec.reasoning}")
 
         print("\n" + "=" * 80)
-        print("[注意] これらは予測に基づく推奨であり、投資は自己責任で行ってください")
+        print("[豕ｨ諢従 縺薙ｌ繧峨・莠域ｸｬ縺ｫ蝓ｺ縺･縺乗耳螂ｨ縺ｧ縺ゅｊ縲∵兜雉・・閾ｪ蟾ｱ雋ｬ莉ｻ縺ｧ陦後▲縺ｦ縺上□縺輔＞")
 
     def get_system_status(self) -> Dict[str, Any]:
-        """システム状況取得"""
+        """繧ｷ繧ｹ繝・Β迥ｶ豕∝叙蠕・""
         return {
             "tse_optimization_ready": True,
             "hybrid_predictor_ready": True,
@@ -864,14 +883,14 @@ class FullAutoInvestmentSystem:
         }
 
 
-# メイン実行関数
+# 繝｡繧､繝ｳ螳溯｡碁未謨ｰ
 async def run_full_auto():
-    """フルオート実行"""
+    """繝輔Ν繧ｪ繝ｼ繝亥ｮ溯｡・""
     system = FullAutoInvestmentSystem()
     recommendations = await system.run_full_auto_analysis()
     return recommendations
 
 
 if __name__ == "__main__":
-    # テスト実行
+    # 繝・せ繝亥ｮ溯｡・
     asyncio.run(run_full_auto())
