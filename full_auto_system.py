@@ -12,7 +12,7 @@ import os
 import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import asyncio
 
 # 既存システムのインポート
@@ -44,6 +44,14 @@ class AutoRecommendation:
     confidence: float
     reasoning: str
     risk_level: str
+    recommendation_score: float
+    risk_score: float
+    buy_timing: datetime = field(init=False)
+    sell_timing: datetime = field(init=False)
+
+    def __post_init__(self):
+        self.buy_timing = self.buy_date
+        self.sell_timing = self.sell_date
 
 
 class FullAutoInvestmentSystem:
@@ -654,6 +662,9 @@ class FullAutoInvestmentSystem:
         # 推奨理由生成
         reasoning = self._generate_reasoning(prediction, sentiment, risk_analysis)
 
+        risk_score = getattr(risk_analysis, 'total_risk_score', 0.0)
+        recommendation_score = self._calculate_recommendation_score(expected_return, prediction.confidence, risk_score)
+
         return AutoRecommendation(
             symbol=symbol,
             company_name=company_name,
@@ -667,7 +678,18 @@ class FullAutoInvestmentSystem:
             confidence=prediction.confidence,
             reasoning=reasoning,
             risk_level=risk_analysis.risk_level.value,
+            recommendation_score=recommendation_score,
+            risk_score=risk_score,
         )
+
+    def _calculate_recommendation_score(self, expected_return: float, confidence: float, risk_score: float) -> float:
+        expected_pct = max(min(expected_return * 100.0, 20.0), -20.0)
+        expected_component = (expected_pct + 20.0) / 40.0  # 0..1
+        confidence_component = max(0.0, min(confidence, 1.0))
+        normalized_risk = max(0.0, min(risk_score / 4.0 if risk_score is not None else 0.0, 1.0))
+        risk_component = 1.0 - normalized_risk
+        score = (expected_component * 4.0) + (confidence_component * 4.0) + (risk_component * 2.0)
+        return round(max(0.0, min(score, 10.0)), 2)
 
     def _get_company_name(self, symbol: str) -> str:
         """企業名取得"""
