@@ -6,6 +6,7 @@ ClStock 取引記録・レポートシステム
 """
 
 import logging
+import os
 import sqlite3
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple
@@ -99,7 +100,7 @@ class TradeRecorder:
     """
 
     def __init__(
-        self, db_path: str = "C:\\gemini-desktop\\ClStock\\data\\trading_records.db"
+        self, db_path: str = os.path.join("C:", "gemini-desktop", "ClStock", "data", "trading_records.db")
     ):
         """
         Args:
