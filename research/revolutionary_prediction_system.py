@@ -233,7 +233,7 @@ class RevolutionaryPredictionSystem:
                 fractal_dim = -np.polyfit(log_scales, log_counts, 1)[0]
                 return min(max(fractal_dim / 2.0, 0.0), 1.0)  # 0-1に正規化
 
-        except:
+        except Exception:
             pass
 
         return 0.5
@@ -276,7 +276,7 @@ class RevolutionaryPredictionSystem:
 
                 return {"direction": direction, "coherence": coherence}
 
-        except:
+        except Exception:
             pass
 
         return {"direction": 0.5, "coherence": 0.0}
@@ -308,7 +308,7 @@ class RevolutionaryPredictionSystem:
                     "multi_scale_consensus": consensus,
                 }
 
-        except:
+        except Exception:
             pass
 
         return {"dominant_direction": 0.5, "multi_scale_consensus": 0.0}
@@ -350,7 +350,7 @@ class RevolutionaryPredictionSystem:
 
                 return {"direction_bias": direction_bias, "uncertainty": uncertainty}
 
-        except:
+        except Exception:
             pass
 
         return {"direction_bias": 0.5, "uncertainty": 1.0}
@@ -500,7 +500,7 @@ class RevolutionaryPredictionSystem:
                 "level": fear_greed,
             }
 
-        except:
+        except Exception:
             return {"direction": 0.5, "confidence": 0.0, "level": 0.5}
 
     def _analyze_crowd_behavior(
@@ -564,7 +564,7 @@ class RevolutionaryPredictionSystem:
 
             return {"direction": direction, "confidence": confidence}
 
-        except:
+        except Exception:
             return {"direction": 0.5, "confidence": 0.0}
 
     def _expectation_theory_analysis(self, returns: pd.Series) -> Dict[str, float]:
@@ -595,7 +595,7 @@ class RevolutionaryPredictionSystem:
 
                 return {"direction": direction, "confidence": confidence}
 
-        except:
+        except Exception:
             pass
 
         return {"direction": 0.5, "confidence": 0.0}
@@ -650,7 +650,7 @@ class RevolutionaryPredictionSystem:
                 "anomaly_rate": anomaly_rate,
             }
 
-        except:
+        except Exception:
             return {"anomaly_direction": 0.5, "anomaly_strength": 0.0}
 
     def _ultra_high_precision_integration(
@@ -838,7 +838,7 @@ class RevolutionaryPredictionSystem:
                             correct += 1
                         total += 1
 
-                except:
+                except Exception:
                     continue
 
             if total < 10:

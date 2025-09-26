@@ -264,7 +264,7 @@ class FinalMAPEBreakthrough:
             else:
                 return 0.0
 
-        except:
+        except Exception:
             return 0.0
 
 

@@ -141,7 +141,7 @@ class PrecisionOptimizationSystem:
                     correct_predictions += 1
                 total_predictions += 1
 
-            except:
+            except Exception:
                 continue
 
         if total_predictions < 3:
@@ -175,7 +175,7 @@ class PrecisionOptimizationSystem:
                     correct_predictions += 1
                 total_predictions += 1
 
-            except:
+            except Exception:
                 continue
 
         if total_predictions < 5:
@@ -347,7 +347,7 @@ class PrecisionOptimizationSystem:
                         total_correct += 1
                     total_tests += 1
 
-            except:
+            except Exception:
                 continue
 
         return total_correct / total_tests if total_tests > 0 else 0

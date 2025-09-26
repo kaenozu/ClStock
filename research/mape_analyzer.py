@@ -156,7 +156,7 @@ class MAPEAnalyzer:
                 return -0.006
             else:
                 return 0.001
-        except:
+        except Exception:
             return 0.001
 
     def create_improved_predictor(self, analysis_results: Dict) -> "ImprovedPredictor":
@@ -314,7 +314,7 @@ class ImprovedPredictor:
             else:
                 return 0.0  # 中立
 
-        except:
+        except Exception:
             return 0.0
 
 

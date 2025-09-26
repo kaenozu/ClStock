@@ -274,7 +274,7 @@ class PersonalDashboard:
                     current_price = (
                         stock_data["Close"].iloc[-1] if not stock_data.empty else 0
                     )
-                except:
+                except Exception:
                     current_price = 0
 
                 enhanced_item = item.copy()
@@ -405,7 +405,7 @@ async def add_to_portfolio(request: Request):
     try:
         stock_data = dashboard.data_provider.get_stock_data(data["symbol"], "1d")
         current_price = stock_data["Close"].iloc[-1] if not stock_data.empty else 0
-    except:
+    except Exception:
         current_price = data.get("buy_price", 0)
 
     cursor.execute(

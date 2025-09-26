@@ -446,7 +446,7 @@ class RealTimeTradingSystem:
                     current_price = current_data["Close"].iloc[-1]
                     position_value = position["size"] * current_price
                     total_value += position_value
-            except:
+            except Exception:
                 continue
 
         total_return = (

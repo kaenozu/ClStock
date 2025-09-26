@@ -242,8 +242,8 @@ def display_system_stats(hybrid_system):
             print(f"総予測回数: {stats['total_predictions']}")
             print(f"平均予測時間: {stats.get('avg_prediction_time', 0):.3f}秒")
             print(f"平均信頼度: {stats.get('avg_confidence', 0):.2f}")
-    except:
-        pass
+    except Exception as e:
+        print(f"\n{Colors.RED}統計情報の表示中にエラー: {e}{Colors.ENDC}")
 
 
 def run_precision_87():

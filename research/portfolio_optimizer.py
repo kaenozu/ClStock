@@ -238,7 +238,7 @@ class PortfolioOptimizer:
                 weighted_returns = recent_returns * config["weight"]
                 portfolio_returns.append(weighted_returns)
 
-            except:
+            except Exception:
                 continue
 
         if portfolio_returns:

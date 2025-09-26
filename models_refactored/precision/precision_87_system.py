@@ -208,7 +208,7 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
             loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
             rs = gain / loss
             return 100 - (100 / (1 + rs))
-        except:
+        except Exception:
             return pd.Series([50] * len(prices), index=prices.index)
 
     def _integrate_87_predictions(

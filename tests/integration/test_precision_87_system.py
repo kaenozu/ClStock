@@ -304,7 +304,7 @@ def main():
             try:
                 json.dumps(value)
                 serializable_results[key] = value
-            except:
+            except TypeError:
                 serializable_results[key] = str(value)
 
         with open(output_file, "w", encoding="utf-8") as f:

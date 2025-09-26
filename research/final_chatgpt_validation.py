@@ -164,7 +164,7 @@ class FinalChatGPTValidation:
                 print(f"{symbol}: 方向性精度 {accuracy:.1f}%")
                 all_accuracies.append(accuracy)
 
-            except:
+            except Exception:
                 continue
 
         if all_accuracies:

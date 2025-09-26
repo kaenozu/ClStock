@@ -187,7 +187,7 @@ def performance_test():
             data = data_provider.get_stock_data(symbol, "3mo")
             if len(data) >= 50:
                 result = detector.detect_846_pattern(data)
-        except:
+        except Exception:
             continue
 
     end_time = time.time()
