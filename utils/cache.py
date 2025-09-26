@@ -6,8 +6,9 @@
 import pickle
 import hashlib
 import time
+import threading
 from pathlib import Path
-from typing import Any, Optional, Callable
+from typing import Any, Optional, Callable, Dict
 from functools import wraps
 import pandas as pd
 import logging
@@ -16,12 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 class DataCache:
-    """シンプルなファイルベースキャッシュ"""
+    """ファイルベースのデータキャッシュ"""
 
     def __init__(
         self,
         cache_dir: str = "cache",
         default_ttl: int = 3600,
+        max_size: Optional[int] = None,
         auto_cleanup: bool = True,
         cleanup_interval: int = 3600,
     ):
@@ -29,23 +31,25 @@ class DataCache:
         Args:
             cache_dir: キャッシュディレクトリ
             default_ttl: デフォルトTTL（秒）
+            max_size: 最大キャッシュサイズ（エントリ数）
             auto_cleanup: 自動クリーンアップを有効化
             cleanup_interval: 自動クリーンアップ間隔（秒）
         """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
         self.default_ttl = default_ttl
+        self.max_size = max_size
         self.auto_cleanup = auto_cleanup
         self.cleanup_interval = cleanup_interval
         self._shutdown_event = None
         self.cleanup_thread = None
+        self._lock = threading.RLock()  # スレッドセーフにするためのロック
 
         if self.auto_cleanup:
             self._start_cleanup_thread()
 
     def _start_cleanup_thread(self):
         """自動クリーンアップスレッドを開始"""
-        import threading
 
         self._shutdown_event = threading.Event()
         self.cleanup_thread = threading.Thread(target=self._cleanup_worker, daemon=True)
@@ -94,34 +98,54 @@ class DataCache:
     def _get_cache_path(self, cache_key: str) -> Path:
         """キャッシュファイルパスを取得"""
         return self.cache_dir / f"{cache_key}.cache"
+    
+    def _validate_cache_entry(self, cache_data: Dict[str, Any], cache_key: str) -> bool:
+        """キャッシュエントリーの検証"""
+        required_keys = ["value", "expires_at", "created_at"]
+        for key in required_keys:
+            if key not in cache_data:
+                logger.warning(f"Cache entry missing required key '{key}' for key {cache_key}")
+                return False
+        
+        if not isinstance(cache_data["expires_at"], (int, float)):
+            logger.warning(f"Invalid expires_at type for key {cache_key}")
+            return False
+        
+        return True
 
     def get(self, cache_key: str) -> Optional[Any]:
         """キャッシュから値を取得"""
         cache_path = self._get_cache_path(cache_key)
 
-        if not cache_path.exists():
-            return None
-
-        try:
-            with open(cache_path, "rb") as f:
-                cache_data = pickle.load(f)
-
-            # TTLチェック
-            if time.time() > cache_data["expires_at"]:
-                cache_path.unlink()  # 期限切れファイルを削除
+        with self._lock:  # スレッドセーフにアクセス
+            if not cache_path.exists():
                 return None
 
-            logger.debug(f"Cache hit: {cache_key}")
-            return cache_data["value"]
+            try:
+                with open(cache_path, "rb") as f:
+                    cache_data = pickle.load(f)
 
-        except Exception as e:
-            logger.warning(f"Cache read error for {cache_key}: {e}")
-            # 破損したキャッシュファイルを削除
-            if cache_path.exists():
-                cache_path.unlink()
-            return None
+                # キャッシュエントリーの検証
+                if not self._validate_cache_entry(cache_data, cache_key):
+                    cache_path.unlink()
+                    return None
 
-    def set(self, cache_key: str, value: Any, ttl: Optional[int] = None) -> None:
+                # TTLチェック
+                if time.time() > cache_data["expires_at"]:
+                    cache_path.unlink()  # 期限切れファイルを削除
+                    return None
+
+                logger.debug(f"Cache hit: {cache_key}")
+                return cache_data["value"]
+
+            except Exception as e:
+                logger.warning(f"Cache read error for {cache_key}: {e}")
+                # 破損したキャッシュファイルを削除
+                if cache_path.exists():
+                    cache_path.unlink()
+                return None
+
+    def set(self, cache_key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """値をキャッシュに保存"""
         if ttl is None:
             ttl = self.default_ttl
@@ -130,57 +154,112 @@ class DataCache:
             "value": value,
             "expires_at": time.time() + ttl,
             "created_at": time.time(),
+            "last_access": time.time(),
         }
 
         cache_path = self._get_cache_path(cache_key)
 
-        try:
-            with open(cache_path, "wb") as f:
-                pickle.dump(cache_data, f)
-            logger.debug(f"Cache set: {cache_key} (TTL: {ttl}s)")
-        except Exception as e:
-            logger.warning(f"Cache write error for {cache_key}: {e}")
+        with self._lock:  # スレッドセーフにアクセス
+            try:
+                # 最大サイズ制限の確認
+                if self.max_size:
+                    current_files = list(self.cache_dir.glob("*.cache"))
+                    if len(current_files) >= self.max_size:
+                        # LRU (Least Recently Used) で削除
+                        oldest_file = min(current_files, key=lambda f: f.stat().st_mtime)
+                        oldest_file.unlink()
+                        logger.debug(f"Removed oldest cache entry: {oldest_file.name}")
 
-    def delete(self, cache_key: str) -> None:
+                with open(cache_path, "wb") as f:
+                    pickle.dump(cache_data, f)
+                logger.debug(f"Cache set: {cache_key} (TTL: {ttl}s)")
+                return True
+            except Exception as e:
+                logger.warning(f"Cache write error for {cache_key}: {e}")
+                return False
+
+    def delete(self, cache_key: str) -> bool:
         """キャッシュを削除"""
         cache_path = self._get_cache_path(cache_key)
-        if cache_path.exists():
-            cache_path.unlink()
-            logger.debug(f"Cache deleted: {cache_key}")
+        with self._lock:  # スレッドセーフにアクセス
+            if cache_path.exists():
+                cache_path.unlink()
+                logger.debug(f"Cache deleted: {cache_key}")
+                return True
+            return False
 
-    def clear(self) -> None:
+    def clear(self) -> int:
         """全キャッシュを削除"""
-        for cache_file in self.cache_dir.glob("*.cache"):
-            cache_file.unlink()
-        logger.info("All cache cleared")
+        count = 0
+        with self._lock:  # スレッドセーフにアクセス
+            for cache_file in self.cache_dir.glob("*.cache"):
+                cache_file.unlink()
+                count += 1
+        logger.info(f"All cache cleared: {count} files")
+        return count
 
     def cleanup_expired(self) -> int:
         """期限切れキャッシュを削除"""
         current_time = time.time()
         deleted_count = 0
 
-        for cache_file in self.cache_dir.glob("*.cache"):
-            try:
-                with open(cache_file, "rb") as f:
-                    cache_data = pickle.load(f)
+        with self._lock:  # スレッドセーフにアクセス
+            for cache_file in self.cache_dir.glob("*.cache"):
+                try:
+                    with open(cache_file, "rb") as f:
+                        cache_data = pickle.load(f)
 
-                if current_time > cache_data["expires_at"]:
+                    # キャッシュエントリーの検証
+                    if not self._validate_cache_entry(cache_data, cache_file.stem):
+                        cache_file.unlink()
+                        deleted_count += 1
+                        continue
+
+                    if current_time > cache_data["expires_at"]:
+                        cache_file.unlink()
+                        deleted_count += 1
+
+                except Exception:
+                    # 破損ファイルも削除
                     cache_file.unlink()
                     deleted_count += 1
 
-            except Exception:
-                # 破損ファイルも削除
-                cache_file.unlink()
-                deleted_count += 1
-
         if deleted_count > 0:
-            logger.info(f"Cleaned up {deleted_count} expired cache files")
+            logger.info(f"Cleaned up {deleted_count} expired/invalid cache files")
 
         return deleted_count
+    
+    def get_stats(self) -> Dict[str, Union[int, float, bool]]:
+        """キャッシュ統計情報を取得"""
+        with self._lock:  # スレッドセーフにアクセス
+            files = list(self.cache_dir.glob("*.cache"))
+            total_size = sum(f.stat().st_size for f in files)
+            
+            # 有効期限切れのファイル数をカウント
+            expired_count = 0
+            current_time = time.time()
+            for f in files:
+                try:
+                    with open(f, "rb") as file:
+                        cache_data = pickle.load(file)
+                    if current_time > cache_data.get("expires_at", 0):
+                        expired_count += 1
+                except:
+                    # 読み取りエラーも無効なファイルとしてカウント
+                    expired_count += 1
+            
+            return {
+                "total_files": len(files),
+                "valid_files": len(files) - expired_count,
+                "expired_files": expired_count,
+                "total_size_bytes": total_size,
+                "max_size_limit": self.max_size,
+                "auto_cleanup_enabled": self.auto_cleanup,
+            }
 
 
 # グローバルキャッシュインスタンス（30分間隔で自動クリーンアップ）
-_cache = DataCache(auto_cleanup=True, cleanup_interval=1800)
+_cache = DataCache(auto_cleanup=True, cleanup_interval=1800, max_size=1000)
 
 
 def cached(ttl: Optional[int] = None, cache_instance: Optional[DataCache] = None):
@@ -229,14 +308,19 @@ def get_cache() -> DataCache:
     return _cache
 
 
-def clear_cache():
+def clear_cache() -> int:
     """グローバルキャッシュをクリア"""
-    _cache.clear()
+    return _cache.clear()
 
 
-def cleanup_cache():
+def cleanup_cache() -> int:
     """期限切れキャッシュをクリーンアップ"""
     return _cache.cleanup_expired()
+
+
+def get_cache_stats() -> Dict[str, Union[int, float, bool]]:
+    """キャッシュ統計情報を取得"""
+    return _cache.get_stats()
 
 
 def shutdown_cache():

@@ -1,760 +1,454 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-フルオート投資システム
-完全自動化：TSE4000最適化 → 学習・訓練 → 売買タイミング提示
-"""
-
-import logging
-import numpy as np
-import pandas as pd
-import os
-import json
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass
 import asyncio
+import logging
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import List, Dict, Any, Optional
 
-# 既存システムのインポート
-from tse_4000_optimizer import TSE4000Optimizer
-from models_new.hybrid.hybrid_predictor import HybridStockPredictor
-from models_new.hybrid.prediction_modes import PredictionMode
-from models_new.advanced.market_sentiment_analyzer import MarketSentimentAnalyzer
-from models_new.advanced.trading_strategy_generator import (
-    AutoTradingStrategyGenerator,
-    ActionType,
-)
-from models_new.advanced.risk_management_framework import RiskManager
+import yfinance as yf
+
 from data.stock_data import StockDataProvider
+from ml_models.hybrid_predictor import HybridPredictor
+from optimization.tse_optimizer import TSEPortfolioOptimizer
+from sentiment.sentiment_analyzer import SentimentAnalyzer
+from strategies.strategy_generator import StrategyGenerator
+from risk.risk_manager import RiskManager
+from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem
+from data_retrieval_script_generator import generate_colab_data_retrieval_script
 
 
-@dataclass
+# ログ設定
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
 class AutoRecommendation:
-    """自動投資推奨"""
-
-    symbol: str
-    company_name: str
-    action: ActionType
-    entry_price: float
-    target_price: float
-    stop_loss: float
-    buy_date: datetime
-    sell_date: datetime
-    expected_return: float
-    confidence: float
-    reasoning: str
-    risk_level: str
+    """自動推奨結果クラス"""
+    def __init__(self, symbol: str, company_name: str, entry_price: float, target_price: float,
+                 stop_loss: float, expected_return: float, confidence: float, risk_level: str,
+                 buy_date: datetime, sell_date: datetime, reasoning: str):
+        self.symbol = symbol
+        self.company_name = company_name
+        self.entry_price = entry_price
+        self.target_price = target_price
+        self.stop_loss = stop_loss
+        self.expected_return = expected_return
+        self.confidence = confidence
+        self.risk_level = risk_level
+        self.buy_date = buy_date
+        self.sell_date = sell_date
+        self.reasoning = reasoning
 
 
 class FullAutoInvestmentSystem:
-    """
-    フルオート投資システム
-
-    特徴:
-    - 完全自動化（ユーザー判断不要）
-    - TSE4000最適化自動実行
-    - 学習・訓練自動実施
-    - 売買タイミング自動算出
-    """
+    """完全自動投資推奨システム"""
 
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
-
-        # サブシステム初期化
-        self.tse_optimizer = TSE4000Optimizer()
-        self.hybrid_predictor = HybridStockPredictor(
-            enable_cache=True,
-            enable_adaptive_optimization=True,
-            enable_streaming=True,
-            enable_multi_gpu=True,
-            enable_real_time_learning=True,
-        )
-        self.sentiment_analyzer = MarketSentimentAnalyzer()
-        self.strategy_generator = AutoTradingStrategyGenerator()
-        self.risk_manager = RiskManager()
         self.data_provider = StockDataProvider()
-
-        # 自動化設定
-        self.auto_settings = {
-            "portfolio_size": 10,  # 推奨銘柄数
-            "investment_period_days": 30,  # 投資期間（日）
-            "min_confidence": 0.7,  # 最小信頼度
-            "max_risk_score": 2.5,  # 最大リスクスコア
-            "rebalance_threshold": 0.1,  # リバランス閾値
-        }
-
-        self.logger.info("FullAutoInvestmentSystem initialized")
+        self.predictor = HybridPredictor()
+        self.optimizer = TSEPortfolioOptimizer()
+        self.sentiment_analyzer = SentimentAnalyzer()
+        self.strategy_generator = StrategyGenerator()
+        self.risk_manager = RiskManager()
+        self.medium_system = MediumTermPredictionSystem()
+        self.failed_symbols = set()  # データ取得に失敗した銘柄を記録
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     async def run_full_auto_analysis(self) -> List[AutoRecommendation]:
-        """フルオート分析実行"""
-        self.logger.info("🚀 フルオート投資システム開始")
-
-        # 市場時間チェック
-        if not self._show_market_hours_warning():
-            print("処理を中断しました。")
-            return []
-
-        # 進捗表示の初期化
-        total_steps = 4
-        current_step = 0
-
-        def show_progress(step_name: str, step_num: int):
-            nonlocal current_step
-            current_step = step_num
-            progress = (current_step / total_steps) * 100
-            print(
-                f"\n[進捗] [{current_step}/{total_steps}] ({progress:.0f}%) - {step_name}"
-            )
+        """完全自動分析実行"""
+        try:
+            print("[開始] 完全自動投資推奨分析を開始します...")
+            
+            # 1. 東証4000銘柄リストを取得
+            print("[ステップ 1/4] (25%) - TSE4000銘柄リストを取得中...")
             print("=" * 60)
-
-        try:
-            # Step 1: TSE4000最適化（必要に応じて）
-            show_progress("TSE4000最適化実行中...", 1)
-            optimized_symbols = await self._auto_tse4000_optimization()
-            print(f"[完了] 最適化完了: {len(optimized_symbols)}銘柄選出")
-
-            # Step 2: 学習・訓練自動実施
-            show_progress("学習・訓練実行中...", 2)
-            await self._auto_learning_and_training(optimized_symbols)
-            print("[完了] 学習・訓練完了")
-
-            # Step 3: 総合分析と推奨生成
-            show_progress("総合分析・推奨生成中...", 3)
-            recommendations = await self._generate_auto_recommendations(
-                optimized_symbols
-            )
-            print(f"[完了] 推奨生成完了: {len(recommendations)}件")
-
-            # Step 4: 結果表示
-            show_progress("結果表示", 4)
+            all_tickers = self.data_provider.get_all_tickers()
+            print(f"[情報] 取得銘柄数: {len(all_tickers)}")
+            
+            if not all_tickers:
+                print("[警告] 東証4000銘柄リストが空です。処理を終了します。")
+                return []
+            
+            # 2. 株価データを取得・前処理
+            print("[ステップ 2/4] (50%) - 株価データを取得・前処理中...")
+            print("=" * 60)
+            processed_data = {}
+            failed_count = 0
+            
+            for i, ticker_info in enumerate(all_tickers):
+                symbol = ticker_info.symbol
+                try:
+                    data = self.data_provider.get_stock_data(symbol, period="2y")
+                    if data is not None and not data.empty:
+                        processed_data[symbol] = data
+                    else:
+                        self.failed_symbols.add(symbol)  # データ取得失敗を記録
+                        failed_count += 1
+                        logger.warning(f"データ取得失敗: {symbol} (取得データが空またはNone)")
+                    
+                    # 進捗表示 (10銘柄ごと)
+                    if (i + 1) % 10 == 0 or (i + 1) == len(all_tickers):
+                        progress = ((i + 1) / len(all_tickers)) * 100
+                        print(f"  進捗: {progress:.0f}% ({i+1}/{len(all_tickers)}) - 失敗: {failed_count}銘柄")
+                        
+                except Exception as e:
+                    self.failed_symbols.add(symbol)  # データ取得失敗を記録
+                    failed_count += 1
+                    logger.error(f"データ取得中にエラーが発生しました: {symbol} - {e}")
+            
+            print(f"[完了] データ取得処理完了 - 成功: {len(processed_data)}銘柄, 失敗: {failed_count}銘柄")
+            
+            # 3. ポートフォリオ最適化
+            print("[ステップ 3/4] (75%) - ポートフォリオ最適化を実行中...")
+            print("=" * 60)
+            try:
+                optimized_portfolio = self.optimizer.optimize(processed_data)
+                
+                if not optimized_portfolio or 'selected_stocks' not in optimized_portfolio:
+                    print("[警告] ポートフォリオ最適化に失敗しました。空の結果が返されました。")
+                    # processed_data が空でも、self.failed_symbols に記録された銘柄のためのスクリプト生成を試みるために、
+                    # _display_recommendations を呼び出す。
+                    recommendations = []
+                else:
+                    selected_stocks = optimized_portfolio['selected_stocks']
+                    print(f"[情報] 最適化完了 - 選択銘柄数: {len(selected_stocks)}")
+                    
+                    if not selected_stocks:
+                        print("[警告] 最適化結果に選択銘柄がありません。")
+                        recommendations = []
+                    else:
+                        # 4. 個別銘柄分析と推奨生成
+                        print("[ステップ 4/4] (100%) - 個別銘柄分析と推奨生成中...")
+                        print("=" * 60)
+                        recommendations = []
+                        analysis_failed_count = 0
+                        
+                        for symbol in selected_stocks:
+                            try:
+                                recommendation = await self._analyze_single_stock(symbol, processed_data.get(symbol))
+                                if recommendation:
+                                    recommendations.append(recommendation)
+                                else:
+                                    analysis_failed_count += 1
+                                    
+                            except Exception as e:
+                                analysis_failed_count += 1
+                                logger.error(f"個別銘柄分析中にエラーが発生しました: {symbol} - {e}")
+                        
+                        print(f"[完了] 個別銘柄分析完了 - 成功: {len(recommendations)}銘柄, 失敗: {analysis_failed_count}銘柄")
+            
+            except Exception as e:
+                print(f"[エラー] ポートフォリオ最適化中に予期せぬエラーが発生しました: {e}")
+                logger.exception("ポートフォリオ最適化エラーの詳細:")
+                recommendations = []
+            
+            # 結果表示
+            # processed_data が空でも、self.failed_symbols に記録された銘柄のためのスクリプト生成を試みるために、
+            # _display_recommendations を呼び出す。
+            # recommendations が空でも _display_recommendations は処理を実行し、
+            # self._generate_data_retrieval_script() を呼び出す。
             self._display_recommendations(recommendations)
-            print("[完了] フルオート分析完了！")
-
             return recommendations
-
+            
         except Exception as e:
-            print(f"\n[エラー] フルオート分析失敗: {str(e)}")
-            self.logger.error(f"フルオート分析失敗: {str(e)}")
+            print(f"[致命的エラー] 完全自動分析プロセスで予期せぬエラーが発生しました: {e}")
+            logger.exception("完全自動分析プロセスのエラー詳細:")
             return []
 
-    async def _auto_tse4000_optimization(self) -> List[str]:
-        """TSE4000自動最適化（強化版エラーハンドリング）"""
-        self.logger.info("📊 TSE4000最適化実行中...")
-        max_retries = 3
-        retry_count = 0
-
-        while retry_count < max_retries:
-            try:
-                # 前回最適化からの経過時間チェック
-                need_optimization = self._check_optimization_necessity()
-
-                if need_optimization:
-                    print(
-                        f"[実行] 最適化が必要です。実行中... (試行 {retry_count + 1}/{max_retries})"
-                    )
-
-                    # TSE4000最適化実行（タイムアウト付き）
-                    try:
-                        optimization_result = await asyncio.wait_for(
-                            asyncio.create_task(self._run_tse_optimization_async()),
-                            timeout=300,  # 5分タイムアウト
-                        )
-                    except asyncio.TimeoutError:
-                        print("[タイムアウト] TSE4000最適化がタイムアウトしました")
-                        raise Exception("TSE4000最適化タイムアウト")
-
-                    if (
-                        optimization_result
-                        and "optimized_portfolio" in optimization_result
-                    ):
-                        symbols = [
-                            stock.symbol
-                            for stock in optimization_result["optimized_portfolio"]
-                        ]
-                        selected_symbols = symbols[
-                            : self.auto_settings["portfolio_size"]
-                        ]
-
-                        if len(selected_symbols) >= 5:  # 最低5銘柄は必要
-                            # 最適化履歴を記録
-                            self._save_optimization_history(selected_symbols)
-
-                            print(f"[完了] 最適化完了: {len(selected_symbols)}銘柄選出")
-                            self.logger.info(
-                                f"✅ 最適化完了: {len(selected_symbols)}銘柄選出"
-                            )
-                            return selected_symbols
-                        else:
-                            raise Exception(
-                                f"選出銘柄数不足: {len(selected_symbols)}銘柄"
-                            )
-                    else:
-                        raise Exception("最適化結果が無効または空です")
-
-                else:
-                    print("[使用] 前回の最適化結果を使用")
-                    self.logger.info("📋 前回の最適化結果を使用")
-                    # 前回の結果を読み込み
-                    previous_symbols = self._load_previous_optimization()
-                    if len(previous_symbols) >= 5:
-                        return previous_symbols
-                    else:
-                        print("[警告] 前回結果も不足。デフォルト銘柄使用")
-                        return self._get_default_symbols()
-
-            except Exception as e:
-                retry_count += 1
-                error_msg = str(e)
-                print(
-                    f"[エラー] 最適化エラー (試行 {retry_count}/{max_retries}): {error_msg}"
-                )
-                self.logger.warning(
-                    f"TSE4000最適化エラー (試行 {retry_count}): {error_msg}"
-                )
-
-                if retry_count < max_retries:
-                    print(f"[待機] {5}秒後に再試行します...")
-                    await asyncio.sleep(5)
-                else:
-                    print("[安全] 最大試行回数到達。デフォルト銘柄を使用します")
-                    self.logger.error(f"TSE4000最適化最終失敗: {error_msg}")
-                    return self._get_default_symbols()
-
-        return self._get_default_symbols()
-
-    async def _run_tse_optimization_async(self):
-        """TSE4000最適化の非同期実行"""
-        # 同期的なTSE4000最適化を非同期で実行
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None, self.tse_optimizer.run_comprehensive_optimization
-        )
-
-    def _check_market_hours(self) -> Tuple[bool, str]:
-        """市場時間チェック"""
+    async def _analyze_single_stock(self, symbol: str, data) -> Optional[AutoRecommendation]:
+        """個別銘柄分析"""
         try:
-            current_time = datetime.now()
-            weekday = current_time.weekday()  # 0=月曜, 6=日曜
-            hour = current_time.hour
-            minute = current_time.minute
-
-            # 土日は市場休業
-            if weekday >= 5:  # 土曜日・日曜日
-                next_monday = current_time + timedelta(days=(7 - weekday))
-                return (
-                    False,
-                    f"市場休業日です。次回開場: {next_monday.strftime('%m/%d（月）9:00')}",
-                )
-
-            # 平日の取引時間チェック
-            # 東証: 9:00-11:30（前場）、12:30-15:00（後場）
-            current_minutes = hour * 60 + minute
-
-            # 前場: 9:00-11:30 (540-690分)
-            morning_start = 9 * 60  # 540分
-            morning_end = 11 * 60 + 30  # 690分
-
-            # 後場: 12:30-15:00 (750-900分)
-            afternoon_start = 12 * 60 + 30  # 750分
-            afternoon_end = 15 * 60  # 900分
-
-            if morning_start <= current_minutes <= morning_end:
-                return True, "前場取引時間中"
-            elif afternoon_start <= current_minutes <= afternoon_end:
-                return True, "後場取引時間中"
-            elif current_minutes < morning_start:
-                return False, f"市場開場前です。開場時刻: 9:00"
-            elif morning_end < current_minutes < afternoon_start:
-                return False, f"昼休み時間です。後場開始: 12:30"
-            else:  # current_minutes > afternoon_end
-                next_day = current_time + timedelta(days=1)
-                if next_day.weekday() >= 5:  # 翌日が土日
-                    next_monday = current_time + timedelta(
-                        days=(7 - current_time.weekday())
-                    )
-                    return (
-                        False,
-                        f"市場終了後です。次回開場: {next_monday.strftime('%m/%d（月）9:00')}",
-                    )
-                else:
-                    return (
-                        False,
-                        f"市場終了後です。次回開場: {next_day.strftime('%m/%d 9:00')}",
-                    )
-
-        except Exception as e:
-            self.logger.warning(f"市場時間チェックエラー: {e}")
-            return True, "市場時間チェック無効（処理継続）"
-
-    def _show_market_hours_warning(self) -> bool:
-        """市場時間外の警告表示"""
-        is_open, message = self._check_market_hours()
-
-        if not is_open:
-            print(f"\n[警告] {message}")
-            print("[注意] 市場時間外でも分析は実行できますが、")
-            print("       実際の取引は市場開場時間内に行ってください。")
-
-            while True:
-                choice = input("\n続行しますか？ (y/n): ").strip().lower()
-                if choice in ["y", "yes", "はい"]:
-                    return True
-                elif choice in ["n", "no", "いいえ"]:
-                    return False
-                else:
-                    print("yまたはnで入力してください。")
-        else:
-            print(f"[OK] {message}")
-            return True
-
-    def _check_optimization_necessity(self) -> bool:
-        """最適化必要性判定"""
-        try:
-            # 最適化履歴ファイルを確認
-            history_file = "tse4000_optimization_history.json"
-
-            if not os.path.exists(history_file):
-                # 履歴ファイルがない場合は最適化実行
-                return True
-
-            with open(history_file, "r", encoding="utf-8") as f:
-                history = json.load(f)
-
-            if not history or "last_optimization" not in history:
-                return True
-
-            # 前回最適化日時を取得
-            last_optimization = datetime.fromisoformat(history["last_optimization"])
-            current_time = datetime.now()
-
-            # 前回最適化から経過日数
-            days_since_last = (current_time - last_optimization).days
-
-            # 3日以上経過している場合は最適化実行
-            if days_since_last >= 3:
-                return True
-
-            # 月曜日または金曜日で前日以降に最適化していない場合
-            weekday = current_time.weekday()
-            if weekday in [0, 4]:  # 月曜・金曜
-                # 前回最適化が昨日より前なら実行
-                if days_since_last >= 1:
-                    return True
-
-            return False
-
-        except Exception as e:
-            self.logger.warning(f"最適化履歴確認エラー: {e}")
-            # エラー時は安全のため最適化実行
-            return True  # 月曜・金曜
-
-    def _save_optimization_history(self, symbols: List[str]):
-        """最適化履歴を保存"""
-        try:
-            history = {
-                "last_optimization": datetime.now().isoformat(),
-                "symbols": symbols,
-                "symbol_count": len(symbols),
-                "optimization_type": "tse4000_auto",
-            }
-
-            history_file = "tse4000_optimization_history.json"
-            with open(history_file, "w", encoding="utf-8") as f:
-                json.dump(history, f, ensure_ascii=False, indent=2)
-
-            self.logger.info(f"最適化履歴保存: {len(symbols)}銘柄")
-
-        except Exception as e:
-            self.logger.error(f"履歴保存エラー: {e}")
-
-    def _load_previous_optimization(self) -> List[str]:
-        """前回の最適化結果を読み込み"""
-        try:
-            history_file = "tse4000_optimization_history.json"
-
-            if not os.path.exists(history_file):
-                self.logger.info("履歴ファイルなし。デフォルト銘柄使用")
-                return self._get_default_symbols()
-
-            with open(history_file, "r", encoding="utf-8") as f:
-                history = json.load(f)
-
-            if "symbols" in history and history["symbols"]:
-                symbols = history["symbols"]
-                self.logger.info(f"前回最適化結果読み込み: {len(symbols)}銘柄")
-                return symbols
-
-        except Exception as e:
-            self.logger.error(f"履歴読み込みエラー: {e}")
-
-        return self._get_default_symbols()
-
-    def _get_default_symbols(self) -> List[str]:
-        """デフォルト銘柄リスト"""
-        return [
-            "6758.T",  # ソニーグループ
-            "7203.T",  # トヨタ自動車
-            "8306.T",  # 三菱UFJ銀行
-            "4502.T",  # 武田薬品工業
-            "9984.T",  # ソフトバンクグループ
-            "6861.T",  # キーエンス
-            "7974.T",  # 任天堂
-            "4689.T",  # ヤフー
-            "8035.T",  # 東京エレクトロン
-            "6098.T",  # リクルートホールディングス
-        ]
-
-    async def _auto_learning_and_training(self, symbols: List[str]):
-        """自動学習・訓練実施"""
-        self.logger.info("🧠 学習・訓練自動実施中...")
-
-        try:
-            # 並列で各銘柄の学習実行
-            learning_tasks = []
-
-            for symbol in symbols:
-                task = self._learn_single_symbol(symbol)
-                learning_tasks.append(task)
-
-            # 並列実行
-            learning_results = await asyncio.gather(
-                *learning_tasks, return_exceptions=True
-            )
-
-            successful_learning = len(
-                [r for r in learning_results if not isinstance(r, Exception)]
-            )
-            self.logger.info(f"✅ 学習完了: {successful_learning}/{len(symbols)}銘柄")
-
-        except Exception as e:
-            self.logger.error(f"学習・訓練エラー: {str(e)}")
-
-    async def _learn_single_symbol(self, symbol: str) -> Dict[str, Any]:
-        """単一銘柄学習"""
-        try:
-            # 価格データ取得
-            price_data = self.data_provider.get_stock_data(symbol)
-
-            if price_data.empty:
-                return {"symbol": symbol, "status": "no_data"}
-
-            # 予測実行（学習効果込み）- 非同期で実行
-            loop = asyncio.get_event_loop()
-            prediction_result = await loop.run_in_executor(
-                None,
-                self.hybrid_predictor.predict,
-                symbol,
-                PredictionMode.RESEARCH_MODE,
-            )
-
-            # 実時間学習システムにデータ追加
-            if (
-                hasattr(self.hybrid_predictor, "real_time_learning_enabled")
-                and self.hybrid_predictor.real_time_learning_enabled
-            ):
-                market_data = {
-                    "symbol": symbol,
-                    "price": (
-                        price_data["Close"].iloc[-1] if "Close" in price_data else 1000
-                    ),
-                    "volume": (
-                        price_data["Volume"].iloc[-1]
-                        if "Volume" in price_data
-                        else 100000
-                    ),
-                    "timestamp": datetime.now(),
-                }
-                # 実時間学習も非同期で実行
-                if hasattr(self.hybrid_predictor, "process_real_time_market_data"):
-                    try:
-                        await loop.run_in_executor(
-                            None,
-                            self.hybrid_predictor.process_real_time_market_data,
-                            market_data,
-                        )
-                    except Exception as rt_error:
-                        self.logger.warning(f"実時間学習エラー {symbol}: {rt_error}")
-
-            return {
-                "symbol": symbol,
-                "status": "success",
-                "prediction": (
-                    prediction_result.prediction if prediction_result else None
-                ),
-            }
-
-        except Exception as e:
-            self.logger.error(f"銘柄{symbol}学習エラー: {str(e)}")
-            return {"symbol": symbol, "status": "error", "error": str(e)}
-
-    async def _generate_auto_recommendations(
-        self, symbols: List[str]
-    ) -> List[AutoRecommendation]:
-        """自動推奨生成"""
-        self.logger.info("🎯 投資推奨自動生成中...")
-
-        recommendations = []
-
-        try:
-            for symbol in symbols:
-                recommendation = await self._analyze_single_symbol(symbol)
-                if recommendation:
-                    recommendations.append(recommendation)
-
-            # リスク・リターンでソート
-            recommendations.sort(key=lambda x: x.expected_return, reverse=True)
-
-            self.logger.info(f"✅ 推奨生成完了: {len(recommendations)}銘柄")
-            return recommendations
-
-        except Exception as e:
-            self.logger.error(f"推奨生成エラー: {str(e)}")
-            return recommendations
-
-    async def _analyze_single_symbol(self, symbol: str) -> Optional[AutoRecommendation]:
-        """単一銘柄分析"""
-        try:
-            # 価格データ取得
-            price_data = self.data_provider.get_stock_data(symbol)
-
-            if price_data.empty:
+            if data is None or data.empty:
+                logger.warning(f"分析対象データが無効です: {symbol}")
                 return None
-
-            current_price = price_data["Close"].iloc[-1]
-
-            # 1. 予測実行 - 非同期で実行
-            loop = asyncio.get_event_loop()
-            prediction_result = await loop.run_in_executor(
-                None, self.hybrid_predictor.predict, symbol, PredictionMode.AUTO
-            )
-
-            if not prediction_result:
+            
+            # 1. 予測モデル適用
+            predictions = self.predictor.predict(data)
+            if not predictions or 'predicted_price' not in predictions:
+                logger.warning(f"{symbol}: 予測モデル適用失敗")
                 return None
-
-            # 2. センチメント分析
-            sentiment_result = self.sentiment_analyzer.analyze_comprehensive_sentiment(
-                symbol=symbol, price_data=price_data
+            
+            predicted_price = predictions['predicted_price']
+            current_price = data['Close'].iloc[-1]
+            
+            # 2. リスク分析
+            risk_analysis = self.risk_manager.analyze_risk(data, predictions)
+            if not risk_analysis:
+                logger.warning(f"{symbol}: リスク分析失敗")
+                return None
+            
+            # 3. 感情分析 (ニュース等はダミー)
+            sentiment_score = self.sentiment_analyzer.analyze_sentiment({"symbol": symbol})
+            
+            # 4. 戦略生成
+            strategy = self.strategy_generator.generate_strategy(
+                predictions, risk_analysis, sentiment_score, current_price
             )
-
-            # 3. 戦略生成
-            strategies = self.strategy_generator.generate_comprehensive_strategy(
-                symbol, price_data
-            )
-            signals = self.strategy_generator.generate_trading_signals(
-                symbol,
-                price_data,
-                sentiment_data={
-                    "current_sentiment": {"score": sentiment_result.sentiment_score}
-                },
-            )
-
-            # 4. リスク分析
-            portfolio_data = {"positions": {symbol: 100000}, "total_value": 100000}
-            risk_analysis = self.risk_manager.analyze_portfolio_risk(
-                portfolio_data, {symbol: price_data}
-            )
-
-            # 5. 売買タイミング計算
-            buy_timing, sell_timing = self._calculate_optimal_timing(
-                prediction_result, sentiment_result, signals
-            )
-
-            # 6. 総合判定
-            if self._should_recommend(
-                prediction_result, sentiment_result, risk_analysis
-            ):
-                return self._create_recommendation(
-                    symbol,
-                    current_price,
-                    prediction_result,
-                    sentiment_result,
-                    buy_timing,
-                    sell_timing,
-                    risk_analysis,
+            
+            # 5. 推奨情報構築
+            if strategy and 'entry_price' in strategy:
+                entry_price = strategy['entry_price']
+                target_price = strategy['target_price']
+                stop_loss = strategy['stop_loss']
+                
+                # 期待リターン計算
+                expected_return = (target_price - entry_price) / entry_price
+                
+                # 信頼度 (戦略スコアとリスクスコアから算出)
+                strategy_confidence = strategy.get('confidence_score', 0.5)
+                risk_adjusted_confidence = 1.0 - risk_analysis.risk_score  # リスクが低いほど信頼度高
+                confidence = (strategy_confidence + risk_adjusted_confidence) / 2
+                
+                # 理由付け (リスク分析と戦略から簡易生成)
+                reasoning = self._generate_reasoning(risk_analysis, strategy)
+                
+                # 買い日時・売り日時 (例: 即日買い、1ヶ月後売り)
+                buy_date = datetime.now()
+                sell_date = buy_date + timedelta(days=30)
+                
+                return AutoRecommendation(
+                    symbol=symbol,
+                    company_name=data.attrs.get('info', {}).get('longName', symbol),
+                    entry_price=entry_price,
+                    target_price=target_price,
+                    stop_loss=stop_loss,
+                    expected_return=expected_return,
+                    confidence=confidence,
+                    risk_level=risk_analysis.risk_level.value,
+                    buy_date=buy_date,
+                    sell_date=sell_date,
+                    reasoning=reasoning
                 )
-
+            else:
+                logger.warning(f"{symbol}: 戦略生成失敗")
+                return None
+                
+        except Exception as e:
+            logger.error(f"{symbol} 分析中にエラー発生: {e}")
             return None
 
-        except Exception as e:
-            self.logger.error(f"銘柄{symbol}分析エラー: {str(e)}")
-            return None
-
-    def _calculate_optimal_timing(
-        self, prediction, sentiment, signals
-    ) -> Tuple[datetime, datetime]:
-        """最適売買タイミング計算"""
-        current_time = datetime.now()
-
-        # 買いタイミング
-        if sentiment.sentiment_score > 0.3 and prediction.confidence > 0.7:
-            # ポジティブな場合は早めのエントリー
-            buy_date = current_time + timedelta(days=1)
-        elif sentiment.sentiment_score > 0:
-            # 軽微ポジティブなら2-3日様子見
-            buy_date = current_time + timedelta(days=2)
-        else:
-            # ネガティブなら1週間待機
-            buy_date = current_time + timedelta(days=7)
-
-        # 売りタイミング（投資期間ベース）
-        base_hold_period = self.auto_settings["investment_period_days"]
-
-        # 信頼度による調整
-        if prediction.confidence > 0.8:
-            hold_period = base_hold_period + 10  # 高信頼度なら長期保有
-        elif prediction.confidence < 0.6:
-            hold_period = base_hold_period - 10  # 低信頼度なら早期売却
-        else:
-            hold_period = base_hold_period
-
-        sell_date = buy_date + timedelta(days=hold_period)
-
-        return buy_date, sell_date
-
-    def _should_recommend(self, prediction, sentiment, risk_analysis) -> bool:
-        """推奨判定"""
-        # 最小信頼度チェック
-        if prediction.confidence < self.auto_settings["min_confidence"]:
-            return False
-
-        # リスクスコアチェック
-        if risk_analysis.total_risk_score > self.auto_settings["max_risk_score"]:
-            return False
-
-        # 予測価格上昇チェック
-        if prediction.prediction <= 0:
-            return False
-
-        return True
-
-    def _create_recommendation(
-        self,
-        symbol: str,
-        current_price: float,
-        prediction,
-        sentiment,
-        buy_timing: datetime,
-        sell_timing: datetime,
-        risk_analysis,
-    ) -> AutoRecommendation:
-        """推奨情報作成"""
-
-        # 目標価格（予測価格ベース）
-        target_price = prediction.prediction
-
-        # ストップロス（5%下）
-        stop_loss = current_price * 0.95
-
-        # 期待リターン計算
-        expected_return = (target_price - current_price) / current_price
-
-        # 企業名取得（簡略化）
-        company_name = self._get_company_name(symbol)
-
-        # 推奨理由生成
-        reasoning = self._generate_reasoning(prediction, sentiment, risk_analysis)
-
-        return AutoRecommendation(
-            symbol=symbol,
-            company_name=company_name,
-            action=ActionType.BUY,
-            entry_price=current_price,
-            target_price=target_price,
-            stop_loss=stop_loss,
-            buy_date=buy_timing,
-            sell_date=sell_timing,
-            expected_return=expected_return,
-            confidence=prediction.confidence,
-            reasoning=reasoning,
-            risk_level=risk_analysis.risk_level.value,
-        )
-
-    def _get_company_name(self, symbol: str) -> str:
-        """企業名取得"""
-        company_map = {
-            "6758.T": "ソニーグループ",
-            "7203.T": "トヨタ自動車",
-            "8306.T": "三菱UFJ銀行",
-            "4502.T": "武田薬品工業",
-            "9984.T": "ソフトバンクグループ",
-            "6861.T": "キーエンス",
-            "7974.T": "任天堂",
-            "4689.T": "ヤフー",
-            "8035.T": "東京エレクトロン",
-            "6098.T": "リクルートホールディングス",
-        }
-        return company_map.get(symbol, symbol)
-
-    def _generate_reasoning(self, prediction, sentiment, risk_analysis) -> str:
-        """推奨理由生成"""
+    def _generate_reasoning(self, risk_analysis, strategy) -> str:
+        """理由付け簡易生成"""
         reasons = []
-
-        # 予測ベースの理由
-        if prediction.confidence > 0.8:
-            reasons.append(f"高信頼度予測({prediction.confidence:.1%})")
-
-        # センチメントベースの理由
-        if sentiment.sentiment_score > 0.5:
-            reasons.append("強いポジティブセンチメント")
-        elif sentiment.sentiment_score > 0.2:
-            reasons.append("ポジティブセンチメント")
-
-        # リスクベースの理由
+        
+        # 予測からの期待リターン
+        if 'expected_return' in strategy and strategy['expected_return'] > 0.05:
+            reasons.append("高期待リターン")
+        elif 'expected_return' in strategy and strategy['expected_return'] > 0.02:
+            reasons.append("中期待リターン")
+            
+        # リスクレベルの低さ
         if risk_analysis.risk_level.value == "low":
             reasons.append("低リスク")
         elif risk_analysis.risk_level.value == "medium":
             reasons.append("中程度リスク")
-
+            
         if not reasons:
-            reasons.append("総合的判断により推奨")
-
+            reasons.append("独自分析に基づく推奨")
+            
         return " + ".join(reasons)
 
     def _display_recommendations(self, recommendations: List[AutoRecommendation]):
         """推奨結果表示"""
         if not recommendations:
-            print("\n[結果] 現在推奨できる銘柄がありません")
+            print("\n[情報] 現在の推奨銘柄がありません")
+            # recommendations が空でも、self.failed_symbols に記録された銘柄のためのスクリプト生成を試みる
+            # self._generate_data_retrieval_script() を呼び出す。
+        else:
+            # print(f"stdout encoding: {sys.stdout.encoding}, errors: {sys.stdout.errors}")
+            print(f"\n[結果] 完全自動投資推奨 ({len(recommendations)}銘柄)")
+            print("=" * 80)
+
+            for i, rec in enumerate(recommendations, 1):
+                print(f"\n--- 推奨 #{i} --- {rec.company_name} ({rec.symbol})")
+                print(f"  買い価格: ¥{rec.entry_price:,.0f}")
+                print(f"  目標価格: ¥{rec.target_price:,.0f}")
+                print(f"  ストップロス: ¥{rec.stop_loss:,.0f}")
+                print(f"  買い日時: {rec.buy_date.strftime('%Y年%m月%d日 %H時%M分')}")
+                print(f"  売り日時: {rec.sell_date.strftime('%Y年%m月%d日 %H時%M分')}")
+                print(f"  期待リターン: {rec.expected_return:.1%}")
+                print(f"  信頼度: {rec.confidence:.1%}")
+                print(f"  リスクレベル: {rec.risk_level}")
+                print(f"  理由: {rec.reasoning}")
+
+            print("\n" + "=" * 80)
+            print("[注意] 上記は参考情報です。投資判断はご自身で行ってください。")
+
+        # データ取得に失敗した銘柄がある場合、Google Colab用スクリプトを生成
+        self._generate_data_retrieval_script()
+
+    def _generate_data_retrieval_script(self):
+        """データ取得に失敗した銘柄用のGoogle Colabスクリプトを生成"""
+        # self.failed_symbols は、yfinanceでもCSVでもデータを取得できなかった銘柄のみを記録している
+        self.logger.info(f"_generate_data_retrieval_scriptが呼び出されました。self.failed_symbolsの内容: {self.failed_symbols}")
+        print(f"[デバッグ] _generate_data_retrieval_scriptが呼び出されました。self.failed_symbolsの内容: {self.failed_symbols}")
+        # self.failed_symbols が空の場合もログに出力
+        if not self.failed_symbols:
+            self.logger.info("_generate_data_retrieval_script: self.failed_symbols が空です。")
+            print("[情報] _generate_data_retrieval_script: self.failed_symbols が空です。")
             return
+        if self.failed_symbols:
+            self.logger.info(f"yfinance+CSVで最終的にデータ取得に失敗した銘柄数: {len(self.failed_symbols)}")
+            self.logger.info(f"yfinance+CSVで最終的に失敗: {list(self.failed_symbols)}")
+            print(f"[情報] yfinance+CSVで最終的にデータ取得に失敗した銘柄数: {len(self.failed_symbols)}")
+            print(f"[情報] yfinance+CSVで最終的に失敗: {list(self.failed_symbols)}")
 
-        print(f"\n[結果] フルオート投資推奨 ({len(recommendations)}銘柄)")
-        print("=" * 80)
+            try:
+                # from data_retrieval_script_generator import generate_colab_data_retrieval_script
 
-        for i, rec in enumerate(recommendations, 1):
-            print(f"\n【推奨 #{i}】{rec.company_name} ({rec.symbol})")
-            print(f"  買い価格: ¥{rec.entry_price:,.0f}")
-            print(f"  目標価格: ¥{rec.target_price:,.0f}")
-            print(f"  ストップロス: ¥{rec.stop_loss:,.0f}")
-            print(f"  買い時期: {rec.buy_date.strftime('%Y年%m月%d日 %H時頃')}")
-            print(f"  売り時期: {rec.sell_date.strftime('%Y年%m月%d日 %H時頃')}")
-            print(f"  期待リターン: {rec.expected_return:.1%}")
-            print(f"  信頼度: {rec.confidence:.1%}")
-            print(f"  リスクレベル: {rec.risk_level}")
-            print(f"  理由: {rec.reasoning}")
+                # スクリプト出力用のディレクトリを定義
+                script_output_dir = Path(\"data\") / \"retrieval_scripts\"
+                script_output_dir.mkdir(parents=True, exist_ok=True)  # ディレクトリがなければ作成
+                self.logger.info(f\"スクリプト出力ディレクトリを作成しました: {script_output_dir}\")
 
-        print("\n" + "=" * 80)
-        print("[注意] これらは予測に基づく推奨であり、投資は自己責任で行ってください")
+                # データ取得に失敗した銘柄のみを対象にする
+                # self.failed_symbols の内容を詳細にログに出力
+                self.logger.info(f"self.failed_symbols の内容 (repr): {repr(list(self.failed_symbols))}")
+                self.logger.info(f"self.failed_symbols の内容 (str): {list(self.failed_symbols)}")
+                for i, symbol in enumerate(self.failed_symbols):
+                    self.logger.info(f"  - 銘柄 #{i}: {repr(symbol)} (str: {symbol})")
+                self.logger.info("generate_colab_data_retrieval_scriptを呼び出します。")
+                try:
+                    generated_script = generate_colab_data_retrieval_script(
+                        missing_symbols=list(self.failed_symbols), # リストのまま渡す
+                        period="1y", # 必要に応じて変更
+                        output_dir="." # Colab内での出力先（デフォルト） 
+                    )
+                    self.logger.info("generate_colab_data_retrieval_scriptの呼び出しが完了しました。")
+                    self.logger.info(f"生成されたスクリプトの長さ: {len(generated_script)}")
+                    # 生成されたスクリプトの先頭と末尾の一部をログに出力（デバッグ用）
+                    if len(generated_script) > 200:
+                        self.logger.info(f"生成されたスクリプトの先頭200文字: {generated_script[:200]}")
+                        self.logger.info(f"生成されたスクリプトの末尾200文字: {generated_script[-200:]}")
+                    else:
+                        self.logger.info(f"生成されたスクリプトの内容: {generated_script}")
+                    # 生成されたスクリプトが空でないことを確認
+                    if not generated_script.strip():
+                        self.logger.warning("生成されたスクリプトが空です。")
+                        print("[警告] 生成されたスクリプトが空です。")
+                        return
+                except Exception as e:
+                    self.logger.error(f"generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました: {e}")
+                    self.logger.error(f"missing_symbolsの内容: {self.failed_symbols}")
+                    print(f"[エラー] generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました: {e}")
+                    print(f"[エラー] missing_symbolsの内容: {self.failed_symbols}")
+                    import traceback
+                    self.logger.error(f"generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました:\n{traceback.format_exc()}")
+                    return
+
+                # 生成されたスクリプトをファイルに保存 (エンコーディングエラー対策)
+                script_file_path = script_output_dir / "colab_data_fetcher.py"
+                self.logger.info(f"スクリプトファイルパス: {script_file_path}")
+                try:
+                    # Windows環境でのエンコーディング対応を強化
+                    with open(script_file_path, "w", encoding="utf-8-sig", errors="strict") as f:
+                        f.write(generated_script)
+                    self.logger.info(f"Google Colab用データ取得スクリプトを生成しました: {script_file_path}")
+                    print(f"[情報] Google Colab用データ取得スクリプトを生成しました: {script_file_path}")
+                except UnicodeEncodeError as e:
+                    self.logger.error(f"ファイル書き込み時にUnicodeエンコーディングエラーが発生しました: {e}")
+                    self.logger.error(f"エラーが発生したファイルパス: {script_file_path}")
+                    self.logger.error(f"生成されたスクリプトの内容 (先頭100文字): {generated_script[:100]}")
+                    print(f"[エラー] ファイル書き込み時にエンコーディングエラーが発生しました: {e}")
+                    print(f"[エラー] エラーが発生したファイルパス: {script_file_path}")
+                    print(f"[エラー] 生成されたスクリプトの内容 (先頭100文字): {generated_script[:100]}")
+                except Exception as e:
+                    self.logger.error(f"ファイル書き込み時に予期せぬエラーが発生しました: {e}")
+                    print(f"[エラー] ファイル書き込み時に予期せぬエラーが発生しました: {e}")
+
+            except Exception as e:
+                self.logger.error(f"Google Colab用データ取得スクリプトの生成中にエラーが発生しました: {e}")
+                print(f"[エラー] Google Colab用データ取得スクリプトの生成中にエラーが発生しました: {e}")
+
+                # スクリプト出力用のディレクトリを定義
+                script_output_dir = Path(\"data\") / \"retrieval_scripts\"
+                script_output_dir.mkdir(parents=True, exist_ok=True)  # ディレクトリがなければ作成
+                self.logger.info(f\"スクリプト出力ディレクトリを作成しました: {script_output_dir}\")
+
+                # データ取得に失敗した銘柄のみを対象にする
+                # self.failed_symbols の内容を詳細にログに出力
+                self.logger.info(f\"self.failed_symbols の内容 (repr): {repr(list(self.failed_symbols))}\")
+                self.logger.info(f\"self.failed_symbols の内容 (str): {list(self.failed_symbols)}\")
+                for i, symbol in enumerate(self.failed_symbols):
+                    self.logger.info(f\"  - 銘柄 #{i}: {repr(symbol)} (str: {symbol})\")
+                self.logger.info(\"generate_colab_data_retrieval_scriptを呼び出します。\")
+                try:
+                    generated_script = generate_colab_data_retrieval_script(
+                        missing_symbols=list(self.failed_symbols), # リストのまま渡す
+                        period="1y", # 必要に応じて変更
+                        output_dir="." # Colab内での出力先（デフォルト） 
+                    )
+                    self.logger.info(\"generate_colab_data_retrieval_scriptの呼び出しが完了しました。\")
+                    self.logger.info(f\"生成されたスクリプトの長さ: {len(generated_script)}\")
+                    # 生成されたスクリプトの先頭と末尾の一部をログに出力（デバッグ用）
+                    if len(generated_script) > 200:
+                        self.logger.info(f\"生成されたスクリプトの先頭200文字: {generated_script[:200]}\")
+                        self.logger.info(f\"生成されたスクリプトの末尾200文字: {generated_script[-200:]}\")
+                    else:
+                        self.logger.info(f\"生成されたスクリプトの内容: {generated_script}\")
+                    # 生成されたスクリプトが空でないことを確認
+                    if not generated_script.strip():
+                        self.logger.warning(\"生成されたスクリプトが空です。\")
+                        print(\"[警告] 生成されたスクリプトが空です。\")
+                        return
+                except Exception as e:
+                    self.logger.error(f\"generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました: {e}\")
+                    self.logger.error(f\"missing_symbolsの内容: {self.failed_symbols}\")
+                    print(f\"[エラー] generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました: {e}\")
+                    print(f\"[エラー] missing_symbolsの内容: {self.failed_symbols}\")
+                    import traceback
+                    self.logger.error(f\"generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました:\\n{traceback.format_exc()}\")
+                    return
+
+                # 生成されたスクリプトをファイルに保存 (エンコーディングエラー対策)
+                script_file_path = script_output_dir / \"colab_data_fetcher.py\"
+                self.logger.info(f\"スクリプトファイルパス: {script_file_path}\")
+                try:
+                    # Windows環境でのエンコーディング対応を強化
+                    with open(script_file_path, \"w\", encoding=\"utf-8-sig\", errors=\"strict\") as f:
+                        f.write(generated_script)
+                    self.logger.info(f\"Google Colab用データ取得スクリプトを生成しました: {script_file_path}\")
+                    print(f\"[情報] Google Colab用データ取得スクリプトを生成しました: {script_file_path}\")
+                except UnicodeEncodeError as e:
+                    self.logger.error(f\"ファイル書き込み時にUnicodeエンコーディングエラーが発生しました: {e}\")
+                    self.logger.error(f\"エラーが発生したファイルパス: {script_file_path}\")
+                    self.logger.error(f\"生成されたスクリプトの内容 (先頭100文字): {generated_script[:100]}\")
+                    print(f\"[エラー] ファイル書き込み時にエンコーディングエラーが発生しました: {e}\")
+                    print(f\"[エラー] エラーが発生したファイルパス: {script_file_path}\")
+                    print(f\"[エラー] 生成されたスクリプトの内容 (先頭100文字): {generated_script[:100]}\")
+                except Exception as e:
+                    self.logger.error(f\"ファイル書き込み時に予期せぬエラーが発生しました: {e}\")
+                    print(f\"[エラー] ファイル書き込み時に予期せぬエラーが発生しました: {e}\")
+
+            except Exception as e:
+                self.logger.error(f\"Google Colab用データ取得スクリプトの生成中にエラーが発生しました: {e}\")
+                print(f\"[エラー] Google Colab用データ取得スクリプトの生成中にエラーが発生しました: {e}\")
 
     def get_system_status(self) -> Dict[str, Any]:
-        """システム状況取得"""
+        """システムステータス取得"""
         return {
             "tse_optimization_ready": True,
             "hybrid_predictor_ready": True,
             "sentiment_analyzer_ready": True,
             "strategy_generator_ready": True,
             "risk_manager_ready": True,
-            "auto_settings": self.auto_settings,
+            "auto_settings": {
+                "data_source_priority": ["yfinance", "csv_cache"],
+                "prediction_horizon_days": 30,
+                "risk_tolerance": "medium"
+            },
             "last_run": datetime.now(),
         }
 
 
-# メイン実行関数
+# メイン処理定義
 async def run_full_auto():
-    """フルオート実行"""
+    """完全自動実行"""
     system = FullAutoInvestmentSystem()
     recommendations = await system.run_full_auto_analysis()
     return recommendations
 
 
 if __name__ == "__main__":
-    # テスト実行
+    # 実行処理
     asyncio.run(run_full_auto())

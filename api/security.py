@@ -23,13 +23,25 @@ except ImportError:
     # secrets.pyが存在しない場合は環境変数から取得
     import os
 
+    # 環境変数からAPIキーを取得
+    dev_key = os.getenv("CLSTOCK_DEV_KEY")
+    admin_key = os.getenv("CLSTOCK_ADMIN_KEY")
+
+    # 環境変数が設定されていない場合の警告
+    if not dev_key:
+        logger.warning("CLSTOCK_DEV_KEY environment variable not set, using default")
+        dev_key = "dev-key-change-me"
+
+    if not admin_key:
+        logger.warning("CLSTOCK_ADMIN_KEY environment variable not set, using default")
+        admin_key = "admin-key-change-me"
+
     API_KEYS = {
-        os.getenv("CLSTOCK_DEV_KEY", "dev-key-change-me"): "developer",
-        os.getenv("CLSTOCK_ADMIN_KEY", "admin-key-change-me"): "administrator",
+        dev_key: "developer",
+        admin_key: "administrator",
     }
-    logger.warning(
-        "config/secrets.py not found, using environment variables or defaults"
-    )
+    
+    # デフォルトキーが使用されているか確認
     if "change-me" in str(API_KEYS):
         logger.error(
             "SECURITY WARNING: Using default API keys! Set CLSTOCK_DEV_KEY and CLSTOCK_ADMIN_KEY environment variables"
@@ -129,10 +141,19 @@ def verify_token(token: str) -> str:
     import os
 
     env_tokens = {}
-    if os.getenv("API_ADMIN_TOKEN"):
-        env_tokens[os.getenv("API_ADMIN_TOKEN")] = "administrator"
-    if os.getenv("API_USER_TOKEN"):
-        env_tokens[os.getenv("API_USER_TOKEN")] = "user"
+    admin_token = os.getenv("API_ADMIN_TOKEN")
+    user_token = os.getenv("API_USER_TOKEN")
+    
+    # 環境変数が設定されていない場合の警告
+    if not admin_token:
+        logger.warning("API_ADMIN_TOKEN environment variable not set")
+    else:
+        env_tokens[admin_token] = "administrator"
+        
+    if not user_token:
+        logger.warning("API_USER_TOKEN environment variable not set")
+    else:
+        env_tokens[user_token] = "user"
 
     # 実際のAPI_KEYSもチェック
     all_tokens = {**API_KEYS, **test_tokens, **env_tokens}

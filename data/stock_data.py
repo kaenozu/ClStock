@@ -1,5 +1,6 @@
 import yfinance as yf
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Union
 import logging
@@ -97,6 +98,61 @@ class StockDataProvider:
         except Exception as e:
             logger.error(f"Error fetching data for {symbol}: {str(e)}")
             raise DataFetchError(symbol, "Unexpected error during data fetch", str(e))
+
+    def _resolve_period_days(self, period: str) -> int:
+        period = (period or '').lower()
+        mapping = {
+            '1d': 1,
+            '5d': 5,
+            '1wk': 5,
+            '1mo': 22,
+            '3mo': 66,
+            '6mo': 126,
+            '1y': 252,
+            '2y': 504,
+            '5y': 1260,
+            '10y': 2520,
+        }
+        if period in mapping:
+            return mapping[period]
+        if period.endswith('y') and period[:-1].isdigit():
+            return max(1, int(period[:-1]) * 252)
+        if period.endswith('mo') and period[:-2].isdigit():
+            return max(1, int(period[:-2]) * 22)
+        if period == 'max':
+            return 2520
+        if period == 'ytd':
+            start_of_year = datetime(datetime.now().year, 1, 1)
+            return max(1, (datetime.now() - start_of_year).days)
+        return 120
+
+    def _generate_demo_data(self, symbol: str, period: str) -> pd.DataFrame:
+        days = self._resolve_period_days(period)
+        end_date = datetime.now()
+        index = pd.date_range(end=end_date, periods=days, freq='B')
+        base_price = 100 + np.random.rand() * 20
+        returns = np.random.normal(loc=0.0005, scale=0.02, size=len(index))
+        close = base_price * np.exp(np.cumsum(returns))
+        high = close * (1 + np.random.uniform(0.001, 0.01, size=len(index)))
+        low = close * (1 - np.random.uniform(0.001, 0.01, size=len(index)))
+        open_prices = close * (1 + np.random.uniform(-0.005, 0.005, size=len(index)))
+        volume = np.random.randint(10_000, 200_000, size=len(index))
+
+        df = pd.DataFrame(
+            {
+                'Open': open_prices,
+                'High': np.maximum.reduce([open_prices, high, close]),
+                'Low': np.minimum.reduce([open_prices, low, close]),
+                'Close': close,
+                'Adj Close': close,
+                'Volume': volume,
+            },
+            index=index,
+        )
+        df.index.name = 'Date'
+        logger.info(f"Generated demo data for {symbol} with {len(df)} points")
+        return df
+
 
     def get_multiple_stocks(
         self, symbols: List[str], period: str = "1y"
