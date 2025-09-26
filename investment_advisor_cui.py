@@ -22,6 +22,7 @@ from models_new.hybrid.hybrid_predictor import HybridStockPredictor
 from models_new.hybrid.prediction_modes import PredictionMode
 from data.stock_data import StockDataProvider
 from data.sector_classification import SectorClassification
+from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem
 
 
 class InvestmentAdvisorCUI:
@@ -31,6 +32,7 @@ class InvestmentAdvisorCUI:
         self.precision_system = Precision87BreakthroughSystem()
         self.hybrid_system = HybridStockPredictor()
         self.data_provider = StockDataProvider()
+        self.medium_system = MediumTermPredictionSystem()
 
         # 推奨銘柄リスト（ブルーチップ中心45銘柄）
         self.target_symbols = [
