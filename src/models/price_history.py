@@ -141,8 +141,21 @@ class PriceHistory(Base):
         return self.close_price < self.open_price
     
     def is_doji(self, threshold_pct: Decimal = Decimal('0.1')) -> bool:
-        """Check if it's a doji (open ≈ close within threshold)."""
+        """
+        同時線（Doji）であるかを判定します。
+        同時線は、始値と終値がほぼ同じ水準にあるローソク足のパターンで、市場の迷いや転換点を示唆するとされるテクニカル分析の重要な指標です。
+        
+        Args:
+            threshold_pct: 始値と終値の差がこの割合（例: 0.1%）以内であれば同時線とみなす閾値。
+                           この値は、市場のボラティリティや分析の厳密さに応じて調整されます。
+                           一般的に、終値と始値の差が小さいほど、より強い同時線と解釈されます。
+        
+        Returns:
+            bool: 同時線であればTrue、そうでなければFalse。
+        """
         if self.open_price == 0:
             return False
+        # 始値と終値の差の絶対値（パーセンテージ）を計算
         change_pct = abs(self.get_price_change_pct())
+        # 変化率が閾値以下であれば同時線と判定
         return change_pct <= threshold_pct
