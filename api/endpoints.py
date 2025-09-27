@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.security import HTTPAuthorizationCredentials
-from typing import List, Optional
+
 from datetime import datetime
 import pandas as pd
 
@@ -8,8 +8,6 @@ import pandas as pd
 from api.security import security, verify_token
 from utils.validators import (
     validate_stock_symbol,
-    validate_period,
-    validate_symbols_list,
     ValidationError,
     log_validation_error,
 )

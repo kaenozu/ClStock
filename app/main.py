@@ -1,10 +1,10 @@
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from typing import List, Optional
+
+
 import uvicorn
 
 from api.endpoints import router
-from models.recommendation import StockRecommendation
+
 
 app = FastAPI(
     title="ClStock - 中期的な推奨銘柄予想API",

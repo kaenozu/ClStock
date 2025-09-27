@@ -5,7 +5,7 @@
 
 from fastapi import APIRouter, HTTPException, Query, Depends, Body
 from fastapi.security import HTTPAuthorizationCredentials
-from typing import List, Optional, Dict, Any
+from typing import Dict, Any
 from datetime import datetime
 import logging
 
@@ -15,7 +15,6 @@ from utils.validators import (
     validate_stock_symbol,
     validate_period,
     validate_symbols_list,
-    validate_numeric_range,
     ValidationError,
     log_validation_error,
 )

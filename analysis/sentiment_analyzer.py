@@ -3,18 +3,14 @@
 84.6%技術分析とニュース感情を統合
 """
 
-import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any, Union
-import requests
-import re
+from typing import Dict, List, Any
 from datetime import datetime, timedelta
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from config.settings import get_settings
-from utils.exceptions import APIError, NetworkError, DataFetchError
 
 logger = logging.getLogger(__name__)
 
@@ -389,9 +385,9 @@ class SentimentAnalyzer:
         """テキストのセンチメント分析"""
         text_lower = text.lower()
 
-        positive_score = sum(1 for keyword in self.positive_keywords if keyword in text)
-        negative_score = sum(1 for keyword in self.negative_keywords if keyword in text)
-        neutral_score = sum(1 for keyword in self.neutral_keywords if keyword in text)
+        positive_score = sum(1 for keyword in self.positive_keywords if keyword in text_lower)
+        negative_score = sum(1 for keyword in self.negative_keywords if keyword in text_lower)
+        neutral_score = sum(1 for keyword in self.neutral_keywords if keyword in text_lower)
 
         total_score = positive_score + negative_score + neutral_score
 
