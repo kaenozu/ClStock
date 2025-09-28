@@ -334,7 +334,7 @@ python-json-logger==3.3.0
 python-multipart==0.0.9
 python-socketio==5.13.0
 pytz==2025.2
-pywin32==311
+pywin32==311; sys_platform == 'win32'
 pywin32-ctypes==0.2.3
 pywinpty==2.0.15
 PyYAML==6.0.2
