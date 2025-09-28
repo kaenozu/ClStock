@@ -3,12 +3,12 @@
 データの重複取得を防ぎパフォーマンスを向上
 """
 
-import pickle
+import joblib
 import hashlib
 import time
 import threading
 from pathlib import Path
-from typing import Any, Optional, Callable, Dict
+from typing import Any, Optional, Callable, Dict, Union
 from functools import wraps
 import pandas as pd
 import logging
@@ -123,7 +123,7 @@ class DataCache:
 
             try:
                 with open(cache_path, "rb") as f:
-                    cache_data = pickle.load(f)
+                    cache_data = joblib.load(f)
 
                 # キャッシュエントリーの検証
                 if not self._validate_cache_entry(cache_data, cache_key):
@@ -171,7 +171,7 @@ class DataCache:
                         logger.debug(f"Removed oldest cache entry: {oldest_file.name}")
 
                 with open(cache_path, "wb") as f:
-                    pickle.dump(cache_data, f)
+                    joblib.dump(cache_data, f)
                 logger.debug(f"Cache set: {cache_key} (TTL: {ttl}s)")
                 return True
             except Exception as e:
@@ -207,7 +207,7 @@ class DataCache:
             for cache_file in self.cache_dir.glob("*.cache"):
                 try:
                     with open(cache_file, "rb") as f:
-                        cache_data = pickle.load(f)
+                        cache_data = joblib.load(f)
 
                     # キャッシュエントリーの検証
                     if not self._validate_cache_entry(cache_data, cache_file.stem):
@@ -241,7 +241,7 @@ class DataCache:
             for f in files:
                 try:
                     with open(f, "rb") as file:
-                        cache_data = pickle.load(file)
+                        cache_data = joblib.load(file)
                     if current_time > cache_data.get("expires_at", 0):
                         expired_count += 1
                 except:

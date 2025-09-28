@@ -1,5 +1,7 @@
 import asyncio
+import argparse
 import logging
+import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -43,7 +45,7 @@ class AutoRecommendation:
 class FullAutoInvestmentSystem:
     """完全自動投資推奨システム"""
 
-    def __init__(self):
+    def __init__(self, max_symbols: Optional[int] = None):
         self.data_provider = StockDataProvider()
         self.predictor = HybridPredictor()
         self.optimizer = TSEPortfolioOptimizer()
@@ -53,6 +55,32 @@ class FullAutoInvestmentSystem:
         self.medium_system = MediumTermPredictionSystem()
         self.failed_symbols = set()  # データ取得に失敗した銘柄を記録
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.max_symbols = self._resolve_max_symbols(max_symbols)
+
+    def _resolve_max_symbols(self, max_symbols: Optional[int]) -> Optional[int]:
+        if max_symbols is not None:
+            if max_symbols <= 0:
+                raise ValueError("max_symbols must be a positive integer.")
+            return max_symbols
+
+        env_value = os.getenv("CLSTOCK_MAX_AUTO_TICKERS")
+        if not env_value:
+            return None
+
+        try:
+            parsed = int(env_value)
+            if parsed <= 0:
+                self.logger.warning(
+                    "CLSTOCK_MAX_AUTO_TICKERS must be positive; ignoring value '%s'.",
+                    env_value,
+                )
+                return None
+            return parsed
+        except ValueError:
+            self.logger.warning(
+                "CLSTOCK_MAX_AUTO_TICKERS is not an integer ('%s'); ignoring.", env_value
+            )
+            return None
 
     async def run_full_auto_analysis(self) -> List[AutoRecommendation]:
         """完全自動分析実行"""
@@ -63,6 +91,9 @@ class FullAutoInvestmentSystem:
             print("[ステップ 1/4] (25%) - TSE4000銘柄リストを取得中...")
             print("=" * 60)
             all_tickers = self.data_provider.get_all_tickers()
+            if self.max_symbols is not None and self.max_symbols < len(all_tickers):
+                all_tickers = all_tickers[:self.max_symbols]
+                print(f"[情報] 解析対象を {len(all_tickers)} 銘柄に制限 (max={self.max_symbols}).")
             print(f"[情報] 取得銘柄数: {len(all_tickers)}")
             
             if not all_tickers:
@@ -111,10 +142,10 @@ class FullAutoInvestmentSystem:
                     recommendations = []
                 else:
                     selected_stocks = optimized_portfolio['selected_stocks']
-                    print(f"[情報] 最適化完了 - 選択銘柄数: {len(selected_stocks)}")
+                    print(f"[情報] 最適化完了 - 選定銘柄数: {len(selected_stocks)}")
                     
                     if not selected_stocks:
-                        print("[警告] 最適化結果に選択銘柄がありません。")
+                        print("[警告] 最適化結果に選定銘柄がありません。")
                         recommendations = []
                     else:
                         # 4. 個別銘柄分析と推奨生成
@@ -261,9 +292,9 @@ class FullAutoInvestmentSystem:
 
             for i, rec in enumerate(recommendations, 1):
                 print(f"\n--- 推奨 #{i} --- {rec.company_name} ({rec.symbol})")
-                print(f"  買い価格: ¥{rec.entry_price:,.0f}")
-                print(f"  目標価格: ¥{rec.target_price:,.0f}")
-                print(f"  ストップロス: ¥{rec.stop_loss:,.0f}")
+                print(f"  買い価格: JPY {rec.entry_price:,.0f}")
+                print(f"  目標価格: JPY {rec.target_price:,.0f}")
+                print(f"  ストップロス: JPY {rec.stop_loss:,.0f}")
                 print(f"  買い日時: {rec.buy_date.strftime('%Y年%m月%d日 %H時%M分')}")
                 print(f"  売り日時: {rec.sell_date.strftime('%Y年%m月%d日 %H時%M分')}")
                 print(f"  期待リターン: {rec.expected_return:.1%}")
@@ -278,177 +309,119 @@ class FullAutoInvestmentSystem:
         self._generate_data_retrieval_script()
 
     def _generate_data_retrieval_script(self):
-        """データ取得に失敗した銘柄用のGoogle Colabスクリプトを生成"""
-        # self.failed_symbols は、yfinanceでもCSVでもデータを取得できなかった銘柄のみを記録している
-        self.logger.info(f"_generate_data_retrieval_scriptが呼び出されました。self.failed_symbolsの内容: {self.failed_symbols}")
-        print(f"[デバッグ] _generate_data_retrieval_scriptが呼び出されました。self.failed_symbolsの内容: {self.failed_symbols}")
-        # self.failed_symbols が空の場合もログに出力
-        if not self.failed_symbols:
-            self.logger.info("_generate_data_retrieval_script: self.failed_symbols が空です。")
-            print("[情報] _generate_data_retrieval_script: self.failed_symbols が空です。")
+        """Generate a Google Colab helper script for symbols that failed to download."""
+        failed_symbols = list(self.failed_symbols or [])
+        self.logger.info("Starting _generate_data_retrieval_script. failed_symbols: %s", failed_symbols)
+        print(f"[INFO] _generate_data_retrieval_script called. failed_symbols: {failed_symbols}")
+
+        if not failed_symbols:
+            self.logger.info("No failed symbols detected; skipping script generation.")
+            print("[INFO] No failed symbols detected. Skipping Google Colab script generation.")
             return
-        if self.failed_symbols:
-            self.logger.info(f"yfinance+CSVで最終的にデータ取得に失敗した銘柄数: {len(self.failed_symbols)}")
-            self.logger.info(f"yfinance+CSVで最終的に失敗: {list(self.failed_symbols)}")
-            print(f"[情報] yfinance+CSVで最終的にデータ取得に失敗した銘柄数: {len(self.failed_symbols)}")
-            print(f"[情報] yfinance+CSVで最終的に失敗: {list(self.failed_symbols)}")
 
-            try:
-                # from data_retrieval_script_generator import generate_colab_data_retrieval_script
+        script_output_dir = Path("data") / "retrieval_scripts"
+        script_output_dir.mkdir(parents=True, exist_ok=True)
+        self.logger.info("Script output directory prepared: %s", script_output_dir)
+        print(f"[INFO] Script output directory: {script_output_dir}")
 
-                # スクリプト出力用のディレクトリを定義
-                script_output_dir = Path(\"data\") / \"retrieval_scripts\"
-                script_output_dir.mkdir(parents=True, exist_ok=True)  # ディレクトリがなければ作成
-                self.logger.info(f\"スクリプト出力ディレクトリを作成しました: {script_output_dir}\")
+        for index, symbol in enumerate(failed_symbols):
+            self.logger.debug("Failed symbol #%d: %s", index, symbol)
 
-                # データ取得に失敗した銘柄のみを対象にする
-                # self.failed_symbols の内容を詳細にログに出力
-                self.logger.info(f"self.failed_symbols の内容 (repr): {repr(list(self.failed_symbols))}")
-                self.logger.info(f"self.failed_symbols の内容 (str): {list(self.failed_symbols)}")
-                for i, symbol in enumerate(self.failed_symbols):
-                    self.logger.info(f"  - 銘柄 #{i}: {repr(symbol)} (str: {symbol})")
-                self.logger.info("generate_colab_data_retrieval_scriptを呼び出します。")
-                try:
-                    generated_script = generate_colab_data_retrieval_script(
-                        missing_symbols=list(self.failed_symbols), # リストのまま渡す
-                        period="1y", # 必要に応じて変更
-                        output_dir="." # Colab内での出力先（デフォルト） 
-                    )
-                    self.logger.info("generate_colab_data_retrieval_scriptの呼び出しが完了しました。")
-                    self.logger.info(f"生成されたスクリプトの長さ: {len(generated_script)}")
-                    # 生成されたスクリプトの先頭と末尾の一部をログに出力（デバッグ用）
-                    if len(generated_script) > 200:
-                        self.logger.info(f"生成されたスクリプトの先頭200文字: {generated_script[:200]}")
-                        self.logger.info(f"生成されたスクリプトの末尾200文字: {generated_script[-200:]}")
-                    else:
-                        self.logger.info(f"生成されたスクリプトの内容: {generated_script}")
-                    # 生成されたスクリプトが空でないことを確認
-                    if not generated_script.strip():
-                        self.logger.warning("生成されたスクリプトが空です。")
-                        print("[警告] 生成されたスクリプトが空です。")
-                        return
-                except Exception as e:
-                    self.logger.error(f"generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました: {e}")
-                    self.logger.error(f"missing_symbolsの内容: {self.failed_symbols}")
-                    print(f"[エラー] generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました: {e}")
-                    print(f"[エラー] missing_symbolsの内容: {self.failed_symbols}")
-                    import traceback
-                    self.logger.error(f"generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました:\n{traceback.format_exc()}")
-                    return
+        self.logger.info("Calling generate_colab_data_retrieval_script.")
+        try:
+            generated_script = generate_colab_data_retrieval_script(
+                missing_symbols=failed_symbols,
+                period="1y",
+                output_dir="."
+            )
+        except Exception as exc:
+            self.logger.error("generate_colab_data_retrieval_script failed", exc_info=True)
+            print(f"[ERROR] Failed to generate Google Colab data retrieval script: {exc}")
+            return
 
-                # 生成されたスクリプトをファイルに保存 (エンコーディングエラー対策)
-                script_file_path = script_output_dir / "colab_data_fetcher.py"
-                self.logger.info(f"スクリプトファイルパス: {script_file_path}")
-                try:
-                    # Windows環境でのエンコーディング対応を強化
-                    with open(script_file_path, "w", encoding="utf-8-sig", errors="strict") as f:
-                        f.write(generated_script)
-                    self.logger.info(f"Google Colab用データ取得スクリプトを生成しました: {script_file_path}")
-                    print(f"[情報] Google Colab用データ取得スクリプトを生成しました: {script_file_path}")
-                except UnicodeEncodeError as e:
-                    self.logger.error(f"ファイル書き込み時にUnicodeエンコーディングエラーが発生しました: {e}")
-                    self.logger.error(f"エラーが発生したファイルパス: {script_file_path}")
-                    self.logger.error(f"生成されたスクリプトの内容 (先頭100文字): {generated_script[:100]}")
-                    print(f"[エラー] ファイル書き込み時にエンコーディングエラーが発生しました: {e}")
-                    print(f"[エラー] エラーが発生したファイルパス: {script_file_path}")
-                    print(f"[エラー] 生成されたスクリプトの内容 (先頭100文字): {generated_script[:100]}")
-                except Exception as e:
-                    self.logger.error(f"ファイル書き込み時に予期せぬエラーが発生しました: {e}")
-                    print(f"[エラー] ファイル書き込み時に予期せぬエラーが発生しました: {e}")
+        if not generated_script or not generated_script.strip():
+            self.logger.warning("Generated script is empty.")
+            print("[WARNING] Generated data retrieval script is empty. Nothing will be written.")
+            return
 
-            except Exception as e:
-                self.logger.error(f"Google Colab用データ取得スクリプトの生成中にエラーが発生しました: {e}")
-                print(f"[エラー] Google Colab用データ取得スクリプトの生成中にエラーが発生しました: {e}")
+        script_length = len(generated_script)
+        self.logger.info("Generated script length: %d characters", script_length)
+        if script_length <= 200:
+            self.logger.debug("Generated script contents: %s", generated_script)
+        else:
+            self.logger.debug("Generated script head: %s", generated_script[:200])
+            self.logger.debug("Generated script tail: %s", generated_script[-200:])
 
-                # スクリプト出力用のディレクトリを定義
-                script_output_dir = Path(\"data\") / \"retrieval_scripts\"
-                script_output_dir.mkdir(parents=True, exist_ok=True)  # ディレクトリがなければ作成
-                self.logger.info(f\"スクリプト出力ディレクトリを作成しました: {script_output_dir}\")
+        script_file_path = script_output_dir / "colab_data_fetcher.py"
+        try:
+            with open(script_file_path, "w", encoding="utf-8-sig", errors="strict") as handle:
+                handle.write(generated_script)
+        except UnicodeEncodeError as exc:
+            self.logger.error("UnicodeEncodeError while writing %s", script_file_path, exc_info=True)
+            print(f"[ERROR] Unicode encoding error while writing {script_file_path}: {exc}")
+            return
+        except Exception as exc:
+            self.logger.error("Unexpected error while writing %s", script_file_path, exc_info=True)
+            print(f"[ERROR] Unexpected error while writing {script_file_path}: {exc}")
+            return
 
-                # データ取得に失敗した銘柄のみを対象にする
-                # self.failed_symbols の内容を詳細にログに出力
-                self.logger.info(f\"self.failed_symbols の内容 (repr): {repr(list(self.failed_symbols))}\")
-                self.logger.info(f\"self.failed_symbols の内容 (str): {list(self.failed_symbols)}\")
-                for i, symbol in enumerate(self.failed_symbols):
-                    self.logger.info(f\"  - 銘柄 #{i}: {repr(symbol)} (str: {symbol})\")
-                self.logger.info(\"generate_colab_data_retrieval_scriptを呼び出します。\")
-                try:
-                    generated_script = generate_colab_data_retrieval_script(
-                        missing_symbols=list(self.failed_symbols), # リストのまま渡す
-                        period="1y", # 必要に応じて変更
-                        output_dir="." # Colab内での出力先（デフォルト） 
-                    )
-                    self.logger.info(\"generate_colab_data_retrieval_scriptの呼び出しが完了しました。\")
-                    self.logger.info(f\"生成されたスクリプトの長さ: {len(generated_script)}\")
-                    # 生成されたスクリプトの先頭と末尾の一部をログに出力（デバッグ用）
-                    if len(generated_script) > 200:
-                        self.logger.info(f\"生成されたスクリプトの先頭200文字: {generated_script[:200]}\")
-                        self.logger.info(f\"生成されたスクリプトの末尾200文字: {generated_script[-200:]}\")
-                    else:
-                        self.logger.info(f\"生成されたスクリプトの内容: {generated_script}\")
-                    # 生成されたスクリプトが空でないことを確認
-                    if not generated_script.strip():
-                        self.logger.warning(\"生成されたスクリプトが空です。\")
-                        print(\"[警告] 生成されたスクリプトが空です。\")
-                        return
-                except Exception as e:
-                    self.logger.error(f\"generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました: {e}\")
-                    self.logger.error(f\"missing_symbolsの内容: {self.failed_symbols}\")
-                    print(f\"[エラー] generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました: {e}\")
-                    print(f\"[エラー] missing_symbolsの内容: {self.failed_symbols}\")
-                    import traceback
-                    self.logger.error(f\"generate_colab_data_retrieval_scriptの呼び出しでエラーが発生しました:\\n{traceback.format_exc()}\")
-                    return
-
-                # 生成されたスクリプトをファイルに保存 (エンコーディングエラー対策)
-                script_file_path = script_output_dir / \"colab_data_fetcher.py\"
-                self.logger.info(f\"スクリプトファイルパス: {script_file_path}\")
-                try:
-                    # Windows環境でのエンコーディング対応を強化
-                    with open(script_file_path, \"w\", encoding=\"utf-8-sig\", errors=\"strict\") as f:
-                        f.write(generated_script)
-                    self.logger.info(f\"Google Colab用データ取得スクリプトを生成しました: {script_file_path}\")
-                    print(f\"[情報] Google Colab用データ取得スクリプトを生成しました: {script_file_path}\")
-                except UnicodeEncodeError as e:
-                    self.logger.error(f\"ファイル書き込み時にUnicodeエンコーディングエラーが発生しました: {e}\")
-                    self.logger.error(f\"エラーが発生したファイルパス: {script_file_path}\")
-                    self.logger.error(f\"生成されたスクリプトの内容 (先頭100文字): {generated_script[:100]}\")
-                    print(f\"[エラー] ファイル書き込み時にエンコーディングエラーが発生しました: {e}\")
-                    print(f\"[エラー] エラーが発生したファイルパス: {script_file_path}\")
-                    print(f\"[エラー] 生成されたスクリプトの内容 (先頭100文字): {generated_script[:100]}\")
-                except Exception as e:
-                    self.logger.error(f\"ファイル書き込み時に予期せぬエラーが発生しました: {e}\")
-                    print(f\"[エラー] ファイル書き込み時に予期せぬエラーが発生しました: {e}\")
-
-            except Exception as e:
-                self.logger.error(f\"Google Colab用データ取得スクリプトの生成中にエラーが発生しました: {e}\")
-                print(f\"[エラー] Google Colab用データ取得スクリプトの生成中にエラーが発生しました: {e}\")
-
-    def get_system_status(self) -> Dict[str, Any]:
-        """システムステータス取得"""
-        return {
-            "tse_optimization_ready": True,
-            "hybrid_predictor_ready": True,
-            "sentiment_analyzer_ready": True,
-            "strategy_generator_ready": True,
-            "risk_manager_ready": True,
-            "auto_settings": {
-                "data_source_priority": ["yfinance", "csv_cache"],
-                "prediction_horizon_days": 30,
-                "risk_tolerance": "medium"
-            },
-            "last_run": datetime.now(),
-        }
+        self.logger.info("Saved Google Colab data retrieval script to %s", script_file_path)
+        print(f"[INFO] Saved Google Colab data retrieval script to {script_file_path}")
 
 
-# メイン処理定義
-async def run_full_auto():
-    """完全自動実行"""
-    system = FullAutoInvestmentSystem()
-    recommendations = await system.run_full_auto_analysis()
-    return recommendations
+
+
+def build_cli_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Run the full auto investment pipeline",
+    )
+    parser.add_argument(
+        "--max-tickers",
+        type=int,
+        default=None,
+        help="Limit the number of tickers processed (useful for quick smoke tests).",
+    )
+    parser.add_argument(
+        "--prefer-local-data",
+        action="store_true",
+        help="Prioritize local CSV data before calling yfinance.",
+    )
+    parser.add_argument(
+        "--skip-local-data",
+        action="store_true",
+        help="Force yfinance downloads even if local CSV data exists.",
+    )
+    return parser
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = build_cli_parser()
+    args = parser.parse_args(argv)
+
+    if args.prefer_local_data and args.skip_local_data:
+        parser.error("--prefer-local-data and --skip-local-data cannot be used together.")
+
+    if args.max_tickers is not None and args.max_tickers <= 0:
+        parser.error("--max-tickers must be a positive integer.")
+
+    if args.prefer_local_data:
+        os.environ["CLSTOCK_PREFER_LOCAL_DATA"] = "1"
+    elif args.skip_local_data:
+        os.environ["CLSTOCK_PREFER_LOCAL_DATA"] = "0"
+
+    try:
+        asyncio.run(run_full_auto(max_symbols=args.max_tickers))
+    except KeyboardInterrupt:
+        print("[INFO] Full auto run interrupted by user.")
+        return 130
+
+    return 0
+
+async def run_full_auto(max_symbols: Optional[int] = None) -> List[AutoRecommendation]:
+    """Convenience coroutine to execute the full auto investment analysis."""
+    system = FullAutoInvestmentSystem(max_symbols=max_symbols)
+    return await system.run_full_auto_analysis()
 
 
 if __name__ == "__main__":
-    # 実行処理
-    asyncio.run(run_full_auto())
+    raise SystemExit(main())

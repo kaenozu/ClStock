@@ -306,9 +306,9 @@ class AdvancedCacheManager(CacheProvider):
             shape_str = f"{data.shape[0]}x{data.shape[1]}"
             sample_values = str(data.iloc[0].values) if not data.empty else ""
             hash_input = f"{shape_str}_{sample_values}"
-            return hashlib.md5(hash_input.encode()).hexdigest()[:16]
+            return hashlib.sha256(hash_input.encode()).hexdigest()[:16]
         except Exception:
-            return hashlib.md5(str(datetime.now()).encode()).hexdigest()[:16]
+            return hashlib.sha256(str(datetime.now()).encode()).hexdigest()[:16]
 
     def save_cache_to_disk(self):
         """キャッシュをディスクに保存"""

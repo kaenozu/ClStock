@@ -21,7 +21,7 @@ def test_api_security():
 
     # Test without authentication (should fail)
     try:
-        response = requests.get(f"{base_url}/stocks")
+        response = requests.get(f"{base_url}/stocks", timeout=10)
         if response.status_code == 403:
             print("✓ Authentication required for /stocks endpoint")
         else:
@@ -32,7 +32,7 @@ def test_api_security():
     # Test with valid API key
     headers = {"Authorization": "Bearer development-key"}
     try:
-        response = requests.get(f"{base_url}/stocks", headers=headers)
+        response = requests.get(f"{base_url}/stocks", headers=headers, timeout=10)
         if response.status_code == 200:
             print("✓ Authenticated access successful")
         else:
@@ -43,7 +43,7 @@ def test_api_security():
     # Test with invalid API key
     invalid_headers = {"Authorization": "Bearer invalid-key"}
     try:
-        response = requests.get(f"{base_url}/stocks", headers=invalid_headers)
+        response = requests.get(f"{base_url}/stocks", headers=invalid_headers, timeout=10)
         if response.status_code == 401:
             print("✓ Invalid API key properly rejected")
         else:
@@ -63,7 +63,7 @@ def test_rate_limiting():
     rate_limit_hit = False
     for i in range(10):
         try:
-            response = requests.get(f"{base_url}/stocks", headers=headers)
+            response = requests.get(f"{base_url}/stocks", headers=headers, timeout=10)
             if response.status_code == 429:  # Too Many Requests
                 print(f"✓ Rate limit triggered after {i+1} requests")
                 rate_limit_hit = True

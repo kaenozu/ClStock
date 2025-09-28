@@ -26,9 +26,8 @@ from tensorflow.keras.layers import (
     Dropout,
     Conv1D,
     MaxPooling1D,
-    Flatten,
 )
-from tensorflow.keras.layers import Attention, MultiHeadAttention, LayerNormalization
+from tensorflow.keras.layers import MultiHeadAttention, LayerNormalization
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.preprocessing import MinMaxScaler

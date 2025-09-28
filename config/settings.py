@@ -1,22 +1,35 @@
-"""
-ClStock 設定管理
-ハードコードされた値を一元管理
-"""
+"""Configuration schema and environment overrides for ClStock."""
 
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
-# プロジェクトルートパス
+from utils.cache import get_cache
+from utils.logger_config import setup_logger
+
+logger = setup_logger(__name__)
+
+def _apply_env_value(env_name: str, caster: Callable[[str], Any], apply: Callable[[Any], None]) -> None:
+    """Parse an environment variable with caster; preserve defaults if invalid."""
+    raw = os.getenv(env_name)
+    if raw is None or raw == "":
+        return
+    try:
+        value = caster(raw)
+    except ValueError:
+        logger.warning("Invalid %s=%r; keeping default configuration", env_name, raw)
+        return
+    apply(value)
+# 繝励Ο繧ｸ繧ｧ繧ｯ繝医Ν繝ｼ繝医ヱ繧ｹ
 PROJECT_ROOT = Path(__file__).parent.parent
 
 
 @dataclass
 class DatabaseConfig:
-    """データベース設定"""
+    """Database file locations."""
 
-    # 絶対パスでデータベースファイルを指定
+    # 邨ｶ蟇ｾ繝代せ縺ｧ繝・・繧ｿ繝吶・繧ｹ繝輔ぃ繧､繝ｫ繧呈欠螳・
     personal_portfolio_db: Path = field(
         default_factory=lambda: PROJECT_ROOT / "data" / "personal_portfolio.db"
     )
@@ -30,22 +43,22 @@ class DatabaseConfig:
 
 @dataclass
 class PredictionConfig:
-    """予測システム設定（命名統一）"""
+    """Prediction thresholds and metrics."""
 
-    # 精度設定
-    target_accuracy: float = 87.0  # 目標精度（%）
-    achieved_accuracy: float = 89.18  # 実際の達成精度（%）
-    baseline_accuracy: float = 84.6  # ベースライン精度（%）
+    # 邊ｾ蠎ｦ險ｭ螳・
+    target_accuracy: float = 87.0  # 逶ｮ讓咏ｲｾ蠎ｦ・・・・
+    achieved_accuracy: float = 89.18  # 螳滄圀縺ｮ驕疲・邊ｾ蠎ｦ・・・・
+    baseline_accuracy: float = 84.6  # 繝吶・繧ｹ繝ｩ繧､繝ｳ邊ｾ蠎ｦ・・・・
 
-    # 予測制限設定
-    max_predicted_change_percent: float = 0.05  # 最大予測変動率（±5%）
-    min_confidence_threshold: float = 0.3  # 最小信頼度閾値
-    max_confidence_threshold: float = 0.95  # 最大信頼度閾値
+    # 莠域ｸｬ蛻ｶ髯占ｨｭ螳・
+    max_predicted_change_percent: float = 0.05  # 譛螟ｧ莠域ｸｬ螟牙虚邇・ｼ按ｱ5%・・
+    min_confidence_threshold: float = 0.3  # 譛蟆丈ｿ｡鬆ｼ蠎ｦ髢ｾ蛟､
+    max_confidence_threshold: float = 0.95  # 譛螟ｧ菫｡鬆ｼ蠎ｦ髢ｾ蛟､
 
-    # 予測履歴設定
-    max_prediction_history_size: int = 1000  # 予測履歴の最大保持数
+    # 莠域ｸｬ螻･豁ｴ險ｭ螳・
+    max_prediction_history_size: int = 1000  # 莠域ｸｬ螻･豁ｴ縺ｮ譛螟ｧ菫晄戟謨ｰ
 
-    # 技術指標設定
+    # 謚陦捺欠讓呵ｨｭ螳・
     rsi_period: int = 14
     rsi_oversold: int = 30
     rsi_overbought: int = 70
@@ -55,30 +68,30 @@ class PredictionConfig:
 
 @dataclass
 class ModelConfig:
-    """機械学習モデル設定"""
+    """Model training hyper-parameters."""
 
-    # XGBoost設定
+    # XGBoost險ｭ螳・
     xgb_n_estimators: int = 200
     xgb_max_depth: int = 6
     xgb_learning_rate: float = 0.1
     xgb_random_state: int = 42
 
-    # LightGBM設定
+    # LightGBM險ｭ螳・
     lgb_n_estimators: int = 200
     lgb_max_depth: int = 6
     lgb_learning_rate: float = 0.1
     lgb_random_state: int = 42
 
-    # 訓練設定
+    # 險鍋ｷｴ險ｭ螳・
     train_test_split: float = 0.8
     min_training_data: int = 100
 
 
 @dataclass
 class BacktestConfig:
-    """バックテスト設定"""
+    """Backtest defaults and constraints."""
 
-    # デフォルト設定
+    # 繝・ヵ繧ｩ繝ｫ繝郁ｨｭ螳・
     default_initial_capital: float = 1000000
     default_rebalance_frequency: int = 5
     default_top_n: int = 3
@@ -87,42 +100,42 @@ class BacktestConfig:
     default_max_holding_days: int = 30
     default_score_threshold: float = 60
 
-    # 期間設定
+    # 譛滄俣險ｭ螳・
     default_data_period: str = "3y"
     min_historical_data_points: int = 100
 
 
 @dataclass
 class TradingConfig:
-    """取引設定"""
+    """Trading score and scheduling settings."""
 
-    # 市場時間
+    # 蟶ょｴ譎る俣
     market_open_hour: int = 9
     market_close_hour: int = 15
 
-    # スコア設定
+    # 繧ｹ繧ｳ繧｢險ｭ螳・
     default_score: float = 50.0
     min_score: int = 0
     max_score: int = 100
 
-    # データ期間設定
+    # 繝・・繧ｿ譛滄俣險ｭ螳・
     recommendation_data_period: str = "6mo"
 
 
 @dataclass
 class APIConfig:
-    """API設定"""
+    """Public API metadata and limits."""
 
-    # FastAPI設定
+    # FastAPI險ｭ螳・
     title: str = "ClStock API"
-    description: str = "中期的な推奨銘柄予想システム"
+    description: str = "荳ｭ譛溽噪縺ｪ謗ｨ螂ｨ驫俶氛莠域Φ繧ｷ繧ｹ繝・Β"
     version: str = "1.0.0"
 
-    # 制限設定
+    # 蛻ｶ髯占ｨｭ螳・
     max_top_n: int = 10
     min_top_n: int = 1
 
-    # データ期間オプション
+    # 繝・・繧ｿ譛滄俣繧ｪ繝励す繝ｧ繝ｳ
     available_periods: Optional[List[str]] = None
 
     def __post_init__(self):
@@ -132,12 +145,12 @@ class APIConfig:
 
 @dataclass
 class LoggingConfig:
-    """ログ設定"""
+    """Logging destinations and rotation settings."""
 
     level: str = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-    # ファイルログ設定
+    # 繝輔ぃ繧､繝ｫ繝ｭ繧ｰ險ｭ螳・
     log_file: str = "logs/clstock.log"
     max_file_size: int = 10 * 1024 * 1024  # 10MB
     backup_count: int = 5
@@ -145,30 +158,30 @@ class LoggingConfig:
 
 @dataclass
 class ProcessConfig:
-    """プロセス管理設定"""
+    """Process management limits."""
 
-    # プロセス制限設定
+    # 繝励Ο繧ｻ繧ｹ蛻ｶ髯占ｨｭ螳・
     max_concurrent_processes: int = 10
     max_memory_per_process_mb: int = 1000
     max_cpu_percent_per_process: int = 50
 
-    # 自動再起動設定
+    # 閾ｪ蜍募・襍ｷ蜍戊ｨｭ螳・
     auto_restart_failed: bool = True
     max_restart_attempts: int = 3
     restart_delay_seconds: int = 5
 
-    # 監視設定
+    # 逶｣隕冶ｨｭ螳・
     health_check_interval_seconds: int = 5
     process_timeout_seconds: int = 300
     memory_warning_threshold_mb: int = 800
     cpu_warning_threshold_percent: int = 80
 
-    # ログ設定
+    # 繝ｭ繧ｰ險ｭ螳・
     enable_process_logging: bool = True
-    log_process_output: bool = False  # デバッグ用
+    log_process_output: bool = False  # 繝・ヰ繝・げ逕ｨ
     max_log_lines_per_process: int = 1000
 
-    # 優先度設定
+    # 蜆ｪ蜈亥ｺｦ險ｭ螳・
     process_priorities: Dict[str, int] = field(
         default_factory=lambda: {
             "dashboard": 10,
@@ -182,7 +195,7 @@ class ProcessConfig:
         }
     )
 
-    # ポート管理設定
+    # 繝昴・繝育ｮ｡逅・ｨｭ螳・
     port_range_start: int = 8000
     port_range_end: int = 8100
     auto_assign_ports: bool = True
@@ -190,30 +203,30 @@ class ProcessConfig:
 
 @dataclass
 class RealTimeConfig:
-    """リアルタイム取引設定"""
+    """Real-time execution tuning options."""
 
-    # データ更新頻度
-    update_interval_seconds: int = 60  # 1分間隔
+    # 繝・・繧ｿ譖ｴ譁ｰ鬆ｻ蠎ｦ
+    update_interval_seconds: int = 60  # 1蛻・俣髫・
     market_hours_only: bool = True
 
-    # 84.6%パターン検出設定
+    # 84.6%繝代ち繝ｼ繝ｳ讀懷・險ｭ螳・
     pattern_confidence_threshold: float = 0.846
     min_trend_days: int = 7
 
-    # 注文執行設定
-    max_position_size_pct: float = 0.20  # 最大20%
-    default_stop_loss_pct: float = 0.05  # 5%損切り
-    default_take_profit_pct: float = 0.10  # 10%利確
+    # 豕ｨ譁・濤陦瑚ｨｭ螳・
+    max_position_size_pct: float = 0.20  # 譛螟ｧ20%
+    default_stop_loss_pct: float = 0.05  # 5%謳榊・繧・
+    default_take_profit_pct: float = 0.10  # 10%蛻ｩ遒ｺ
 
-    # リスク管理
+    # 繝ｪ繧ｹ繧ｯ邂｡逅・
     max_daily_trades: int = 5
-    max_total_exposure_pct: float = 0.80  # 最大80%投資
+    max_total_exposure_pct: float = 0.80  # 譛螟ｧ80%謚戊ｳ・
 
-    # API設定
+    # API險ｭ螳・
     data_source: str = "yahoo"  # yahoo, rakuten, sbi
     order_execution: str = "simulation"  # simulation, live
 
-    # WebSocket設定
+    # WebSocket險ｭ螳・
     websocket_url: str = ""
     websocket_timeout: int = 10
     websocket_ping_interval: int = 30
@@ -221,36 +234,36 @@ class RealTimeConfig:
     max_reconnection_attempts: int = 5
     reconnection_base_delay: float = 1.0
 
-    # データ品質監視設定
+    # 繝・・繧ｿ蜩∬ｳｪ逶｣隕冶ｨｭ螳・
     enable_data_quality_monitoring: bool = True
-    max_price_spike_threshold: float = 0.1  # 10%の価格変動をスパイクとして検出
-    data_latency_warning_threshold: int = 300  # 5分以上遅延で警告
+    max_price_spike_threshold: float = 0.1  # 10%縺ｮ萓｡譬ｼ螟牙虚繧偵せ繝代う繧ｯ縺ｨ縺励※讀懷・
+    data_latency_warning_threshold: int = 300  # 5蛻・ｻ･荳企≦蟒ｶ縺ｧ隴ｦ蜻・
     min_data_points_for_validation: int = 10
 
-    # キャッシュ設定
+    # 繧ｭ繝｣繝・す繝･險ｭ螳・
     enable_real_time_caching: bool = True
     max_tick_history_per_symbol: int = 1000
     max_order_book_history_per_symbol: int = 100
     cache_cleanup_interval_hours: int = 24
-    tick_cache_ttl_seconds: int = 300  # 5分
-    order_book_cache_ttl_seconds: int = 60  # 1分
+    tick_cache_ttl_seconds: int = 300  # 5蛻・
+    order_book_cache_ttl_seconds: int = 60  # 1蛻・
 
-    # ログ設定
+    # 繝ｭ繧ｰ險ｭ螳・
     enable_detailed_logging: bool = True
-    log_websocket_messages: bool = False  # デバッグ用
+    log_websocket_messages: bool = False  # 繝・ヰ繝・げ逕ｨ
     log_data_quality_issues: bool = True
     log_cache_operations: bool = False
-    performance_logging_interval: int = 300  # 5分間隔
+    performance_logging_interval: int = 300  # 5蛻・俣髫・
 
-    # 監視設定
+    # 逶｣隕冶ｨｭ螳・
     enable_performance_monitoring: bool = True
     enable_market_metrics_calculation: bool = True
-    metrics_calculation_interval: int = 60  # 1分間隔
+    metrics_calculation_interval: int = 60  # 1蛻・俣髫・
     alert_on_connection_loss: bool = True
     alert_on_data_quality_degradation: bool = True
-    data_quality_alert_threshold: float = 0.95  # 品質95%を下回ったらアラート
+    data_quality_alert_threshold: float = 0.95  # 蜩∬ｳｪ95%繧剃ｸ句屓縺｣縺溘ｉ繧｢繝ｩ繝ｼ繝・
 
-    # サブスクリプション設定
+    # 繧ｵ繝悶せ繧ｯ繝ｪ繝励す繝ｧ繝ｳ險ｭ螳・
     default_tick_subscription: List[str] = field(default_factory=lambda: [])
     default_order_book_subscription: List[str] = field(default_factory=lambda: [])
     default_index_subscription: List[str] = field(
@@ -259,16 +272,16 @@ class RealTimeConfig:
     enable_news_subscription: bool = True
     news_relevance_threshold: float = 0.7
 
-    # 市場時間設定
+    # 蟶ょｴ譎る俣險ｭ螳・
     market_open_time: str = "09:00"  # JST
     market_close_time: str = "15:00"  # JST
     market_timezone: str = "Asia/Tokyo"
-    enable_after_hours_trading: bool = False  # 時間外取引有効フラグ（True/False）
+    enable_after_hours_trading: bool = False  # 譎る俣螟門叙蠑墓怏蜉ｹ繝輔Λ繧ｰ・・rue/False・・
 
 
 @dataclass
 class AppSettings:
-    """アプリケーション全体設定"""
+    """Configuration section."""
 
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     prediction: PredictionConfig = field(default_factory=PredictionConfig)
@@ -280,89 +293,83 @@ class AppSettings:
     realtime: RealTimeConfig = field(default_factory=RealTimeConfig)
     process: ProcessConfig = field(default_factory=ProcessConfig)
 
-    # 対象銘柄
+    # 蟇ｾ雎｡驫俶氛
     target_stocks: Dict[str, str] = field(
         default_factory=lambda: {
-            # 指定された50銘柄
-            "7203": "トヨタ自動車",
-            "6758": "ソニーグループ",
-            "9432": "NTT",
-            "9434": "ソフトバンク",
-            "6701": "日本電気",
-            "8316": "三井住友フィナンシャルグループ",
-            "8411": "みずほフィナンシャルグループ",
-            "8306": "三菱UFJフィナンシャル・グループ",
-            "8058": "三菱商事",
-            "8001": "伊藤忠商事",
-            "8002": "丸紅",
-            "8031": "三井物産",
-            "6902": "デンソー",
-            "7267": "ホンダ",
-            "6501": "日立製作所",
-            "6503": "三菱電機",
-            "7751": "キヤノン",
-            "8035": "東京エレクトロン",
-            "6770": "アルプスアルパイン",
-            "9433": "KDDI",
-            "6502": "東芝",
-            "6752": "パナソニックHD",
-            "6954": "ファナック",
-            "6861": "キーエンス",
-            "4523": "エーザイ",
-            "4578": "大塚HD",
-            "7201": "日産自動車",
-            "7261": "マツダ",
-            "7269": "スズキ",
-            "4901": "富士フイルムHD",
-            "4502": "武田薬品工業",
-            "4503": "アステラス製薬",
-            "6504": "富士電機",
-            "4011": "ヤフー",  # 代替
-            "2914": "日本たばこ産業",
-            "5020": "ENEOSホールディングス",
-            "1605": "INPEX",
-            "1332": "日本水産",
-            "5201": "AGC",
-            "5401": "日本製鉄",
-            "6098": "リクルートHD",
-            "3865": "北越コーポレーション",
-            "6724": "セイコーエプソン",
-            "6703": "沖電気",
-            "4063": "信越化学工業",
-            "4689": "ヤフー",
-            "9983": "ファーストリテイリング",
-            "4755": "楽天グループ",
-            "6367": "ダイキン工業",
-            "4519": "中外製薬",
+            "7203": "Toyota Motor Corp",
+            "6758": "Sony Group Corp",
+            "9432": "Nippon Telegraph and Telephone",
+            "9434": "SoftBank Corp",
+            "6701": "NEC Corp",
+            "8316": "Sumitomo Mitsui Financial Group",
+            "8411": "Mizuho Financial Group",
+            "8306": "MUFG Bank",
+            "8058": "Mitsubishi Corp",
+            "8001": "Itochu Corp",
+            "8002": "Marubeni Corp",
+            "8031": "Mitsui & Co",
+            "6902": "Denso Corp",
+            "7267": "Honda Motor Co",
+            "6501": "Hitachi Ltd",
+            "6503": "Mitsubishi Electric",
+            "7751": "Canon Inc",
+            "8035": "Tokyo Electron",
+            "6770": "Alps Alpine",
+            "9433": "KDDI Corp",
+            "6502": "Toshiba Corp",
+            "6752": "Panasonic Holdings",
+            "6954": "Fanuc Corp",
+            "6861": "Keyence Corp",
+            "4523": "Eisai Co",
+            "4578": "Otsuka Holdings",
+            "7201": "Nissan Motor Co",
+            "7261": "Mazda Motor Corp",
+            "7269": "Suzuki Motor Corp",
+            "4901": "Fujifilm Holdings",
+            "4502": "Takeda Pharmaceutical",
         }
     )
 
 
-# グローバル設定インスタンス
+# 繧ｰ繝ｭ繝ｼ繝舌Ν險ｭ螳壹う繝ｳ繧ｹ繧ｿ繝ｳ繧ｹ
 settings = AppSettings()
 
 
 def get_settings() -> AppSettings:
-    """設定を取得"""
+    """Configuration section."""
     return settings
 
 
 def load_from_env() -> None:
-    """環境変数から設定を読み込み"""
-    # データベース設定
+    """Configuration section."""
+    load_database_settings_from_env()
+    load_prediction_settings_from_env()
+    load_model_settings_from_env()
+    load_backtest_settings_from_env()
+    load_trading_settings_from_env()
+    load_api_settings_from_env()
+    load_logging_settings_from_env()
+    load_realtime_settings_from_env()
+    load_process_settings_from_env()
+
+
+def load_database_settings_from_env():
+    """Configuration section."""
     personal_portfolio_db = os.getenv("CLSTOCK_PERSONAL_PORTFOLIO_DB")
     if personal_portfolio_db:
         settings.database.personal_portfolio_db = Path(personal_portfolio_db)
-    
+
     prediction_history_db = os.getenv("CLSTOCK_PREDICTION_HISTORY_DB")
     if prediction_history_db:
         settings.database.prediction_history_db = Path(prediction_history_db)
-    
+
     backtest_results_db = os.getenv("CLSTOCK_BACKTEST_RESULTS_DB")
     if backtest_results_db:
         settings.backtest.backtest_results_db = Path(backtest_results_db)
 
-    # 予測設定
+
+def load_prediction_settings_from_env():
+    """Configuration section."""
     target_accuracy = os.getenv("CLSTOCK_TARGET_ACCURACY")
     if target_accuracy:
         settings.prediction.target_accuracy = float(target_accuracy)
@@ -387,7 +394,9 @@ def load_from_env() -> None:
     if max_confidence_threshold:
         settings.prediction.max_confidence_threshold = float(max_confidence_threshold)
 
-    # モデル設定
+
+def load_model_settings_from_env():
+    """Configuration section."""
     xgb_estimators = os.getenv("CLSTOCK_XGB_N_ESTIMATORS")
     if xgb_estimators:
         settings.model.xgb_n_estimators = int(xgb_estimators)
@@ -420,7 +429,9 @@ def load_from_env() -> None:
     if min_training_data:
         settings.model.min_training_data = int(min_training_data)
 
-    # バックテスト設定
+
+def load_backtest_settings_from_env():
+    """Configuration section."""
     initial_capital = os.getenv("CLSTOCK_INITIAL_CAPITAL")
     if initial_capital:
         settings.backtest.default_initial_capital = float(initial_capital)
@@ -453,7 +464,9 @@ def load_from_env() -> None:
     if data_period:
         settings.backtest.default_data_period = data_period
 
-    # トレード設定
+
+def load_trading_settings_from_env():
+    """Configuration section."""
     market_open_hour = os.getenv("CLSTOCK_MARKET_OPEN_HOUR")
     if market_open_hour:
         settings.trading.market_open_hour = int(market_open_hour)
@@ -462,7 +475,9 @@ def load_from_env() -> None:
     if market_close_hour:
         settings.trading.market_close_hour = int(market_close_hour)
 
-    # API設定
+
+def load_api_settings_from_env():
+    """Configuration section."""
     api_title = os.getenv("CLSTOCK_API_TITLE")
     if api_title:
         settings.api.title = api_title
@@ -487,7 +502,9 @@ def load_from_env() -> None:
     if available_periods:
         settings.api.available_periods = available_periods.split(",")
 
-    # ログ設定
+
+def load_logging_settings_from_env():
+    """Configuration section."""
     log_level = os.getenv("CLSTOCK_LOG_LEVEL")
     if log_level:
         settings.logging.level = log_level
@@ -500,7 +517,9 @@ def load_from_env() -> None:
     if log_file:
         settings.logging.log_file = log_file
 
-    # リアルタイム設定
+
+def load_realtime_settings_from_env():
+    """Configuration section."""
     update_interval = os.getenv("CLSTOCK_RT_UPDATE_INTERVAL")
     if update_interval:
         settings.realtime.update_interval_seconds = int(update_interval)
@@ -541,7 +560,9 @@ def load_from_env() -> None:
     if order_execution:
         settings.realtime.order_execution = order_execution
 
-    # プロセス設定
+
+def load_process_settings_from_env():
+    """Configuration section."""
     max_concurrent_processes = os.getenv("CLSTOCK_MAX_CONCURRENT_PROCESSES")
     if max_concurrent_processes:
         settings.process.max_concurrent_processes = int(max_concurrent_processes)
@@ -562,12 +583,11 @@ def load_from_env() -> None:
     if max_restart_attempts:
         settings.process.max_restart_attempts = int(max_restart_attempts)
 
-
 def validate_settings(settings: 'AppSettings') -> bool:
-    """設定のバリデーション"""
+    """Configuration section."""
     errors = []
     
-    # 予測設定のバリデーション
+    # 莠域ｸｬ險ｭ螳壹・繝舌Μ繝・・繧ｷ繝ｧ繝ｳ
     if not 0 <= settings.prediction.min_confidence_threshold <= 1:
         errors.append(f"min_confidence_threshold must be between 0 and 1, got {settings.prediction.min_confidence_threshold}")
     
@@ -580,32 +600,32 @@ def validate_settings(settings: 'AppSettings') -> bool:
     if settings.prediction.max_predicted_change_percent <= 0:
         errors.append(f"max_predicted_change_percent must be positive, got {settings.prediction.max_predicted_change_percent}")
     
-    # モデル設定のバリデーション
+    # 繝｢繝・Ν險ｭ螳壹・繝舌Μ繝・・繧ｷ繝ｧ繝ｳ
     if settings.model.train_test_split <= 0 or settings.model.train_test_split >= 1:
         errors.append(f"train_test_split must be between 0 and 1 (exclusive), got {settings.model.train_test_split}")
     
     if settings.model.min_training_data <= 0:
         errors.append(f"min_training_data must be positive, got {settings.model.min_training_data}")
     
-    # バックテスト設定のバリデーション
+    # 繝舌ャ繧ｯ繝・せ繝郁ｨｭ螳壹・繝舌Μ繝・・繧ｷ繝ｧ繝ｳ
     if settings.backtest.default_initial_capital <= 0:
         errors.append(f"default_initial_capital must be positive, got {settings.backtest.default_initial_capital}")
     
     if settings.backtest.default_score_threshold < 0:
         errors.append(f"default_score_threshold must be non-negative, got {settings.backtest.default_score_threshold}")
     
-    # トレード設定のバリデーション
+    # 繝医Ξ繝ｼ繝芽ｨｭ螳壹・繝舌Μ繝・・繧ｷ繝ｧ繝ｳ
     if settings.trading.min_score < 0 or settings.trading.max_score > 100 or settings.trading.min_score >= settings.trading.max_score:
         errors.append("Invalid trading score range")
     
-    # API設定のバリデーション
+    # API險ｭ螳壹・繝舌Μ繝・・繧ｷ繝ｧ繝ｳ
     if settings.api.max_top_n <= 0:
         errors.append(f"max_top_n must be positive, got {settings.api.max_top_n}")
     
     if settings.api.min_top_n <= 0:
         errors.append(f"min_top_n must be positive, got {settings.api.min_top_n}")
     
-    # ログ設定
+    # 繝ｭ繧ｰ險ｭ螳・
     if settings.api.max_top_n < settings.api.min_top_n:
         errors.append(f"max_top_n ({settings.api.max_top_n}) cannot be less than min_top_n ({settings.api.min_top_n})")
     
@@ -616,9 +636,15 @@ def validate_settings(settings: 'AppSettings') -> bool:
     
     return True
 
-# 起動時に環境変数を読み込み
+# 襍ｷ蜍墓凾縺ｫ迺ｰ蠅・､画焚繧定ｪｭ縺ｿ霎ｼ縺ｿ
 load_from_env()
 
-# 設定のバリデーション
+# 險ｭ螳壹・繝舌Μ繝・・繧ｷ繝ｧ繝ｳ
 if not validate_settings(settings):
     logger.error("Settings validation failed. Please check the configuration.")
+
+
+
+
+
+

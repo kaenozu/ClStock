@@ -6,12 +6,12 @@
 """
 
 import time
-import pickle
+import joblib
 import hashlib
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Any, Tuple
-from functools import lru_cache
+
 import numpy as np
 import pandas as pd
 import threading
@@ -365,7 +365,7 @@ class IntelligentPredictionCache:
         try:
             cached_data = self.redis_client.get(cache_key)
             if cached_data:
-                return pickle.loads(cached_data)
+                return joblib.loads(cached_data)
         except Exception as e:
             self.logger.warning(f"Redis get error: {str(e)}")
 
@@ -377,7 +377,7 @@ class IntelligentPredictionCache:
             return
 
         try:
-            serialized_data = pickle.dumps(result)
+            serialized_data = joblib.dumps(result)
             self.redis_client.setex(cache_key, ttl, serialized_data)
         except Exception as e:
             self.logger.warning(f"Redis set error: {str(e)}")

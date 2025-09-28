@@ -15,7 +15,7 @@ from dataclasses import dataclass, asdict
 
 try:
     import plotly.graph_objects as go
-    import plotly.express as px
+
     from plotly.subplots import make_subplots
     import plotly.io as pio
 
@@ -25,7 +25,7 @@ except ImportError:
 
 try:
     import dash
-    from dash import dcc, html, Input, Output, State
+    from dash import dcc, html, Input, Output
     import dash_bootstrap_components as dbc
 
     DASH_AVAILABLE = True

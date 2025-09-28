@@ -6,8 +6,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Callable, ClassVar
+import logging
 
 import hashlib
+from utils.logger_config import setup_logger
+
+logger = setup_logger(__name__)
 import json
 
 import joblib
@@ -133,7 +137,8 @@ class EnsembleStockPredictor(StockPredictor):
             weight = self.weights[index] if default_weight is None else default_weight
             try:
                 prediction = model.predict(symbol, data)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Prediction failed for symbol {symbol} with model {model.__class__.__name__}: {e}")
                 continue
             valid_predictions.append(prediction)
             valid_weights.append(weight)

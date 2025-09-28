@@ -21,7 +21,6 @@ from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import LSTM, GRU, Dense, Dropout, Conv1D, MaxPooling1D
 from tensorflow.keras.layers import (
     BatchNormalization,
-    Attention,
     MultiHeadAttention,
     LayerNormalization,
 )

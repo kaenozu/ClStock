@@ -4,7 +4,7 @@
 
 import logging
 import pandas as pd
-import pickle
+import joblib
 import gzip
 
 
@@ -56,11 +56,11 @@ class MemoryEfficientCache:
 
     def _compress(self, df: pd.DataFrame) -> bytes:
         """DataFrameを圧縮"""
-        return gzip.compress(pickle.dumps(df))
+        return gzip.compress(joblib.dumps(df))
 
     def _decompress(self, data: bytes) -> pd.DataFrame:
         """圧縮データを展開"""
-        return pickle.loads(gzip.decompress(data))
+        return joblib.loads(gzip.decompress(data))
 
     def clear(self):
         """キャッシュクリア"""

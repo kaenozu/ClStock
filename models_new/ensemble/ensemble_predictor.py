@@ -155,7 +155,7 @@ class EnsembleStockPredictor(StockPredictor):
         """複数のモデルタイプを準備"""
         from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
         from sklearn.neural_network import MLPRegressor
-        from sklearn.svm import SVR
+        
 
         models_to_add = []
 

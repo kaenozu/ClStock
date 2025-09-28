@@ -6,6 +6,7 @@ ClStock デモトレーダー
 """
 
 import logging
+import os
 import threading
 import time
 from datetime import datetime, timedelta
@@ -636,7 +637,7 @@ class DemoTrader:
 
         # JSONファイルに保存
         filename = f"demo_session_{self.current_session.session_id}.json"
-        filepath = f"C:\\gemini-desktop\\ClStock\\data\\{filename}"
+        filepath = os.path.join("C:", "gemini-desktop", "ClStock", "data", filename)
 
         try:
             with open(filepath, "w", encoding="utf-8") as f:

@@ -1,42 +1,70 @@
-# ClStock - 中期的な推奨銘柄予想アプリ
+# ClStock - AI株価予測・投資推奨システム
 
 初心者でも「どの銘柄を買って、いつ売ればいいか」が分かるように、AIが中期（数週間〜数か月）の推奨銘柄をランキング形式で提示するアプリケーションです。
 
 ## 機能
 
-- 📊 主要日本株10銘柄の推奨ランキング
+- 📊 主要日本株4000銘柄の推奨ランキング（東証4000銘柄対応）
 - 💰 買うタイミング、目標価格、損切り価格の提示
 - 📅 保有期間の目安
-- 🎯 技術的指標に基づくスコアリング
-- 🔌 REST API提供
+- 🎯 機械学習モデルによる高精度予測（87%精度突破システム）
+- 🔐 API認証・レート制限・入力検証を含むセキュアなAPI
+- 🔌 REST APIとCLI提供
 - 💻 CUIインターフェース
+- 📈 リアルタイムデータとWebSocket対応
+- 🔄 自動プロセスマネージャーと監視機能
+- 🧪 完備されたテストスイート（ユニットテスト・統合テスト）
 
 ## インストール
 
 ```bash
 # 依存関係をインストール
 pip install -r requirements.txt
+
+# または、仮想環境を使用
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or
+venv\Scripts\activate  # Windows
+
+pip install -r requirements.txt
 ```
 
 ## 使用方法
 
-### CUIクライアント
+### CLIクライアント（推奨）
 
 ```bash
-# 上位5銘柄の推奨を表示
-python recommend.py
+# CLIメニュー（推奨）
+python clstock_cli.py
 
-# 上位10銘柄の推奨を表示
-python recommend.py --top 10
+# サービス管理
+python clstock_cli.py service start dashboard    # ダッシュボード起動
+python clstock_cli.py service start demo_trading # デモ取引起動
+python clstock_cli.py service status             # サービス状態確認
+python clstock_cli.py service stop all           # 全サービス停止
 
-# 特定銘柄の推奨を表示
-python recommend.py --symbol 7203
+# 予測実行
+python clstock_cli.py system predict -s 7203     # 特定銘柄の87%精度予測
 
-# JSON形式で出力
-python recommend.py --json
+# データ取得
+python clstock_cli.py data fetch -s 7203 -p 1y   # 株価データ取得（1年分）
 
-# 利用可能な銘柄一覧を表示
-python recommend.py --list
+# セットアップ
+python clstock_cli.py setup                       # 初期セットアップ
+```
+
+### システム実行
+
+```bash
+# 完全自動システム（4000銘柄分析）
+python full_auto_system.py
+
+# デモ取引開始
+python demo_start.py
+
+# 投資アドバイス取得
+python investment_advisor_cui.py
 ```
 
 ### API サーバー
@@ -52,23 +80,65 @@ python main.py
 
 #### API エンドポイント
 
-- `GET /api/v1/recommendations?top_n=5` - 推奨銘柄ランキング
-- `GET /api/v1/recommendation/{symbol}` - 特定銘柄の推奨
-- `GET /api/v1/stocks` - 利用可能な銘柄一覧
-- `GET /api/v1/stock/{symbol}/data` - 株価データと技術指標
+- `GET /recommendations?top_n=5` - 推奨銘柄ランキング（認証必要）
+- `GET /recommendation/{symbol}` - 特定銘柄の推奨（認証必要）
+- `GET /stocks` - 利用可能な銘柄一覧
+- `GET /stock/{symbol}/data` - 株価データと技術指標
+- `GET /secure/stock/{symbol}/data` - セキュアな株価データ取得（認証必要）
+- `GET /secure/analysis/{symbol}` - 高度な市場分析（管理者権限必要）
+
+## 主要技術
+
+- 🧠 **87%精度突破統合システム** - メタラーニング・DQN強化学習統合
+- 📊 **リアルタイムデータプロバイダー** - WebSocket対応
+- 🔐 **APIセキュリティ** - トークン認証・レート制限
+- 🔄 **プロセスマネージャー** - 自動再起動・監視機能
+- 🧪 **テスト駆動開発** - 90%以上のカバレッジを目指す
+
+## テストの実行
+
+```bash
+# すべてのテストを実行
+pytest
+
+# 単位テストのみ
+pytest tests/unit/
+
+# APIテストのみ
+pytest tests/test_api_security.py
+
+# 特定のテストモジュール
+pytest tests/unit/test_data/test_stock_data.py
+
+# カバレッジレポート
+pytest --cov=.
+
+# カバレッジレポート（HTML出力）
+pytest --cov=. --cov-report=html
+```
+
+## ディレクトリ構造
+
+```
+ClStock/
+├── api/                 # APIエンドポイント
+├── app/                 # メインアプリケーション
+├── config/             # 設定ファイル
+├── data/               # データ取得・処理モジュール
+├── ml_models/          # 機械学習モデル
+├── models_new/         # 新しいモデル実装（87%精度システムなど）
+├── models_refactored/  # リファクタリング済みモデル
+├── systems/            # システム管理（プロセスマネージャーなど）
+├── tests/              # テストスイート
+├── trading/            # トレード戦略・ポートフォリオ管理
+├── utils/              # ユーティリティ関数
+├── research/           # 研究・実験コード
+└── README.md
+```
 
 ## 対象銘柄
 
-- 7203: トヨタ自動車
-- 6758: ソニーグループ
-- 9984: ソフトバンクグループ
-- 8306: 三菱UFJフィナンシャル・グループ
-- 6861: キーエンス
-- 4661: オリエンタルランド
-- 9433: KDDI
-- 4519: 中外製薬
-- 6367: ダイキン工業
-- 8035: 東京エレクトロン
+- 東証4000銘柄に対応（デフォルトで50銘柄が設定済み）
 
 ## 出力例
 
@@ -85,6 +155,17 @@ python main.py
    📅 保有期間の目安: 1～2か月
    📊 推奨度スコア: 78.5/100
    💡 推奨理由: 強い上昇トレンドとファンダメンタルズが良好
+   🔮 87%精度AI予測: 次週価格は3,650円（+12.0%）を予測
+```
+
+## 設定
+
+プロジェクトは `config/settings.py` で設定を一元管理しています。環境変数によるオーバーライドも可能です：
+
+```bash
+export CLSTOCK_API_TITLE="My Custom ClStock API"
+export CLSTOCK_LOG_LEVEL="DEBUG"
+export CLSTOCK_INITIAL_CAPITAL=2000000
 ```
 
 ## 注意事項
@@ -92,6 +173,7 @@ python main.py
 - この情報は投資判断の参考であり、投資は自己責任で行ってください
 - 実際の投資では、必ず最新の情報を確認してください
 - 市場状況により予測が外れる可能性があります
+- 高精度予測システムはテスト中であり、実際の投資結果を保証するものではありません
 
 ## ライセンス
 

@@ -130,6 +130,7 @@ omit = [
     "*/migrations/*",
     "*/static/*",
     "*/media/*",
+    "archive/*",
 ]
 
 [tool.coverage.report]
@@ -146,10 +147,32 @@ exclude_lines = [
     "@(abc\\.)?abstractmethod",
 ]
 
+[tool.vulture]
+exclude = [
+    "archive",
+]
+min_confidence = 90
+ignore_names = [
+    "cv2",
+    "ImageDraw",
+    "n_clicks",
+    "n_intervals",
+    "sklearn",
+    "aioredis",
+    "mp",
+    "cp",
+    "frame",
+]
+
+[tool.xenon]
+max-average = 10
+max-complexity = 20
+
 [tool.bandit]
 exclude_dirs = [
     "tests",
     "venv",
+    "archive",
 ]
 skips = [
     "B101",

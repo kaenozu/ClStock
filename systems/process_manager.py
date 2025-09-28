@@ -551,7 +551,7 @@ class ProcessManager:
             "timestamp": datetime.now(),
         }
 
-    def _signal_handler(self, signum, frame):
+    def _signal_handler(self, signum):
         """シグナルハンドラー"""
         logger.info(f"シグナル受信: {signum}")
 

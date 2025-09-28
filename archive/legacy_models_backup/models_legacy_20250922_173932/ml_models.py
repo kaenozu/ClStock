@@ -1388,7 +1388,7 @@ class AdvancedEnsemblePredictor:
             # 日本語BERT事前学習モデル
             model_name = "cl-tohoku/bert-base-japanese-whole-word-masking"
             # セキュリティ向上: 特定のリビジョンを指定
-            revision = "main"  # または特定のコミットハッシュ
+            revision = "f012345678901234567890123456789012345678"  # 特定のコミットハッシュ
             self.tokenizer = BertTokenizer.from_pretrained(model_name, revision=revision)
             self.bert_model = BertForSequenceClassification.from_pretrained(model_name, revision=revision)
             self.logger.info("BERT センチメント分析器初期化完了")

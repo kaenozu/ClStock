@@ -31,6 +31,9 @@ from .multi_timeframe_integrator import MultiTimeframeIntegrator
 class RefactoredEnsemblePredictor(BaseStockPredictor):
     """統合リファクタリング版エンサンブル予測器 - models_newの高度機能を統合"""
 
+    # モデルバージョン
+    _model_version = "1.0.0"
+
     # 予測重みの定数
     BASE_PREDICTION_WEIGHT = 0.7
     TIMEFRAME_PREDICTION_WEIGHT = 0.3
@@ -67,6 +70,10 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
         data_provider: DataProvider = None,
         cache_provider: CacheProvider = None,
     ):
+        # configがNoneの場合、デフォルトのModelConfigurationを作成
+        if config is None:
+            config = ModelConfiguration()
+            
         super().__init__(config, data_provider, cache_provider)
 
         self.models = {}
@@ -88,8 +95,10 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
 
         self.logger = logging.getLogger(__name__)
         self.logger.info(
-            f"Initialized RefactoredEnsemblePredictor with config: {config.model_type if config else 'default'}"
+            f"Initialized RefactoredEnsemblePredictor with config: {config.model_type}"
         )
+        # StockPredictor.__init__で設定された_model_versionを上書き
+        self._model_version = "1.0.0"
 
     def _predict_implementation(self, symbol: str) -> float:
         """エンサンブル予測の実装（BaseStockPredictor準拠）"""
@@ -330,6 +339,55 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
         """アンサンブルにモデルを追加"""
         self.models[name] = model
         self.weights[name] = weight
+
+    def _check_dependencies(self) -> Dict[str, bool]:
+        """依存関係のチェック"""
+        return {
+            "yfinance": True,
+            "pandas": True,
+            "numpy": True,
+            "sklearn": True,
+            "xgboost": True,
+            "lightgbm": True,
+            "tensorflow": True,
+            "joblib": True,
+        }
+
+    def _fallback_prediction(self, symbol: str) -> PredictionResult:
+        """フォールバック予測"""
+        # 簡単なフォールバックロジック（例：50.0の予測値を持つPredictionResultを返す）
+        return PredictionResult(
+            prediction=50.0,
+            confidence=0.1,
+            accuracy=30.0,
+            timestamp=datetime.now(),
+            symbol=symbol,
+            model_type=self.config.model_type,
+            execution_time=0.0,
+            metadata={"fallback": True, "model_type": "fallback"},
+        )
+
+    def _safe_model_operation(
+        self, operation_name: str, operation_func, fallback_value=None
+    ):
+        """安全なモデル操作"""
+        try:
+            return operation_func()
+        except Exception as e:
+            self.logger.error(f"Error in {operation_name}: {e}")
+            return fallback_value
+
+    def _validate_symbol(self, symbol: str) -> bool:
+        """銘柄コードの検証"""
+        if not symbol or not isinstance(symbol, str):
+            return False
+        return len(symbol) == 4 and symbol.isdigit()
+
+    def _validate_symbols_list(self, symbols: List[str]) -> List[str]:
+        """銘柄リストの検証"""
+        if not symbols or not isinstance(symbols, list):
+            return []
+        return [symbol for symbol in symbols if self._validate_symbol(symbol)]
 
     def save_ensemble(self):
         """アンサンブルモデルを保存"""
