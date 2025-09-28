@@ -335,7 +335,7 @@ python-socketio==5.13.0
 pytz==2025.2
 pywin32==311; sys_platform == 'win32'
 pywin32-ctypes==0.2.3
-pywinpty==2.0.15
+pywinpty==2.0.15; sys_platform == 'win32'
 PyYAML==6.0.2
 pyyaml_env_tag==1.1
 pyzmq==27.0.1
