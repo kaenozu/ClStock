@@ -341,7 +341,6 @@ PyYAML==6.0.2
 pyyaml_env_tag==1.1
 pyzmq==27.0.1
 qrcode==7.4.2
-realesrgan==0.2.5.0
 redis==5.2.1
 referencing==0.36.2
 regex==2024.11.6
