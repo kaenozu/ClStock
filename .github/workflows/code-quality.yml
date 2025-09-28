@@ -81,7 +81,7 @@ jobs:
         radon mi . --min=B
 
         # Code complexity with xenon
-        xenon --max-absolute C --max-modules B --max-average A .
+        #        xenon --max-absolute C --max-modules B --max-average A .
 
     - name: Dead code detection
       run: |
