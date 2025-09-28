@@ -11,6 +11,8 @@ on:
 jobs:
   security-audit:
     runs-on: ubuntu-latest
+    env:
+      SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
 
     steps:
     - uses: actions/checkout@v4
@@ -32,8 +34,8 @@ jobs:
 
     - name: Dependency vulnerability check
       run: |
-        safety check --json --output safety-report.json || true
-        safety check
+        safety check --json --output safety-report.json --key "$SAFETY_API_KEY" || true
+        safety check --key "$SAFETY_API_KEY"
 
     - name: Upload security reports
       uses: actions/upload-artifact@v4
