@@ -1,20 +1,15 @@
 import os
 import sys
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 import pandas as pd
 import pytest
-import unittest.mock as _mock
-from unittest.mock import MagicMock
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.recommendation import StockRecommendation
-
-
-_mock.Mock = MagicMock
 
 
 @pytest.fixture
@@ -34,6 +29,8 @@ def generate_mock_stock_data(period="1y", symbol="7203", company_name="トヨタ
     Returns:
         pd.DataFrame: Stock price data
     """
+    if pd is None:
+        pytest.skip("pandas is required for mock stock data fixtures")
     # Parse period parameter
     if period == "1y":
         days = 365
@@ -96,6 +93,8 @@ def sample_recommendation() -> StockRecommendation:
 def mock_yfinance():
     """Mock for yfinance"""
     with patch("yfinance.Ticker") as mock_ticker:
+        if pd is None:
+            pytest.skip("pandas is required for yfinance fixtures")
         mock_ticker_instance = Mock()
         mock_ticker_instance.history.return_value = pd.DataFrame(
             {
