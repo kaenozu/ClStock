@@ -4,7 +4,6 @@
 """
 
 import logging
-import time
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -14,8 +13,8 @@ from sklearn.preprocessing import StandardScaler
 import joblib
 
 from ..core.interfaces import (
-    StockPredictor,
     PredictionResult,
+    BatchPredictionResult,
     ModelConfiguration,
     ModelType,
     PredictionMode,
@@ -26,6 +25,7 @@ from ..core.base_predictor import BaseStockPredictor
 from .parallel_feature_calculator import ParallelFeatureCalculator
 from .memory_efficient_cache import MemoryEfficientCache
 from .multi_timeframe_integrator import MultiTimeframeIntegrator
+from data.stock_data import StockDataProvider
 
 
 class RefactoredEnsemblePredictor(BaseStockPredictor):
@@ -67,12 +67,22 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
         data_provider: DataProvider = None,
         cache_provider: CacheProvider = None,
     ):
+        if config is None:
+            config = ModelConfiguration()
+
+        if data_provider is None:
+            data_provider = StockDataProvider()
+
         super().__init__(config, data_provider, cache_provider)
 
         self.models = {}
         self.weights = {}
         self.feature_names = []
         self.scaler = None
+
+        # 最新の取得データを保持し、期間付きキャッシュキー生成を可能にする
+        self._latest_data_by_symbol: Dict[str, pd.DataFrame] = {}
+        self._active_period: Optional[str] = None
 
         # 並列特徴量計算システム
         self.parallel_calculator = ParallelFeatureCalculator()
@@ -88,8 +98,121 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
 
         self.logger = logging.getLogger(__name__)
         self.logger.info(
-            f"Initialized RefactoredEnsemblePredictor with config: {config.model_type if config else 'default'}"
+            "Initialized RefactoredEnsemblePredictor with config: %s",
+            config.model_type,
         )
+
+    def predict(self, symbol: str, period: str = "1y") -> PredictionResult:
+        """Execute a prediction for the provided *symbol* using the given *period*.
+
+        The method ensures data is fetched up-front so that callers receive clear
+        feedback when no data is available while still leveraging the base class
+        pipeline for caching and result formatting.
+        """
+
+        if not self.validate_symbol(symbol):
+            raise ValueError(f"Invalid symbol: {symbol}")
+
+        self._active_period = period
+
+        try:
+            data = self.data_provider.get_stock_data(symbol, period)
+        except Exception:
+            # モック／実際のデータプロバイダーからの例外はそのまま伝播させる
+            self._active_period = None
+            raise
+
+        if data.empty:
+            self._active_period = None
+            raise ValueError("No data available")
+
+        self._latest_data_by_symbol[symbol] = data
+
+        try:
+            result = super().predict(symbol)
+        finally:
+            self._latest_data_by_symbol.pop(symbol, None)
+            self._active_period = None
+
+        # enrich metadata with period and feature snapshot for transparency
+        feature_vector = self._calculate_features(data)
+        result.metadata.update(
+            {
+                "period": period,
+                "data_points": len(data),
+                "features": feature_vector,
+            }
+        )
+
+        return result
+
+    def predict_batch(
+        self, symbols: List[str], period: str = "1y"
+    ) -> BatchPredictionResult:
+        """Execute batch predictions with period-aware handling.
+
+        Returns
+        -------
+        BatchPredictionResult
+            Container holding successful predictions and error messages for
+            each requested symbol.
+        """
+
+        if not symbols:
+            return BatchPredictionResult(predictions={}, errors={}, metadata={"period": period})
+
+        predictions: Dict[str, float] = {}
+        errors: Dict[str, str] = {}
+
+        for symbol in symbols:
+            try:
+                result = self.predict(symbol, period=period)
+                predictions[symbol] = result.prediction
+            except Exception as exc:
+                errors[symbol] = str(exc)
+
+        metadata = {
+            "period": period,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+        return BatchPredictionResult(predictions=predictions, errors=errors, metadata=metadata)
+
+    def _calculate_features(self, data: pd.DataFrame) -> List[float]:
+        """Calculate a numeric feature vector from the provided market data."""
+
+        if data is None or data.empty:
+            return []
+
+        try:
+            technical = self.parallel_calculator._calculate_technical_indicators_fast(data)
+            advanced = self.parallel_calculator._calculate_advanced_features_fast(data)
+            combined = pd.concat([technical, advanced], axis=1)
+            numeric = combined.select_dtypes(include=[np.number]).fillna(0)
+
+            if numeric.empty:
+                numeric = data.select_dtypes(include=[np.number]).fillna(0)
+
+            latest_series = numeric.iloc[-1]
+            return latest_series.astype(float).tolist()
+
+        except Exception as exc:
+            self.logger.debug(
+                "Falling back to basic feature extraction due to error: %s", exc
+            )
+            numeric = data.select_dtypes(include=[np.number]).fillna(0)
+            if numeric.empty:
+                return []
+            latest_series = numeric.iloc[-1]
+            return latest_series.astype(float).tolist()
+
+    def _generate_cache_key(self, symbol: str) -> str:
+        """Extend the base cache key with the active period for clarity."""
+
+        base_key = super()._generate_cache_key(symbol)
+        if self._active_period:
+            return f"{base_key}_{self._active_period}"
+        return base_key
 
     def _predict_implementation(self, symbol: str) -> float:
         """エンサンブル予測の実装（BaseStockPredictor準拠）"""
@@ -102,7 +225,10 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
 
         try:
             # キャッシュチェック
-            cache_key = f"prediction_{symbol}_{datetime.now().strftime('%Y%m%d_%H')}"
+            period = getattr(self, "_active_period", "1y")
+            cache_key = (
+                f"prediction_{symbol}_{period}_{datetime.now().strftime('%Y%m%d_%H')}"
+            )
             cached_result = self.prediction_cache.get(cache_key)
             if cached_result is not None:
                 self.logger.debug(f"Using cached prediction for {symbol}")
@@ -156,7 +282,10 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
         """基本のアンサンブル予測（従来の特徴量ベース）"""
         try:
             # データ取得
-            data = self.data_provider.get_stock_data(symbol, "1y")
+            data = self._latest_data_by_symbol.get(symbol)
+            if data is None:
+                period = getattr(self, "_active_period", "1y")
+                data = self.data_provider.get_stock_data(symbol, period)
             if data.empty:
                 return 50.0
 
@@ -169,11 +298,15 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
             latest_features = features.iloc[-1:].copy()
 
             # 特徴量を訓練時と同じ順序に調整
-            latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0
-            )
+            if self.feature_names:
+                latest_features = latest_features.reindex(
+                    columns=self.feature_names, fill_value=0
+                )
 
             # スケーリング
+            if self.scaler is None:
+                return float(latest_features.mean(axis=1).iloc[0])
+
             features_scaled = self.scaler.transform(latest_features)
 
             # 各モデルの予測を収集
@@ -215,10 +348,20 @@ class RefactoredEnsemblePredictor(BaseStockPredictor):
             return cached_features
 
         try:
-            # 並列特徴量計算システムを使用
-            features = self.parallel_calculator._calculate_single_symbol_features(
-                symbol, self.data_provider
-            )
+            feature_vector = self._calculate_features(data)
+            features = pd.DataFrame()
+
+            if feature_vector:
+                feature_columns = [f"feature_{idx}" for idx in range(len(feature_vector))]
+                latest_index = data.tail(1).index
+                features = pd.DataFrame(
+                    [feature_vector], index=latest_index, columns=feature_columns
+                )
+
+            if features.empty:
+                features = self.parallel_calculator._calculate_single_symbol_features(
+                    symbol, self.data_provider
+                )
 
             if not features.empty:
                 # キャッシュに保存
