@@ -7,12 +7,8 @@ ClStock 新メニューシステム v2.0
 import os
 import sys
 import time
-import logging
-from pathlib import Path
 
 from utils.logger_config import get_logger
-from typing import Optional
-from datetime import datetime
 
 logger = get_logger(__name__)
 
@@ -305,7 +301,7 @@ def run_enhanced_ensemble():
         print(f"予測値: {result.prediction:.1f}")
         print(f"信頼度: {result.confidence:.2f}")
         print(f"精度: {result.accuracy:.1f}%")
-        print(f"予測時間: 超高速 (0.01秒未満)")
+        print("予測時間: 超高速 (0.01秒未満)")
 
     except Exception as e:
         print(f"\n{Colors.RED}エラー: {str(e)}{Colors.ENDC}")
