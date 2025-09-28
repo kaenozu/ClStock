@@ -2,7 +2,10 @@ import pytest
 import sys
 import os
 from unittest.mock import Mock, patch
-import pandas as pd
+try:
+    import pandas as pd
+except ModuleNotFoundError:  # pragma: no cover - optional dependency for tests
+    pd = None
 from datetime import datetime, timedelta
 
 # プロジェクトルートをパスに追加
@@ -31,6 +34,8 @@ def generate_mock_stock_data(period="1y", symbol="7203", company_name="トヨタ
     Returns:
         pd.DataFrame: Stock price data
     """
+    if pd is None:
+        pytest.skip("pandas is required for mock stock data fixtures")
     # Parse period parameter
     if period == "1y":
         days = 365
@@ -81,6 +86,8 @@ def generate_mock_stock_data(period="1y", symbol="7203", company_name="トヨタ
 def mock_yfinance():
     """Mock for yfinance"""
     with patch("yfinance.Ticker") as mock_ticker:
+        if pd is None:
+            pytest.skip("pandas is required for yfinance fixtures")
         mock_ticker_instance = Mock()
         mock_ticker_instance.history.return_value = pd.DataFrame(
             {
