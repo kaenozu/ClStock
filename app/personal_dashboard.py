@@ -12,18 +12,18 @@ import uvicorn
 import sqlite3
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-import json
+from datetime import datetime
+
 import sys
 import os
 from typing import Dict, List, Any
 
-# プロジェクトルートをパスに追加
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from models_new.precision.precision_87_system import Precision87BreakthroughSystem
 from data.stock_data import StockDataProvider
 from config.settings import get_settings
+
+# プロジェクトルートをパスに追加
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 app = FastAPI(title="ClStock Personal Dashboard", version="1.0.0")
 
@@ -200,9 +200,7 @@ class PersonalDashboard:
                 "component_breakdown": prediction_result.get("component_breakdown", {}),
                 "timestamp": datetime.now().isoformat(),
                 "system_performance": f"{self.settings.prediction.achieved_accuracy}% Average Accuracy",
-            }
-
-        except Exception as e:
+except Exception:
             return {
                 "error": str(e),
                 "symbol": symbol,
@@ -254,7 +252,7 @@ class PersonalDashboard:
 
             return portfolio_summary
 
-        except Exception as e:
+        except Exception:
             # フォールバック：通常のポートフォリオサマリーを返す
             return self.get_portfolio_summary()
 
@@ -274,7 +272,7 @@ class PersonalDashboard:
                     current_price = (
                         stock_data["Close"].iloc[-1] if not stock_data.empty else 0
                     )
-                except:
+                except Exception:
                     current_price = 0
 
                 enhanced_item = item.copy()
@@ -405,7 +403,7 @@ async def add_to_portfolio(request: Request):
     try:
         stock_data = dashboard.data_provider.get_stock_data(data["symbol"], "1d")
         current_price = stock_data["Close"].iloc[-1] if not stock_data.empty else 0
-    except:
+    except Exception:
         current_price = data.get("buy_price", 0)
 
     cursor.execute(

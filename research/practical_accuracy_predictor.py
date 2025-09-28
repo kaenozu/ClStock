@@ -240,7 +240,7 @@ class PracticalAccuracyPredictor:
 
             return (worst, expected, best)
 
-        except:
+        except Exception:
             return (-0.01, 0.0, 0.01)
 
 

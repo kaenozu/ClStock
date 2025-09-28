@@ -78,7 +78,7 @@ class ConnectionPool:
             try:
                 self.pool.put_nowait(connection)
                 logger.debug("Connection returned to pool")
-            except:
+            except Exception:
                 # Pool is full, close the connection
                 logger.debug("Pool is full, closing connection")
                 self._close_connection(connection)

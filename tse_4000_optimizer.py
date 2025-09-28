@@ -569,7 +569,7 @@ class TSE4000Optimizer:
                     portfolio_state["current_capital"] += (
                         position["shares"] * current_price
                     )
-            except:
+            except Exception:
                 pass
 
     def _calculate_backtest_results(self, portfolio_state: Dict) -> Dict:

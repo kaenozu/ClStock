@@ -281,7 +281,7 @@ class DemoRiskManager:
                     if data is not None and len(data) > 30:
                         returns = data["Close"].pct_change().dropna()
                         returns_data[symbol] = returns.tolist()
-                except:
+                except Exception:
                     continue
 
             if not returns_data:
@@ -346,7 +346,7 @@ class DemoRiskManager:
                     if data is not None and len(data) > 30:
                         returns = data["Close"].pct_change().dropna()
                         returns_data[symbol] = returns.tolist()
-                except:
+                except Exception:
                     continue
 
             if not returns_data:

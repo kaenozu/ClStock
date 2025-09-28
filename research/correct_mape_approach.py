@@ -419,7 +419,7 @@ class CorrectMAPEPredictor:
 
             return max(-0.1, min(0.1, prediction))
 
-        except:
+        except Exception:
             return 0.0
 
 

@@ -4,9 +4,9 @@ Security middleware for the ClStock API
 
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Dict, Optional, Callable
+from typing import Dict, Callable
 import time
-import logging
+
 from functools import wraps
 from utils.logger_config import get_logger
 

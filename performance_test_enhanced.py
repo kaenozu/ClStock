@@ -185,7 +185,7 @@ def test_cache_effectiveness(predictor, symbols: List[str]) -> Dict[str, Any]:
             predictor.predict(symbol)
             end_time = time.time()
             first_run_times.append(end_time - start_time)
-        except:
+        except Exception:
             pass
 
     # 2回目の予測（キャッシュあり）
@@ -196,7 +196,7 @@ def test_cache_effectiveness(predictor, symbols: List[str]) -> Dict[str, Any]:
             predictor.predict(symbol)
             end_time = time.time()
             second_run_times.append(end_time - start_time)
-        except:
+        except Exception:
             pass
 
     if first_run_times and second_run_times:
@@ -271,7 +271,7 @@ def test_memory_usage(predictor, symbols: List[str]) -> Dict[str, Any]:
         for symbol in symbols[:5]:  # 少数のサンプルでテスト
             try:
                 predictor.predict(symbol)
-            except:
+            except Exception:
                 pass
 
         # 実行後メモリ使用量
