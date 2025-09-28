@@ -200,7 +200,7 @@ class PersonalDashboard:
                 "component_breakdown": prediction_result.get("component_breakdown", {}),
                 "timestamp": datetime.now().isoformat(),
                 "system_performance": f"{self.settings.prediction.achieved_accuracy}% Average Accuracy",
-except Exception:
+        except Exception as e:
             return {
                 "error": str(e),
                 "symbol": symbol,
