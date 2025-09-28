@@ -260,6 +260,7 @@ paginate==0.5.7
 pandas==2.2.3
 pandas-datareader==0.10.0
 pandas-stubs==2.3.0.250703
+pandas_ta
 pandera==0.25.0
 pandocfilters==1.5.1
 parse==1.20.2
