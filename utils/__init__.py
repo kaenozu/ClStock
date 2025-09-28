@@ -18,15 +18,6 @@ from .exceptions import (
     FileOperationError,
 )
 
-from .cache import (
-    DataCache,
-    cached,
-    cache_dataframe,
-    get_cache,
-    clear_cache,
-    cleanup_cache,
-)
-
 __all__ = [
     "ClStockException",
     "DataFetchError",
@@ -41,10 +32,32 @@ __all__ = [
     "ValidationError",
     "NetworkError",
     "FileOperationError",
-    "DataCache",
-    "cached",
-    "cache_dataframe",
-    "get_cache",
-    "clear_cache",
-    "cleanup_cache",
 ]
+
+try:
+    from .cache import (
+        DataCache,
+        cached,
+        cache_dataframe,
+        get_cache,
+        clear_cache,
+        cleanup_cache,
+    )
+except ModuleNotFoundError:  # pragma: no cover - optional pandas dependency
+    DataCache = None
+    cached = None
+    cache_dataframe = None
+    get_cache = None
+    clear_cache = None
+    cleanup_cache = None
+else:
+    __all__.extend(
+        [
+            "DataCache",
+            "cached",
+            "cache_dataframe",
+            "get_cache",
+            "clear_cache",
+            "cleanup_cache",
+        ]
+    )
