@@ -5,9 +5,7 @@ import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-
-import yfinance as yf
+from typing import List, Optional
 
 from data.stock_data import StockDataProvider
 from ml_models.hybrid_predictor import HybridPredictor
@@ -17,6 +15,7 @@ from strategies.strategy_generator import StrategyGenerator
 from risk.risk_manager import RiskManager
 from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem
 from data_retrieval_script_generator import generate_colab_data_retrieval_script
+from config.settings import get_settings
 
 
 # ログ設定
@@ -56,6 +55,7 @@ class FullAutoInvestmentSystem:
         self.failed_symbols = set()  # データ取得に失敗した銘柄を記録
         self.logger = logging.getLogger(self.__class__.__name__)
         self.max_symbols = self._resolve_max_symbols(max_symbols)
+        self.settings = get_settings()
 
     def _resolve_max_symbols(self, max_symbols: Optional[int]) -> Optional[int]:
         if max_symbols is not None:
@@ -90,37 +90,48 @@ class FullAutoInvestmentSystem:
             # 1. 東証4000銘柄リストを取得
             print("[ステップ 1/4] (25%) - TSE4000銘柄リストを取得中...")
             print("=" * 60)
-            all_tickers = self.data_provider.get_all_tickers()
-            if self.max_symbols is not None and self.max_symbols < len(all_tickers):
-                all_tickers = all_tickers[:self.max_symbols]
-                print(f"[情報] 解析対象を {len(all_tickers)} 銘柄に制限 (max={self.max_symbols}).")
-            print(f"[情報] 取得銘柄数: {len(all_tickers)}")
-            
-            if not all_tickers:
+            target_stocks = self.settings.target_stocks
+            all_symbols = list(target_stocks.keys())
+            if self.max_symbols is not None and self.max_symbols < len(all_symbols):
+                all_symbols = all_symbols[:self.max_symbols]
+                print(f"[情報] 解析対象を {len(all_symbols)} 銘柄に制限 (max={self.max_symbols}).")
+            print(f"[情報] 取得銘柄数: {len(all_symbols)}")
+
+            if not all_symbols:
                 print("[警告] 東証4000銘柄リストが空です。処理を終了します。")
                 return []
-            
+
             # 2. 株価データを取得・前処理
             print("[ステップ 2/4] (50%) - 株価データを取得・前処理中...")
             print("=" * 60)
             processed_data = {}
             failed_count = 0
-            
-            for i, ticker_info in enumerate(all_tickers):
-                symbol = ticker_info.symbol
+            total_symbols = len(all_symbols)
+
+            for i, symbol in enumerate(all_symbols):
+                company_name = target_stocks.get(symbol, symbol)
                 try:
-                    data = self.data_provider.get_stock_data(symbol, period="2y")
+                    data = self.data_provider.fetch_stock_data(
+                        symbol,
+                        period="2y",
+                        interval="1d",
+                    )
                     if data is not None and not data.empty:
+                        data.attrs.setdefault("info", {})["longName"] = company_name
                         processed_data[symbol] = data
                     else:
                         self.failed_symbols.add(symbol)  # データ取得失敗を記録
                         failed_count += 1
-                        logger.warning(f"データ取得失敗: {symbol} (取得データが空またはNone)")
+                        logger.warning(
+                            f"データ取得失敗: {symbol} (取得データが空またはNone)"
+                        )
                     
                     # 進捗表示 (10銘柄ごと)
-                    if (i + 1) % 10 == 0 or (i + 1) == len(all_tickers):
-                        progress = ((i + 1) / len(all_tickers)) * 100
-                        print(f"  進捗: {progress:.0f}% ({i+1}/{len(all_tickers)}) - 失敗: {failed_count}銘柄")
+                    if (i + 1) % 10 == 0 or (i + 1) == total_symbols:
+                        progress = ((i + 1) / total_symbols) * 100
+                        print(
+                            f"  進捗: {progress:.0f}% ({i+1}/{total_symbols}) - 失敗: {failed_count}銘柄"
+                        )
                         
                 except Exception as e:
                     self.failed_symbols.add(symbol)  # データ取得失敗を記録
