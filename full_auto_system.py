@@ -1,21 +1,16 @@
-import asyncio
 import argparse
+import asyncio
 import logging
 import os
-import sys
+from dataclasses import dataclass
 from datetime import datetime, timedelta
+from enum import Enum
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
-import yfinance as yf
+import pandas as pd
 
-from data.stock_data import StockDataProvider
-from ml_models.hybrid_predictor import HybridPredictor
-from optimization.tse_optimizer import TSEPortfolioOptimizer
-from sentiment.sentiment_analyzer import SentimentAnalyzer
-from strategies.strategy_generator import StrategyGenerator
-from risk.risk_manager import RiskManager
-from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem
+from data.stock_data import StockDataProvider, TickerInfo
 from data_retrieval_script_generator import generate_colab_data_retrieval_script
 
 
@@ -42,17 +37,157 @@ class AutoRecommendation:
         self.reasoning = reasoning
 
 
+class SimplePricePredictor:
+    """Deterministic price projection based on moving averages and momentum."""
+
+    def predict(self, symbol: str, data: pd.DataFrame) -> Dict[str, float]:
+        closes = data["Close"].astype(float)
+        if closes.empty:
+            return {}
+
+        recent_close = closes.iloc[-1]
+        window_short = closes.rolling(window=5, min_periods=1).mean().iloc[-1]
+        window_long = closes.rolling(window=20, min_periods=1).mean().iloc[-1]
+
+        momentum = 0.0
+        if len(closes) > 10:
+            momentum = (recent_close / closes.iloc[-10] - 1.0)
+
+        trend_factor = 0.0
+        if window_long:
+            trend_factor = (window_short - window_long) / max(window_long, 1e-9)
+
+        projected_return = 0.5 * momentum + 0.5 * trend_factor
+        projected_return = max(min(projected_return, 0.15), -0.15)
+        predicted_price = recent_close * (1.0 + projected_return)
+
+        confidence = min(max(abs(projected_return) * 3, 0.1), 0.9)
+
+        return {
+            "predicted_price": float(predicted_price),
+            "projected_return": float(projected_return),
+            "confidence": float(confidence),
+        }
+
+
+class SimplePortfolioOptimizer:
+    """Select top symbols by trailing momentum."""
+
+    def __init__(self, top_n: int = 5):
+        self.top_n = top_n
+
+    def optimize(self, price_data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
+        if not price_data:
+            return {"selected_stocks": []}
+
+        scores: List[tuple[str, float]] = []
+        for symbol, df in price_data.items():
+            closes = df.get("Close")
+            if closes is None or len(closes) < 30:
+                continue
+
+            recent = closes.iloc[-1]
+            base = closes.iloc[-21]
+            if base <= 0:
+                continue
+            momentum = (recent / base) - 1.0
+            scores.append((symbol, float(momentum)))
+
+        scores.sort(key=lambda item: item[1], reverse=True)
+        selected = [symbol for symbol, _ in scores[: self.top_n]]
+        return {"selected_stocks": selected, "momentum_scores": scores}
+
+
+class SimpleSentimentAnalyzer:
+    """Placeholder sentiment analyser returning neutral scores."""
+
+    def analyze_sentiment(self, context: Dict[str, Any]) -> float:
+        _ = context
+        return 0.0
+
+
+class RiskLevel(Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+@dataclass
+class RiskAnalysis:
+    risk_level: RiskLevel
+    risk_score: float
+    volatility: float
+
+
+class SimpleRiskManager:
+    """Approximate risk scoring based on annualised volatility."""
+
+    def analyze_risk(
+        self, data: pd.DataFrame, predictions: Dict[str, Any]
+    ) -> Optional[RiskAnalysis]:
+        if data is None or data.empty:
+            return None
+
+        closes = data["Close"].astype(float)
+        returns = closes.pct_change().dropna()
+        if returns.empty:
+            return RiskAnalysis(RiskLevel.MEDIUM, 0.5, 0.0)
+
+        volatility = float(returns.std() * (252 ** 0.5))
+        risk_score = min(max(volatility / 0.4, 0.0), 1.0)
+
+        if risk_score < 0.33:
+            risk_level = RiskLevel.LOW
+        elif risk_score < 0.66:
+            risk_level = RiskLevel.MEDIUM
+        else:
+            risk_level = RiskLevel.HIGH
+
+        return RiskAnalysis(risk_level=risk_level, risk_score=risk_score, volatility=volatility)
+
+
+class SimpleStrategyGenerator:
+    """Generate entry/exit levels using projected returns and risk."""
+
+    def generate_strategy(
+        self,
+        predictions: Dict[str, Any],
+        risk_analysis: RiskAnalysis,
+        sentiment_score: float,
+        current_price: float,
+    ) -> Dict[str, Any]:
+        predicted_price = predictions.get("predicted_price", current_price)
+        projected_return = predictions.get("projected_return", 0.0)
+
+        entry_price = float(current_price)
+        target_multiplier = 1.0 + max(projected_return, 0.02) + sentiment_score * 0.1
+        target_price = float(entry_price * max(target_multiplier, 0.9))
+
+        base_stop = 0.04 + risk_analysis.risk_score * 0.08
+        stop_loss = float(entry_price * (1.0 - min(base_stop, 0.2)))
+
+        confidence = predictions.get("confidence", 0.4)
+        confidence = float(max(min(confidence - risk_analysis.risk_score * 0.2, 0.9), 0.1))
+
+        return {
+            "entry_price": entry_price,
+            "target_price": target_price,
+            "stop_loss": stop_loss,
+            "confidence_score": confidence,
+            "expected_return": target_price / entry_price - 1.0,
+        }
+
+
 class FullAutoInvestmentSystem:
     """完全自動投資推奨システム"""
 
     def __init__(self, max_symbols: Optional[int] = None):
         self.data_provider = StockDataProvider()
-        self.predictor = HybridPredictor()
-        self.optimizer = TSEPortfolioOptimizer()
-        self.sentiment_analyzer = SentimentAnalyzer()
-        self.strategy_generator = StrategyGenerator()
-        self.risk_manager = RiskManager()
-        self.medium_system = MediumTermPredictionSystem()
+        self.predictor = SimplePricePredictor()
+        self.optimizer = SimplePortfolioOptimizer()
+        self.sentiment_analyzer = SimpleSentimentAnalyzer()
+        self.strategy_generator = SimpleStrategyGenerator()
+        self.risk_manager = SimpleRiskManager()
         self.failed_symbols = set()  # データ取得に失敗した銘柄を記録
         self.logger = logging.getLogger(self.__class__.__name__)
         self.max_symbols = self._resolve_max_symbols(max_symbols)
@@ -92,22 +227,27 @@ class FullAutoInvestmentSystem:
             print("=" * 60)
             all_tickers = self.data_provider.get_all_tickers()
             if self.max_symbols is not None and self.max_symbols < len(all_tickers):
-                all_tickers = all_tickers[:self.max_symbols]
-                print(f"[情報] 解析対象を {len(all_tickers)} 銘柄に制限 (max={self.max_symbols}).")
+                all_tickers = all_tickers[: self.max_symbols]
+                print(
+                    f"[情報] 解析対象を {len(all_tickers)} 銘柄に制限 (max={self.max_symbols})."
+                )
             print(f"[情報] 取得銘柄数: {len(all_tickers)}")
-            
+
             if not all_tickers:
                 print("[警告] 東証4000銘柄リストが空です。処理を終了します。")
                 return []
-            
+
             # 2. 株価データを取得・前処理
             print("[ステップ 2/4] (50%) - 株価データを取得・前処理中...")
             print("=" * 60)
             processed_data = {}
             failed_count = 0
-            
+
             for i, ticker_info in enumerate(all_tickers):
-                symbol = ticker_info.symbol
+                if isinstance(ticker_info, TickerInfo):
+                    symbol = ticker_info.symbol
+                else:
+                    symbol = str(ticker_info)
                 try:
                     data = self.data_provider.get_stock_data(symbol, period="2y")
                     if data is not None and not data.empty:
@@ -134,7 +274,7 @@ class FullAutoInvestmentSystem:
             print("=" * 60)
             try:
                 optimized_portfolio = self.optimizer.optimize(processed_data)
-                
+
                 if not optimized_portfolio or 'selected_stocks' not in optimized_portfolio:
                     print("[警告] ポートフォリオ最適化に失敗しました。空の結果が返されました。")
                     # processed_data が空でも、self.failed_symbols に記録された銘柄のためのスクリプト生成を試みるために、
@@ -156,7 +296,9 @@ class FullAutoInvestmentSystem:
                         
                         for symbol in selected_stocks:
                             try:
-                                recommendation = await self._analyze_single_stock(symbol, processed_data.get(symbol))
+                                recommendation = await self._analyze_single_stock(
+                                    symbol, processed_data.get(symbol)
+                                )
                                 if recommendation:
                                     recommendations.append(recommendation)
                                 else:
@@ -186,15 +328,17 @@ class FullAutoInvestmentSystem:
             logger.exception("完全自動分析プロセスのエラー詳細:")
             return []
 
-    async def _analyze_single_stock(self, symbol: str, data) -> Optional[AutoRecommendation]:
+    async def _analyze_single_stock(
+        self, symbol: str, data: Optional[pd.DataFrame]
+    ) -> Optional[AutoRecommendation]:
         """個別銘柄分析"""
         try:
             if data is None or data.empty:
                 logger.warning(f"分析対象データが無効です: {symbol}")
                 return None
-            
+
             # 1. 予測モデル適用
-            predictions = self.predictor.predict(data)
+            predictions = self.predictor.predict(symbol, data)
             if not predictions or 'predicted_price' not in predictions:
                 logger.warning(f"{symbol}: 予測モデル適用失敗")
                 return None
@@ -207,9 +351,11 @@ class FullAutoInvestmentSystem:
             if not risk_analysis:
                 logger.warning(f"{symbol}: リスク分析失敗")
                 return None
-            
+
             # 3. 感情分析 (ニュース等はダミー)
-            sentiment_score = self.sentiment_analyzer.analyze_sentiment({"symbol": symbol})
+            sentiment_score = self.sentiment_analyzer.analyze_sentiment(
+                {"symbol": symbol}
+            )
             
             # 4. 戦略生成
             strategy = self.strategy_generator.generate_strategy(
@@ -227,7 +373,7 @@ class FullAutoInvestmentSystem:
                 
                 # 信頼度 (戦略スコアとリスクスコアから算出)
                 strategy_confidence = strategy.get('confidence_score', 0.5)
-                risk_adjusted_confidence = 1.0 - risk_analysis.risk_score  # リスクが低いほど信頼度高
+                risk_adjusted_confidence = 1.0 - risk_analysis.risk_score
                 confidence = (strategy_confidence + risk_adjusted_confidence) / 2
                 
                 # 理由付け (リスク分析と戦略から簡易生成)
@@ -269,9 +415,9 @@ class FullAutoInvestmentSystem:
             reasons.append("中期待リターン")
             
         # リスクレベルの低さ
-        if risk_analysis.risk_level.value == "low":
+        if risk_analysis and risk_analysis.risk_level.value == "low":
             reasons.append("低リスク")
-        elif risk_analysis.risk_level.value == "medium":
+        elif risk_analysis and risk_analysis.risk_level.value == "medium":
             reasons.append("中程度リスク")
             
         if not reasons:
