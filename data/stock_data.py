@@ -206,3 +206,53 @@ class StockDataProvider:
 
     def get_all_stock_symbols(self) -> List[str]:
         return list(self.jp_stock_codes.keys())
+
+    def _generate_demo_data(self, symbol: str, period: str = "1y") -> pd.DataFrame:
+        """
+        デモデータを生成する
+        """
+        import pandas as pd
+        from datetime import datetime, timedelta
+        import numpy as np
+
+        # period に応じた日数を計算
+        period_map = {
+            "1d": 1,
+            "5d": 5,
+            "1mo": 30,
+            "3mo": 90,
+            "6mo": 180,
+            "1y": 365,
+            "2y": 730,
+            "5y": 1825,
+            "10y": 3650,
+            "max": 3650,  # maxも10年分とする
+        }
+        days = period_map.get(period, 365)  # デフォルトは1年
+
+        # データ生成
+        dates = pd.date_range(end=datetime.now(), periods=days, freq="D")
+        base_price = np.random.uniform(100, 1000)  # 基準価格
+        prices = [base_price]
+        volumes = []
+
+        for _ in range(1, len(dates)):
+            change_percent = np.random.uniform(-0.05, 0.05)  # -5% 〜 +5% の変動
+            new_price = prices[-1] * (1 + change_percent)
+            prices.append(new_price)
+            volumes.append(np.random.randint(1000, 100000))  # ランダムな取引量
+
+        # DataFrame に変換
+        df = pd.DataFrame({
+            "Open": prices,
+            "High": [p * np.random.uniform(1, 1.02) for p in prices],  # HighはOpenより少し高い
+            "Low": [p * np.random.uniform(0.98, 1) for p in prices],   # LowはOpenより少し低い
+            "Close": prices,
+            "Volume": volumes,
+        }, index=dates)
+
+        # 一部の値をNaNに置き換えて、検証用に使う
+        if np.random.random() > 0.9:  # 10%の確率で
+            df.loc[df.index[:5], "Close"] = np.nan  # 最初の5行をNaN
+
+        return df
