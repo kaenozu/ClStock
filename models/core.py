@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import OrderedDict
@@ -9,9 +9,11 @@ from typing import Any, Dict, Iterable, List, Optional, Callable, ClassVar
 import logging
 
 import hashlib
-from utils.logger import setup_logging
+from utils.logger import setup_logging # 修正
 
-logger = setup_logger(__name__)
+setup_logging() # 追加
+logger = logging.getLogger(__name__) # 修正
+
 import json
 
 import joblib
