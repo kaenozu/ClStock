@@ -155,7 +155,7 @@ class StockDataProvider:
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                stock = yf.Ticker(ticker, session=self.yf_session)
+                stock = yf.Ticker(ticker)
                 time.sleep(0.1)
                 data = stock.history(period=period)
                 if not data.empty:
@@ -446,7 +446,7 @@ class StockDataProvider:
                 import time
                 # 繝ｪ繧ｯ繧ｨ繧ｹ繝亥燕縺ｫ蟆代＠蠕・ｩ滂ｼ・PI雋闕ｷ霆ｽ貂帙・縺溘ａ・・                time.sleep(0.1)
                 
-                stock = yf.Ticker(ticker, session=self.yf_session)
+                stock = yf.Ticker(ticker)
                 info = stock.info
 
                 metrics: Dict[str, Union[str, int, float]] = {
