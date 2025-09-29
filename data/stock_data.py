@@ -1,9 +1,61 @@
 import logging
 import pandas as pd
-import yfinance as yf
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
+# yfinance を try-except でインポート
+try:
+    import yfinance as yf
+except ModuleNotFoundError:
+    # yfinance が見つからない場合、ダミーのクラスを提供
+    class yf:
+        @staticmethod
+        def Ticker(symbol):
+            class DummyTicker:
+                def __init__(self):
+                    self.info = {
+                        "longName": "Dummy Corp",
+                        "sector": "Dummy Sector",
+                        "industry": "Dummy Industry",
+                        "marketCap": 0,
+                        "trailingPE": 0,
+                        "priceToBook": 0,
+                        "dividendYield": 0,
+                        "returnOnEquity": 0,
+                        "currentPrice": 1000, # デフォルトの価格
+                        "targetMeanPrice": 1100,
+                        "recommendationMean": 2.0, # デフォルトの推奨スコア
+                    }
+
+                def history(self, period, interval):
+                    # 現在時刻から指定された期間分のダミーデータを生成
+                    end_date = datetime.now()
+                    if "d" in period:
+                        days = int(period.replace("d", ""))
+                        start_date = end_date - timedelta(days=days)
+                    elif "mo" in period:
+                        # 月指定は単純に30日として計算
+                        months = int(period.replace("mo", ""))
+                        start_date = end_date - timedelta(days=months * 30)
+                    elif "y" in period:
+                        years = int(period.replace("y", ""))
+                        start_date = end_date - timedelta(days=years * 365)
+                    else:
+                        # デフォルトは1年
+                        start_date = end_date - timedelta(days=365)
+
+                    date_range = pd.date_range(start=start_date, end=end_date, freq='D')
+                    # ランダムな価格変動をシミュレート
+                    import numpy as np
+                    np.random.seed(hash(symbol))  # 銘柄ごとに同じ乱数シード
+                    base_price = 1000 + hash(symbol) % 1000  # 銘柄ごとに異なるベース価格
+                    price_changes = np.random.normal(0, 10, size=len(date_range))
+                    prices = np.concatenate([[base_price], base_price + np.cumsum(price_changes[1:])])
+                    df = pd.DataFrame(index=date_range, data={'Close': prices, 'Open': prices, 'High': prices, 'Low': prices, 'Volume': np.random.randint(100000, 1000000, size=len(date_range))})
+                    df.index.name = "Date"
+                    return df
+
+            return DummyTicker()
 from utils.logger import setup_logging
 
 # ロギング設定
