@@ -4,13 +4,30 @@ Security middleware for the ClStock API
 
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Dict, Callable
+from typing import Dict, Callable, Optional
 import time
+
+import os
 
 from functools import wraps
 from utils.logger_config import get_logger
 
 logger = get_logger(__name__)
+
+def _get_env_with_warning(var_name: str) -> Optional[str]:
+    """
+    環境変数を取得し、存在しない場合は警告をログに出力します。
+
+    Args:
+        var_name: 取得する環境変数名
+
+    Returns:
+        環境変数の値。存在しない場合は None。
+    """
+    value = os.getenv(var_name)
+    if not value:
+        logger.warning(f"{var_name} environment variable not set")
+    return value
 
 # Simple in-memory storage for rate limiting
 # In production, you would use Redis or similar
@@ -138,21 +155,17 @@ def verify_token(token: str) -> str:
     }
 
     # 環境変数から追加のトークンを取得
-    import os
+    # import os # ステップ2でファイル冒頭に import された
 
     env_tokens = {}
-    admin_token = os.getenv("API_ADMIN_TOKEN")
-    user_token = os.getenv("API_USER_TOKEN")
+    admin_token = _get_env_with_warning("API_ADMIN_TOKEN")
+    user_token = _get_env_with_warning("API_USER_TOKEN")
     
-    # 環境変数が設定されていない場合の警告
-    if not admin_token:
-        logger.warning("API_ADMIN_TOKEN environment variable not set")
-    else:
+    # 環境変数が設定されている場合にのみ、env_tokens に追加
+    if admin_token:
         env_tokens[admin_token] = "administrator"
         
-    if not user_token:
-        logger.warning("API_USER_TOKEN environment variable not set")
-    else:
+    if user_token:
         env_tokens[user_token] = "user"
 
     # 実際のAPI_KEYSもチェック
