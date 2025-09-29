@@ -23,9 +23,7 @@ from models.core import (
     PredictorInterface,
     StockPredictor,
 )
-from models_refactored.ensemble.ensemble_predictor import (
-    RefactoredEnsemblePredictor as EnsemblePredictor,
-)
+from models_refactored.ensemble.ensemble_predictor import (EnsemblePredictor,)
 
 
 class TestPredictionResult:

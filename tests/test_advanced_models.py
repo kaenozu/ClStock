@@ -29,7 +29,7 @@ class TestPredictionDashboard:
         assert self.dashboard is not None
         assert hasattr(self.dashboard, "display_predictions")
 
-    @patch("models_refactored.ensemble.ensemble_predictor.RefactoredEnsemblePredictor")
+    @patch("models_refactored.ensemble.ensemble_predictor.EnsemblePredictor")
     def test_display_predictions(self, mock_predictor_class):
         """予測表示のテスト"""
         # モック予測結果の設定
@@ -55,7 +55,7 @@ class TestPredictionDashboard:
         results = self.dashboard.display_predictions([])
         assert results is not None
 
-    @patch("models_refactored.ensemble.ensemble_predictor.RefactoredEnsemblePredictor")
+    @patch("models_refactored.ensemble.ensemble_predictor.EnsemblePredictor")
     def test_dashboard_error_handling(self, mock_predictor_class):
         """ダッシュボードエラーハンドリングのテスト"""
         # エラーを発生させるモック

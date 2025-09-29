@@ -11,6 +11,7 @@ import joblib
 import os
 
 from data.stock_data import StockDataProvider
+from utils.feature_engineering import calculate_technical_indicators
 from models.core import StockPredictor
 from utils.logger import setup_logging
 
@@ -45,29 +46,7 @@ class EnsemblePredictor(StockPredictor):
         df.set_index("Date", inplace=True)
         df.sort_index(inplace=True)
 
-        # 終値の移動平均
-        df["SMA_5"] = df["Close"].rolling(window=5).mean()
-        df["SMA_20"] = df["Close"].rolling(window=20).mean()
-
-        # RSI (Relative Strength Index)
-        delta = df["Close"].diff()
-        gain = delta.where(delta > 0, 0)
-        loss = -delta.where(delta < 0, 0)
-        avg_gain = gain.rolling(window=14).mean()
-        avg_loss = loss.rolling(window=14).mean()
-        rs = avg_gain / avg_loss
-        df["RSI"] = 100 - (100 / (1 + rs))
-
-        # MACD (Moving Average Convergence Divergence)
-        exp1 = df["Close"].ewm(span=12, adjust=False).mean()
-        exp2 = df["Close"].ewm(span=26, adjust=False).mean()
-        df["MACD"] = exp1 - exp2
-        df["Signal_Line"] = df["MACD"].ewm(span=9, adjust=False).mean()
-
-        # ボリンジャーバンド
-        df["BB_Middle"] = df["Close"].rolling(window=20).mean()
-        df["BB_Upper"] = df["BB_Middle"] + (df["Close"].rolling(window=20).std() * 2)
-        df["BB_Lower"] = df["BB_Middle"] - (df["Close"].rolling(window=20).std() * 2)
+        df = calculate_technical_indicators(df)
 
         # ターゲット変数の作成（翌日の終値）
         df["Target"] = df["Close"].shift(-1)
