@@ -1,8 +1,9 @@
 from fastapi import FastAPI
+from typing import List, Optional
 import uvicorn
 
 from api.endpoints import router
-
+# from models.recommendation import StockRecommendation # 削除
 
 app = FastAPI(
     title="ClStock - 中期的な推奨銘柄予想API",
@@ -28,5 +29,10 @@ if __name__ == "__main__":
     import os
 
     host = os.environ.get("HOST", "127.0.0.1")
-    port = int(os.environ.get("PORT", "8000"))
+    port_str = os.environ.get("PORT", "8000")
+    try:
+        port = int(port_str)
+    except ValueError:
+        port = 8000
+
     uvicorn.run(app, host=host, port=port)

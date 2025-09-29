@@ -94,7 +94,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
 
             # 基本価格が設定されていない場合はランダム生成
             if symbol not in self.symbol_prices:
-                self.symbol_prices[symbol] = random.uniform(1000, 10000)
+                self.symbol_prices[symbol] = random.uniform(1000, 10000)  # nosec B311
 
             # ティックデータ生成タスクを開始
             task = asyncio.create_task(self._generate_tick_data(symbol))
@@ -174,7 +174,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
         while self.is_connected_flag and symbol in self.subscribed_symbols:
             try:
                 # 1-5秒間隔でランダム生成
-                await asyncio.sleep(random.uniform(1, 5))
+                await asyncio.sleep(random.uniform(1, 5))  # nosec B311
 
                 tick_data = self._create_mock_tick_data(symbol)
 
@@ -195,7 +195,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
         while self.is_connected_flag:
             try:
                 # 2-8秒間隔
-                await asyncio.sleep(random.uniform(2, 8))
+                await asyncio.sleep(random.uniform(2, 8))  # nosec B311
 
                 order_book_data = self._create_mock_order_book_data(symbol)
 
@@ -216,7 +216,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
         while self.is_connected_flag and index in self.subscribed_indices:
             try:
                 # 10-30秒間隔
-                await asyncio.sleep(random.uniform(10, 30))
+                await asyncio.sleep(random.uniform(10, 30))  # nosec B311
 
                 index_data = self._create_mock_index_data(index)
 
@@ -253,24 +253,24 @@ class MockRealTimeProvider(RealTimeDataProvider):
         while self.is_connected_flag and self.subscribed_news:
             try:
                 # 60-300秒間隔
-                await asyncio.sleep(random.uniform(60, 300))
+                await asyncio.sleep(random.uniform(60, 300))  # nosec B311
 
                 # ランダムな銘柄を選択
                 available_symbols = symbols or list(company_names.keys())
                 if available_symbols:
-                    symbol = random.choice(available_symbols)
+                    symbol = random.choice(available_symbols)  # nosec B311
                     company_name = company_names.get(symbol, f"企業{symbol}")
 
                     news_data = NewsData(
                         id=f"news_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                         timestamp=datetime.now(),
-                        title=random.choice(news_templates).format(
+                        title=random.choice(news_templates).format(  # nosec B311
                             company=company_name
                         ),
                         content=f"{company_name}に関する重要なニュースが発表されました。",
                         symbols=[symbol],
-                        sentiment=random.choice(["positive", "negative", "neutral"]),
-                        impact_score=random.uniform(0.3, 1.0),
+                        sentiment=random.choice(["positive", "negative", "neutral"]),  # nosec B311
+                        impact_score=random.uniform(0.3, 1.0),  # nosec B311
                     )
 
                     # コールバック実行
@@ -289,7 +289,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
         """モックティックデータを作成"""
         # 価格をランダムウォークで変動
         current_price = self.symbol_prices[symbol]
-        price_change = random.uniform(-0.02, 0.02)  # ±2%の変動
+        price_change = random.uniform(-0.02, 0.02)  # ±2%の変動  # nosec B311
         new_price = current_price * (1 + price_change)
         self.symbol_prices[symbol] = new_price
 
@@ -298,10 +298,10 @@ class MockRealTimeProvider(RealTimeDataProvider):
             symbol=symbol,
             timestamp=datetime.now(),
             price=round(new_price, 2),
-            volume=random.randint(100, 10000),
+            volume=random.randint(100, 10000),  # nosec B311
             bid_price=round(new_price * 0.999, 2),
             ask_price=round(new_price * 1.001, 2),
-            trade_type=random.choice(["buy", "sell", "unknown"]),
+            trade_type=random.choice(["buy", "sell", "unknown"]),  # nosec B311
         )
 
     def _create_mock_order_book_data(self, symbol: str) -> OrderBookData:
@@ -312,14 +312,14 @@ class MockRealTimeProvider(RealTimeDataProvider):
         bids = []
         for i in range(5):
             price = round(current_price * (1 - (i + 1) * 0.001), 2)
-            volume = random.randint(100, 5000)
+            volume = random.randint(100, 5000)  # nosec B311
             bids.append((price, volume))
 
         # 売り注文（現在価格より高い価格で昇順）
         asks = []
         for i in range(5):
             price = round(current_price * (1 + (i + 1) * 0.001), 2)
-            volume = random.randint(100, 5000)
+            volume = random.randint(100, 5000)  # nosec B311
             asks.append((price, volume))
 
         return OrderBookData(
@@ -331,7 +331,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
         current_value = self.index_values[index]
 
         # 指数をランダムウォークで変動
-        change = random.uniform(-0.01, 0.01)  # ±1%の変動
+        change = random.uniform(-0.01, 0.01)  # ±1%の変動  # nosec B311
         new_value = current_value * (1 + change)
         self.index_values[index] = new_value
 
@@ -375,15 +375,15 @@ class MockRealTimeProvider(RealTimeDataProvider):
 
         data = []
         for date in dates:
-            price = base_price * (1 + random.uniform(-0.05, 0.05))
+            price = base_price * (1 + random.uniform(-0.05, 0.05))  # nosec B311
             data.append(
                 {
                     "Date": date,
-                    "Open": price * (1 + random.uniform(-0.02, 0.02)),
-                    "High": price * (1 + random.uniform(0.0, 0.03)),
-                    "Low": price * (1 + random.uniform(-0.03, 0.0)),
+                    "Open": price * (1 + random.uniform(-0.02, 0.02)),  # nosec B311
+                    "High": price * (1 + random.uniform(0.0, 0.03)),  # nosec B311
+                    "Low": price * (1 + random.uniform(-0.03, 0.0)),  # nosec B311
                     "Close": price,
-                    "Volume": random.randint(100000, 1000000),
+                    "Volume": random.randint(100000, 1000000),  # nosec B311
                 }
             )
 
@@ -397,8 +397,8 @@ class MockRealTimeProvider(RealTimeDataProvider):
 
         return {
             "last_price": current_price,
-            "sma_20": current_price * (1 + random.uniform(-0.05, 0.05)),
-            "sma_50": current_price * (1 + random.uniform(-0.1, 0.1)),
-            "rsi": random.uniform(20, 80),
-            "volume": float(random.randint(100000, 1000000)),
+            "sma_20": current_price * (1 + random.uniform(-0.05, 0.05)),  # nosec B311
+            "sma_50": current_price * (1 + random.uniform(-0.1, 0.1)),  # nosec B311
+            "rsi": random.uniform(20, 80),  # nosec B311
+            "volume": float(random.randint(100000, 1000000)),  # nosec B311
         }

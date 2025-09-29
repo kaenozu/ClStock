@@ -28,7 +28,11 @@ class Colors:
 
 def clear_screen():
     """画面クリア"""
-    os.system("cls" if os.name == "nt" else "clear")
+    import subprocess
+    if os.name == "nt":
+        subprocess.run(["cmd", "/c", "cls"], check=True)
+    else:
+        subprocess.run(["clear"], check=True)
 
 
 def print_header():
@@ -36,10 +40,10 @@ def print_header():
     print(f"{Colors.CYAN}{Colors.BOLD}")
     print("=" * 60)
     print("   ____  _ ____  _             _    ")
-    print("  / ___|| / ___|| |_ ___   ___| | __")
-    print(" | |    | \___ \| __/ _ \ / __| |/ /")
-    print(" | |___ | |___) | || (_) | (__|   < ")
-    print("  \____||_|____/ \__\___/ \___|_|\_\\")
+    print(r"  / ___|| / ___|| |_ ___   ___| | __")
+    print(r" | |    | \___ \| __/ _ \ / __| |/ /")
+    print(r" | |___ | |___) | || (_) | (__|   < ")
+    print(r"  \____||_|____/ \__\___/ \___|_|\_\\")
     print()
     print("      高精度株価予測システム v1.0")
     print("=" * 60)
@@ -230,7 +234,8 @@ def run_demo_trading():
 
     if confirm == "y":
         print(f"\n{Colors.YELLOW}デモ取引開始...{Colors.ENDC}")
-        os.system("python demo_start.py")
+        import subprocess
+        subprocess.run(["python", "demo_start.py"], check=True)
     else:
         print("キャンセルしました")
 

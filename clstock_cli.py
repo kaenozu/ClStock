@@ -342,8 +342,7 @@ def setup():
         import pandas
         import numpy
         import yfinance
-        import fastapi
-        import jinja2
+
 
         click.echo("[成功] 必要なライブラリがインストール済み")
     except ImportError as e:

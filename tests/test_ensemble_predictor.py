@@ -211,9 +211,10 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         self.assertIsInstance(info, dict)
         self.assertEqual(info["name"], "RefactoredEnsemblePredictor")
         self.assertEqual(info["version"], "1.0.0")
-        self.assertEqual(len(info["models"]), 2)
-        self.assertTrue(info["interface_compliant"])
-        self.assertEqual(info["feature_count"], 3)
+        self.assertEqual(info["is_trained"], True)
+        self.assertEqual(info["model_data"]["num_models"], 2)
+        self.assertEqual(info["model_data"]["num_features"], 3)
+        self.assertEqual(info["model_data"]["models"], ["model1", "model2"])
 
     def test_safe_model_operation_success(self):
         """安全なモデル操作（成功）テスト"""

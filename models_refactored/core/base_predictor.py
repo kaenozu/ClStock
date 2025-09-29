@@ -157,6 +157,11 @@ class BaseStockPredictor(StockPredictor):
             "version": self._model_version,
             "is_trained": self.is_trained,
             "prediction_mode": self.config.prediction_mode.value,
+            "model_data": {
+                "num_models": len(getattr(self, "models", {})),
+                "num_features": len(getattr(self, "feature_names", [])),
+                "models": list(getattr(self, "models", {}).keys()),
+            },
             "config": {
                 "cache_enabled": self.config.cache_enabled,
                 "parallel_enabled": self.config.parallel_enabled,

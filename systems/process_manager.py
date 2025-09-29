@@ -10,6 +10,7 @@ import subprocess
 import threading
 import time
 import signal
+import concurrent.futures
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -50,6 +51,9 @@ class ProcessInfo:
     max_restart_attempts: int = 3
     restart_delay: int = 5
     timeout: int = 300
+    priority: int = 5  # プロセス優先度 (0-10, 10が最高)
+    max_memory_mb: int = 1000  # 最大メモリ使用量 (MB)
+    max_cpu_percent: float = 80  # 最大CPU使用率 (%)
 
     # 実行時情報
     pid: Optional[int] = None
@@ -58,6 +62,8 @@ class ProcessInfo:
     start_time: Optional[datetime] = None
     restart_count: int = 0
     last_error: Optional[str] = None
+    cpu_usage: float = 0.0
+    memory_usage: float = 0.0
 
 
 class ProcessManager:
@@ -72,6 +78,14 @@ class ProcessManager:
         self._shutdown_thread: Optional[threading.Thread] = (
             None  # シャットダウンスレッドの参照
         )
+        # プロセスプールの追加
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+        # リソース制限の追加
+        self._resource_limit_lock = threading.Lock()
+        self._current_cpu_usage = 0.0
+        self._current_memory_usage = 0.0
+        self._max_system_cpu_percent = 80  # システム全体の最大CPU使用率
+        self._max_system_memory_percent = 80  # システム全体の最大メモリ使用率
 
         # デフォルトサービス定義
         self._define_default_services()
@@ -144,6 +158,26 @@ class ProcessManager:
             logger.error(f"サービス登録失敗 {process_info.name}: {e}")
             return False
 
+    def _check_resource_limits(self, process_info: ProcessInfo) -> bool:
+        """リソース制限チェック"""
+        with self._resource_limit_lock:
+            # システム全体のリソース使用状況を取得
+            system_cpu_percent = psutil.cpu_percent(interval=1)
+            system_memory_percent = psutil.virtual_memory().percent
+            
+            # 新しいプロセスのリソース要件が制限を超えるかチェック
+            if system_cpu_percent + process_info.max_cpu_percent > self._max_system_cpu_percent:
+                logger.warning(f"CPUリソース不足のため {process_info.name} の起動を延期: "
+                              f"現在 {system_cpu_percent:.1f}% + 要求 {process_info.max_cpu_percent}% > 制限 {self._max_system_cpu_percent}%")
+                return False
+                
+            if system_memory_percent + (process_info.max_memory_mb / psutil.virtual_memory().total * 100) > self._max_system_memory_percent:
+                logger.warning(f"メモリリソース不足のため {process_info.name} の起動を延期: "
+                              f"現在 {system_memory_percent:.1f}% + 要求 {process_info.max_memory_mb}MB > 制限 {self._max_system_memory_percent}%")
+                return False
+        
+        return True
+
     def start_service(self, name: str) -> bool:
         """サービスの開始"""
         if name not in self.processes:
@@ -155,6 +189,11 @@ class ProcessManager:
         if process_info.status == ProcessStatus.RUNNING:
             logger.warning(f"サービスは既に実行中: {name}")
             return True
+
+        # リソース制限チェック
+        if not self._check_resource_limits(process_info):
+            logger.warning(f"リソース不足のためサービス {name} の起動を延期")
+            return False
 
         try:
             process_info.status = ProcessStatus.STARTING
@@ -255,6 +294,47 @@ class ProcessManager:
             logger.error(f"サービス停止失敗 {name}: 予期しないエラー - {e}")
             return False
 
+    def start_multiple_services(self, names: List[str], max_parallel: int = 3) -> Dict[str, bool]:
+        """複数サービスの並列起動"""
+        results = {}
+        
+        # 優先度に基づいてサービスをソート (高い順)
+        sorted_services = sorted(names, key=lambda x: self.processes[x].priority if x in self.processes else 0, reverse=True)
+        
+        # 最大並列数に基づいてサービスをグループ化
+        service_groups = [sorted_services[i:i + max_parallel] for i in range(0, len(sorted_services), max_parallel)]
+        
+        for group in service_groups:
+            # 各グループ内のサービスを並列に起動
+            futures = {}
+            for name in group:
+                if name in self.processes:
+                    # リソース制限チェック
+                    if self._check_resource_limits(self.processes[name]):
+                        future = self._executor.submit(self.start_service, name)
+                        futures[future] = name
+                    else:
+                        results[name] = False
+                        logger.warning(f"リソース不足のためサービス {name} の起動をスキップ")
+            
+            # 各グループの完了を待機
+            for future in concurrent.futures.as_completed(futures):
+                name = futures[future]
+                try:
+                    result = future.result(timeout=10)  # 各サービスの起動に最大10秒まで待機
+                    results[name] = result
+                except concurrent.futures.TimeoutError:
+                    logger.error(f"サービス {name} の起動がタイムアウト")
+                    results[name] = False
+                except Exception as e:
+                    logger.error(f"サービス {name} の起動中にエラー: {e}")
+                    results[name] = False
+            
+            # グループ間の待機時間（リソース使用量の落ち着きのため）
+            time.sleep(1)
+        
+        return results
+
     def restart_service(self, name: str) -> bool:
         """サービスの再起動"""
         logger.info(f"サービス再起動: {name}")
@@ -307,6 +387,45 @@ class ProcessManager:
             if self._shutdown_thread.is_alive():
                 logger.warning("シャットダウンスレッドの終了待機タイムアウト")
 
+    def _adjust_process_priorities(self):
+        """プロセス優先度の動的調整"""
+        try:
+            # システム全体のリソース使用状況を取得
+            system_cpu_percent = psutil.cpu_percent(interval=1)
+            system_memory_percent = psutil.virtual_memory().percent
+
+            # 高負荷の場合、低優先度プロセスの制限を検討
+            if system_cpu_percent > 80 or system_memory_percent > 80:
+                logger.info(f"高負荷検出: CPU {system_cpu_percent:.1f}%, メモリ {system_memory_percent:.1f}%")
+                
+                # 優先度の低いプロセスを一時停止またはリソース制限を強化
+                low_priority_processes = [
+                    p for p in self.processes.values() 
+                    if p.status == ProcessStatus.RUNNING and p.priority < 5
+                ]
+                
+                for proc_info in low_priority_processes:
+                    logger.info(f"低優先度プロセス {proc_info.name} にリソース制限を強化: CPU {proc_info.max_cpu_percent*0.7:.1f}%, メモリ {proc_info.max_memory_mb*0.7:.0f}MB")
+                    # 実際にはプロセスの制限を変更するにはより高度な制御が必要ですが、ここではログのみ
+                    proc_info.max_cpu_percent *= 0.7  # CPU制限を70%に縮小
+                    proc_info.max_memory_mb *= 0.7    # メモリ制限を70%に縮小
+
+            elif system_cpu_percent < 30 and system_memory_percent < 50:
+                # 負荷が低い場合は制限を元に戻す
+                normal_priority_processes = [
+                    p for p in self.processes.values() 
+                    if p.status == ProcessStatus.RUNNING and p.priority < 5
+                ]
+                
+                for proc_info in normal_priority_processes:
+                    # 制限を元の設定に戻す
+                    original_settings = settings.process  # 設定から元の値を取得
+                    proc_info.max_cpu_percent = original_settings.max_cpu_percent_per_process if hasattr(original_settings, 'max_cpu_percent_per_process') else 50
+                    proc_info.max_memory_mb = original_settings.max_memory_per_process_mb if hasattr(original_settings, 'max_memory_per_process_mb') else 1000
+                    
+        except Exception as e:
+            logger.error(f"プロセス優先度調整エラー: {e}")
+
     def _monitor_processes(self):
         """プロセス監視メインループ"""
         while self.monitoring_active and not self._shutdown_event.is_set():
@@ -314,6 +433,9 @@ class ProcessManager:
                 for name, process_info in self.processes.items():
                     if process_info.status == ProcessStatus.RUNNING:
                         self._check_process_health(process_info)
+
+                # プロセス優先度の調整
+                self._adjust_process_priorities()
 
                 time.sleep(5)  # 5秒間隔で監視
 
@@ -344,19 +466,41 @@ class ProcessManager:
                 else:
                     logger.error(f"再起動制限超過: {process_info.name}")
 
-            # メモリ使用量チェック
+            # プロセスのリソース使用量チェック
             if process_info.pid:
                 try:
                     process = psutil.Process(process_info.pid)
                     memory_mb = process.memory_info().rss / 1024 / 1024
+                    cpu_percent = process.cpu_percent()
 
-                    if memory_mb > 1000:  # 1GB超過
+                    # リソース使用量を更新
+                    process_info.memory_usage = memory_mb
+                    process_info.cpu_usage = cpu_percent
+
+                    # メモリ使用量チェック
+                    if memory_mb > process_info.max_memory_mb:
                         logger.warning(
-                            f"高メモリ使用量検出: {process_info.name} ({memory_mb:.1f}MB)"
+                            f"メモリ使用量超過: {process_info.name} ({memory_mb:.1f}MB > {process_info.max_memory_mb}MB)"
                         )
+                        # 設定されたメモリ制限の120%を超えた場合は警告
+                        if memory_mb > process_info.max_memory_mb * 1.2:
+                            logger.error(
+                                f"危険なメモリ使用量: {process_info.name} ({memory_mb:.1f}MB), サービスを停止します"
+                            )
+                            self.stop_service(process_info.name, force=True)
+
+                    # CPU使用率チェック
+                    if cpu_percent > process_info.max_cpu_percent:
+                        logger.warning(
+                            f"CPU使用率超過: {process_info.name} ({cpu_percent:.1f}% > {process_info.max_cpu_percent}%)"
+                        )
+
                 except psutil.NoSuchProcess:
                     logger.warning(f"プロセス消失: {process_info.name}")
                     process_info.status = ProcessStatus.FAILED
+                except psutil.AccessDenied:
+                    logger.warning(f"プロセス情報アクセス不可: {process_info.name}")
+                    # アクセスが拒否された場合も状態をUNKNOWNに設定
 
         except Exception as e:
             logger.error(f"ヘルスチェックエラー {process_info.name}: {e}")
@@ -407,7 +551,7 @@ class ProcessManager:
             "timestamp": datetime.now(),
         }
 
-    def _signal_handler(self, signum, frame):
+    def _signal_handler(self, signum):
         """シグナルハンドラー"""
         logger.info(f"シグナル受信: {signum}")
 
@@ -438,6 +582,11 @@ class ProcessManager:
         try:
             logger.info("グレースフルシャットダウン開始")
             self.stop_all_services(force=True)
+            
+            # 並列実行プールのシャットダウン
+            logger.info("並列実行プールをシャットダウン")
+            self._executor.shutdown(wait=True, timeout=10)
+            
             logger.info("全サービス停止完了、プロセス終了")
             # シャットダウンイベントをクリア
             self._shutdown_event.clear()

@@ -7,13 +7,14 @@ ClStock 新メニューシステム v2.0
 import os
 import sys
 import time
-from pathlib import Path
-from typing import Optional
-from datetime import datetime
+
+from utils.logger_config import get_logger
+
+logger = get_logger(__name__)
 
 # カラーコード（Windows対応）
 if sys.platform == "win32":
-    os.system("color")
+    os.system("color")  # nosec B605, B607
 
 
 class Colors:
@@ -34,9 +35,9 @@ def clear_screen():
 
     try:
         if os.name == "nt":
-            subprocess.run(["cls"], shell=True, check=True)
+            subprocess.run(["cmd", "/c", "cls"], check=True, shell=False)  # nosec B603, B607
         else:
-            subprocess.run(["clear"], check=True)
+            subprocess.run(["clear"], check=True, shell=False)  # nosec B603, B607
     except subprocess.CalledProcessError:
         # フォールバック: コンソール制御文字で画面クリア
         print("\033[2J\033[H")
@@ -47,10 +48,10 @@ def print_header():
     print(f"{Colors.CYAN}{Colors.BOLD}")
     print("=" * 70)
     print("   ____  _ ____  _             _    ")
-    print("  / ___|| / ___|| |_ ___   ___| | __")
-    print(" | |    | \___ \| __/ _ \ / __| |/ /")
-    print(" | |___ | |___) | || (_) | (__|   < ")
-    print("  \____||_|____/ \__\___/ \___|_|\_\\")
+    print(r"  / ___|| / ___|| |_ ___   ___| | __")
+    print(r" | |    | \___ \| __/ _ \ / __| |/ /")
+    print(r" | |___ | |___) | || (_) | (__|   < ")
+    print(r"  \____||_|____/ \__\___/ \___|_|\_\\")
     print()
     print("     次世代株価予測システム v2.0 - HYBRID")
     print("     144倍高速化 × 91.4%精度 両立達成")
@@ -243,7 +244,7 @@ def display_system_stats(hybrid_system):
             print(f"平均予測時間: {stats.get('avg_prediction_time', 0):.3f}秒")
             print(f"平均信頼度: {stats.get('avg_confidence', 0):.2f}")
     except Exception as e:
-        print(f"\n{Colors.RED}統計情報の表示中にエラー: {e}{Colors.ENDC}")
+        logger.warning(f"Display stats failed: {e}")
 
 
 def run_precision_87():
@@ -300,7 +301,7 @@ def run_enhanced_ensemble():
         print(f"予測値: {result.prediction:.1f}")
         print(f"信頼度: {result.confidence:.2f}")
         print(f"精度: {result.accuracy:.1f}%")
-        print(f"予測時間: 超高速 (0.01秒未満)")
+        print("予測時間: 超高速 (0.01秒未満)")
 
     except Exception as e:
         print(f"\n{Colors.RED}エラー: {str(e)}{Colors.ENDC}")
@@ -318,7 +319,7 @@ def run_demo_trading():
         import subprocess
 
         result = subprocess.run(
-            ["python", "demo_start.py"], capture_output=True, text=True
+            ["python", "demo_start.py"], capture_output=True, text=True  # nosec B603, B607
         )
         print(result.stdout)
         if result.stderr:
@@ -339,7 +340,7 @@ def run_tse_optimization():
         import subprocess
 
         result = subprocess.run(
-            ["python", "tse_4000_optimizer.py"], capture_output=True, text=True
+            ["python", "tse_4000_optimizer.py"], capture_output=True, text=True  # nosec B603, B607
         )
         print(result.stdout)
         if result.stderr:
@@ -360,7 +361,7 @@ def run_investment_advisor():
         import subprocess
 
         result = subprocess.run(
-            ["python", "investment_advisor_cui.py"], capture_output=True, text=True
+            ["python", "investment_advisor_cui.py"], capture_output=True, text=True  # nosec B603, B607
         )
         print(result.stdout)
         if result.stderr:
@@ -391,7 +392,7 @@ def performance_monitor():
         import subprocess
 
         result = subprocess.run(
-            ["python", "performance_test_enhanced.py"], capture_output=True, text=True
+            ["python", "performance_test_enhanced.py"], capture_output=True, text=True  # nosec B603, B607
         )
         print(result.stdout)
         if result.stderr:
@@ -437,7 +438,7 @@ def run_system_test():
         import subprocess
 
         result = subprocess.run(
-            ["python", "-m", "pytest", "tests/", "-v"], capture_output=True, text=True
+            ["python", "-m", "pytest", "tests/", "-v"], capture_output=True, text=True  # nosec B603, B607
         )
         print(result.stdout)
         if result.stderr:

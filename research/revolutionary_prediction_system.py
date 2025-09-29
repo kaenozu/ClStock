@@ -11,7 +11,7 @@ import logging
 from utils.logger_config import setup_logger
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.cluster import KMeans
+
 import warnings
 
 warnings.filterwarnings("ignore")

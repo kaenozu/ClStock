@@ -22,7 +22,6 @@ from models_refactored.core.interfaces import (
     ModelConfiguration as OrderBookData,
     PerformanceMetrics as IndexData,
     PredictionResult as NewsData,
-    PredictionResult as MarketData,
     CacheProvider as DataQualityMonitor,
 )
 from models_refactored.monitoring.cache_manager import (

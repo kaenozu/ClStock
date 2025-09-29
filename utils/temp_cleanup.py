@@ -38,7 +38,8 @@ class TempFileCleanup:
 
     def create_temp_file(self, suffix: str = "", prefix: str = "tmp") -> str:
         """Create a temporary file and register it for cleanup"""
-        temp_file = tempfile.mktemp(suffix=suffix, prefix=prefix)
+        fd, temp_file = tempfile.mkstemp(suffix=suffix, prefix=prefix)
+        os.close(fd)
         self.register_temp_file(temp_file)
         return temp_file
 

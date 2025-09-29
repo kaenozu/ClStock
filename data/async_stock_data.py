@@ -77,10 +77,17 @@ class AsyncStockDataProvider:
 
             return data
 
-        except DataFetchError:
+        except InvalidSymbolError as e:
+            logger.error(f"Invalid symbol error for {symbol}: {str(e)}")
+            raise
+        except NetworkError as e:
+            logger.error(f"Network error for {symbol}: {str(e)}")
+            raise
+        except DataFetchError as e:
+            logger.error(f"Data fetch error for {symbol}: {str(e)}")
             raise
         except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {str(e)}")
+            logger.error(f"Unexpected error fetching data for {symbol}: {str(e)}")
             raise DataFetchError(symbol, "Unexpected error during data fetch", str(e))
 
     async def _fetch_with_yfinance_async(
@@ -89,16 +96,69 @@ class AsyncStockDataProvider:
         """Fetch data using yfinance with async wrapper"""
         # yfinance is not async by nature, so we'll run it in a thread pool
         loop = asyncio.get_event_loop()
-
-        def fetch_data():
+        
+        # リトライ回数の設定
+        max_retries = 3
+        retry_count = 0
+        
+        def fetch_data_with_retry(ticker: str, period: str):
             import yfinance as yf
+            import time
 
+            # yfinanceのインスタンスを取得
             stock = yf.Ticker(ticker)
-            return stock.history(period=period)
+            
+            # ヒストリカルデータを取得
+            data = stock.history(period=period)
+            
+            return data
 
-        # Run in thread pool to avoid blocking
-        data = await loop.run_in_executor(None, fetch_data)
-        return data
+        while retry_count < max_retries:
+            try:
+                import time
+                # 関数実行前に少し待機（API負荷軽減のため）
+                time.sleep(0.1)
+                
+                # スレッドプールで実行
+                data = await loop.run_in_executor(None, fetch_data_with_retry, ticker, period)
+                
+                # データ構造を確認
+                if not data.empty:
+                    logger.info(f"Successfully fetched {len(data)} data points for {ticker}")
+                    # 最初と最後の日付をログに出力
+                    if len(data) > 0:
+                        logger.info(f"Date range: {data.index[0]} to {data.index[-1]}")
+                    return data
+                else:
+                    logger.warning(f"No data found for ticker: {ticker} (async, attempt {retry_count + 1}/{max_retries})")
+                    # 次のリトライのために少し待機
+                    time.sleep(0.5)
+                    retry_count += 1
+                    continue
+            except Exception as e:
+                # より詳細なエラー情報をログに出力
+                logger.error(f"Failed to fetch data for {ticker} (async): {str(e)} (type: {type(e).__name__}), attempt {retry_count + 1}/{max_retries}")
+                # 例外の詳細をログに出力
+                import traceback
+                logger.error(f"Full traceback for {ticker} (async): {traceback.format_exc()}")
+                
+                # HTTPエラーか確認（一時的なエラーの可能性）
+                if "429" in str(e) or "404" in str(e) or "50" in str(e):
+                    logger.warning(f"HTTP error detected, will retry for {ticker} (async)")
+                elif "ConnectionError" in str(type(e)) or "Timeout" in str(e):
+                    logger.warning(f"Connection error detected, will retry for {ticker} (async)")
+                else:
+                    # その他のエラーの場合はリトライしない
+                    logger.error(f"Non-retryable error for {ticker} (async), stopping retries")
+                    raise
+                
+                # 次のリトライのために少し待機
+                await asyncio.sleep(1.0 * (retry_count + 1))  # 非同期対応のスリープ
+                retry_count += 1
+        
+        # 全てのリトライが失敗した場合
+        logger.error(f"All retry attempts failed for {ticker} (async)")
+        return pd.DataFrame()  # 空のDataFrameを返す
 
     async def get_multiple_stocks(
         self, symbols: List[str], period: str = "1y"

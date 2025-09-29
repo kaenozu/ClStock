@@ -67,7 +67,7 @@ class AdvancedRiskManager:
         }
 
     def calculate_portfolio_var(
-        self, confidence_level: float = 0.05, time_horizon: int = 1
+        self, confidence_level: float = 0.05
     ) -> dict:
         """ポートフォリオVaR（Value at Risk）計算"""
 

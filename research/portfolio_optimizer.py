@@ -125,7 +125,7 @@ class PortfolioOptimizer:
 
         return result.x if result.success else initial_weights
 
-    def create_optimal_portfolio(self, symbols, lookback_months=12):
+    def create_optimal_portfolio(self, symbols):
         """最適ポートフォリオ構築"""
         print("=== ポートフォリオ最適化システム ===")
         print(f"初期資金: {self.initial_capital:,}円")
