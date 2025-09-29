@@ -3,7 +3,7 @@ from typing import List, Optional
 import uvicorn
 
 from api.endpoints import router
-from models.recommendation import StockRecommendation
+# from models.recommendation import StockRecommendation # 削除
 
 app = FastAPI(
     title="ClStock - 中期的な推奨銘柄予想API",

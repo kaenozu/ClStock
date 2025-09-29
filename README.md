@@ -25,9 +25,12 @@ pip install -r requirements.txt
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 # or
-venv\Scripts\activate  # Windows
+vnv\Scripts\activate  # Windows
 
 pip install -r requirements.txt
+
+# PyTorch系の重いライブラリが必要な場合のみ追加でインストール
+pip install -r requirements-ml.txt
 ```
 
 ## 使用方法
