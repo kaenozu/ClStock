@@ -21,7 +21,7 @@ Mock = MagicMock
 from models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
 from models.core import PredictionResult
 from models_refactored.ensemble.ensemble_predictor import (
-    EnsemblePredictor as EnsembleStockPredictor, # RefactoredEnsemblePredictor を EnsemblePredictor に変更
+    EnsemblePredictor as EnsembleStockPredictor,
 )
 
 
