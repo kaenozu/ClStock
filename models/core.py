@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Callable, ClassVar
 import logging
 
 import hashlib
-from utils.logger_config import setup_logger
+from utils.logger import setup_logging
 
 logger = setup_logger(__name__)
 import json
