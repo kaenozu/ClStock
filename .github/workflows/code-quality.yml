@@ -11,14 +11,16 @@ on:
 jobs:
   security-audit:
     runs-on: ubuntu-latest
+    env:
+      SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
+    - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
-        python-version: 3.11
+        python-version: 3.12
 
     - name: Install dependencies
       run: |
@@ -32,8 +34,8 @@ jobs:
 
     - name: Dependency vulnerability check
       run: |
-        safety check --json --output safety-report.json || true
-        safety check
+        safety check --json --output safety-report.json --key "$SAFETY_API_KEY" || true
+        safety check --key "$SAFETY_API_KEY"
 
     - name: Upload security reports
       uses: actions/upload-artifact@v4
@@ -58,10 +60,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
+    - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
-        python-version: 3.11
+        python-version: 3.12
 
     - name: Install dependencies
       run: |
@@ -71,17 +73,15 @@ jobs:
     - name: Calculate code metrics
       run: |
         # Cyclomatic complexity
-        radon cc . --total-average --json -o complexity-report.json
-        radon cc . --min=B
-
-        # Maintainability index
-        radon mi . --json -o maintainability-report.json
-        radon mi . --min=B
-
-        # Code complexity with xenon
-        xenon --max-absolute B --max-modules B --max-average A .
-
-    - name: Dead code detection
+                radon cc . --total-average --json -o complexity-report.json
+                radon cc . --min=B
+        
+                # Maintainability index
+                radon mi . --json -o maintainability-report.json
+                radon mi . --min=B
+        
+                # Code complexity with xenon
+                xenon --max-absolute C --max-modules B --max-average A .    - name: Dead code detection
       run: |
         vulture . --min-confidence 80 > dead-code-report.txt || true
 
@@ -100,10 +100,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
+    - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
-        python-version: 3.11
+        python-version: 3.12
 
     - name: Install dependencies
       run: |
@@ -125,10 +125,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
+    - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
-        python-version: 3.11
+        python-version: 3.12
 
     - name: Install dependencies
       run: |
