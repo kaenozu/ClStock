@@ -10,8 +10,8 @@ from sklearn.metrics import mean_squared_error
 import joblib
 import os
 
-from data.stock_data import StockData
-from models.core import ModelCore
+from data.stock_data import StockDataProvider
+from models.core import StockPredictor
 from utils.logger import setup_logging
 
 # ロギング設定
@@ -19,7 +19,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-class EnsemblePredictor(ModelCore):
+class EnsemblePredictor(StockPredictor):
     """
     複数の機械学習モデルを組み合わせたアンサンブル予測器。
     線形回帰、ランダムフォレスト、勾配ブースティングを統合し、
