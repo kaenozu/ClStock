@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-<<<<<<< HEAD
 try:
         try:
         import yfinance as yf
@@ -20,556 +18,67 @@ try:
                 return _DummyTicker()
 
         yf = _DummyYFinance()  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - fallback for test environments
-    class _DummyTicker:
-        def __init__(self, *_, **__):
-            pass
-
-        def history(self, *_, **__):
-            import pandas as pd  # type: ignore
-
-            return pd.DataFrame()
-
-    class _DummyYFinance:
-        def Ticker(self, *args, **kwargs):
-            return _DummyTicker()
-
-    yf = _DummyYFinance()  # type: ignore
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Union
-import logging
-from utils.logger_config import setup_logger
-
-logger = setup_logger(__name__)
-
-
-class StockDataProvider:
-    def __init__(self):
-        from config.settings import get_settings
-
-        settings = get_settings()
-        self.jp_stock_codes: Dict[str, str] = settings.target_stocks
-
-    def get_stock_data(self, symbol: str, period: str = "1y") -> pd.DataFrame:
-        from utils.exceptions import DataFetchError, InvalidSymbolError, NetworkError
-        from utils.cache import get_cache
-
-        # キャッシュキーを生成
-        cache_key = f"stock_data_{symbol}_{period}"
-        cache = get_cache()
-
-        # キャッシュから取得を試行
-        cached_data = cache.get(cache_key)
-        if cached_data is not None:
-            return cached_data
-
-        try:
-            # 日本株の場合は複数の形式を試行
-            if symbol in self.jp_stock_codes:
-                ticker_formats = [f"{symbol}.T", f"{symbol}.TO", symbol]
-            else:
-                ticker_formats = [symbol]
-
-            data = pd.DataFrame()
-            successful_ticker = None
-
-            for ticker in ticker_formats:
-                logger.info(f"Fetching data for {ticker} (period: {period})")
-                try:
-                    stock = yf.Ticker(ticker)
-                    data = stock.history(period=period)
-
-                    if not data.empty:
-                        successful_ticker = ticker
-                        logger.info(f"Successfully fetched data using ticker: {ticker}")
-                        break
-                    else:
-                        logger.warning(f"No data found for ticker format: {ticker}")
-                except Exception as e:
-                    logger.warning(f"Failed to fetch data for {ticker}: {str(e)}")
-                    continue
-
-            if data.empty:
-                # 最後の手段：より長い期間で試行
-                logger.info(f"Trying longer period for {symbol}")
-                try:
-                    for ticker in ticker_formats:
-                        stock = yf.Ticker(ticker)
-                        data = stock.history(period="2y")
-                        if not data.empty:
-                            logger.info(f"Found data with 2y period for {ticker}")
-                            successful_ticker = ticker
-                            break
-                except Exception:
-                    pass
-
-            if data.empty:
-                # 最終的にデモデータを生成
-                logger.warning(
-                    f"No real data available for {symbol}, generating demo data"
-                )
-                data = self._generate_demo_data(symbol, period)
-                successful_ticker = "demo_data"
-
-            # データが取得できた場合の処理
-            data["Symbol"] = symbol
-            data["CompanyName"] = self.jp_stock_codes.get(symbol, symbol)
-            data["ActualTicker"] = successful_ticker
-
-            logger.info(
-                f"Successfully processed {len(data)} data points for {symbol} using {successful_ticker}"
-            )
-
-            # キャッシュに保存（30分）
-            cache.set(cache_key, data, ttl=1800)
-
-            return data
-
-        except DataFetchError:
-            raise
-        except ConnectionError as e:
-            raise NetworkError(f"yfinance API for {symbol}", str(e))
-        except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {str(e)}")
-            raise DataFetchError(symbol, "Unexpected error during data fetch", str(e))
-
-    def _resolve_period_days(self, period: str) -> int:
-        period = (period or '').lower()
-        mapping = {
-            '1d': 1,
-            '5d': 5,
-            '1wk': 5,
-            '1mo': 22,
-            '3mo': 66,
-            '6mo': 126,
-            '1y': 252,
-            '2y': 504,
-            '5y': 1260,
-            '10y': 2520,
-        }
-        if period in mapping:
-            return mapping[period]
-        if period.endswith('y') and period[:-1].isdigit():
-            return max(1, int(period[:-1]) * 252)
-        if period.endswith('mo') and period[:-2].isdigit():
-            return max(1, int(period[:-2]) * 22)
-        if period == 'max':
-            return 2520
-        if period == 'ytd':
-            start_of_year = datetime(datetime.now().year, 1, 1)
-            return max(1, (datetime.now() - start_of_year).days)
-        return 120
-
-    def _generate_demo_data(self, symbol: str, period: str) -> pd.DataFrame:
-        days = self._resolve_period_days(period)
-        end_date = datetime.now()
-        index = pd.date_range(end=end_date, periods=days, freq='B')
-        base_price = 100 + np.random.rand() * 20
-        returns = np.random.normal(loc=0.0005, scale=0.02, size=len(index))
-        close = base_price * np.exp(np.cumsum(returns))
-        high = close * (1 + np.random.uniform(0.001, 0.01, size=len(index)))
-        low = close * (1 - np.random.uniform(0.001, 0.01, size=len(index)))
-        open_prices = close * (1 + np.random.uniform(-0.005, 0.005, size=len(index)))
-        volume = np.random.randint(10_000, 200_000, size=len(index))
-
-        df = pd.DataFrame(
-            {
-                'Open': open_prices,
-                'High': np.maximum.reduce([open_prices, high, close]),
-                'Low': np.minimum.reduce([open_prices, low, close]),
-                'Close': close,
-                'Adj Close': close,
-                'Volume': volume,
-            },
-            index=index,
-        )
-        df.index.name = 'Date'
-        logger.info(f"Generated demo data for {symbol} with {len(df)} points")
-        return df
-
-
-    def get_multiple_stocks(
-        self, symbols: List[str], period: str = "1y"
-    ) -> Dict[str, pd.DataFrame]:
-        from utils.exceptions import DataFetchError, InvalidSymbolError
-
-        result: Dict[str, pd.DataFrame] = {}
-        failed_symbols: List[str] = []
-
-        for symbol in symbols:
-            try:
-                data = self.get_stock_data(symbol, period)
-                if not data.empty:
-                    result[symbol] = data
-            except DataFetchError as e:
-                logger.warning(f"Failed to fetch data for {symbol}: {e}")
-                failed_symbols.append(symbol)
-            except Exception as e:
-                logger.error(f"Unexpected error for {symbol}: {e}")
-                failed_symbols.append(symbol)
-
-        if failed_symbols:
-            logger.info(f"Failed to fetch data for symbols: {failed_symbols}")
-
-        return result
-
-    def calculate_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
-        from utils.cache import get_cache
-
-        if data.empty:
-            return data
-
-        # シンボル情報を含むキャッシュキーを生成
-        symbol = data["Symbol"].iloc[0] if "Symbol" in data.columns else "unknown"
-        cache_key = f"technical_indicators_{symbol}_{hash(str(data.index.tolist()))}"
-        cache = get_cache()
-
-        # キャッシュから取得を試行
-        cached_data = cache.get(cache_key)
-        if cached_data is not None:
-            return cached_data
-
-        df = data.copy()
-
-        # 移動平均線（ベクトル化で高速化）
-        df["SMA_20"] = df["Close"].rolling(window=20, min_periods=1).mean()
-        df["SMA_50"] = df["Close"].rolling(window=50, min_periods=1).mean()
-
-        # RSI（効率的な計算）
-        delta = df["Close"].diff()
-        gain = delta.where(delta > 0, 0)
-        loss = -delta.where(delta < 0, 0)
-
-        avg_gain = gain.rolling(window=14, min_periods=1).mean()
-        avg_loss = loss.rolling(window=14, min_periods=1).mean()
-
-        rs = avg_gain / avg_loss
-        df["RSI"] = 100 - (100 / (1 + rs))
-
-        # MACD（効率的な指数移動平均）
-        exp1 = df["Close"].ewm(span=12, adjust=False).mean()
-        exp2 = df["Close"].ewm(span=26, adjust=False).mean()
-        df["MACD"] = exp1 - exp2
-        df["MACD_Signal"] = df["MACD"].ewm(span=9, adjust=False).mean()
-
-        # ATR（効率的なTrue Range計算）
-        high_low = df["High"] - df["Low"]
-        high_close = (df["High"] - df["Close"].shift()).abs()
-        low_close = (df["Low"] - df["Close"].shift()).abs()
-
-        true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-        df["ATR"] = true_range.rolling(window=14, min_periods=1).mean()
-
-        # キャッシュに保存（30分）
-        cache.set(cache_key, df, ttl=1800)
-
-        return df
-
-    def get_financial_metrics(self, symbol: str) -> Dict[str, Union[str, int, float]]:
-        try:
-            if symbol in self.jp_stock_codes:
-                ticker = f"{symbol}.T"
-            else:
-                ticker = symbol
-
-            stock = yf.Ticker(ticker)
-            info = stock.info
-
-            metrics: Dict[str, Union[str, int, float]] = {
-                "symbol": symbol,
-                "company_name": self.jp_stock_codes.get(symbol, symbol),
-                "market_cap": info.get("marketCap", 0),
-                "pe_ratio": info.get("trailingPE", 0),
-                "pb_ratio": info.get("priceToBook", 0),
-                "dividend_yield": info.get("dividendYield", 0),
-                "roe": info.get("returnOnEquity", 0),
-                "current_price": info.get("currentPrice", 0),
-                "target_price": info.get("targetMeanPrice", 0),
-                "recommendation": info.get("recommendationMean", 0),
-            }
-
-            return metrics
-
-        except Exception as e:
-            logger.error(f"Error fetching financial metrics for {symbol}: {str(e)}")
-            return {}
-
-    def get_all_stock_symbols(self) -> List[str]:
-        return list(self.jp_stock_codes.keys())
-=======
-try:
-        try:
-        import yfinance as yf
-        import pandas as pd
-        import numpy as np
-    except ModuleNotFoundError:  # pragma: no cover - fallback for test environments
-        import pandas as pd  # type: ignore
-
-        class _DummyTicker:
-            def __init__(self, *_, **__):
-                pass
-
-            def history(self, *_, **__):
-                return pd.DataFrame()
-
-        class _DummyYFinance:
-            def Ticker(self, *args, **kwargs):
-                return _DummyTicker()
-
-        yf = _DummyYFinance()  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - fallback for test environments
-    class _DummyTicker:
-        def __init__(self, *_, **__):
-            pass
-
-        def history(self, *_, **__):
-            import pandas as pd  # type: ignore
-
-            return pd.DataFrame()
-
-    class _DummyYFinance:
-        def Ticker(self, *args, **kwargs):
-            return _DummyTicker()
-
-    yf = _DummyYFinance()  # type: ignore
-import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Union
-import logging
-from utils.logger_config import setup_logger
-
-logger = setup_logger(__name__)
-
-
-class StockDataProvider:
-    def __init__(self):
-        from config.settings import get_settings
-
-        settings = get_settings()
-        self.jp_stock_codes: Dict[str, str] = settings.target_stocks
-
-    def get_stock_data(self, symbol: str, period: str = "1y") -> pd.DataFrame:
-        from utils.exceptions import DataFetchError, InvalidSymbolError, NetworkError
-        from utils.cache import get_cache
-
-        # キャッシュキーを生成
-        cache_key = f"stock_data_{symbol}_{period}"
-        cache = get_cache()
-
-        # キャッシュから取得を試行
-        cached_data = cache.get(cache_key)
-        if cached_data is not None:
-            return cached_data
-
-        try:
-            # 日本株の場合は複数の形式を試行
-            if symbol in self.jp_stock_codes:
-                ticker_formats = [f"{symbol}.T", f"{symbol}.TO", symbol]
-            else:
-                ticker_formats = [symbol]
-
-            data = pd.DataFrame()
-            successful_ticker = None
-
-            for ticker in ticker_formats:
-                logger.info(f"Fetching data for {ticker} (period: {period})")
-                try:
-                    stock = yf.Ticker(ticker)
-                    data = stock.history(period=period)
-
-                    if not data.empty:
-                        successful_ticker = ticker
-                        logger.info(f"Successfully fetched data using ticker: {ticker}")
-                        break
-                    else:
-                        logger.warning(f"No data found for ticker format: {ticker}")
-                except Exception as e:
-                    logger.warning(f"Failed to fetch data for {ticker}: {str(e)}")
-                    continue
-
-            if data.empty:
-                # 最後の手段：より長い期間で試行
-                logger.info(f"Trying longer period for {symbol}")
-                try:
-                    for ticker in ticker_formats:
-                        stock = yf.Ticker(ticker)
-                        data = stock.history(period="2y")
-                        if not data.empty:
-                            logger.info(f"Found data with 2y period for {ticker}")
-                            successful_ticker = ticker
-                            break
-                except Exception:
-                    pass
-
-            if data.empty:
-                # 最終的にデモデータを生成
-                logger.warning(
-                    f"No real data available for {symbol}, generating demo data"
-                )
-                data = self._generate_demo_data(symbol, period)
-                successful_ticker = "demo_data"
-
-            # データが取得できた場合の処理
-            data["Symbol"] = symbol
-            data["CompanyName"] = self.jp_stock_codes.get(symbol, symbol)
-            data["ActualTicker"] = successful_ticker
-
-            logger.info(
-                f"Successfully processed {len(data)} data points for {symbol} using {successful_ticker}"
-            )
-
-            # キャッシュに保存（30分）
-            cache.set(cache_key, data, ttl=1800)
-
-            return data
-
-        except DataFetchError:
-            raise
-        except ConnectionError as e:
-            raise NetworkError(f"yfinance API for {symbol}", str(e))
-        except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {str(e)}")
-            raise DataFetchError(symbol, "Unexpected error during data fetch", str(e))
-
-    def get_multiple_stocks(
-        self, symbols: List[str], period: str = "1y"
-    ) -> Dict[str, pd.DataFrame]:
-        from utils.exceptions import DataFetchError, InvalidSymbolError
-
-        result: Dict[str, pd.DataFrame] = {}
-        failed_symbols: List[str] = []
-
-        for symbol in symbols:
-            try:
-                data = self.get_stock_data(symbol, period)
-                if not data.empty:
-                    result[symbol] = data
-            except DataFetchError as e:
-                logger.warning(f"Failed to fetch data for {symbol}: {e}")
-                failed_symbols.append(symbol)
-            except Exception as e:
-                logger.error(f"Unexpected error for {symbol}: {e}")
-                failed_symbols.append(symbol)
-
-        if failed_symbols:
-            logger.info(f"Failed to fetch data for symbols: {failed_symbols}")
-
-        return result
-
-    def calculate_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
-        from utils.cache import get_cache
-
-        if data.empty:
-            return data
-
-        # シンボル情報を含むキャッシュキーを生成
-        symbol = data["Symbol"].iloc[0] if "Symbol" in data.columns else "unknown"
-        cache_key = f"technical_indicators_{symbol}_{hash(str(data.index.tolist()))}"
-        cache = get_cache()
-
-        # キャッシュから取得を試行
-        cached_data = cache.get(cache_key)
-        if cached_data is not None:
-            return cached_data
-
-        df = data.copy()
-
-        # 移動平均線（ベクトル化で高速化）
-        df["SMA_20"] = df["Close"].rolling(window=20, min_periods=1).mean()
-        df["SMA_50"] = df["Close"].rolling(window=50, min_periods=1).mean()
-
-        # RSI（効率的な計算）
-        delta = df["Close"].diff()
-        gain = delta.where(delta > 0, 0)
-        loss = -delta.where(delta < 0, 0)
-
-        avg_gain = gain.rolling(window=14, min_periods=1).mean()
-        avg_loss = loss.rolling(window=14, min_periods=1).mean()
-
-        rs = avg_gain / avg_loss
-        df["RSI"] = 100 - (100 / (1 + rs))
-
-        # MACD（効率的な指数移動平均）
-        exp1 = df["Close"].ewm(span=12, adjust=False).mean()
-        exp2 = df["Close"].ewm(span=26, adjust=False).mean()
-        df["MACD"] = exp1 - exp2
-        df["MACD_Signal"] = df["MACD"].ewm(span=9, adjust=False).mean()
-
-        # ATR（効率的なTrue Range計算）
-        high_low = df["High"] - df["Low"]
-        high_close = (df["High"] - df["Close"].shift()).abs()
-        low_close = (df["Low"] - df["Close"].shift()).abs()
-
-        true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-        df["ATR"] = true_range.rolling(window=14, min_periods=1).mean()
-
-        # キャッシュに保存（30分）
-        cache.set(cache_key, df, ttl=1800)
-
-        return df
-
-    def get_financial_metrics(self, symbol: str) -> Dict[str, Union[str, int, float]]:
-        try:
-            if symbol in self.jp_stock_codes:
-                ticker = f"{symbol}.T"
-            else:
-                ticker = symbol
-
-            stock = yf.Ticker(ticker)
-            info = stock.info
-
-            metrics: Dict[str, Union[str, int, float]] = {
-                "symbol": symbol,
-                "company_name": self.jp_stock_codes.get(symbol, symbol),
-                "market_cap": info.get("marketCap", 0),
-                "pe_ratio": info.get("trailingPE", 0),
-                "pb_ratio": info.get("priceToBook", 0),
-                "dividend_yield": info.get("dividendYield", 0),
-                "roe": info.get("returnOnEquity", 0),
-                "current_price": info.get("currentPrice", 0),
-                "target_price": info.get("targetMeanPrice", 0),
-                "recommendation": info.get("recommendationMean", 0),
-            }
-
-            return metrics
-
-        except Exception as e:
-            logger.error(f"Error fetching financial metrics for {symbol}: {str(e)}")
-            return {}
-
-    def get_all_stock_symbols(self) -> List[str]:
-        return list(self.jp_stock_codes.keys())
->>>>>>> origin/codex/fix-ci-errors-in-pull-request
-=======
-﻿import logging
-import os
+﻿import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-    try:
-        import yfinance as yf
-        import pandas as pd
-        import numpy as np
-    except ModuleNotFoundError:  # pragma: no cover - fallback for test environments
-        import pandas as pd  # type: ignore
+import requests
+# yfinance を try-except でインポート
+try:
+    import yfinance as yf
+except ModuleNotFoundError:
+    # yfinance が見つからない場合、ダミーのクラスを提供
+    class yf:
+        @staticmethod
+        def Ticker(symbol):
+            class DummyTicker:
+                def __init__(self):
+                    self.info = {
+                        "longName": "Dummy Corp",
+                        "sector": "Dummy Sector",
+                        "industry": "Dummy Industry",
+                        "marketCap": 0,
+                        "trailingPE": 0,
+                        "priceToBook": 0,
+                        "dividendYield": 0,
+                        "returnOnEquity": 0,
+                        "currentPrice": 1000, # デフォルトの価格
+                        "targetMeanPrice": 1100,
+                        "recommendationMean": 2.0, # デフォルトの推奨スコア
+                    }
 
-        class _DummyTicker:
-            def __init__(self, *_, **__):
-                pass
+                def history(self, period, interval):
+                    # 現在時刻から指定された期間分のダミーデータを生成
+                    end_date = datetime.now()
+                    if "d" in period:
+                        days = int(period.replace("d", ""))
+                        start_date = end_date - timedelta(days=days)
+                    elif "mo" in period:
+                        # 月指定は単純に30日として計算
+                        months = int(period.replace("mo", ""))
+                        start_date = end_date - timedelta(days=months * 30)
+                    elif "y" in period:
+                        years = int(period.replace("y", ""))
+                        start_date = end_date - timedelta(days=years * 365)
+                    else:
+                        # デフォルトは1年
+                        start_date = end_date - timedelta(days=365)
 
-            def history(self, *_, **__):
-                return pd.DataFrame()
+                    date_range = pd.date_range(start=start_date, end=end_date, freq='D')
+                    # ランダムな価格変動をシミュレート
+                    import numpy as np
+                    np.random.seed(hash(symbol))  # 銘柄ごとに同じ乱数シード
+                    base_price = 1000 + hash(symbol) % 1000  # 銘柄ごとに異なるベース価格
+                    price_changes = np.random.normal(loc=0.0005, scale=0.02, size=len(date_range))
+                    prices = np.concatenate([[base_price], base_price + np.cumsum(price_changes[1:])])
+                    df = pd.DataFrame(index=date_range, data={'Close': prices, 'Open': prices, 'High': prices, 'Low': prices, 'Volume': np.random.randint(100000, 1000000, size=len(date_range))})
+                    df.index.name = "Date"
+                    return df
 
-        class _DummyYFinance:
-            def Ticker(self, *args, **kwargs):
-                return _DummyTicker()
-
-        yf = _DummyYFinance()  # type: ignore
+            return DummyTicker()
 
 from utils.logger_config import setup_logger
 from utils.cache import get_cache
@@ -584,10 +93,9 @@ class StockDataProvider:
 
         settings = get_settings()
         self.jp_stock_codes: Dict[str, str] = settings.target_stocks
-        self.yfinance_failure_log: set = set()  # yfinance縺ｧ蜿門ｾ励↓螟ｱ謨励＠縺滄釜譟・ｒ險倬鹸
+        self.yfinance_failure_log: set = set()  # yfinance縺ｫ螟ｱ謨励＠縺滄釜譟・ｒ險倬鹸
 
-        # yfinance逕ｨ繧ｻ繝・す繝ｧ繝ｳ・・ser-Agent繧剃ｸ頑嶌縺搾ｼ・
-        import requests
+        # yfinance縺ｧ縺ｮ繧ｻ繝・す繝ｧ繝ｳ菴懈・縺ｨUser-Agent縺ｮ險ｭ螳・
 
         user_agent = os.getenv(
             "CLSTOCK_YF_USER_AGENT",
@@ -595,7 +103,7 @@ class StockDataProvider:
             "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         )
         self.yf_session = requests.Session()
-        self.yf_session.headers.update({"User-Agent": user_agent})  # yfinance縺ｧ蜿門ｾ励↓螟ｱ謨励＠縺滄釜譟・ｒ險倬鹸
+        self.yf_session.headers.update({"User-Agent": user_agent})  # yfinance縺ｫ螟ｱ謨励＠縺滄釜譟・ｒ險倬鹸
 
     def _ticker_formats(self, symbol: str) -> List[str]:
         if symbol in self.jp_stock_codes:
@@ -667,7 +175,7 @@ class StockDataProvider:
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                stock = yf.Ticker(ticker, session=self.yf_session)
+                stock = yf.Ticker(ticker)
                 time.sleep(0.1)
                 data = stock.history(period=period)
                 if not data.empty:
@@ -746,7 +254,7 @@ class StockDataProvider:
         return [TickerInfo(code, name) for code, name in self.jp_stock_codes.items()]
 
     def get_stock_data(self, symbol: str, period: str = "1y") -> pd.DataFrame:
-        from utils.exceptions import DataFetchError, InvalidSymbolError, NetworkError
+        from utils.exceptions import DataFetchError, NetworkError
 
 
         cache_key = f"stock_data_{symbol}_{period}"
@@ -866,10 +374,12 @@ class StockDataProvider:
         return df
 
 
+
+
     def get_multiple_stocks(
         self, symbols: List[str], period: str = "1y"
     ) -> Dict[str, pd.DataFrame]:
-        from utils.exceptions import DataFetchError, InvalidSymbolError
+        from utils.exceptions import DataFetchError
 
         result: Dict[str, pd.DataFrame] = {}
         failed_symbols: List[str] = []
@@ -880,8 +390,7 @@ class StockDataProvider:
                 if not data.empty:
                     result[symbol] = data
             except ValueError as e:
-                # get_stock_data縺ｧ繝・・繧ｿ縺瑚ｦ九▽縺九ｉ縺ｪ縺・ｴ蜷医・ValueError繧貞・逅・
-                logger.warning(f"Failed to fetch data for {symbol}: {e}")
+                # get_stock_data縺悟､ｱ謨励＠縺溷ｴ蜷医・ValueError 繧貞・逅・                logger.warning(f"Failed to fetch data for {symbol}: {e}")
                 failed_symbols.append(symbol)
             except DataFetchError as e:
                 logger.warning(f"Failed to fetch data for {symbol}: {e}")
@@ -899,27 +408,25 @@ class StockDataProvider:
 
 
 
+
+
         if data.empty:
             return data
 
-        # 繧ｷ繝ｳ繝懊Ν諠・ｱ繧貞性繧繧ｭ繝｣繝・す繝･繧ｭ繝ｼ繧堤函謌・
-        symbol = data["Symbol"].iloc[0] if "Symbol" in data.columns else "unknown"
+        # 繧ｭ繝｣繝・す繝･繧貞性繧繧ｭ繝｣繝・す繝･繧ｭ繝ｼ繧堤函謌・        symbol = data["Symbol"].iloc[0] if "Symbol" in data.columns else "unknown"
         cache_key = f"technical_indicators_{symbol}_{hash(str(data.index.tolist()))}"
         cache = get_cache()
 
-        # 繧ｭ繝｣繝・す繝･縺九ｉ蜿門ｾ励ｒ隧ｦ陦・
-        cached_data = cache.get(cache_key)
+        # 繧ｭ繝｣繝・す繝･縺九ｉ蜿門ｾ励ｒ隧ｦ陦・        cached_data = cache.get(cache_key)
         if cached_data is not None:
             return cached_data
 
         df = data.copy()
 
-        # 遘ｻ蜍募ｹｳ蝮・ｷ夲ｼ医・繧ｯ繝医Ν蛹悶〒鬮倬溷喧・・
-        df["SMA_20"] = df["Close"].rolling(window=20, min_periods=1).mean()
+        # 遘ｻ蜍募ｹｳ蝮・ｷ夲ｼ医・繧ｯ繝医Ν蛹悶〒鬮倬溷喧・・        df["SMA_20"] = df["Close"].rolling(window=20, min_periods=1).mean()
         df["SMA_50"] = df["Close"].rolling(window=50, min_periods=1).mean()
 
-        # RSI・亥柑邇・噪縺ｪ險育ｮ暦ｼ・
-        delta = df["Close"].diff()
+        # RSI・亥柑邇・噪縺ｪ險育ｮ暦ｼ・        delta = df["Close"].diff()
         gain = delta.where(delta > 0, 0)
         loss = -delta.where(delta < 0, 0)
 
@@ -929,22 +436,19 @@ class StockDataProvider:
         rs = avg_gain / avg_loss
         df["RSI"] = 100 - (100 / (1 + rs))
 
-        # MACD・亥柑邇・噪縺ｪ謖・焚遘ｻ蜍募ｹｳ蝮・ｼ・
-        exp1 = df["Close"].ewm(span=12, adjust=False).mean()
+        # MACD・亥柑邇・噪縺ｪ謖・焚遘ｻ蜍募ｹｳ蝮・ｼ・        exp1 = df["Close"].ewm(span=12, adjust=False).mean()
         exp2 = df["Close"].ewm(span=26, adjust=False).mean()
         df["MACD"] = exp1 - exp2
         df["MACD_Signal"] = df["MACD"].ewm(span=9, adjust=False).mean()
 
-        # ATR・亥柑邇・噪縺ｪTrue Range險育ｮ暦ｼ・
-        high_low = df["High"] - df["Low"]
+        # ATR・亥柑邇・噪縺ｪTrue Range險育ｮ暦ｼ・        high_low = df["High"] - df["Low"]
         high_close = (df["High"] - df["Close"].shift()).abs()
         low_close = (df["Low"] - df["Close"].shift()).abs()
 
         true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
         df["ATR"] = true_range.rolling(window=14, min_periods=1).mean()
 
-        # 繧ｭ繝｣繝・す繝･縺ｫ菫晏ｭ假ｼ・0蛻・ｼ・
-        cache.set(cache_key, df, ttl=1800)
+        # 繧ｭ繝｣繝・す繝･縺ｫ菫晏ｭ假ｼ・0蛻・ｼ・        cache.set(cache_key, df, ttl=1800)
 
         return df
 
@@ -960,10 +464,9 @@ class StockDataProvider:
         while retry_count < max_retries:
             try:
                 import time
-                # 繝ｪ繧ｯ繧ｨ繧ｹ繝亥燕縺ｫ蟆代＠蠕・ｩ滂ｼ・PI雋闕ｷ霆ｽ貂帙・縺溘ａ・・
-                time.sleep(0.1)
+                # 繝ｪ繧ｯ繧ｨ繧ｹ繝亥燕縺ｫ蟆代＠蠕・ｩ滂ｼ・PI雋闕ｷ霆ｽ貂帙・縺溘ａ・・                time.sleep(0.1)
                 
-                stock = yf.Ticker(ticker, session=self.yf_session)
+                stock = yf.Ticker(ticker)
                 info = stock.info
 
                 metrics: Dict[str, Union[str, int, float]] = {
@@ -994,12 +497,11 @@ class StockDataProvider:
                     logger.error(f"Non-retryable error for {symbol}, stopping retries")
                     break
                 
-                # 谺｡縺ｮ繝ｪ繝医Λ繧､縺ｮ縺溘ａ縺ｫ蟆代＠蠕・ｩ・
+                # 谺｡縺ｮ繝ｪ繝医Λ繧､縺悟､ｱ謨励＠蠕・ｩ・
                 time.sleep(1.0 * (retry_count + 1))
                 retry_count += 1
 
-        # 蜈ｨ縺ｦ縺ｮ繝ｪ繝医Λ繧､縺悟､ｱ謨励＠縺溷ｴ蜷・
-        logger.error(f"All retry attempts failed for financial metrics of {symbol}")
+        # 蜈ｨ縺ｦ縺ｮ繝ｪ繝医Λ繧､縺悟､ｱ謨励＠縺溷ｴ蜷・        logger.error(f"All retry attempts failed for financial metrics of {symbol}")
         return {}
 
     def get_all_stock_symbols(self) -> List[str]:
@@ -1007,4 +509,4 @@ class StockDataProvider:
 
 
 
->>>>>>> Stashed changes
+
