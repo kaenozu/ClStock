@@ -10,10 +10,12 @@ import subprocess
 import threading
 import time
 import signal
+import shlex
 import concurrent.futures
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -44,7 +46,7 @@ class ProcessInfo:
     """プロセス情報"""
 
     name: str
-    command: str
+    command: Union[str, Sequence[str]]
     working_dir: str = str(PROJECT_ROOT)
     env_vars: Dict[str, str] = field(default_factory=dict)
     auto_restart: bool = True
@@ -198,8 +200,18 @@ class ProcessManager:
             env.update(process_info.env_vars)
 
             # プロセス開始
+            command = process_info.command
+            if isinstance(command, str):
+                argv = shlex.split(command)
+            elif isinstance(command, Sequence):
+                argv = list(command)
+            else:
+                raise TypeError(
+                    f"Unsupported command type for service {name}: {type(command)!r}"
+                )
+
             process_info.process = subprocess.Popen(
-                process_info.command.split(),
+                argv,
                 cwd=process_info.working_dir,
                 env=env,
                 stdout=subprocess.PIPE,
