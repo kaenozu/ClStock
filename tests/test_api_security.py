@@ -385,8 +385,7 @@ class TestAPIEndpointSecurity:
 
         import pandas as pd
 
-        mock_df = pd.DataFrame(
-            mock_data, index=pd.date_range("2023-01-01", periods=100)
+        mock_df = pd.DataFrame(mock_data, index=pd.date_range("2023-01-01", periods=100)
         )
 
         mock_provider_instance = Mock()
