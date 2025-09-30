@@ -13,7 +13,7 @@ import signal
 import concurrent.futures
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -80,6 +80,8 @@ class ProcessManager:
         )
         # プロセスプールの追加
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+        self._executor_futures_lock = threading.Lock()
+        self._executor_futures: Set[concurrent.futures.Future] = set()
         # リソース制限の追加
         self._resource_limit_lock = threading.Lock()
         self._current_cpu_usage = 0.0
@@ -306,6 +308,7 @@ class ProcessManager:
                     # リソース制限チェック
                     if self._check_resource_limits(self.processes[name]):
                         future = self._executor.submit(self.start_service, name)
+                        self._register_executor_future(future)
                         futures[future] = name
                     else:
                         results[name] = False
@@ -576,11 +579,37 @@ class ProcessManager:
         try:
             logger.info("グレースフルシャットダウン開始")
             self.stop_all_services(force=True)
-            
+
             # 並列実行プールのシャットダウン
-            logger.info("並列実行プールをシャットダウン")
-            self._executor.shutdown(wait=True, timeout=10)
-            
+            logger.info("並列実行プールをシャットダウン (最大10秒待機)")
+            shutdown_timeout = 10
+            deadline = time.monotonic() + shutdown_timeout
+            pending_futures = self._collect_executor_futures()
+            all_completed = True
+
+            for future in pending_futures:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    all_completed = False
+                    logger.warning("並列タスクの完了待機がタイムアウトしました")
+                    break
+
+                try:
+                    future.result(timeout=remaining)
+                except concurrent.futures.TimeoutError:
+                    logger.warning("並列タスクの完了待機がタイムアウトしました")
+                    all_completed = False
+                    break
+                except Exception as future_error:
+                    logger.error(f"並列タスクの実行中にエラー: {future_error}")
+
+            if all_completed:
+                self._executor.shutdown(wait=True)
+            else:
+                self._executor.shutdown(wait=False)
+                # タイムアウトした未完了タスクはキャンセルを試みる
+                self._cancel_pending_futures()
+
             logger.info("全サービス停止完了、プロセス終了")
             # シャットダウンイベントをクリア
             self._shutdown_event.clear()
@@ -589,6 +618,31 @@ class ProcessManager:
         except Exception as e:
             logger.error(f"シャットダウン中にエラー発生: {e}")
             os._exit(1)
+
+    def _register_executor_future(self, future: concurrent.futures.Future) -> None:
+        """シャットダウン時に待機するため、実行中の Future を登録する"""
+
+        with self._executor_futures_lock:
+            self._executor_futures.add(future)
+
+        def _remove_completed(fut: concurrent.futures.Future) -> None:
+            with self._executor_futures_lock:
+                self._executor_futures.discard(fut)
+
+        future.add_done_callback(_remove_completed)
+
+    def _collect_executor_futures(self) -> List[concurrent.futures.Future]:
+        """現在登録されている Future のスナップショットを取得"""
+
+        with self._executor_futures_lock:
+            return list(self._executor_futures)
+
+    def _cancel_pending_futures(self) -> None:
+        """未完了の Future をキャンセル"""
+
+        with self._executor_futures_lock:
+            for future in list(self._executor_futures):
+                future.cancel()
 
 
 # グローバルインスタンス
