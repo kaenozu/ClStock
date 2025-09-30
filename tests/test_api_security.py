@@ -180,6 +180,24 @@ class TestAPIAuthentication:
         result = verify_token(custom_token)
         assert result == "user"
 
+    def test_verify_token_accepts_test_token_when_enabled(self, monkeypatch):
+        """テストトークン有効化時に_TEST_TOKENSが使用されることを確認"""
+        from fastapi import HTTPException
+
+        # 環境フラグは無効化しておく
+        monkeypatch.delenv("API_ENABLE_TEST_TOKENS", raising=False)
+
+        # 明示的にテストトークンを無効化
+        security_module.configure_security(enable_test_tokens=False)
+
+        with pytest.raises(HTTPException):
+            verify_token("admin_token_secure_2024")
+
+        # テストトークンを有効化すると検証が通るはず
+        security_module.configure_security(enable_test_tokens=True)
+
+        assert verify_token("admin_token_secure_2024") == "administrator"
+
     def test_verify_token_missing_env_logs_warning_once(self, monkeypatch):
         """Missing environment variables should only emit one warning each"""
 

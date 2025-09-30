@@ -231,6 +231,9 @@ def verify_api_key(
 def _is_test_token_flag_enabled() -> bool:
     """Check if the environment flag for test tokens is enabled."""
 
+    if ALLOW_TEST_TOKENS:
+        return True
+
     flag_value = os.getenv(_TEST_TOKEN_FLAG, "").strip().lower()
     return flag_value in {"1", "true", "yes", "on"}
 
