@@ -10,10 +10,12 @@ import subprocess
 import threading
 import time
 import signal
+import shlex
 import concurrent.futures
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -44,7 +46,7 @@ class ProcessInfo:
     """プロセス情報"""
 
     name: str
-    command: str
+    command: Union[str, Sequence[str]]
     working_dir: str = str(PROJECT_ROOT)
     env_vars: Dict[str, str] = field(default_factory=dict)
     auto_restart: bool = True
@@ -64,6 +66,8 @@ class ProcessInfo:
     last_error: Optional[str] = None
     cpu_usage: float = 0.0
     memory_usage: float = 0.0
+    stdout_thread: Optional[threading.Thread] = None
+    stderr_thread: Optional[threading.Thread] = None
 
 
 class ProcessManager:
@@ -80,6 +84,8 @@ class ProcessManager:
         )
         # プロセスプールの追加
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+        self._executor_futures_lock = threading.Lock()
+        self._executor_futures: Set[concurrent.futures.Future] = set()
         # リソース制限の追加
         self._resource_limit_lock = threading.Lock()
         self._current_cpu_usage = 0.0
@@ -197,20 +203,48 @@ class ProcessManager:
             env = os.environ.copy()
             env.update(process_info.env_vars)
 
+            capture_output = bool(
+                getattr(settings.process, "log_process_output", False)
+            )
+
+            popen_kwargs = {
+                "cwd": process_info.working_dir,
+                "env": env,
+            }
+
+            if capture_output:
+                popen_kwargs.update(
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+
             # プロセス開始
+            command = process_info.command
+            if isinstance(command, str):
+                argv = shlex.split(command)
+            elif isinstance(command, Sequence):
+                argv = list(command)
+            else:
+                raise TypeError(
+                    f"Unsupported command type for service {name}: {type(command)!r}"
+                )
+
             process_info.process = subprocess.Popen(
-                process_info.command.split(),
-                cwd=process_info.working_dir,
-                env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
+                argv,
+                **popen_kwargs,
             )
 
             process_info.pid = process_info.process.pid
             process_info.start_time = datetime.now()
             process_info.status = ProcessStatus.RUNNING
             process_info.last_error = None
+
+            if capture_output:
+                self._start_output_logging(process_info)
+            else:
+                process_info.stdout_thread = None
+                process_info.stderr_thread = None
 
             logger.info(f"サービス開始完了: {name} (PID: {process_info.pid})")
             return True
@@ -235,6 +269,48 @@ class ProcessManager:
             process_info.last_error = str(e)
             logger.error(f"サービス開始失敗 {name}: 予期しないエラー - {e}")
             return False
+
+    def _start_output_logging(self, process_info: ProcessInfo) -> None:
+        """プロセス標準出力/標準エラーの非同期読み取りを開始"""
+
+        process = process_info.process
+        if not process:
+            return
+
+        def _consume_stream(stream, log_func, stream_name: str):
+            if stream is None:
+                return None
+
+            def _reader():
+                try:
+                    for line in iter(stream.readline, ""):
+                        if not line:
+                            break
+                        log_func(f"[{process_info.name}][{stream_name}] {line.rstrip()}")
+                except Exception as e:
+                    logger.debug(
+                        f"{process_info.name} の {stream_name} ログ読み取り中にエラー: {e}"
+                    )
+                finally:
+                    try:
+                        stream.close()
+                    except Exception:
+                        pass
+
+            thread = threading.Thread(
+                target=_reader,
+                daemon=True,
+                name=f"{process_info.name}-{stream_name}-logger",
+            )
+            thread.start()
+            return thread
+
+        process_info.stdout_thread = _consume_stream(
+            process.stdout, logger.info, "stdout"
+        )
+        process_info.stderr_thread = _consume_stream(
+            process.stderr, logger.warning, "stderr"
+        )
 
     def stop_service(self, name: str, force: bool = False) -> bool:
         """サービスの停止"""
@@ -271,6 +347,12 @@ class ProcessManager:
             process_info.status = ProcessStatus.STOPPED
             process_info.pid = None
             process_info.process = None
+            if process_info.stdout_thread and process_info.stdout_thread.is_alive():
+                process_info.stdout_thread.join(timeout=1)
+            if process_info.stderr_thread and process_info.stderr_thread.is_alive():
+                process_info.stderr_thread.join(timeout=1)
+            process_info.stdout_thread = None
+            process_info.stderr_thread = None
 
             logger.info(f"サービス停止完了: {name}")
             return True
@@ -306,6 +388,7 @@ class ProcessManager:
                     # リソース制限チェック
                     if self._check_resource_limits(self.processes[name]):
                         future = self._executor.submit(self.start_service, name)
+                        self._register_executor_future(future)
                         futures[future] = name
                     else:
                         results[name] = False
@@ -353,6 +436,8 @@ class ProcessManager:
         if self.monitoring_active:
             return
 
+        # 以前の監視停止時にセットされたシャットダウンフラグをリセット
+        self._shutdown_event.clear()
         self.monitoring_active = True
         self.monitor_thread = threading.Thread(
             target=self._monitor_processes, daemon=True
@@ -371,6 +456,9 @@ class ProcessManager:
             if self.monitor_thread.is_alive():
                 logger.warning("監視スレッドの終了待機タイムアウト")
                 # デーモンスレッドなので強制終了は不要
+
+        # 再起動時の状態を明示的に初期化
+        self.monitor_thread = None
 
         logger.info("プロセス監視停止")
 
@@ -576,11 +664,37 @@ class ProcessManager:
         try:
             logger.info("グレースフルシャットダウン開始")
             self.stop_all_services(force=True)
-            
+
             # 並列実行プールのシャットダウン
-            logger.info("並列実行プールをシャットダウン")
-            self._executor.shutdown(wait=True, timeout=10)
-            
+            logger.info("並列実行プールをシャットダウン (最大10秒待機)")
+            shutdown_timeout = 10
+            deadline = time.monotonic() + shutdown_timeout
+            pending_futures = self._collect_executor_futures()
+            all_completed = True
+
+            for future in pending_futures:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    all_completed = False
+                    logger.warning("並列タスクの完了待機がタイムアウトしました")
+                    break
+
+                try:
+                    future.result(timeout=remaining)
+                except concurrent.futures.TimeoutError:
+                    logger.warning("並列タスクの完了待機がタイムアウトしました")
+                    all_completed = False
+                    break
+                except Exception as future_error:
+                    logger.error(f"並列タスクの実行中にエラー: {future_error}")
+
+            if all_completed:
+                self._executor.shutdown(wait=True)
+            else:
+                self._executor.shutdown(wait=False)
+                # タイムアウトした未完了タスクはキャンセルを試みる
+                self._cancel_pending_futures()
+
             logger.info("全サービス停止完了、プロセス終了")
             # シャットダウンイベントをクリア
             self._shutdown_event.clear()
@@ -589,6 +703,31 @@ class ProcessManager:
         except Exception as e:
             logger.error(f"シャットダウン中にエラー発生: {e}")
             os._exit(1)
+
+    def _register_executor_future(self, future: concurrent.futures.Future) -> None:
+        """シャットダウン時に待機するため、実行中の Future を登録する"""
+
+        with self._executor_futures_lock:
+            self._executor_futures.add(future)
+
+        def _remove_completed(fut: concurrent.futures.Future) -> None:
+            with self._executor_futures_lock:
+                self._executor_futures.discard(fut)
+
+        future.add_done_callback(_remove_completed)
+
+    def _collect_executor_futures(self) -> List[concurrent.futures.Future]:
+        """現在登録されている Future のスナップショットを取得"""
+
+        with self._executor_futures_lock:
+            return list(self._executor_futures)
+
+    def _cancel_pending_futures(self) -> None:
+        """未完了の Future をキャンセル"""
+
+        with self._executor_futures_lock:
+            for future in list(self._executor_futures):
+                future.cancel()
 
 
 # グローバルインスタンス

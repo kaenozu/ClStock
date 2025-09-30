@@ -1,11 +1,16 @@
-"""Tests for the process manager system."""
+"Tests for the process manager system."
 
 import pytest
 import threading
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-from systems.process_manager import ProcessManager, ProcessInfo, ProcessStatus
+from systems.process_manager import (
+    ProcessManager,
+    ProcessInfo,
+    ProcessStatus,
+    settings,
+)
 
 
 class TestProcessManager:
@@ -100,10 +105,32 @@ class TestProcessManager:
         mock_popen.assert_called_once()  # Only called once
 
     @patch("systems.process_manager.subprocess.Popen")
+    def test_start_service_inherits_streams_when_logging_disabled(
+        self, mock_popen
+    ):
+        """Processes should inherit stdout/stderr when logging is disabled."""
+
+        mock_process = Mock(pid=12345)
+        mock_popen.return_value = mock_process
+
+        pm = ProcessManager()
+
+        with patch.object(
+            settings.process,
+            "log_process_output",
+            False,
+        ):
+            pm.start_service("dashboard")
+
+        assert mock_popen.called, "Popen should be invoked to start the process"
+        _, kwargs = mock_popen.call_args
+
+        assert kwargs.get("stdout") is None
+        assert kwargs.get("stderr") is None
+
+    @patch("systems.process_manager.subprocess.Popen")
     def test_start_service_file_not_found(self, mock_popen):
         """Test service start failure due to file not found."""
-        from FileNotFoundError import FileNotFoundError
-
         mock_popen.side_effect = FileNotFoundError("python not found")
 
         pm = ProcessManager()
@@ -137,27 +164,26 @@ class TestProcessManager:
 
         # Initially stopped
         status = pm.get_service_status("dashboard")
-        assert status == ProcessStatus.STOPPED
+        assert status.status == ProcessStatus.STOPPED
 
         # Start the service
         pm.start_service("dashboard")
 
         # Now running
         status = pm.get_service_status("dashboard")
-        assert status == ProcessStatus.RUNNING
+        assert status.status == ProcessStatus.RUNNING
 
-    def test_get_all_services_status(self):
+    def test_list_services(self):
         """Test getting status of all services."""
         pm = ProcessManager()
 
         # Get all services status
-        statuses = pm.get_all_services_status()
+        statuses = pm.list_services()
 
         # Should return a dictionary with all services
-        assert isinstance(statuses, dict)
+        assert isinstance(statuses, list)
         assert len(statuses) > 0
-        assert "dashboard" in statuses
-        assert statuses["dashboard"] == ProcessStatus.STOPPED
+        assert "dashboard" in [s.name for s in statuses]
 
     def test_register_service(self):
         """Test registering a new service."""
@@ -174,8 +200,28 @@ class TestProcessManager:
         assert "test_service" in pm.processes
         assert pm.processes["test_service"] is service_info
 
+    @patch("systems.process_manager.subprocess.Popen")
+    def test_start_service_with_quoted_arguments(self, mock_popen):
+        """Service commands with quoted arguments should be parsed correctly."""
+        pm = ProcessManager()
+        service_info = ProcessInfo(
+            name="quoted_service",
+            command='python -c "print(\'hello world\')"',
+        )
+        pm.register_service(service_info)
+
+        mock_process = Mock(pid=6789)
+        mock_popen.return_value = mock_process
+
+        with patch.object(ProcessManager, "_check_resource_limits", return_value=True):
+            assert pm.start_service("quoted_service") is True
+
+        mock_popen.assert_called_once()
+        args, _ = mock_popen.call_args
+        assert args[0] == ["python", "-c", "print('hello world')"]
+
     @patch("systems.process_manager.psutil")
-    def test_get_system_resources(self, mock_psutil):
+    def test_get_system_status(self, mock_psutil):
         """Test getting system resource information."""
         # Mock psutil responses
         mock_psutil.cpu_percent.return_value = 25.5
@@ -186,13 +232,12 @@ class TestProcessManager:
         pm = ProcessManager()
 
         # Get system resources
-        resources = pm.get_system_resources()
+        resources = pm.get_system_status()
 
         # Check the returned values
-        assert "cpu_percent" in resources
-        assert "memory_percent" in resources
-        assert resources["cpu_percent"] == 25.5
-        assert resources["memory_percent"] == 60.0
+        assert "total_services" in resources
+        assert "running" in resources
+        assert "failed" in resources
 
     def test_default_service_scripts_exist(self):
         """Ensure default service commands reference existing scripts."""
@@ -211,3 +256,30 @@ class TestProcessManager:
             assert script_path.exists(), (
                 f"Script for {service.name} not found: {script_path}"
             )
+
+    def test_graceful_shutdown_uses_supported_executor_signature(self):
+        """Ensure graceful shutdown only passes supported args to executor.shutdown."""
+        pm = ProcessManager()
+
+        # Stub out heavy dependencies
+        pm.stop_all_services = MagicMock()
+
+        executor_mock = MagicMock()
+        executor_mock.shutdown = MagicMock()
+        executor_mock._threads = set()  # No threads to join during shutdown
+        pm._executor = executor_mock
+
+        pm._shutdown_event.set()
+
+        with patch("systems.process_manager.os._exit") as mock_exit:
+            pm._graceful_shutdown()
+
+        pm.stop_all_services.assert_called_once_with(force=True)
+
+        executor_mock.shutdown.assert_called_once()
+        args, kwargs = executor_mock.shutdown.call_args
+        assert args == ()
+        assert kwargs == {"wait": False}
+
+        assert not pm._shutdown_event.is_set()
+        mock_exit.assert_called_once_with(0)
