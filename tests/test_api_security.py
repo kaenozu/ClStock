@@ -101,7 +101,7 @@ class TestAPIAuthentication:
             with pytest.raises(HTTPException):
                 verify_token(invalid_token)
 
-        expected_masked = invalid_token[:4] + "*" * (len(invalid_token) - 4)
+        expected_masked = security_module._redact_secret(invalid_token)
         warning_messages = [record.getMessage() for record in caplog.records]
         assert any(
             "Invalid token attempt:" in message and expected_masked in message
@@ -140,7 +140,7 @@ class TestAPIAuthentication:
             with pytest.raises(HTTPException):
                 security_module.verify_api_key(credentials)
 
-        expected_masked = invalid_api_key[:4] + "*" * (len(invalid_api_key) - 4)
+        expected_masked = security_module._redact_secret(invalid_api_key)
         warning_messages = [record.getMessage() for record in caplog.records]
         assert any(
             "Invalid API key attempt:" in message and expected_masked in message
