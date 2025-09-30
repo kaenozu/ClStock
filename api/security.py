@@ -14,6 +14,16 @@ from utils.logger_config import get_logger
 
 logger = get_logger(__name__)
 
+def _mask_token(token: Optional[str], visible_chars: int = 4) -> str:
+    """Return a masked representation of the provided token."""
+
+    if not token:
+        return ""
+
+    visible_chars = max(0, min(visible_chars, len(token)))
+    masked_length = len(token) - visible_chars
+    return token[:visible_chars] + ("*" * masked_length)
+
 _env_cache: Dict[str, Optional[str]] = {}
 _logged_missing_env_vars: Set[str] = set()
 _env_tokens_cache: Dict[str, str] = {}
@@ -116,7 +126,7 @@ rate_limit_storage: Dict[str, Dict[str, int]] = {}
 
 API_KEYS: Dict[str, str] = _initialize_api_keys()
 ALLOW_TEST_TOKENS = False
-TEST_TOKENS: Dict[str, str] = {}
+TEST_TOKENS: Dict[str, str] = dict(_TEST_TOKENS)
 
 
 def configure_security(
@@ -210,7 +220,7 @@ def verify_api_key(
     token = credentials.credentials
 
     if token not in API_KEYS:
-        logger.warning(f"Invalid API key attempt: {token}")
+        logger.warning(f"Invalid API key attempt: {_mask_token(token)}")
         raise HTTPException(status_code=401, detail="Invalid API key")
 
     user_type = API_KEYS[token]
@@ -218,11 +228,17 @@ def verify_api_key(
     return user_type
 
 
-def _should_include_test_tokens() -> bool:
-    """テスト用トークンを許可するかを判定"""
+def _is_test_token_flag_enabled() -> bool:
+    """Check if the environment flag for test tokens is enabled."""
 
     flag_value = os.getenv(_TEST_TOKEN_FLAG, "").strip().lower()
     return flag_value in {"1", "true", "yes", "on"}
+
+
+def _should_include_test_tokens() -> bool:
+    """テスト用トークンを許可するかを判定"""
+
+    return ALLOW_TEST_TOKENS or _is_test_token_flag_enabled()
 
 
 def _build_allowed_tokens() -> Dict[str, str]:
@@ -234,10 +250,15 @@ def _build_allowed_tokens() -> Dict[str, str]:
     tokens.update(env_tokens)
 
     if _should_include_test_tokens():
-        logger.warning(
-            "Test tokens enabled via environment flag. Do not use in production."
-        )
-        tokens.update(_TEST_TOKENS)
+        if _is_test_token_flag_enabled():
+            logger.warning(
+                "Test tokens enabled via environment flag. Do not use in production."
+            )
+        elif ALLOW_TEST_TOKENS:
+            logger.warning(
+                "Test tokens enabled via configuration. Do not use in production."
+            )
+        tokens.update(TEST_TOKENS)
 
     return tokens
 
@@ -250,7 +271,7 @@ def verify_token(token: str) -> str:
     allowed_tokens = _build_allowed_tokens()
 
     if token not in allowed_tokens:
-        logger.warning(f"Invalid token attempt: {token}")
+        logger.warning(f"Invalid token attempt: {_mask_token(token)}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user_type = allowed_tokens[token]
