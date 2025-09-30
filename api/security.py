@@ -116,7 +116,7 @@ rate_limit_storage: Dict[str, Dict[str, int]] = {}
 
 API_KEYS: Dict[str, str] = _initialize_api_keys()
 ALLOW_TEST_TOKENS = False
-TEST_TOKENS: Dict[str, str] = {}
+TEST_TOKENS: Dict[str, str] = dict(_TEST_TOKENS)
 
 
 def configure_security(
@@ -221,6 +221,9 @@ def verify_api_key(
 def _should_include_test_tokens() -> bool:
     """テスト用トークンを許可するかを判定"""
 
+    if ALLOW_TEST_TOKENS:
+        return True
+
     flag_value = os.getenv(_TEST_TOKEN_FLAG, "").strip().lower()
     return flag_value in {"1", "true", "yes", "on"}
 
@@ -234,10 +237,8 @@ def _build_allowed_tokens() -> Dict[str, str]:
     tokens.update(env_tokens)
 
     if _should_include_test_tokens():
-        logger.warning(
-            "Test tokens enabled via environment flag. Do not use in production."
-        )
-        tokens.update(_TEST_TOKENS)
+        logger.warning("Test tokens enabled. Do not use in production.")
+        tokens.update(TEST_TOKENS)
 
     return tokens
 
