@@ -85,8 +85,7 @@ def _initialize_api_keys() -> Dict[str, str]:
 
 
 def _get_env_with_warning(var_name: str) -> Optional[str]:
-    """
-    環境変数を取得し、存在しない場合は警告をログに出力します。
+    """環境変数を取得し、存在しない場合は警告をログに出力します。
 
     Args:
         var_name: 取得する環境変数名
@@ -245,11 +244,8 @@ def verify_api_key(
 def _is_test_token_flag_enabled() -> bool:
     """Check if the environment flag for test tokens is enabled."""
 
-    if ALLOW_TEST_TOKENS:
-        return True
-
     flag_value = os.getenv(_TEST_TOKEN_FLAG, "").strip().lower()
-    return flag_value in {"1", "true", "yes", "on"} or bool(ALLOW_TEST_TOKENS)
+    return flag_value in {"1", "true", "yes", "on"}
 
 
 def _should_include_test_tokens() -> bool:

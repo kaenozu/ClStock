@@ -246,6 +246,28 @@ class TestAPIAuthentication:
 
         assert len(missing_warnings_after_second_call) == 2
 
+    def test_configure_security_custom_test_tokens(self):
+        """configure_security で指定したテストトークンが利用可能になる"""
+
+        original_test_tokens = dict(security_module.TEST_TOKENS)
+        original_allow_flag = security_module.ALLOW_TEST_TOKENS
+
+        try:
+            security_module.configure_security(
+                test_tokens={"custom_test_token": "qa"},
+                enable_test_tokens=True,
+            )
+
+            if hasattr(security_module, "reset_env_token_cache"):
+                security_module.reset_env_token_cache()
+
+            assert verify_token("custom_test_token") == "qa"
+        finally:
+            security_module.configure_security(
+                test_tokens=original_test_tokens,
+                enable_test_tokens=original_allow_flag,
+            )
+
     def test_configure_security_overrides_test_tokens(self, monkeypatch):
         """configure_security should respect custom test tokens"""
 
@@ -445,6 +467,9 @@ class TestInputValidation:
     def setup_method(self):
         """各テストメソッドの前に実行"""
         from fastapi import FastAPI
+
+        if hasattr(security_module, "reset_env_token_cache"):
+            security_module.reset_env_token_cache()
 
         self.app = FastAPI()
         self.app.include_router(router)
