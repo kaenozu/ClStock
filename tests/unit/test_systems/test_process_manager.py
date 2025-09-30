@@ -174,6 +174,26 @@ class TestProcessManager:
         assert "test_service" in pm.processes
         assert pm.processes["test_service"] is service_info
 
+    @patch("systems.process_manager.subprocess.Popen")
+    def test_start_service_with_quoted_arguments(self, mock_popen):
+        """Service commands with quoted arguments should be parsed correctly."""
+        pm = ProcessManager()
+        service_info = ProcessInfo(
+            name="quoted_service",
+            command='python -c "print(\'hello world\')"',
+        )
+        pm.register_service(service_info)
+
+        mock_process = Mock(pid=6789)
+        mock_popen.return_value = mock_process
+
+        with patch.object(ProcessManager, "_check_resource_limits", return_value=True):
+            assert pm.start_service("quoted_service") is True
+
+        mock_popen.assert_called_once()
+        args, _ = mock_popen.call_args
+        assert args[0] == ["python", "-c", "print('hello world')"]
+
     @patch("systems.process_manager.psutil")
     def test_get_system_resources(self, mock_psutil):
         """Test getting system resource information."""
