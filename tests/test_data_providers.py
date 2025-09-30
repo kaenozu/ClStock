@@ -7,6 +7,7 @@ import pandas as pd
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
 
+import data.stock_data as stock_data_module
 from data.stock_data import StockDataProvider
 
 
@@ -157,6 +158,61 @@ class TestStockDataProvider:
         # データ取得と検証
         result = self.provider.get_stock_data("7203", "1mo")
         assert result is not None
+
+    def test_get_stock_data_dummy_fallback_handles_negative_hash(self, monkeypatch):
+        """Fallback ダミーデータが負のハッシュでも動作することを検証"""
+
+        class DummyYF:
+            @staticmethod
+            def Ticker(symbol):
+                class DummyTicker:
+                    def __init__(self, symbol):
+                        self._symbol = symbol
+                        self.info = {
+                            "longName": "Dummy Corp",
+                            "sector": "Dummy Sector",
+                            "industry": "Dummy Industry",
+                            "currentPrice": 1000,
+                        }
+
+                    def history(self, period, interval):
+                        import numpy as np
+
+                        seed = stock_data_module._normalized_symbol_seed(self._symbol)
+                        np.random.seed(seed)
+                        end = datetime.now()
+                        index = pd.date_range(end - timedelta(days=4), periods=5, freq="D")
+                        base_price = 1000 + seed % 1000
+                        close = base_price + np.arange(len(index))
+                        data = {
+                            "Close": close,
+                            "Open": close,
+                            "High": close,
+                            "Low": close,
+                            "Volume": np.random.randint(1_000, 10_000, size=len(index)),
+                        }
+                        df = pd.DataFrame(data, index=index)
+                        df.index.name = "Date"
+                        return df
+
+                return DummyTicker(symbol)
+
+        monkeypatch.setattr(stock_data_module, "yf", DummyYF)
+
+        negative_symbol = None
+        for idx in range(1000):
+            candidate = f"NEGATIVE_HASH_{idx}"
+            if hash(f"{candidate}.T") < 0:
+                negative_symbol = candidate
+                break
+
+        if negative_symbol is None:
+            pytest.skip("Could not find symbol with negative hash in test run")
+
+        result = self.provider.get_stock_data(negative_symbol, "1mo")
+
+        assert isinstance(result, pd.DataFrame)
+        assert not result.empty
 
 
 class TestDataValidation:
