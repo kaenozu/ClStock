@@ -1,6 +1,7 @@
 """Machine learning based stock predictor utilities."""
 
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -15,6 +16,13 @@ from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from data.stock_data import StockDataProvider
+
+try:  # pragma: no cover - optional dependency for enhanced parallelism
+    from models_refactored.ensemble.parallel_feature_calculator import (
+        ParallelFeatureCalculator,
+    )
+except Exception:  # pragma: no cover - calculator not available in all environments
+    ParallelFeatureCalculator = None
 
 logger = logging.getLogger(__name__)
 
@@ -227,46 +235,135 @@ class MLStockPredictor:
             scores.iloc[i] = max(0, min(100, score))
         return scores.fillna(50)
 
-    def prepare_dataset(
-        self, symbols: List[str], start_date: str = "2020-01-01"
+    def _process_symbol(
+        self, symbol: str
+    ) -> Tuple[str, Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
+        """Retrieve data, build features and targets for a single symbol."""
+        try:
+            logger.info(f"Processing {symbol}...")
+            data = self.data_provider.get_stock_data(symbol, "3y")
+            if data.empty or len(data) < 100:
+                logger.warning(f"Insufficient data for {symbol}")
+                return symbol, None, None, None
+            features = self.prepare_features(data)
+            targets_reg, targets_cls = self.create_targets(data)
+            features[f"symbol_{symbol}"] = 1
+            return symbol, features, targets_reg, targets_cls
+        except Exception as exc:  # pragma: no cover - safety net for unexpected errors
+            logger.error(f"Error processing {symbol}: {str(exc)}")
+            return symbol, None, None, None
+
+    def _aggregate_results(
+        self,
+        symbols: List[str],
+        results: Dict[str, Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]]],
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        """複数銘柄のデータセットを準備"""
-        all_features = []
-        all_targets_reg = []
-        all_targets_cls = []
+        all_features: List[pd.DataFrame] = []
+        all_targets_reg: List[pd.DataFrame] = []
+        all_targets_cls: List[pd.DataFrame] = []
+
         for symbol in symbols:
-            try:
-                logger.info(f"Processing {symbol}...")
-                data = self.data_provider.get_stock_data(symbol, "3y")
-                if data.empty or len(data) < 100:
-                    logger.warning(f"Insufficient data for {symbol}")
-                    continue
-                features = self.prepare_features(data)
-                targets_reg, targets_cls = self.create_targets(data)
-                # 銘柄情報を追加
-                features["symbol_" + symbol] = 1
-                all_features.append(features)
-                all_targets_reg.append(targets_reg)
-                all_targets_cls.append(targets_cls)
-            except Exception as e:
-                logger.error(f"Error processing {symbol}: {str(e)}")
+            features, targets_reg, targets_cls = results.get(symbol, (None, None, None))
+            if features is None or targets_reg is None or targets_cls is None:
                 continue
+            all_features.append(features)
+            all_targets_reg.append(targets_reg)
+            all_targets_cls.append(targets_cls)
+
         if not all_features:
             raise ValueError("No valid data available")
-        # データを結合
+
         combined_features = pd.concat(all_features, ignore_index=True)
         combined_targets_reg = pd.concat(all_targets_reg, ignore_index=True)
         combined_targets_cls = pd.concat(all_targets_cls, ignore_index=True)
-        # ワンホットエンコーディング用の銘柄列を調整
-        symbol_columns = [
-            col for col in combined_features.columns if col.startswith("symbol_")
-        ]
         for symbol in symbols:
             col_name = f"symbol_{symbol}"
             if col_name not in combined_features.columns:
                 combined_features[col_name] = 0
+
         combined_features = combined_features.fillna(0)
         return combined_features, combined_targets_reg, combined_targets_cls
+
+    def _prepare_dataset_sequential(
+        self, symbols: List[str]
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        results: Dict[
+            str,
+            Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]],
+        ] = {}
+        for symbol in symbols:
+            _, features, targets_reg, targets_cls = self._process_symbol(symbol)
+            results[symbol] = (features, targets_reg, targets_cls)
+
+        return self._aggregate_results(symbols, results)
+
+    def _prepare_dataset_parallel(
+        self, symbols: List[str]
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        results: Dict[
+            str,
+            Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]],
+        ] = {}
+
+        if ParallelFeatureCalculator is not None:
+            try:
+                calculator = ParallelFeatureCalculator()
+                max_workers = getattr(calculator, "n_jobs", len(symbols) or 1)
+                with ThreadPoolExecutor(max_workers=max_workers or 1) as executor:
+                    futures = {
+                        executor.submit(self._process_symbol, symbol): symbol
+                        for symbol in symbols
+                    }
+                    for future in as_completed(futures):
+                        symbol = futures[future]
+                        try:
+                            _, features, targets_reg, targets_cls = future.result()
+                            results[symbol] = (features, targets_reg, targets_cls)
+                        except Exception as exc:  # pragma: no cover - executor safety
+                            logger.error(f"Parallel processing error for {symbol}: {str(exc)}")
+                            results[symbol] = (None, None, None)
+            except Exception as exc:  # pragma: no cover - creation failure
+                logger.warning(
+                    "ParallelFeatureCalculator unavailable, falling back to ThreadPoolExecutor: %s",
+                    str(exc),
+                )
+                results = {}
+
+        if not results:
+            with ThreadPoolExecutor(max_workers=len(symbols) or 1) as executor:
+                futures = {
+                    executor.submit(self._process_symbol, symbol): symbol
+                    for symbol in symbols
+                }
+                for future in as_completed(futures):
+                    symbol = futures[future]
+                    try:
+                        _, features, targets_reg, targets_cls = future.result()
+                        results[symbol] = (features, targets_reg, targets_cls)
+                    except Exception as exc:  # pragma: no cover - executor safety
+                        logger.error(f"Parallel processing error for {symbol}: {str(exc)}")
+                        results[symbol] = (None, None, None)
+
+        return self._aggregate_results(symbols, results)
+
+    def prepare_dataset(
+        self,
+        symbols: List[str],
+        start_date: str = "2020-01-01",
+        parallel: bool = False,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        """複数銘柄のデータセットを準備"""
+        if not parallel:
+            return self._prepare_dataset_sequential(symbols)
+
+        try:
+            return self._prepare_dataset_parallel(symbols)
+        except Exception as exc:
+            logger.warning(
+                "Parallel dataset preparation failed, falling back to sequential: %s",
+                str(exc),
+            )
+            return self._prepare_dataset_sequential(symbols)
 
     def train_model(
         self, symbols: List[str], target_column: str = "recommendation_score"
