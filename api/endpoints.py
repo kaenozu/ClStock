@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.security import HTTPAuthorizationCredentials
 
 from datetime import datetime
+from dataclasses import dataclass
+from typing import List
 import pandas as pd
 
 # セキュリティと検証機能
@@ -17,13 +19,18 @@ from utils.validators import (
 # from models.predictor import StockPredictor
 
 # 新しいインポートパス
-from models_refactored.core.interfaces import (
-    StockPredictor,
-    PredictionResult as RecommendationResponse,
-)
+from models.core import MLStockPredictor
+from models.recommendation import StockRecommendation
 
 # StockRecommendationクラスは削除されたため、一時的にコメントアウト
 from data.stock_data import StockDataProvider
+
+@dataclass
+class RecommendationResponse:
+    recommendations: List[StockRecommendation]
+    generated_at: datetime
+    market_status: str
+
 
 router = APIRouter()
 
@@ -41,7 +48,7 @@ async def get_recommendations(
         if not (1 <= top_n <= 50):  # Stricter limit for security
             raise ValidationError("top_n must be between 1 and 50")
 
-        predictor = StockPredictor()
+        predictor = MLStockPredictor()
         recommendations = predictor.get_top_recommendations(top_n)
 
         return RecommendationResponse(
@@ -60,7 +67,8 @@ async def get_recommendations(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to fetch recommendations: {str(e)}"
+            status_code=500,
+            detail=f"推奨銘柄の取得に失敗しました: {str(e)}",
         )
 
 
@@ -78,7 +86,7 @@ async def get_single_recommendation(
         # Input validation
         symbol = validate_stock_symbol(symbol)
 
-        predictor = StockPredictor()
+        predictor = MLStockPredictor()
         data_provider = StockDataProvider()
 
         if symbol not in data_provider.get_all_stock_symbols():
@@ -89,7 +97,9 @@ async def get_single_recommendation(
 
         return recommendation
     except InvalidSymbolError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=404, detail=f"銘柄コード {symbol} が見つかりません"
+        )
     except PredictionError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:

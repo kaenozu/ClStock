@@ -22,6 +22,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
 from data.stock_data import StockDataProvider
+from models.recommendation import StockRecommendation
 
 
 @dataclass
@@ -273,6 +274,9 @@ class MLStockPredictor(CacheablePredictor):
         columns = {col.lower(): col for col in df.columns}
         close = columns.get("close")
         volume = columns.get("volume")
+        high = columns.get("high")
+        low = columns.get("low")
+        open_col = columns.get("open")
         if close is None:
             raise ValueError("Input data must contain a Close column")
 
@@ -282,6 +286,22 @@ class MLStockPredictor(CacheablePredictor):
             features["volume_change"] = df[volume].pct_change().fillna(0.0)
         else:
             features["volume_change"] = 0.0
+
+        if high and low:
+            with np.errstate(divide="ignore", invalid="ignore"):
+                features["high_low_ratio"] = (
+                    (df[high] - df[low]) / df[close].replace(0, np.nan)
+                ).fillna(0.0)
+        else:
+            features["high_low_ratio"] = 0.0
+
+        if open_col:
+            with np.errstate(divide="ignore", invalid="ignore"):
+                features["close_open_ratio"] = (
+                    (df[close] - df[open_col]) / df[open_col].replace(0, np.nan)
+                ).fillna(0.0)
+        else:
+            features["close_open_ratio"] = 0.0
 
         price_diff = df[close].diff().fillna(0.0)
         gain = price_diff.where(price_diff > 0, 0.0)
@@ -293,12 +313,30 @@ class MLStockPredictor(CacheablePredictor):
 
         features["sma_20"] = df[close].rolling(window=20, min_periods=1).mean()
         features["sma_50"] = df[close].rolling(window=50, min_periods=1).mean()
+        with np.errstate(divide="ignore", invalid="ignore"):
+            features["sma_20_ratio"] = (
+                df[close] / features["sma_20"].replace(0, np.nan)
+            ).fillna(0.0)
+            features["sma_50_ratio"] = (
+                df[close] / features["sma_50"].replace(0, np.nan)
+            ).fillna(0.0)
         features["macd"] = (
             df[close].ewm(span=12, adjust=False).mean()
             - df[close].ewm(span=26, adjust=False).mean()
         )
         features["macd_signal"] = features["macd"].ewm(span=9, adjust=False).mean()
         features["atr"] = (df[close] - df[close].shift(1)).abs().fillna(0.0)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            features["atr_ratio"] = (
+                features["atr"] / df[close].replace(0, np.nan)
+            ).fillna(0.0)
+
+        features["price_lag_1"] = df[close].shift(1).fillna(0.0)
+        features["price_lag_5"] = df[close].shift(5).fillna(0.0)
+        if volume:
+            features["volume_lag_1"] = df[volume].shift(1).fillna(0.0)
+        else:
+            features["volume_lag_1"] = 0.0
 
         return self._ensure_numeric(features)
 
@@ -455,3 +493,162 @@ class MLStockPredictor(CacheablePredictor):
 
     def get_confidence(self) -> float:
         return 0.8 if self.is_trained() else 0.3
+
+    # ------------------------------------------------------------------
+    # Recommendation helpers expected by API/tests
+    # ------------------------------------------------------------------
+    def calculate_score(self, symbol: str) -> float:
+        """Compute a simple heuristic score in the 0-100 range."""
+
+        try:
+            raw_data = self.data_provider.get_stock_data(symbol, "6mo")
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.warning("Failed to fetch data for %s: %s", symbol, exc)
+            return 0.0
+
+        if raw_data is None or raw_data.empty:
+            return 0.0
+
+        try:
+            data = self.data_provider.calculate_technical_indicators(raw_data)
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.warning(
+                "Failed to calculate technical indicators for %s: %s", symbol, exc
+            )
+            data = raw_data
+
+        if data is None or data.empty:
+            return 0.0
+
+        close_col = next((c for c in data.columns if c.lower() == "close"), None)
+        sma20_col = next((c for c in data.columns if c.lower() == "sma_20"), None)
+        sma50_col = next((c for c in data.columns if c.lower() == "sma_50"), None)
+        rsi_col = next((c for c in data.columns if c.lower() == "rsi"), None)
+
+        score = 50.0
+        if close_col and sma20_col:
+            current_price = data[close_col].iloc[-1]
+            sma20 = data[sma20_col].iloc[-1]
+            if pd.notna(current_price) and pd.notna(sma20) and sma20:
+                score += float((current_price - sma20) / sma20) * 100
+
+        if sma20_col and sma50_col:
+            sma20 = data[sma20_col].iloc[-1]
+            sma50 = data[sma50_col].iloc[-1]
+            if pd.notna(sma20) and pd.notna(sma50) and sma50:
+                score += float((sma20 - sma50) / sma50) * 80
+
+        if rsi_col:
+            rsi = data[rsi_col].iloc[-1]
+            if pd.notna(rsi):
+                score += (50 - abs(50 - float(rsi))) / 2
+
+        volume_col = next((c for c in data.columns if c.lower() == "volume"), None)
+        if volume_col:
+            short = data[volume_col].rolling(window=5, min_periods=1).mean().iloc[-1]
+            long = data[volume_col].rolling(window=20, min_periods=1).mean().iloc[-1]
+            if pd.notna(short) and pd.notna(long) and long:
+                score += float((short - long) / long) * 40
+
+        return float(min(max(score, 0.0), 100.0))
+
+    def _score_to_holding_period(self, score: float) -> str:
+        if score >= 80:
+            return "1～2か月"
+        if score >= 60:
+            return "2～3か月"
+        return "3～4か月"
+
+    def _score_to_level(self, score: float) -> str:
+        if score >= 80:
+            return "strong_buy"
+        if score >= 60:
+            return "buy"
+        if score >= 40:
+            return "neutral"
+        if score >= 20:
+            return "watch"
+        return "avoid"
+
+    def generate_recommendation(self, symbol: str) -> StockRecommendation:
+        data = self.data_provider.get_stock_data(symbol, "6mo")
+        if data is None or data.empty:
+            raise ValueError(f"No data available for symbol {symbol}")
+
+        technical_data = self.data_provider.calculate_technical_indicators(data)
+        if technical_data is None or technical_data.empty:
+            raise ValueError(f"Unable to prepare technical indicators for {symbol}")
+
+        close_col = next((c for c in technical_data.columns if c.lower() == "close"), None)
+        if close_col is None:
+            raise ValueError("Technical data must contain a Close column")
+
+        latest_price = float(technical_data[close_col].iloc[-1])
+        score = self.calculate_score(symbol)
+
+        base_multiplier = max(score - 40.0, 0.0) / 200.0
+        target_price = latest_price * (1.05 + base_multiplier)
+        stop_loss = max(latest_price * (1 - max(0.1, (100 - score) / 200.0)), 0.01)
+
+        company_name = self.data_provider.jp_stock_codes.get(symbol)
+        name_column = next(
+            (
+                col
+                for col in technical_data.columns
+                if col.lower() in {"companyname", "company_name"}
+            ),
+            None,
+        )
+        if name_column is not None:
+            candidate = technical_data[name_column].iloc[-1]
+            if pd.notna(candidate) and str(candidate):
+                company_name = str(candidate)
+        if not company_name:
+            company_name = symbol
+
+        recommendation = StockRecommendation(
+            rank=0,
+            symbol=symbol,
+            company_name=company_name,
+            buy_timing="押し目買いを検討",
+            target_price=float(target_price),
+            stop_loss=float(stop_loss),
+            profit_target_1=float(target_price * 0.98),
+            profit_target_2=float(target_price * 1.05),
+            holding_period=self._score_to_holding_period(score),
+            score=float(score),
+            current_price=float(latest_price),
+            recommendation_reason=(
+                f"テクニカル指標から算出したスコアが {score:.1f} 点のため"
+            ),
+            recommendation_level=self._score_to_level(score),
+        )
+
+        try:
+            financial_metrics = self.data_provider.get_financial_metrics(symbol)
+            if financial_metrics:
+                recommendation.recommendation_reason += "。財務データも安定しています"
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.debug("Failed to fetch financial metrics for %s: %s", symbol, exc)
+
+        return recommendation
+
+    def get_top_recommendations(self, top_n: int = 5) -> List[StockRecommendation]:
+        symbols = self.data_provider.get_all_stock_symbols()
+        recommendations: List[StockRecommendation] = []
+
+        for symbol in symbols:
+            try:
+                recommendation = self.generate_recommendation(symbol)
+            except Exception as exc:
+                logger.debug("Skipping symbol %s due to error: %s", symbol, exc)
+                continue
+            recommendations.append(recommendation)
+
+        recommendations.sort(key=lambda rec: rec.score, reverse=True)
+
+        limited = recommendations[:max(top_n, 0)]
+        for idx, recommendation in enumerate(limited, start=1):
+            recommendation.rank = idx
+
+        return limited
