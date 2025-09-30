@@ -20,7 +20,8 @@ import base64
 
 # 既存システム
 from data.stock_data import StockDataProvider
-from .trade_recorder import TradeRecorder, PerformanceMetrics
+from .trade_recorder import TradeRecorder
+from .models import PerformanceMetrics
 
 
 @dataclass
