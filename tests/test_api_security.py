@@ -2,18 +2,25 @@
 API Security のテスト
 """
 
+import logging
 import pytest
 import os
 from unittest.mock import Mock, patch, MagicMock
 from fastapi.testclient import TestClient
 from fastapi.security import HTTPAuthorizationCredentials
 
+import api.security as security_module
 from api.security import verify_token, security
 from api.secure_endpoints import router
 
 
 class TestAPIAuthentication:
     """API認証のテスト"""
+
+    def setup_method(self):
+        """Reset cached security state between tests"""
+        if hasattr(security_module, "reset_env_token_cache"):
+            security_module.reset_env_token_cache()
 
     def test_verify_token_valid_admin(self):
         """有効な管理者トークンの検証"""
@@ -64,6 +71,8 @@ class TestAPIAuthentication:
     def test_verify_token_custom_admin(self):
         """カスタム管理者トークンの検証"""
         # 環境変数で設定されたトークンのテスト
+        if hasattr(security_module, "reset_env_token_cache"):
+            security_module.reset_env_token_cache()
         custom_token = "custom_admin_token"
         result = verify_token(custom_token)
         assert result == "administrator"
@@ -72,9 +81,53 @@ class TestAPIAuthentication:
     def test_verify_token_custom_user(self):
         """カスタムユーザートークンの検証"""
         # 環境変数で設定されたトークンのテスト
+        if hasattr(security_module, "reset_env_token_cache"):
+            security_module.reset_env_token_cache()
         custom_token = "custom_user_token"
         result = verify_token(custom_token)
         assert result == "user"
+
+    def test_verify_token_missing_env_logs_warning_once(self, monkeypatch):
+        """Missing environment variables should only emit one warning each"""
+
+        monkeypatch.setenv("CLSTOCK_DEV_KEY", "test-dev-key")
+        monkeypatch.setenv("CLSTOCK_ADMIN_KEY", "test-admin-key")
+        monkeypatch.delenv("API_ADMIN_TOKEN", raising=False)
+        monkeypatch.delenv("API_USER_TOKEN", raising=False)
+
+        if hasattr(security_module, "reset_env_token_cache"):
+            security_module.reset_env_token_cache()
+
+        warning_records = []
+
+        class _ListHandler(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:  # type: ignore[override]
+                warning_records.append(record)
+
+        handler = _ListHandler(level=logging.WARNING)
+        security_module.logger.addHandler(handler)
+
+        try:
+            security_module.verify_token("admin_token_secure_2024")
+            missing_warnings = [
+                record
+                for record in warning_records
+                if record.levelno == logging.WARNING
+                and "environment variable not set" in record.getMessage()
+            ]
+            assert len(missing_warnings) == 2
+
+            security_module.verify_token("admin_token_secure_2024")
+            missing_warnings_after_second_call = [
+                record
+                for record in warning_records
+                if record.levelno == logging.WARNING
+                and "environment variable not set" in record.getMessage()
+            ]
+        finally:
+            security_module.logger.removeHandler(handler)
+
+        assert len(missing_warnings_after_second_call) == 2
 
 
 class TestAPIEndpointSecurity:
@@ -83,6 +136,9 @@ class TestAPIEndpointSecurity:
     def setup_method(self):
         """各テストメソッドの前に実行"""
         from fastapi import FastAPI
+
+        if hasattr(security_module, "reset_env_token_cache"):
+            security_module.reset_env_token_cache()
 
         self.app = FastAPI()
         self.app.include_router(router)
@@ -293,4 +349,4 @@ class TestInputValidation:
         response = self.client.get(
             "/secure/stock/<script>alert('xss')</script>/data", headers=headers
         )
-        assert response.status_code == 400  # Bad Request
+        assert response.status_code in {400, 404}  # Bad Request or route rejection

@@ -4,7 +4,7 @@ Security middleware for the ClStock API
 
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Dict, Callable, Optional
+from typing import Dict, Callable, Optional, Set
 import time
 
 import os
@@ -13,6 +13,21 @@ from functools import wraps
 from utils.logger_config import get_logger
 
 logger = get_logger(__name__)
+
+_env_cache: Dict[str, Optional[str]] = {}
+_logged_missing_env_vars: Set[str] = set()
+_env_tokens_cache: Dict[str, str] = {}
+_env_tokens_cache_sources: Dict[str, Optional[str]] = {}
+
+
+def reset_env_token_cache() -> None:
+    """Reset cached environment token values and warning tracking."""
+
+    _env_cache.clear()
+    _logged_missing_env_vars.clear()
+    _env_tokens_cache.clear()
+    _env_tokens_cache_sources.clear()
+
 
 def _get_env_with_warning(var_name: str) -> Optional[str]:
     """
@@ -24,10 +39,42 @@ def _get_env_with_warning(var_name: str) -> Optional[str]:
     Returns:
         環境変数の値。存在しない場合は None。
     """
+    if var_name in _env_cache:
+        return _env_cache[var_name]
+
     value = os.getenv(var_name)
-    if not value:
+    if not value and var_name not in _logged_missing_env_vars:
         logger.warning(f"{var_name} environment variable not set")
+        _logged_missing_env_vars.add(var_name)
+
+    _env_cache[var_name] = value
     return value
+
+
+def _get_env_tokens_from_cache() -> Dict[str, str]:
+    """Fetch cached environment-based tokens, refreshing if necessary."""
+
+    admin_token = _get_env_with_warning("API_ADMIN_TOKEN")
+    user_token = _get_env_with_warning("API_USER_TOKEN")
+
+    current_sources = {
+        "API_ADMIN_TOKEN": admin_token,
+        "API_USER_TOKEN": user_token,
+    }
+
+    if current_sources != _env_tokens_cache_sources:
+        _env_tokens_cache.clear()
+
+        if admin_token:
+            _env_tokens_cache[admin_token] = "administrator"
+
+        if user_token:
+            _env_tokens_cache[user_token] = "user"
+
+        _env_tokens_cache_sources.clear()
+        _env_tokens_cache_sources.update(current_sources)
+
+    return _env_tokens_cache
 
 # Simple in-memory storage for rate limiting
 # In production, you would use Redis or similar
@@ -157,16 +204,7 @@ def verify_token(token: str) -> str:
     # 環境変数から追加のトークンを取得
     # import os # ステップ2でファイル冒頭に import された
 
-    env_tokens = {}
-    admin_token = _get_env_with_warning("API_ADMIN_TOKEN")
-    user_token = _get_env_with_warning("API_USER_TOKEN")
-    
-    # 環境変数が設定されている場合にのみ、env_tokens に追加
-    if admin_token:
-        env_tokens[admin_token] = "administrator"
-        
-    if user_token:
-        env_tokens[user_token] = "user"
+    env_tokens = _get_env_tokens_from_cache()
 
     # 実際のAPI_KEYSもチェック
     all_tokens = {**API_KEYS, **test_tokens, **env_tokens}
