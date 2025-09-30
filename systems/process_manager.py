@@ -584,8 +584,32 @@ class ProcessManager:
             
             # 並列実行プールのシャットダウン
             logger.info("並列実行プールをシャットダウン")
-            self._executor.shutdown(wait=True, timeout=10)
-            
+            shutdown_deadline = time.time() + 10
+            try:
+                self._executor.shutdown(wait=False)
+            except TypeError:
+                # 古いバージョンのconcurrent.futuresではwait引数のみサポート
+                logger.debug("wait=False をサポートしないためフォールバック")
+                self._executor.shutdown(wait=True)
+                shutdown_threads = []
+            else:
+                shutdown_threads = list(getattr(self._executor, "_threads", []))
+
+            # wait=False でシャットダウンした場合は明示的にタイムアウト監視
+            if shutdown_deadline is not None and shutdown_threads:
+                for thread in shutdown_threads:
+                    remaining = shutdown_deadline - time.time()
+                    if remaining <= 0:
+                        break
+                    thread.join(timeout=remaining)
+
+                if any(thread.is_alive() for thread in shutdown_threads):
+                    logger.warning(
+                        "並列実行プールのシャットダウンがタイムアウトしました"
+                    )
+                else:
+                    logger.info("並列実行プールのシャットダウン完了")
+
             logger.info("全サービス停止完了、プロセス終了")
             # シャットダウンイベントをクリア
             self._shutdown_event.clear()

@@ -211,3 +211,30 @@ class TestProcessManager:
             assert script_path.exists(), (
                 f"Script for {service.name} not found: {script_path}"
             )
+
+    def test_graceful_shutdown_uses_supported_executor_signature(self):
+        """Ensure graceful shutdown only passes supported args to executor.shutdown."""
+        pm = ProcessManager()
+
+        # Stub out heavy dependencies
+        pm.stop_all_services = MagicMock()
+
+        executor_mock = MagicMock()
+        executor_mock.shutdown = MagicMock()
+        executor_mock._threads = set()  # No threads to join during shutdown
+        pm._executor = executor_mock
+
+        pm._shutdown_event.set()
+
+        with patch("systems.process_manager.os._exit") as mock_exit:
+            pm._graceful_shutdown()
+
+        pm.stop_all_services.assert_called_once_with(force=True)
+
+        executor_mock.shutdown.assert_called_once()
+        args, kwargs = executor_mock.shutdown.call_args
+        assert args == ()
+        assert kwargs == {"wait": False}
+
+        assert not pm._shutdown_event.is_set()
+        mock_exit.assert_called_once_with(0)
