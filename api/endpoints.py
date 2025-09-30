@@ -137,18 +137,23 @@ async def get_stock_data(
         technical_data = data_provider.calculate_technical_indicators(data)
         financial_metrics = data_provider.get_financial_metrics(symbol)
 
+        current_price = float(technical_data["Close"].iloc[-1])
+        price_change = 0.0
+        price_change_percent = 0.0
+
+        if len(technical_data) >= 2:
+            previous_close = technical_data["Close"].iloc[-2]
+            if not pd.isna(previous_close):
+                price_change = float(current_price - previous_close)
+                if previous_close != 0:
+                    price_change_percent = float(price_change / previous_close * 100)
+
         return {
             "symbol": symbol,
             "company_name": data_provider.jp_stock_codes.get(symbol, symbol),
-            "current_price": float(technical_data["Close"].iloc[-1]),
-            "price_change": float(
-                technical_data["Close"].iloc[-1] - technical_data["Close"].iloc[-2]
-            ),
-            "price_change_percent": float(
-                (technical_data["Close"].iloc[-1] - technical_data["Close"].iloc[-2])
-                / technical_data["Close"].iloc[-2]
-                * 100
-            ),
+            "current_price": current_price,
+            "price_change": price_change,
+            "price_change_percent": price_change_percent,
             "volume": int(technical_data["Volume"].iloc[-1]),
             "technical_indicators": {
                 "sma_20": (
