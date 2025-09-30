@@ -50,25 +50,26 @@ except ImportError:
     dev_key = os.getenv("CLSTOCK_DEV_KEY")
     admin_key = os.getenv("CLSTOCK_ADMIN_KEY")
 
-    # 環境変数が設定されていない場合の警告
+    missing_vars = []
     if not dev_key:
-        logger.warning("CLSTOCK_DEV_KEY environment variable not set, using default")
-        dev_key = "dev-key-change-me"
+        missing_vars.append("CLSTOCK_DEV_KEY")
 
     if not admin_key:
-        logger.warning("CLSTOCK_ADMIN_KEY environment variable not set, using default")
-        admin_key = "admin-key-change-me"
+        missing_vars.append("CLSTOCK_ADMIN_KEY")
+
+    if missing_vars:
+        missing_list = ", ".join(missing_vars)
+        error_message = (
+            "Required API key environment variables are missing: "
+            f"{missing_list}. Set these variables or provide config.secrets.API_KEYS."
+        )
+        logger.error(error_message)
+        raise RuntimeError(error_message)
 
     API_KEYS = {
         dev_key: "developer",
         admin_key: "administrator",
     }
-    
-    # デフォルトキーが使用されているか確認
-    if "change-me" in str(API_KEYS):
-        logger.error(
-            "SECURITY WARNING: Using default API keys! Set CLSTOCK_DEV_KEY and CLSTOCK_ADMIN_KEY environment variables"
-        )
 
 security = HTTPBearer()
 
