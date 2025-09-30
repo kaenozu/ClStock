@@ -66,6 +66,8 @@ class ProcessInfo:
     last_error: Optional[str] = None
     cpu_usage: float = 0.0
     memory_usage: float = 0.0
+    stdout_thread: Optional[threading.Thread] = None
+    stderr_thread: Optional[threading.Thread] = None
 
 
 class ProcessManager:
@@ -199,6 +201,22 @@ class ProcessManager:
             env = os.environ.copy()
             env.update(process_info.env_vars)
 
+            capture_output = bool(
+                getattr(settings.process, "log_process_output", False)
+            )
+
+            popen_kwargs = {
+                "cwd": process_info.working_dir,
+                "env": env,
+            }
+
+            if capture_output:
+                popen_kwargs.update(
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+
             # プロセス開始
             command = process_info.command
             if isinstance(command, str):
@@ -212,17 +230,19 @@ class ProcessManager:
 
             process_info.process = subprocess.Popen(
                 argv,
-                cwd=process_info.working_dir,
-                env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
+                **popen_kwargs,
             )
 
             process_info.pid = process_info.process.pid
             process_info.start_time = datetime.now()
             process_info.status = ProcessStatus.RUNNING
             process_info.last_error = None
+
+            if capture_output:
+                self._start_output_logging(process_info)
+            else:
+                process_info.stdout_thread = None
+                process_info.stderr_thread = None
 
             logger.info(f"サービス開始完了: {name} (PID: {process_info.pid})")
             return True
@@ -247,6 +267,48 @@ class ProcessManager:
             process_info.last_error = str(e)
             logger.error(f"サービス開始失敗 {name}: 予期しないエラー - {e}")
             return False
+
+    def _start_output_logging(self, process_info: ProcessInfo) -> None:
+        """プロセス標準出力/標準エラーの非同期読み取りを開始"""
+
+        process = process_info.process
+        if not process:
+            return
+
+        def _consume_stream(stream, log_func, stream_name: str):
+            if stream is None:
+                return None
+
+            def _reader():
+                try:
+                    for line in iter(stream.readline, ""):
+                        if not line:
+                            break
+                        log_func(f"[{process_info.name}][{stream_name}] {line.rstrip()}")
+                except Exception as e:
+                    logger.debug(
+                        f"{process_info.name} の {stream_name} ログ読み取り中にエラー: {e}"
+                    )
+                finally:
+                    try:
+                        stream.close()
+                    except Exception:
+                        pass
+
+            thread = threading.Thread(
+                target=_reader,
+                daemon=True,
+                name=f"{process_info.name}-{stream_name}-logger",
+            )
+            thread.start()
+            return thread
+
+        process_info.stdout_thread = _consume_stream(
+            process.stdout, logger.info, "stdout"
+        )
+        process_info.stderr_thread = _consume_stream(
+            process.stderr, logger.warning, "stderr"
+        )
 
     def stop_service(self, name: str, force: bool = False) -> bool:
         """サービスの停止"""
@@ -283,6 +345,12 @@ class ProcessManager:
             process_info.status = ProcessStatus.STOPPED
             process_info.pid = None
             process_info.process = None
+            if process_info.stdout_thread and process_info.stdout_thread.is_alive():
+                process_info.stdout_thread.join(timeout=1)
+            if process_info.stderr_thread and process_info.stderr_thread.is_alive():
+                process_info.stderr_thread.join(timeout=1)
+            process_info.stdout_thread = None
+            process_info.stderr_thread = None
 
             logger.info(f"サービス停止完了: {name}")
             return True
