@@ -27,6 +27,7 @@ class TestProcessManager:
         assert "dashboard" in pm.processes
         assert "demo_trading" in pm.processes
         assert "investment_system" in pm.processes
+        assert "integration_test" in pm.processes
 
         # Check dashboard service configuration
         dashboard = pm.processes["dashboard"]
@@ -34,6 +35,21 @@ class TestProcessManager:
         assert dashboard.name == "dashboard"
         assert dashboard.command == "python app/personal_dashboard.py"
         assert dashboard.status == ProcessStatus.STOPPED
+
+        investment = pm.processes["investment_system"]
+        assert investment.command == "python full_auto_system.py"
+
+        deep_learning = pm.processes["deep_learning"]
+        assert deep_learning.command == "python research/big_data_deep_learning.py"
+
+        integration = pm.processes["integration_test"]
+        assert integration.command == "python integration_test_enhanced.py"
+
+        optimized = pm.processes["optimized_system"]
+        assert optimized.command == "python ultra_optimized_system.py"
+
+        selective = pm.processes["selective_system"]
+        assert selective.command == "python performance_test_enhanced.py"
 
     def test_process_info_initialization(self):
         """Test ProcessInfo dataclass initialization."""
@@ -177,3 +193,21 @@ class TestProcessManager:
         assert "memory_percent" in resources
         assert resources["cpu_percent"] == 25.5
         assert resources["memory_percent"] == 60.0
+
+    def test_default_service_scripts_exist(self):
+        """Ensure default service commands reference existing scripts."""
+        import shlex
+        from pathlib import Path
+
+        pm = ProcessManager()
+
+        for service in pm.list_services():
+            command_parts = shlex.split(service.command)
+            assert (
+                len(command_parts) >= 2
+            ), f"Command for {service.name} must include script path"
+
+            script_path = Path(service.working_dir) / command_parts[1]
+            assert script_path.exists(), (
+                f"Script for {service.name} not found: {script_path}"
+            )
