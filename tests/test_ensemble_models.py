@@ -8,7 +8,7 @@ import pandas as pd
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-from models_refactored.ensemble.ensemble_predictor import RefactoredEnsemblePredictor
+from models_refactored.ensemble.ensemble_predictor import EnsemblePredictor
 from models_refactored.core.interfaces import (
     ModelConfiguration,
     ModelType,
@@ -26,7 +26,7 @@ class TestEnsembleStockPredictor:
             prediction_mode=PredictionMode.BALANCED,
             cache_enabled=False,  # テスト用にキャッシュ無効
         )
-        self.predictor = RefactoredEnsemblePredictor(self.config)
+        self.predictor = EnsemblePredictor(self.config)
 
     def test_predictor_initialization(self):
         """予測器初期化のテスト"""
@@ -131,7 +131,7 @@ class TestEnsembleStockPredictor:
         config = ModelConfiguration(
             model_type=ModelType.ENSEMBLE, prediction_mode=PredictionMode.CONSERVATIVE
         )
-        predictor = RefactoredEnsemblePredictor(config)
+        predictor = EnsemblePredictor(config)
 
         assert predictor.config.prediction_mode == PredictionMode.CONSERVATIVE
 
@@ -140,7 +140,7 @@ class TestEnsembleStockPredictor:
         config = ModelConfiguration(
             model_type=ModelType.ENSEMBLE, prediction_mode=PredictionMode.AGGRESSIVE
         )
-        predictor = RefactoredEnsemblePredictor(config)
+        predictor = EnsemblePredictor(config)
 
         assert predictor.config.prediction_mode == PredictionMode.AGGRESSIVE
 
@@ -162,8 +162,7 @@ class TestEnsembleStockPredictor:
 
     def test_parallel_processing_config(self):
         """並列処理設定のテスト"""
-        config = ModelConfiguration(parallel_enabled=True, max_workers=8)
-        predictor = RefactoredEnsemblePredictor(config)
+        predictor = EnsemblePredictor(config)
 
         assert predictor.config.parallel_enabled is True
         assert predictor.config.max_workers == 8

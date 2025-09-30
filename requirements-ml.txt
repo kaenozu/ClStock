@@ -1,0 +1,6 @@
+# Optional heavy machine learning dependencies.
+--index-url https://download.pytorch.org/whl/cpu
+torch==2.7.1+cpu
+# torchaudio and torchvision share the same index for CPU wheels.
+torchaudio==2.7.1+cpu
+torchvision==0.22.1+cpu

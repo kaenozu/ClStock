@@ -20,7 +20,7 @@ from ..core.interfaces import (
     BatchPredictionResult,
 )
 from ..core.base_predictor import BaseStockPredictor
-from ..ensemble.ensemble_predictor import RefactoredEnsemblePredictor
+from ..ensemble.ensemble_predictor import EnsemblePredictor
 
 
 class RefactoredHybridPredictor(BaseStockPredictor):
@@ -43,7 +43,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
         self.logger = logging.getLogger(__name__)
 
         # エンサンブル予測器を内部で使用
-        self.ensemble_predictor = RefactoredEnsemblePredictor(
+        self.ensemble_predictor = EnsemblePredictor(
             config=config, data_provider=data_provider, cache_provider=cache_provider
         )
 

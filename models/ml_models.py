@@ -13,13 +13,9 @@ import xgboost as xgb
 import lightgbm as lgb
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import (
-    mean_squared_error,
-    accuracy_score,
-    mean_absolute_error,
-    r2_score,
-)
+
 from data.stock_data import StockDataProvider
+from utils.feature_engineering import calculate_technical_indicators
 
 logger = logging.getLogger(__name__)
 

@@ -1,18 +1,16 @@
-import pytest
-import sys
 import os
-from unittest.mock import Mock, patch
-import pandas as pd
+import sys
 from datetime import datetime, timedelta
+from unittest.mock import Mock, patch, MagicMock
+
+import pandas as pd
+import pytest
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from models.recommendation import StockRecommendation
 
-import unittest.mock as _mock
-from unittest.mock import MagicMock
-
-_mock.Mock = MagicMock
 
 @pytest.fixture
 def mock_stock_data():
@@ -31,6 +29,8 @@ def generate_mock_stock_data(period="1y", symbol="7203", company_name="トヨタ
     Returns:
         pd.DataFrame: Stock price data
     """
+    if pd is None:
+        pytest.skip("pandas is required for mock stock data fixtures")
     # Parse period parameter
     if period == "1y":
         days = 365
@@ -69,18 +69,32 @@ def generate_mock_stock_data(period="1y", symbol="7203", company_name="トヨタ
     return data
 
 
-# StockRecommendation class has been removed, temporarily disabling test
-# @pytest.fixture
-# def sample_recommendation():
-#     """Test recommendation data"""
-#     # from models.recommendation import StockRecommendation
-#     return None  # Removed: No longer needed after code refactoring
+@pytest.fixture
+def sample_recommendation() -> StockRecommendation:
+    """Provide a representative stock recommendation object for API tests."""
+
+    return StockRecommendation(
+        rank=1,
+        symbol="7203",
+        company_name="トヨタ自動車",
+        buy_timing="押し目買いを検討",
+        target_price=2300.0,
+        stop_loss=2000.0,
+        profit_target_1=2400.0,
+        profit_target_2=2500.0,
+        holding_period="1～2か月",
+        score=85.0,
+        current_price=2100.0,
+        recommendation_reason="テクニカル指標が上昇トレンドを示唆",
+    )
 
 
 @pytest.fixture
 def mock_yfinance():
     """Mock for yfinance"""
     with patch("yfinance.Ticker") as mock_ticker:
+        if pd is None:
+            pytest.skip("pandas is required for yfinance fixtures")
         mock_ticker_instance = Mock()
         mock_ticker_instance.history.return_value = pd.DataFrame(
             {

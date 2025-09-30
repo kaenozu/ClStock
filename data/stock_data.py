@@ -18,7 +18,7 @@ try:
                 return _DummyTicker()
 
         yf = _DummyYFinance()  # type: ignore
-﻿import os
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -375,7 +375,6 @@ class StockDataProvider:
 
 
 
-
     def get_multiple_stocks(
         self, symbols: List[str], period: str = "1y"
     ) -> Dict[str, pd.DataFrame]:
@@ -405,6 +404,7 @@ class StockDataProvider:
         return result
 
     def calculate_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
+
 
 
 
@@ -506,7 +506,3 @@ class StockDataProvider:
 
     def get_all_stock_symbols(self) -> List[str]:
         return list(self.jp_stock_codes.keys())
-
-
-
-

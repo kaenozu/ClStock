@@ -211,11 +211,11 @@ class PredictorFactory:
         """デフォルト予測器の登録"""
         try:
             # 遅延インポートで循環参照を回避
-            from ..ensemble.ensemble_predictor import RefactoredEnsemblePredictor
+            from ..ensemble.ensemble_predictor import EnsemblePredictor
             from ..hybrid.hybrid_predictor import RefactoredHybridPredictor
             from ..deep_learning.deep_predictor import RefactoredDeepLearningPredictor
 
-            self.register_predictor(ModelType.ENSEMBLE, RefactoredEnsemblePredictor)
+            self.register_predictor(ModelType.ENSEMBLE, EnsemblePredictor)
             self.register_predictor(ModelType.HYBRID, RefactoredHybridPredictor)
             self.register_predictor(
                 ModelType.DEEP_LEARNING, RefactoredDeepLearningPredictor

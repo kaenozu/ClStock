@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import OrderedDict
@@ -9,9 +9,11 @@ from typing import Any, Dict, Iterable, List, Optional, Callable, ClassVar
 import logging
 
 import hashlib
-from utils.logger_config import setup_logger
+from utils.logger import setup_logging # 修正
 
-logger = setup_logger(__name__)
+setup_logging() # 追加
+logger = logging.getLogger(__name__) # 修正
+
 import json
 
 import joblib
@@ -20,6 +22,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
 from data.stock_data import StockDataProvider
+from utils.feature_engineering import calculate_technical_indicators
 
 
 @dataclass
@@ -281,21 +284,11 @@ class MLStockPredictor(CacheablePredictor):
         else:
             features["volume_change"] = 0.0
 
-        price_diff = df[close].diff().fillna(0.0)
-        gain = price_diff.where(price_diff > 0, 0.0)
-        loss = (-price_diff).where(price_diff < 0, 0.0)
-        avg_gain = gain.rolling(window=14, min_periods=1).mean()
-        avg_loss = loss.rolling(window=14, min_periods=1).mean()
-        rs = avg_gain / avg_loss.replace(0, np.nan)
-        features["rsi"] = 100 - (100 / (1 + rs.replace(np.nan, 0)))
+        # Calculate common technical indicators
+        df_indicators = calculate_technical_indicators(df[[close]].rename(columns={close: "Close"}))
+        features = pd.concat([features, df_indicators], axis=1)
 
-        features["sma_20"] = df[close].rolling(window=20, min_periods=1).mean()
         features["sma_50"] = df[close].rolling(window=50, min_periods=1).mean()
-        features["macd"] = (
-            df[close].ewm(span=12, adjust=False).mean()
-            - df[close].ewm(span=26, adjust=False).mean()
-        )
-        features["macd_signal"] = features["macd"].ewm(span=9, adjust=False).mean()
         features["atr"] = (df[close] - df[close].shift(1)).abs().fillna(0.0)
 
         return self._ensure_numeric(features)

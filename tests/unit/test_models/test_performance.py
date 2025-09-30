@@ -1,4 +1,4 @@
-﻿"""Test performance optimization models."""
+"""Test performance optimization models."""
 
 import pytest
 import pandas as pd
@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 from datetime import datetime
 from concurrent.futures import Future
 
-# 蜿､縺・odels繝・ぅ繝ｬ繧ｯ繝医Μ縺ｯ蟒・ｭ｢縺輔ｌ縺ｾ縺励◆
+# 既存のインポートを修正
 # from models.performance import (
 #     ParallelStockPredictor,
 #     AdvancedCacheManager,
@@ -16,12 +16,12 @@ from concurrent.futures import Future
 # from models.base import PredictionResult
 # from models.core import EnsembleStockPredictor
 
-# 譁ｰ縺励＞繧､繝ｳ繝昴・繝医ヱ繧ｹ
+# 修正されたインポート
 Mock = MagicMock
 from models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
 from models.core import PredictionResult
 from models_refactored.ensemble.ensemble_predictor import (
-    RefactoredEnsemblePredictor as EnsembleStockPredictor,
+    EnsemblePredictor as EnsembleStockPredictor,
 )
 
 
@@ -106,9 +106,9 @@ class TestParallelStockPredictor:
         predictor = ParallelStockPredictor(mock_ensemble_predictor, n_jobs=2)
 
         # Mock the executor and futures
-        mock_future1 = Mock(spec=Future)
+        mock_future1 = Mock()
         mock_future1.result.return_value = 75.0
-        mock_future2 = Mock(spec=Future)
+        mock_future2 = Mock()
         mock_future2.result.return_value = 80.0
 
         mock_executor_instance = Mock()

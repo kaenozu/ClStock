@@ -12,7 +12,7 @@ from .core.factory import PredictorFactory
 from .core.manager import ModelManager
 
 # 主要なモデル実装
-from .ensemble.ensemble_predictor import RefactoredEnsemblePredictor
+from .ensemble.ensemble_predictor import EnsemblePredictor
 from .hybrid.hybrid_predictor import RefactoredHybridPredictor
 from .deep_learning.deep_predictor import RefactoredDeepLearningPredictor
 
@@ -42,7 +42,7 @@ __all__ = [
     "DataProvider",
     "PredictorFactory",
     "ModelManager",
-    "RefactoredEnsemblePredictor",
+    "EnsemblePredictor",
     "RefactoredHybridPredictor",
     "RefactoredDeepLearningPredictor",
     # Advanced features

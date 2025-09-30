@@ -15,7 +15,7 @@ import numpy as np
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from models_refactored.ensemble.ensemble_predictor import RefactoredEnsemblePredictor
+from models_refactored.ensemble.ensemble_predictor import EnsemblePredictor
 from models_refactored.core.interfaces import PredictionResult
 
 
@@ -26,7 +26,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         """テスト前の準備"""
         # モックデータプロバイダー
         self.mock_data_provider = Mock()
-        self.predictor = RefactoredEnsemblePredictor(
+        self.predictor = EnsemblePredictor(
             data_provider=self.mock_data_provider
         )
 
@@ -92,7 +92,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         self.assertIn("lightgbm", deps)
 
     @patch(
-        "models_refactored.ensemble.ensemble_predictor.RefactoredEnsemblePredictor.predict_score"
+        "models_refactored.ensemble.ensemble_predictor.EnsemblePredictor.predict_score"
     )
     def test_predict_with_valid_input(self, mock_predict_score):
         """有効入力での予測テスト"""
@@ -209,7 +209,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         info = self.predictor.get_model_info()
 
         self.assertIsInstance(info, dict)
-        self.assertEqual(info["name"], "RefactoredEnsemblePredictor")
+        self.assertEqual(info["name"], "EnsemblePredictor")
         self.assertEqual(info["version"], "1.0.0")
         self.assertEqual(info["is_trained"], True)
         self.assertEqual(info["model_data"]["num_models"], 2)
@@ -294,7 +294,7 @@ class TestEnsembleStockPredictorIntegration(unittest.TestCase):
 
     def setUp(self):
         """統合テスト用の準備"""
-        self.predictor = RefactoredEnsemblePredictor()
+        self.predictor = EnsemblePredictor()
 
     def test_end_to_end_prediction_flow(self):
         """エンドツーエンド予測フローテスト"""
