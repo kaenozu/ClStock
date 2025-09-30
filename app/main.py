@@ -3,6 +3,7 @@ from typing import List, Optional
 import uvicorn
 
 from api.endpoints import router
+from api.secure_endpoints import router as secure_router
 # from models.recommendation import StockRecommendation # 削除
 
 app = FastAPI(
@@ -12,6 +13,7 @@ app = FastAPI(
 )
 
 app.include_router(router, prefix="/api/v1")
+app.include_router(secure_router, prefix="/api/v1")
 
 
 @app.get("/")
