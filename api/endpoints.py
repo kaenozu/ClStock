@@ -14,22 +14,10 @@ from utils.validators import (
     log_validation_error,
 )
 
-# 古いmodelsディレクトリは廃止されました
-# from models.recommendation import RecommendationResponse, StockRecommendation
-# from models.predictor import StockPredictor
-
-# 新しいインポートパス
 from models.core import MLStockPredictor
 from models.recommendation import StockRecommendation
-
-# StockRecommendationクラスは削除されたため、一時的にコメントアウト
+from api.schemas import RecommendationResponse
 from data.stock_data import StockDataProvider
-
-@dataclass
-class RecommendationResponse:
-    recommendations: List[StockRecommendation]
-    generated_at: datetime
-    market_status: str
 
 
 router = APIRouter()
