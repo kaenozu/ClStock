@@ -10,9 +10,11 @@ import pandas as pd
 from api.security import security, verify_token
 from utils.validators import (
     validate_stock_symbol,
+    validate_period,
     ValidationError,
     log_validation_error,
 )
+from utils.exceptions import DataFetchError
 
 from models.core import MLStockPredictor
 from models.recommendation import StockRecommendation
@@ -120,14 +122,17 @@ async def get_stock_data(
     ),
 ):
     try:
+        validated_symbol = validate_stock_symbol(symbol)
+        validated_period = validate_period(period)
+
         data_provider = StockDataProvider()
 
-        if symbol not in data_provider.get_all_stock_symbols():
+        if validated_symbol not in data_provider.get_all_stock_symbols():
             raise HTTPException(
                 status_code=404, detail=f"銘柄コード {symbol} が見つかりません"
             )
 
-        data = data_provider.get_stock_data(symbol, period)
+        data = data_provider.get_stock_data(validated_symbol, validated_period)
 
         if data.empty:
             raise HTTPException(
@@ -135,7 +140,7 @@ async def get_stock_data(
             )
 
         technical_data = data_provider.calculate_technical_indicators(data)
-        financial_metrics = data_provider.get_financial_metrics(symbol)
+        financial_metrics = data_provider.get_financial_metrics(validated_symbol)
 
         current_price = float(technical_data["Close"].iloc[-1])
         price_change = 0.0
@@ -149,8 +154,10 @@ async def get_stock_data(
                     price_change_percent = float(price_change / previous_close * 100)
 
         return {
-            "symbol": symbol,
-            "company_name": data_provider.jp_stock_codes.get(symbol, symbol),
+            "symbol": validated_symbol,
+            "company_name": data_provider.jp_stock_codes.get(
+                validated_symbol, validated_symbol
+            ),
             "current_price": current_price,
             "price_change": price_change,
             "price_change_percent": price_change_percent,
@@ -180,6 +187,18 @@ async def get_stock_data(
             "financial_metrics": financial_metrics,
             "last_updated": datetime.now(),
         }
+    except ValidationError as e:
+        log_validation_error(
+            e,
+            {
+                "endpoint": "/stock/{symbol}/data",
+                "symbol": symbol,
+                "period": period,
+            },
+        )
+        raise HTTPException(status_code=400, detail=str(e))
+    except DataFetchError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
