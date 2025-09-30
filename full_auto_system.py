@@ -3,6 +3,7 @@ import argparse
 import logging
 import os
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional, Dict, Any
@@ -11,10 +12,19 @@ import pandas as pd
 
 from data.stock_data import StockDataProvider
 from models_new.hybrid.hybrid_predictor import HybridStockPredictor
-from models_new.advanced.market_sentiment_analyzer import MarketSentimentAnalyzer
-from models_new.advanced.risk_management_framework import RiskManager
-from models_new.advanced.trading_strategy_generator import StrategyGenerator
-from optimization.tse_optimizer import TSEPortfolioOptimizer
+from trading.tse.analysis import StockProfile
+from trading.tse.optimizer import PortfolioOptimizer
+from analysis.sentiment_analyzer import MarketSentimentAnalyzer
+from models_new.advanced.trading_strategy_generator import (
+    StrategyGenerator,
+    SignalGenerator,
+    ActionType,
+)
+from models_new.advanced.risk_management_framework import (
+    RiskManager,
+    RiskLevel,
+    PortfolioRisk,
+)
 from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem
 from data_retrieval_script_generator import generate_colab_data_retrieval_script
 from config.settings import get_settings
@@ -42,16 +52,218 @@ class AutoRecommendation:
         self.reasoning = reasoning
 
 
+@dataclass
+class RiskAssessment:
+    """Adapter friendly risk analysis result."""
+
+    risk_score: float
+    risk_level: RiskLevel
+    max_safe_position_size: float
+    recommendations: List[str]
+    raw: Optional[PortfolioRisk] = None
+
+
+class HybridPredictorAdapter:
+    """Wrap HybridStockPredictor to expose the legacy predict interface."""
+
+    def __init__(self, predictor: Optional[HybridStockPredictor] = None):
+        self._predictor = predictor or HybridStockPredictor()
+
+    def predict(self, symbol: str, data: Optional[pd.DataFrame]) -> Dict[str, Any]:
+        result = self._predictor.predict(symbol)
+
+        return {
+            "predicted_price": float(result.prediction),
+            "confidence": float(result.confidence),
+            "accuracy": float(result.accuracy),
+            "metadata": dict(result.metadata),
+            "symbol": result.symbol,
+            "timestamp": result.timestamp,
+        }
+
+
+class SentimentAnalyzerAdapter:
+    """Provide an analyze_sentiment shim for the news sentiment analyzer."""
+
+    def __init__(self, analyzer: Optional[MarketSentimentAnalyzer] = None):
+        self._analyzer = analyzer or MarketSentimentAnalyzer()
+
+    def analyze_sentiment(self, symbol: str) -> Dict[str, Any]:
+        try:
+            sentiment = self._analyzer.analyze_news_sentiment(symbol)
+        except AttributeError:
+            sentiment = self._analyzer.analyze_sentiment(symbol)  # type: ignore[attr-defined]
+        except Exception:
+            sentiment = {}
+
+        sentiment_score = 0.0
+        if isinstance(sentiment, dict):
+            sentiment_score = float(sentiment.get("sentiment_score", 0.0))
+        else:
+            sentiment = {}
+
+        sentiment.setdefault("sentiment_score", sentiment_score)
+        return sentiment
+
+
+class RiskManagerAdapter:
+    """Translate portfolio level risk outputs into the legacy structure."""
+
+    def __init__(self, manager: Optional[RiskManager] = None):
+        self._manager = manager or RiskManager()
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def analyze_risk(
+        self,
+        symbol: str,
+        price_data: Optional[pd.DataFrame],
+        predictions: Dict[str, Any],
+    ) -> Optional[RiskAssessment]:
+        if price_data is None or price_data.empty:
+            return None
+
+        try:
+            portfolio_risk = self._manager.analyze_portfolio_risk(
+                {"positions": {symbol: float(price_data["Close"].iloc[-1])}},
+                {symbol: price_data},
+            )
+        except AttributeError:
+            self.logger.debug(
+                "RiskManager missing analyze_portfolio_risk, falling back",
+                exc_info=True,
+            )
+            portfolio_risk = self._manager.analyze_risk(price_data, predictions)  # type: ignore[attr-defined]
+        except Exception:
+            self.logger.exception("Risk analysis failed for %s", symbol)
+            return None
+
+        if portfolio_risk is None:
+            return None
+
+        if isinstance(portfolio_risk, RiskAssessment):
+            return portfolio_risk
+
+        total_score = getattr(portfolio_risk, "total_risk_score", 2.0)
+        normalized_score = max(0.0, min((float(total_score) - 1.0) / 3.0, 1.0))
+        risk_level = getattr(portfolio_risk, "risk_level", RiskLevel.MEDIUM)
+        max_position = getattr(portfolio_risk, "max_safe_position_size", 0.05)
+        recommendations = getattr(portfolio_risk, "recommendations", [])
+
+        return RiskAssessment(
+            risk_score=float(normalized_score),
+            risk_level=risk_level,
+            max_safe_position_size=float(max_position),
+            recommendations=list(recommendations),
+            raw=portfolio_risk if isinstance(portfolio_risk, PortfolioRisk) else None,
+        )
+
+
+class StrategyGeneratorAdapter:
+    """Leverage the advanced generator to produce legacy-friendly strategies."""
+
+    def __init__(
+        self,
+        generator: Optional[StrategyGenerator] = None,
+        signal_generator: Optional[SignalGenerator] = None,
+    ):
+        self._generator = generator or StrategyGenerator()
+        self._signal_generator = signal_generator or SignalGenerator()
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def generate_strategy(
+        self,
+        symbol: str,
+        price_data: Optional[pd.DataFrame],
+        predictions: Dict[str, Any],
+        risk_assessment: Optional[RiskAssessment],
+        sentiment: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        if price_data is None or price_data.empty:
+            return {}
+
+        sentiment_score = 0.0
+        if isinstance(sentiment, dict):
+            sentiment_score = float(sentiment.get("sentiment_score", 0.0))
+
+        sentiment_payload = {"current_sentiment": {"score": sentiment_score}}
+
+        best_signal = None
+        for strategy in self._collect_strategies(symbol, price_data):
+            try:
+                signals = self._signal_generator.generate_signals(
+                    symbol, price_data, strategy, sentiment_payload
+                )
+            except Exception:
+                self.logger.debug(
+                    "Signal generation failed for %s strategy", strategy.name, exc_info=True
+                )
+                continue
+
+            for signal in signals:
+                if signal.action != ActionType.BUY:
+                    continue
+                if best_signal is None or signal.confidence > best_signal.confidence:
+                    best_signal = signal
+
+        if best_signal is None:
+            return {}
+
+        entry_price = float(best_signal.entry_price)
+        target_price = float(best_signal.take_profit or entry_price)
+        stop_loss = float(best_signal.stop_loss or entry_price)
+        expected_return = 0.0
+        if entry_price:
+            expected_return = (target_price - entry_price) / entry_price
+
+        strategy_dict = {
+            "entry_price": entry_price,
+            "target_price": target_price,
+            "stop_loss": stop_loss,
+            "confidence_score": float(best_signal.confidence),
+            "expected_return": float(expected_return),
+            "reasoning": best_signal.reasoning,
+            "metadata": best_signal.metadata,
+        }
+
+        if risk_assessment:
+            strategy_dict["max_safe_position_size"] = risk_assessment.max_safe_position_size
+
+        return strategy_dict
+
+    def _collect_strategies(
+        self, symbol: str, price_data: pd.DataFrame
+    ) -> List[Any]:
+        candidate_methods = [
+            getattr(self._generator, "generate_momentum_strategy", None),
+            getattr(self._generator, "generate_mean_reversion_strategy", None),
+            getattr(self._generator, "generate_breakout_strategy", None),
+        ]
+
+        strategies: List[Any] = []
+        for method in candidate_methods:
+            if not callable(method):
+                continue
+            try:
+                strategy = method(symbol, price_data)
+            except Exception:
+                self.logger.debug("Strategy generation failed", exc_info=True)
+                continue
+            if strategy:
+                strategies.append(strategy)
+
+        return strategies
+
+
 class FullAutoInvestmentSystem:
     """完全自動投資推奨システム"""
 
     def __init__(self, max_symbols: Optional[int] = None):
         self.data_provider = StockDataProvider()
-        self.predictor = HybridStockPredictor()
-        self.optimizer = TSEPortfolioOptimizer()
-        self.sentiment_analyzer = MarketSentimentAnalyzer()
-        self.strategy_generator = StrategyGenerator()
-        self.risk_manager = RiskManager()
+        self.predictor = HybridPredictorAdapter()
+        self.optimizer = PortfolioOptimizer()
+        self.sentiment_analyzer = SentimentAnalyzerAdapter()
+        self.strategy_generator = StrategyGeneratorAdapter()
+        self.risk_manager = RiskManagerAdapter()
         self.medium_system = MediumTermPredictionSystem()
         self.failed_symbols = set()  # データ取得に失敗した銘柄を記録
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -82,6 +294,82 @@ class FullAutoInvestmentSystem:
                 "CLSTOCK_MAX_AUTO_TICKERS is not an integer ('%s'); ignoring.", env_value
             )
             return None
+
+    def _build_stock_profiles(
+        self, processed_data: Dict[str, pd.DataFrame]
+    ) -> List[StockProfile]:
+        profiles: List[StockProfile] = []
+
+        for symbol, data in processed_data.items():
+            if data is None or data.empty:
+                continue
+
+            try:
+                close = data["Close"] if "Close" in data else data.iloc[:, 0]
+                close = close.dropna()
+                if close.empty:
+                    continue
+
+                volume_series = data.get("Volume") if isinstance(data, pd.DataFrame) else None
+                if volume_series is not None:
+                    volume_series = volume_series.dropna()
+
+                returns = close.pct_change().dropna()
+                volatility = (
+                    float(returns.std() * (252 ** 0.5)) if not returns.empty else 0.0
+                )
+
+                start_price = float(close.iloc[0])
+                end_price = float(close.iloc[-1])
+                profit_potential = (
+                    ((end_price - start_price) / start_price)
+                    if start_price not in (0, 0.0)
+                    else 0.0
+                )
+
+                if volume_series is not None and not volume_series.empty:
+                    market_cap = end_price * float(volume_series.iloc[-1])
+                else:
+                    market_cap = end_price
+
+                diversity_score = 1.0 / (1.0 + max(volatility, 0.0))
+                combined_score = profit_potential + diversity_score
+
+                sector = data.attrs.get("info", {}).get("sector", "unknown")
+
+                profiles.append(
+                    StockProfile(
+                        symbol=symbol,
+                        sector=sector,
+                        market_cap=float(market_cap),
+                        volatility=float(volatility),
+                        profit_potential=float(profit_potential),
+                        diversity_score=float(diversity_score),
+                        combined_score=float(combined_score),
+                    )
+                )
+            except Exception:
+                self.logger.debug("Failed to build stock profile for %s", symbol, exc_info=True)
+                continue
+
+        return profiles
+
+    def _optimize_portfolio(
+        self, processed_data: Dict[str, pd.DataFrame]
+    ) -> Dict[str, List[str]]:
+        profiles = self._build_stock_profiles(processed_data)
+
+        if not profiles:
+            return {"selected_stocks": []}
+
+        if hasattr(self.optimizer, "optimize_portfolio"):
+            selected_profiles = self.optimizer.optimize_portfolio(profiles)
+        elif hasattr(self.optimizer, "optimize"):
+            selected_profiles = self.optimizer.optimize(profiles)  # type: ignore[attr-defined]
+        else:
+            raise AttributeError("Optimizer does not support portfolio optimisation methods")
+
+        return {"selected_stocks": [profile.symbol for profile in selected_profiles]}
 
     async def run_full_auto_analysis(self) -> List[AutoRecommendation]:
         """完全自動分析実行"""
@@ -145,7 +433,7 @@ class FullAutoInvestmentSystem:
             print("[ステップ 3/4] (75%) - ポートフォリオ最適化を実行中...")
             print("=" * 60)
             try:
-                optimized_portfolio = self.optimizer.optimize(processed_data)
+                optimized_portfolio = self._optimize_portfolio(processed_data)
 
                 if not optimized_portfolio or 'selected_stocks' not in optimized_portfolio:
                     print("[警告] ポートフォリオ最適化に失敗しました。空の結果が返されました。")
@@ -215,36 +503,21 @@ class FullAutoInvestmentSystem:
                 logger.warning(f"{symbol}: 予測モデル適用失敗")
                 return None
 
-            predicted_price = prediction_result.prediction
-            prediction_confidence = float(getattr(prediction_result, "confidence", 0.0) or 0.0)
-            prediction_confidence = max(min(prediction_confidence, 1.0), 0.0)
+            predicted_price = predictions['predicted_price']
             current_price = data['Close'].iloc[-1]
 
             # 2. リスク分析
-            risk_analysis = self._perform_portfolio_risk_analysis(
-                symbol=symbol,
-                current_price=current_price,
-                price_data=data,
-                predicted_price=predicted_price,
-            )
+            risk_analysis = self.risk_manager.analyze_risk(symbol, data, predictions)
             if not risk_analysis:
                 logger.warning(f"{symbol}: リスク分析失敗")
                 return None
 
             # 3. 感情分析 (ニュース等はダミー)
-            news_data = data.attrs.get("news_headlines") or []
-            raw_sentiment = self.sentiment_analyzer.analyze_news_sentiment(
-                news_data if isinstance(news_data, list) else []
-            )
-            try:
-                sentiment_score = float(raw_sentiment)
-            except (TypeError, ValueError):
-                sentiment_score = 0.0
-            sentiment_score = max(min(sentiment_score, 1.0), -1.0)
+            sentiment_result = self.sentiment_analyzer.analyze_sentiment(symbol)
 
             # 4. 戦略生成
-            trading_strategy = self.strategy_generator.generate_momentum_strategy(
-                symbol, data
+            strategy = self.strategy_generator.generate_strategy(
+                symbol, data, predictions, risk_analysis, sentiment_result
             )
 
             # 5. 推奨情報構築
