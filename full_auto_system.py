@@ -5,19 +5,19 @@ import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Optional, Dict, Any
 
-import yfinance as yf
+import pandas as pd
 
 from data.stock_data import StockDataProvider
-from ml_models.hybrid_predictor import HybridPredictor
+from models_new.hybrid.hybrid_predictor import HybridStockPredictor
+from models_new.advanced.market_sentiment_analyzer import MarketSentimentAnalyzer
+from models_new.advanced.risk_management_framework import RiskManager
+from models_new.advanced.trading_strategy_generator import StrategyGenerator
 from optimization.tse_optimizer import TSEPortfolioOptimizer
-from sentiment.sentiment_analyzer import SentimentAnalyzer
-from strategies.strategy_generator import StrategyGenerator
-from risk.risk_manager import RiskManager
 from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem
 from data_retrieval_script_generator import generate_colab_data_retrieval_script
-
+from config.settings import get_settings
 
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -47,15 +47,16 @@ class FullAutoInvestmentSystem:
 
     def __init__(self, max_symbols: Optional[int] = None):
         self.data_provider = StockDataProvider()
-        self.predictor = HybridPredictor()
+        self.predictor = HybridStockPredictor()
         self.optimizer = TSEPortfolioOptimizer()
-        self.sentiment_analyzer = SentimentAnalyzer()
+        self.sentiment_analyzer = MarketSentimentAnalyzer()
         self.strategy_generator = StrategyGenerator()
         self.risk_manager = RiskManager()
         self.medium_system = MediumTermPredictionSystem()
         self.failed_symbols = set()  # データ取得に失敗した銘柄を記録
         self.logger = logging.getLogger(self.__class__.__name__)
         self.max_symbols = self._resolve_max_symbols(max_symbols)
+        self.settings = get_settings()
 
     def _resolve_max_symbols(self, max_symbols: Optional[int]) -> Optional[int]:
         if max_symbols is not None:
@@ -90,37 +91,48 @@ class FullAutoInvestmentSystem:
             # 1. 東証4000銘柄リストを取得
             print("[ステップ 1/4] (25%) - TSE4000銘柄リストを取得中...")
             print("=" * 60)
-            all_tickers = self.data_provider.get_all_tickers()
-            if self.max_symbols is not None and self.max_symbols < len(all_tickers):
-                all_tickers = all_tickers[:self.max_symbols]
-                print(f"[情報] 解析対象を {len(all_tickers)} 銘柄に制限 (max={self.max_symbols}).")
-            print(f"[情報] 取得銘柄数: {len(all_tickers)}")
-            
-            if not all_tickers:
+            target_stocks = self.settings.target_stocks
+            all_symbols = list(target_stocks.keys())
+            if self.max_symbols is not None and self.max_symbols < len(all_symbols):
+                all_symbols = all_symbols[:self.max_symbols]
+                print(f"[情報] 解析対象を {len(all_symbols)} 銘柄に制限 (max={self.max_symbols}).")
+            print(f"[情報] 取得銘柄数: {len(all_symbols)}")
+
+            if not all_symbols:
                 print("[警告] 東証4000銘柄リストが空です。処理を終了します。")
                 return []
-            
+
             # 2. 株価データを取得・前処理
             print("[ステップ 2/4] (50%) - 株価データを取得・前処理中...")
             print("=" * 60)
             processed_data = {}
             failed_count = 0
-            
-            for i, ticker_info in enumerate(all_tickers):
-                symbol = ticker_info.symbol
+            total_symbols = len(all_symbols)
+
+            for i, symbol in enumerate(all_symbols):
+                company_name = target_stocks.get(symbol, symbol)
                 try:
-                    data = self.data_provider.get_stock_data(symbol, period="2y")
+                    data = self.data_provider.fetch_stock_data(
+                        symbol,
+                        period="2y",
+                        interval="1d",
+                    )
                     if data is not None and not data.empty:
+                        data.attrs.setdefault("info", {})["longName"] = company_name
                         processed_data[symbol] = data
                     else:
                         self.failed_symbols.add(symbol)  # データ取得失敗を記録
                         failed_count += 1
-                        logger.warning(f"データ取得失敗: {symbol} (取得データが空またはNone)")
+                        logger.warning(
+                            f"データ取得失敗: {symbol} (取得データが空またはNone)"
+                        )
                     
                     # 進捗表示 (10銘柄ごと)
-                    if (i + 1) % 10 == 0 or (i + 1) == len(all_tickers):
-                        progress = ((i + 1) / len(all_tickers)) * 100
-                        print(f"  進捗: {progress:.0f}% ({i+1}/{len(all_tickers)}) - 失敗: {failed_count}銘柄")
+                    if (i + 1) % 10 == 0 or (i + 1) == total_symbols:
+                        progress = ((i + 1) / total_symbols) * 100
+                        print(
+                            f"  進捗: {progress:.0f}% ({i+1}/{total_symbols}) - 失敗: {failed_count}銘柄"
+                        )
                         
                 except Exception as e:
                     self.failed_symbols.add(symbol)  # データ取得失敗を記録
@@ -134,7 +146,7 @@ class FullAutoInvestmentSystem:
             print("=" * 60)
             try:
                 optimized_portfolio = self.optimizer.optimize(processed_data)
-                
+
                 if not optimized_portfolio or 'selected_stocks' not in optimized_portfolio:
                     print("[警告] ポートフォリオ最適化に失敗しました。空の結果が返されました。")
                     # processed_data が空でも、self.failed_symbols に記録された銘柄のためのスクリプト生成を試みるために、
@@ -156,7 +168,9 @@ class FullAutoInvestmentSystem:
                         
                         for symbol in selected_stocks:
                             try:
-                                recommendation = await self._analyze_single_stock(symbol, processed_data.get(symbol))
+                                recommendation = await self._analyze_single_stock(
+                                    symbol, processed_data.get(symbol)
+                                )
                                 if recommendation:
                                     recommendations.append(recommendation)
                                 else:
@@ -186,57 +200,105 @@ class FullAutoInvestmentSystem:
             logger.exception("完全自動分析プロセスのエラー詳細:")
             return []
 
-    async def _analyze_single_stock(self, symbol: str, data) -> Optional[AutoRecommendation]:
+    async def _analyze_single_stock(
+        self, symbol: str, data: Optional[pd.DataFrame]
+    ) -> Optional[AutoRecommendation]:
         """個別銘柄分析"""
         try:
             if data is None or data.empty:
                 logger.warning(f"分析対象データが無効です: {symbol}")
                 return None
-            
+
             # 1. 予測モデル適用
-            predictions = self.predictor.predict(data)
-            if not predictions or 'predicted_price' not in predictions:
+            prediction_result = self.predictor.predict(symbol)
+            if not prediction_result:
                 logger.warning(f"{symbol}: 予測モデル適用失敗")
                 return None
-            
-            predicted_price = predictions['predicted_price']
+
+            predicted_price = prediction_result.prediction
+            prediction_confidence = float(getattr(prediction_result, "confidence", 0.0) or 0.0)
+            prediction_confidence = max(min(prediction_confidence, 1.0), 0.0)
             current_price = data['Close'].iloc[-1]
-            
+
             # 2. リスク分析
-            risk_analysis = self.risk_manager.analyze_risk(data, predictions)
+            risk_analysis = self._perform_portfolio_risk_analysis(
+                symbol=symbol,
+                current_price=current_price,
+                price_data=data,
+                predicted_price=predicted_price,
+            )
             if not risk_analysis:
                 logger.warning(f"{symbol}: リスク分析失敗")
                 return None
-            
+
             # 3. 感情分析 (ニュース等はダミー)
-            sentiment_score = self.sentiment_analyzer.analyze_sentiment({"symbol": symbol})
-            
-            # 4. 戦略生成
-            strategy = self.strategy_generator.generate_strategy(
-                predictions, risk_analysis, sentiment_score, current_price
+            news_data = data.attrs.get("news_headlines") or []
+            raw_sentiment = self.sentiment_analyzer.analyze_news_sentiment(
+                news_data if isinstance(news_data, list) else []
             )
-            
+            try:
+                sentiment_score = float(raw_sentiment)
+            except (TypeError, ValueError):
+                sentiment_score = 0.0
+            sentiment_score = max(min(sentiment_score, 1.0), -1.0)
+
+            # 4. 戦略生成
+            trading_strategy = self.strategy_generator.generate_momentum_strategy(
+                symbol, data
+            )
+
             # 5. 推奨情報構築
-            if strategy and 'entry_price' in strategy:
-                entry_price = strategy['entry_price']
-                target_price = strategy['target_price']
-                stop_loss = strategy['stop_loss']
-                
+            if trading_strategy:
+                entry_price = float(current_price)
+                stop_loss_pct = trading_strategy.risk_management.get(
+                    "stop_loss_pct", 0.05
+                )
+                take_profit_pct = trading_strategy.risk_management.get(
+                    "take_profit_pct", trading_strategy.expected_return
+                )
+
+                stop_loss = entry_price * (1 - stop_loss_pct)
+                expected_return_pct = (
+                    trading_strategy.expected_return
+                    if trading_strategy.expected_return is not None
+                    else take_profit_pct
+                )
+                target_price = entry_price * (1 + expected_return_pct)
+
+                strategy_payload = {
+                    "entry_price": entry_price,
+                    "target_price": target_price,
+                    "stop_loss": stop_loss,
+                    "expected_return": expected_return_pct,
+                    "confidence_score": trading_strategy.win_rate,
+                    "sentiment_score": sentiment_score,
+                    "predicted_price": predicted_price,
+                    "take_profit_pct": take_profit_pct,
+                    "stop_loss_pct": stop_loss_pct,
+                }
+
                 # 期待リターン計算
-                expected_return = (target_price - entry_price) / entry_price
-                
-                # 信頼度 (戦略スコアとリスクスコアから算出)
-                strategy_confidence = strategy.get('confidence_score', 0.5)
-                risk_adjusted_confidence = 1.0 - risk_analysis.risk_score  # リスクが低いほど信頼度高
-                confidence = (strategy_confidence + risk_adjusted_confidence) / 2
-                
+                expected_return = expected_return_pct
+
+                # 信頼度 (戦略スコア、リスクスコア、予測信頼度から算出)
+                strategy_confidence = max(
+                    min(trading_strategy.win_rate, 1.0), 0.0
+                )
+                risk_score = getattr(risk_analysis, "total_risk_score", 0.5)
+                risk_adjusted_confidence = max(min(1.0 - risk_score, 1.0), 0.0)
+                confidence = (
+                    strategy_confidence
+                    + risk_adjusted_confidence
+                    + prediction_confidence
+                ) / 3
+
                 # 理由付け (リスク分析と戦略から簡易生成)
-                reasoning = self._generate_reasoning(risk_analysis, strategy)
-                
+                reasoning = self._generate_reasoning(risk_analysis, strategy_payload)
+
                 # 買い日時・売り日時 (例: 即日買い、1ヶ月後売り)
                 buy_date = datetime.now()
                 sell_date = buy_date + timedelta(days=30)
-                
+
                 return AutoRecommendation(
                     symbol=symbol,
                     company_name=data.attrs.get('info', {}).get('longName', symbol),
@@ -258,6 +320,33 @@ class FullAutoInvestmentSystem:
             logger.error(f"{symbol} 分析中にエラー発生: {e}")
             return None
 
+    def _perform_portfolio_risk_analysis(
+        self,
+        symbol: str,
+        current_price: float,
+        price_data: pd.DataFrame,
+        predicted_price: float,
+    ):
+        try:
+            portfolio_data = {
+                "portfolio_value": current_price,
+                "cash": 0.0,
+                "positions": {symbol: current_price},
+                "target_allocation": {symbol: 1.0},
+                "expected_prices": {symbol: predicted_price},
+                "metadata": {
+                    "analysis_type": "single_stock",
+                    "generated_at": datetime.now(),
+                },
+            }
+            price_map = {symbol: price_data}
+            return self.risk_manager.analyze_portfolio_risk(
+                portfolio_data, price_map
+            )
+        except Exception as exc:
+            logger.error(f"{symbol}: ポートフォリオリスク分析の準備に失敗: {exc}")
+            return None
+
     def _generate_reasoning(self, risk_analysis, strategy) -> str:
         """理由付け簡易生成"""
         reasons = []
@@ -269,9 +358,9 @@ class FullAutoInvestmentSystem:
             reasons.append("中期待リターン")
             
         # リスクレベルの低さ
-        if risk_analysis.risk_level.value == "low":
+        if risk_analysis and risk_analysis.risk_level.value == "low":
             reasons.append("低リスク")
-        elif risk_analysis.risk_level.value == "medium":
+        elif risk_analysis and risk_analysis.risk_level.value == "medium":
             reasons.append("中程度リスク")
             
         if not reasons:
@@ -367,7 +456,6 @@ class FullAutoInvestmentSystem:
 
         self.logger.info("Saved Google Colab data retrieval script to %s", script_file_path)
         print(f"[INFO] Saved Google Colab data retrieval script to {script_file_path}")
-
 
 
 

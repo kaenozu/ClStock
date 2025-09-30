@@ -7,8 +7,7 @@ import tempfile
 import glob
 import logging
 import shutil
-from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List
 from utils.logger_config import get_logger
 from utils.context_managers import get_shutdown_manager
 
@@ -49,27 +48,29 @@ class TempFileCleanup:
         self.register_temp_dir(temp_dir)
         return temp_dir
 
+    def _cleanup_path(
+        self, path: str, remove_func: Callable[[str], None], description: str
+    ) -> bool:
+        """Clean up a path using the provided removal function"""
+        try:
+            if not os.path.exists(path):
+                logger.debug(f"{description} already removed: {path}")
+                return True
+
+            remove_func(path)
+            logger.debug(f"Cleaned up {description}: {path}")
+            return True
+        except Exception as e:
+            logger.error(f"Error cleaning up {description} {path}: {e}")
+            return False
+
     def cleanup_file(self, file_path: str) -> bool:
         """Clean up a specific temporary file"""
-        try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-                logger.debug(f"Cleaned up temp file: {file_path}")
-                return True
-        except Exception as e:
-            logger.error(f"Error cleaning up temp file {file_path}: {e}")
-        return False
+        return self._cleanup_path(file_path, os.remove, "temp file")
 
     def cleanup_dir(self, dir_path: str) -> bool:
         """Clean up a specific temporary directory"""
-        try:
-            if os.path.exists(dir_path):
-                shutil.rmtree(dir_path)
-                logger.debug(f"Cleaned up temp directory: {dir_path}")
-                return True
-        except Exception as e:
-            logger.error(f"Error cleaning up temp directory {dir_path}: {e}")
-        return False
+        return self._cleanup_path(dir_path, shutil.rmtree, "temp directory")
 
     def cleanup_all(self):
         """Clean up all registered temporary files and directories"""

@@ -34,7 +34,7 @@ Get top recommended stocks for mid-term investment (30-90 days).
 **Query Parameters:**
 - `top_n` (integer, optional): Number of recommendations to return (1-10, default: 5)
 
-**Response:**
+**Response:** (conforms to `api.schemas.RecommendationResponse`)
 ```json
 {
   "recommendations": [

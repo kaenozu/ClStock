@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.security import HTTPAuthorizationCredentials
 
 from datetime import datetime
+from dataclasses import dataclass
+from typing import List
 import pandas as pd
 
 # セキュリティと検証機能
@@ -12,18 +14,11 @@ from utils.validators import (
     log_validation_error,
 )
 
-# 古いmodelsディレクトリは廃止されました
-# from models.recommendation import RecommendationResponse, StockRecommendation
-# from models.predictor import StockPredictor
-
-# 新しいインポートパス
-from models_refactored.core.interfaces import (
-    StockPredictor,
-    PredictionResult as RecommendationResponse,
-)
-
-# StockRecommendationクラスは削除されたため、一時的にコメントアウト
+from models.core import MLStockPredictor
+from models.recommendation import StockRecommendation
+from api.schemas import RecommendationResponse
 from data.stock_data import StockDataProvider
+
 
 router = APIRouter()
 
@@ -41,7 +36,7 @@ async def get_recommendations(
         if not (1 <= top_n <= 50):  # Stricter limit for security
             raise ValidationError("top_n must be between 1 and 50")
 
-        predictor = StockPredictor()
+        predictor = MLStockPredictor()
         recommendations = predictor.get_top_recommendations(top_n)
 
         return RecommendationResponse(
@@ -60,7 +55,8 @@ async def get_recommendations(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to fetch recommendations: {str(e)}"
+            status_code=500,
+            detail=f"推奨銘柄の取得に失敗しました: {str(e)}",
         )
 
 
@@ -78,7 +74,7 @@ async def get_single_recommendation(
         # Input validation
         symbol = validate_stock_symbol(symbol)
 
-        predictor = StockPredictor()
+        predictor = MLStockPredictor()
         data_provider = StockDataProvider()
 
         if symbol not in data_provider.get_all_stock_symbols():
@@ -89,7 +85,9 @@ async def get_single_recommendation(
 
         return recommendation
     except InvalidSymbolError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=404, detail=f"銘柄コード {symbol} が見つかりません"
+        )
     except PredictionError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
@@ -139,18 +137,23 @@ async def get_stock_data(
         technical_data = data_provider.calculate_technical_indicators(data)
         financial_metrics = data_provider.get_financial_metrics(symbol)
 
+        current_price = float(technical_data["Close"].iloc[-1])
+        price_change = 0.0
+        price_change_percent = 0.0
+
+        if len(technical_data) >= 2:
+            previous_close = technical_data["Close"].iloc[-2]
+            if not pd.isna(previous_close):
+                price_change = float(current_price - previous_close)
+                if previous_close != 0:
+                    price_change_percent = float(price_change / previous_close * 100)
+
         return {
             "symbol": symbol,
             "company_name": data_provider.jp_stock_codes.get(symbol, symbol),
-            "current_price": float(technical_data["Close"].iloc[-1]),
-            "price_change": float(
-                technical_data["Close"].iloc[-1] - technical_data["Close"].iloc[-2]
-            ),
-            "price_change_percent": float(
-                (technical_data["Close"].iloc[-1] - technical_data["Close"].iloc[-2])
-                / technical_data["Close"].iloc[-2]
-                * 100
-            ),
+            "current_price": current_price,
+            "price_change": price_change,
+            "price_change_percent": price_change_percent,
             "volume": int(technical_data["Volume"].iloc[-1]),
             "technical_indicators": {
                 "sma_20": (
