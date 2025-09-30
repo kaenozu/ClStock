@@ -4,19 +4,19 @@
 87%精度システムの結果を個人向けに可視化
 """
 
+import sqlite3
+from datetime import datetime
+import sys
+import os
+from typing import Dict, List, Any
+
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-import sqlite3
 import pandas as pd
 import numpy as np
-from datetime import datetime
-
-import sys
-import os
-from typing import Dict, List, Any
 
 from models_new.precision.precision_87_system import Precision87BreakthroughSystem
 from data.stock_data import StockDataProvider
@@ -45,6 +45,9 @@ templates.env.filters["format_number"] = format_number
 
 
 class PersonalDashboard:
+    """
+    個人投資用Webダッシュボードのクラス
+    """
     def __init__(self):
         self.settings = get_settings()
         self.db_path = str(self.settings.database.personal_portfolio_db)
@@ -200,6 +203,7 @@ class PersonalDashboard:
                 "component_breakdown": prediction_result.get("component_breakdown", {}),
                 "timestamp": datetime.now().isoformat(),
                 "system_performance": f"{self.settings.prediction.achieved_accuracy}% Average Accuracy",
+            }
         except Exception as e:
             return {
                 "error": str(e),
@@ -316,7 +320,7 @@ class PersonalDashboard:
 
             return enhanced_watchlist
 
-        except Exception as e:
+        except Exception:
             # フォールバック：通常の監視銘柄リストを返す
             return self.get_watchlist()
 
@@ -485,7 +489,10 @@ async def accuracy_summary():
 @app.get("/api/medium_term/{symbol}")
 async def medium_term_prediction(symbol: str):
     """中期予測API（1ヶ月）"""
-    from medium_term_prediction import MediumTermPredictionSystem
+    try:
+        from medium_term_prediction import MediumTermPredictionSystem
+    except ImportError:
+        return {"error": "Medium term prediction module not found", "symbol": symbol}
 
     try:
         medium_system = MediumTermPredictionSystem()
