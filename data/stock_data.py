@@ -10,6 +10,12 @@ import pandas as pd
 from config.settings import get_settings
 from utils.exceptions import DataFetchError
 
+
+def _normalized_symbol_seed(symbol: str) -> int:
+    """Return a deterministic, non-negative seed for a ticker symbol."""
+
+    return abs(hash(symbol)) % (2**32)
+
 # yfinance を try-except でインポート
 try:
     import yfinance as yf
@@ -54,8 +60,10 @@ except ModuleNotFoundError:
                     date_range = pd.date_range(start=start_date, end=end_date, freq='D')
                     # ランダムな価格変動をシミュレート
                     import numpy as np
-                    np.random.seed(hash(symbol))  # 銘柄ごとに同じ乱数シード
-                    base_price = 1000 + hash(symbol) % 1000  # 銘柄ごとに異なるベース価格
+
+                    seed = _normalized_symbol_seed(symbol)
+                    np.random.seed(seed)  # 銘柄ごとに同じ乱数シード
+                    base_price = 1000 + seed % 1000  # 銘柄ごとに異なるベース価格
                     price_changes = np.random.normal(0, 10, size=len(date_range))
                     prices = np.concatenate([[base_price], base_price + np.cumsum(price_changes[1:])])
                     df = pd.DataFrame(index=date_range, data={'Close': prices, 'Open': prices, 'High': prices, 'Low': prices, 'Volume': np.random.randint(100000, 1000000, size=len(date_range))})
