@@ -116,6 +116,25 @@ API_KEYS = {
 - `GET /secure/stock/{symbol}/data` - セキュアな株価データ取得（認証必要）
 - `GET /secure/analysis/{symbol}` - 高度な市場分析（管理者権限必要）
 
+#### API 認証トークンの設定
+
+運用環境では以下の環境変数を必ず設定し、デフォルトの固定トークンは使用しないでください。
+
+```bash
+export API_ADMIN_TOKEN="<強力な管理者トークン>"
+export API_USER_TOKEN="<一般ユーザー用トークン>"
+```
+
+必要に応じて FastAPI のセキュアエンドポイントに追加のトークンを紐付けたい場合は `config/secrets.py` や `CLSTOCK_DEV_KEY`/`CLSTOCK_ADMIN_KEY` などの既存設定を活用できます。
+
+ローカル開発やテストで旧来の固定トークン（`admin_token_secure_2024` など）を利用したい場合のみ、明示的に以下のフラグを有効化してください。
+
+```bash
+export API_ENABLE_TEST_TOKENS=1  # 本番環境では絶対に有効化しない
+```
+
+このフラグが無効な状態では固定トークンは一切受け付けられず、環境変数で登録したトークンのみが使用されます。
+
 ## 主要技術
 
 - 🧠 **87%精度突破統合システム** - メタラーニング・DQN強化学習統合
