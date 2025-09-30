@@ -14,6 +14,38 @@ from utils.logger_config import get_logger
 
 logger = get_logger(__name__)
 
+
+def _load_required_env_var(var_name: str) -> str:
+    """Fetch an environment variable or raise an explicit error."""
+
+    value = os.getenv(var_name)
+    if not value:
+        raise RuntimeError(
+            f"Missing required environment variable: {var_name}. "
+            "Set this variable before starting the application."
+        )
+    return value
+
+
+def _initialize_api_keys() -> Dict[str, str]:
+    """Initialize API keys from config or environment variables."""
+
+    try:
+        from config.secrets import API_KEYS as secrets_api_keys  # type: ignore
+
+        if not secrets_api_keys:
+            raise RuntimeError("config.secrets.API_KEYS is empty")
+
+        return dict(secrets_api_keys)
+    except ImportError:
+        dev_key = _load_required_env_var("CLSTOCK_DEV_KEY")
+        admin_key = _load_required_env_var("CLSTOCK_ADMIN_KEY")
+        return {
+            dev_key: "developer",
+            admin_key: "administrator",
+        }
+
+
 def _get_env_with_warning(var_name: str) -> Optional[str]:
     """
     環境変数を取得し、存在しない場合は警告をログに出力します。
@@ -33,36 +65,30 @@ def _get_env_with_warning(var_name: str) -> Optional[str]:
 # In production, you would use Redis or similar
 rate_limit_storage: Dict[str, Dict[str, int]] = {}
 
-# セキュリティ設定をインポート
-try:
-    from config.secrets import API_KEYS
-except ImportError:
-    # secrets.pyが存在しない場合は環境変数から取得
-    import os
+API_KEYS: Dict[str, str] = _initialize_api_keys()
+ALLOW_TEST_TOKENS = False
+TEST_TOKENS: Dict[str, str] = {}
 
-    # 環境変数からAPIキーを取得
-    dev_key = os.getenv("CLSTOCK_DEV_KEY")
-    admin_key = os.getenv("CLSTOCK_ADMIN_KEY")
 
-    # 環境変数が設定されていない場合の警告
-    if not dev_key:
-        logger.warning("CLSTOCK_DEV_KEY environment variable not set, using default")
-        dev_key = "dev-key-change-me"
+def configure_security(
+    api_keys: Optional[Dict[str, str]] = None,
+    test_tokens: Optional[Dict[str, str]] = None,
+    enable_test_tokens: Optional[bool] = None,
+) -> None:
+    """Configure security settings, primarily for testing purposes."""
 
-    if not admin_key:
-        logger.warning("CLSTOCK_ADMIN_KEY environment variable not set, using default")
-        admin_key = "admin-key-change-me"
+    global API_KEYS, TEST_TOKENS, ALLOW_TEST_TOKENS
 
-    API_KEYS = {
-        dev_key: "developer",
-        admin_key: "administrator",
-    }
-    
-    # デフォルトキーが使用されているか確認
-    if "change-me" in str(API_KEYS):
-        logger.error(
-            "SECURITY WARNING: Using default API keys! Set CLSTOCK_DEV_KEY and CLSTOCK_ADMIN_KEY environment variables"
-        )
+    if api_keys is not None:
+        if not api_keys:
+            raise ValueError("api_keys cannot be empty")
+        API_KEYS = dict(api_keys)
+
+    if test_tokens is not None:
+        TEST_TOKENS = dict(test_tokens)
+
+    if enable_test_tokens is not None:
+        ALLOW_TEST_TOKENS = enable_test_tokens
 
 security = HTTPBearer()
 
@@ -148,12 +174,6 @@ def verify_token(token: str) -> str:
     if not token:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    # テスト用の固定トークン
-    test_tokens = {
-        "admin_token_secure_2024": "administrator",
-        "user_token_basic_2024": "user",
-    }
-
     # 環境変数から追加のトークンを取得
     # import os # ステップ2でファイル冒頭に import された
 
@@ -169,7 +189,10 @@ def verify_token(token: str) -> str:
         env_tokens[user_token] = "user"
 
     # 実際のAPI_KEYSもチェック
-    all_tokens = {**API_KEYS, **test_tokens, **env_tokens}
+    all_tokens = {**API_KEYS, **env_tokens}
+
+    if ALLOW_TEST_TOKENS:
+        all_tokens.update(TEST_TOKENS)
 
     if token not in all_tokens:
         logger.warning(f"Invalid token attempt: {token}")
