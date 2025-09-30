@@ -49,6 +49,47 @@ class TestAPIAuthentication:
         if hasattr(security_module, "reset_env_token_cache"):
             security_module.reset_env_token_cache()
 
+    def test_verify_token_respects_runtime_test_token_flag(self, monkeypatch):
+        """Runtime configuration should control acceptance of test tokens."""
+
+        from fastapi import HTTPException
+
+        original_api_keys = dict(security_module.API_KEYS)
+        original_test_tokens = dict(security_module.TEST_TOKENS)
+        original_allow_test_tokens = security_module.ALLOW_TEST_TOKENS
+
+        try:
+            security_module.configure_security(
+                test_tokens={"qa-token": "administrator"},
+                enable_test_tokens=False,
+            )
+            if hasattr(security_module, "reset_env_token_cache"):
+                security_module.reset_env_token_cache()
+
+            with pytest.raises(HTTPException):
+                verify_token("qa-token")
+
+            security_module.configure_security(enable_test_tokens=True)
+            if hasattr(security_module, "reset_env_token_cache"):
+                security_module.reset_env_token_cache()
+
+            assert verify_token("qa-token") == "administrator"
+
+            security_module.configure_security(enable_test_tokens=False)
+            if hasattr(security_module, "reset_env_token_cache"):
+                security_module.reset_env_token_cache()
+
+            with pytest.raises(HTTPException):
+                verify_token("qa-token")
+        finally:
+            security_module.configure_security(
+                api_keys=original_api_keys,
+                test_tokens=original_test_tokens,
+                enable_test_tokens=original_allow_test_tokens,
+            )
+            if hasattr(security_module, "reset_env_token_cache"):
+                security_module.reset_env_token_cache()
+
     def test_verify_token_valid_admin(self):
         """有効な管理者トークンの検証"""
         # 有効な管理者トークンでのテスト
