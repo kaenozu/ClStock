@@ -353,6 +353,8 @@ class ProcessManager:
         if self.monitoring_active:
             return
 
+        # 以前の監視停止時にセットされたシャットダウンフラグをリセット
+        self._shutdown_event.clear()
         self.monitoring_active = True
         self.monitor_thread = threading.Thread(
             target=self._monitor_processes, daemon=True
@@ -371,6 +373,9 @@ class ProcessManager:
             if self.monitor_thread.is_alive():
                 logger.warning("監視スレッドの終了待機タイムアウト")
                 # デーモンスレッドなので強制終了は不要
+
+        # 再起動時の状態を明示的に初期化
+        self.monitor_thread = None
 
         logger.info("プロセス監視停止")
 
