@@ -9,6 +9,10 @@ from .core import (
     StockPredictor,
 )
 from .performance import ParallelStockPredictor, UltraHighPerformancePredictor
+
+from .advanced_precision import AdvancedPrecisionBreakthrough87System
+from .precision_breakthrough import Precision87BreakthroughSystem
+from .ultra_high_performance import UltraHighPerformancePredictor as UltraHighPerformanceSystem
 from .recommendation import StockRecommendation
 from .cache import AdvancedCacheManager, RedisCache
 from .deep_learning import DeepLearningPredictor, DQNReinforcementLearner
@@ -47,4 +51,7 @@ __all__ = [
     "MetaLearningOptimizer",
     "SentimentAnalyzer",
     "MacroEconomicDataProvider",
+    "AdvancedPrecisionBreakthrough87System",
+    "Precision87BreakthroughSystem",
+    "UltraHighPerformanceSystem",
 ]
