@@ -17,10 +17,9 @@ from utils.validators import (
 # from models.predictor import StockPredictor
 
 # 新しいインポートパス
-from models_refactored.core.interfaces import (
-    StockPredictor,
-    PredictionResult as RecommendationResponse,
-)
+from models_refactored.core.interfaces import StockPredictor
+
+from api.schemas import RecommendationResponse
 
 # StockRecommendationクラスは削除されたため、一時的にコメントアウト
 from data.stock_data import StockDataProvider

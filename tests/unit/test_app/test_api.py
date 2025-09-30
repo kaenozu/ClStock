@@ -5,6 +5,9 @@ import pandas as pd
 from datetime import datetime
 
 from app.main import app
+from api.schemas import RecommendationResponse
+
+AUTH_HEADER = {"Authorization": "Bearer admin_token_secure_2024"}
 
 # StockRecommendationクラスが削除されたため、一時的にコメントアウト
 # from models.recommendation import StockRecommendation
@@ -55,20 +58,24 @@ class TestAPI:
     @pytest.mark.api
     def test_get_recommendations_endpoint(self, client, sample_recommendation):
         """推奨銘柄ランキングエンドポイントのテスト"""
-        with patch("models.predictor.StockPredictor") as mock_predictor_class:
+        with patch("api.endpoints.StockPredictor") as mock_predictor_class:
             mock_predictor = Mock()
             mock_predictor.get_top_recommendations.return_value = [
                 sample_recommendation
             ]
             mock_predictor_class.return_value = mock_predictor
 
-            response = client.get("/api/v1/recommendations?top_n=1")
+            response = client.get(
+                "/api/v1/recommendations?top_n=1", headers=AUTH_HEADER
+            )
             assert response.status_code == 200
 
             data = response.json()
             assert "recommendations" in data
             assert "generated_at" in data
             assert "market_status" in data
+
+            RecommendationResponse.model_validate(data)
 
             assert len(data["recommendations"]) == 1
             rec = data["recommendations"][0]
@@ -78,7 +85,7 @@ class TestAPI:
     @pytest.mark.api
     def test_get_recommendations_with_params(self, client, sample_recommendation):
         """パラメータ付き推奨銘柄エンドポイントのテスト"""
-        with patch("models.predictor.StockPredictor") as mock_predictor_class:
+        with patch("api.endpoints.StockPredictor") as mock_predictor_class:
             mock_predictor = Mock()
             recommendations = [sample_recommendation] * 3
             for i, rec in enumerate(recommendations):
@@ -87,26 +94,33 @@ class TestAPI:
             mock_predictor_class.return_value = mock_predictor
 
             # top_n=3でテスト
-            response = client.get("/api/v1/recommendations?top_n=3")
+            response = client.get(
+                "/api/v1/recommendations?top_n=3", headers=AUTH_HEADER
+            )
             assert response.status_code == 200
 
             data = response.json()
+            RecommendationResponse.model_validate(data)
             assert len(data["recommendations"]) == 3
 
     @pytest.mark.api
     def test_get_recommendations_invalid_params(self, client):
         """無効なパラメータでの推奨銘柄エンドポイントテスト"""
         # top_nが範囲外
-        response = client.get("/api/v1/recommendations?top_n=15")
+        response = client.get(
+            "/api/v1/recommendations?top_n=15", headers=AUTH_HEADER
+        )
         assert response.status_code == 422  # Validation Error
 
-        response = client.get("/api/v1/recommendations?top_n=0")
+        response = client.get(
+            "/api/v1/recommendations?top_n=0", headers=AUTH_HEADER
+        )
         assert response.status_code == 422  # Validation Error
 
     @pytest.mark.api
     def test_get_single_recommendation_endpoint(self, client, sample_recommendation):
         """特定銘柄推奨エンドポイントのテスト"""
-        with patch("models.predictor.StockPredictor") as mock_predictor_class, patch(
+        with patch("api.endpoints.StockPredictor") as mock_predictor_class, patch(
             "data.stock_data.StockDataProvider"
         ) as mock_provider_class:
 
@@ -118,7 +132,9 @@ class TestAPI:
             mock_provider.get_all_stock_symbols.return_value = ["7203", "6758", "9984"]
             mock_provider_class.return_value = mock_provider
 
-            response = client.get("/api/v1/recommendation/7203")
+            response = client.get(
+                "/api/v1/recommendation/7203", headers=AUTH_HEADER
+            )
             assert response.status_code == 200
 
             data = response.json()
@@ -133,7 +149,9 @@ class TestAPI:
             mock_provider.get_all_stock_symbols.return_value = ["7203", "6758"]
             mock_provider_class.return_value = mock_provider
 
-            response = client.get("/api/v1/recommendation/9999")
+            response = client.get(
+                "/api/v1/recommendation/9999", headers=AUTH_HEADER
+            )
             assert response.status_code == 404
             assert "見つかりません" in response.json()["detail"]
 
@@ -197,19 +215,21 @@ class TestAPI:
     @pytest.mark.api
     def test_api_error_handling(self, client):
         """API エラーハンドリングのテスト"""
-        with patch("models.predictor.StockPredictor") as mock_predictor_class:
+        with patch("api.endpoints.StockPredictor") as mock_predictor_class:
             mock_predictor = Mock()
             mock_predictor.get_top_recommendations.side_effect = Exception("Test error")
             mock_predictor_class.return_value = mock_predictor
 
-            response = client.get("/api/v1/recommendations")
+            response = client.get(
+                "/api/v1/recommendations", headers=AUTH_HEADER
+            )
             assert response.status_code == 500
             assert "推奨銘柄の取得に失敗しました" in response.json()["detail"]
 
     @pytest.mark.api
     def test_market_status_logic(self, client, sample_recommendation):
         """市場状況判定ロジックのテスト"""
-        with patch("models.predictor.StockPredictor") as mock_predictor_class:
+        with patch("api.endpoints.StockPredictor") as mock_predictor_class:
             mock_predictor = Mock()
             mock_predictor.get_top_recommendations.return_value = [
                 sample_recommendation
@@ -219,14 +239,18 @@ class TestAPI:
             # 営業時間内をシミュレート (10時)
             with patch("api.endpoints.datetime") as mock_datetime:
                 mock_datetime.now.return_value = datetime(2023, 1, 1, 10, 0, 0)
-                response = client.get("/api/v1/recommendations")
+                response = client.get(
+                    "/api/v1/recommendations", headers=AUTH_HEADER
+                )
                 data = response.json()
                 assert "市場営業中" in data["market_status"]
 
             # 営業時間外をシミュレート (18時)
             with patch("api.endpoints.datetime") as mock_datetime:
                 mock_datetime.now.return_value = datetime(2023, 1, 1, 18, 0, 0)
-                response = client.get("/api/v1/recommendations")
+                response = client.get(
+                    "/api/v1/recommendations", headers=AUTH_HEADER
+                )
                 data = response.json()
                 assert "市場営業時間外" in data["market_status"]
 
@@ -240,7 +264,9 @@ class TestAPI:
             assert response.status_code == 200
 
             # 実際の推奨取得（ネットワーク接続が必要）
-            response = client.get("/api/v1/recommendations?top_n=1")
+            response = client.get(
+                "/api/v1/recommendations?top_n=1", headers=AUTH_HEADER
+            )
             if response.status_code == 200:
                 data = response.json()
                 assert "recommendations" in data
