@@ -37,8 +37,7 @@ class TestProcessManagerComprehensive:
             "demo_trading",
             "investment_system",
             "deep_learning",
-            "ensemble_test",
-            "clstock_main",
+            "integration_test",
             "optimized_system",
             "selective_system",
         ]

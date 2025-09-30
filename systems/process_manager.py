@@ -110,34 +110,28 @@ class ProcessManager:
             ),
             "investment_system": ProcessInfo(
                 name="investment_system",
-                command="python investment_system.py",
+                command="python full_auto_system.py",
                 working_dir=str(PROJECT_ROOT),
             ),
             "deep_learning": ProcessInfo(
                 name="deep_learning",
-                command="python big_data_deep_learning.py",
+                command="python research/big_data_deep_learning.py",
                 working_dir=str(PROJECT_ROOT),
             ),
-            "ensemble_test": ProcessInfo(
-                name="ensemble_test",
-                command="python advanced_ensemble_test.py",
-                working_dir=str(PROJECT_ROOT),
-                auto_restart=False,
-            ),
-            "clstock_main": ProcessInfo(
-                name="clstock_main",
-                command="python clstock_main.py --integrated 7203",
+            "integration_test": ProcessInfo(
+                name="integration_test",
+                command="python integration_test_enhanced.py",
                 working_dir=str(PROJECT_ROOT),
                 auto_restart=False,
             ),
             "optimized_system": ProcessInfo(
                 name="optimized_system",
-                command="python optimized_investment_system.py",
+                command="python ultra_optimized_system.py",
                 working_dir=str(PROJECT_ROOT),
             ),
             "selective_system": ProcessInfo(
                 name="selective_system",
-                command="python super_selective_system.py",
+                command="python performance_test_enhanced.py",
                 working_dir=str(PROJECT_ROOT),
             ),
         }

@@ -247,11 +247,24 @@ def optimize():
     """最適化システムの実行"""
     manager = get_process_manager()
 
-    click.echo("[最適化] 最適化システム起動...")
+    click.echo("[最適化] ウルトラ最適化システム起動...")
     if manager.start_service("optimized_system"):
-        click.echo("[成功] 最適化システム起動完了")
+        click.echo("[成功] ウルトラ最適化システム起動完了")
     else:
         click.echo("[失敗] 最適化システム起動失敗")
+        sys.exit(1)
+
+
+@system.command()
+def integration():
+    """統合テストサービスの実行"""
+    manager = get_process_manager()
+
+    click.echo("🔬 統合テストサービス起動...")
+    if manager.start_service("integration_test"):
+        click.echo("[成功] 統合テストサービス起動完了")
+    else:
+        click.echo("[失敗] 統合テストサービス起動失敗")
         sys.exit(1)
 
 

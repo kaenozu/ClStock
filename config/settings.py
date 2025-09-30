@@ -188,8 +188,7 @@ class ProcessConfig:
             "demo_trading": 5,
             "investment_system": 8,
             "deep_learning": 3,
-            "ensemble_test": 2,
-            "clstock_main": 7,
+            "integration_test": 2,
             "optimized_system": 6,
             "selective_system": 4,
         }
