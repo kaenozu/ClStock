@@ -81,6 +81,32 @@ cd app
 python main.py
 ```
 
+#### API 認証キーの設定
+
+セキュアな API エンドポイントを利用するには、起動する環境で API キーを明示的に設定する必要があります。
+
+- 環境変数 `CLSTOCK_DEV_KEY` と `CLSTOCK_ADMIN_KEY` を設定する。
+- もしくは `config/secrets.py` を作成し、`API_KEYS` 辞書に少なくとも開発者と管理者のキーを定義する。
+
+環境変数を利用する例：
+
+```bash
+export CLSTOCK_DEV_KEY="your-dev-api-key"
+export CLSTOCK_ADMIN_KEY="your-admin-api-key"
+```
+
+`config/secrets.py` を利用する例：
+
+```python
+# config/secrets.py
+API_KEYS = {
+    "your-dev-api-key": "developer",
+    "your-admin-api-key": "administrator",
+}
+```
+
+これらの設定が存在しない場合、API の初期化時にエラーとなります。
+
 #### API エンドポイント
 
 - `GET /recommendations?top_n=5` - 推奨銘柄ランキング（認証必要）
