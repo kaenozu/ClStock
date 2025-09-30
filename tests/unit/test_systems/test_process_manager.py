@@ -5,7 +5,12 @@ import threading
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-from systems.process_manager import ProcessManager, ProcessInfo, ProcessStatus
+from systems.process_manager import (
+    ProcessManager,
+    ProcessInfo,
+    ProcessStatus,
+    settings,
+)
 
 
 class TestProcessManager:
@@ -98,6 +103,30 @@ class TestProcessManager:
         # Should return True but not call Popen again
         assert result is True
         mock_popen.assert_called_once()  # Only called once
+
+    @patch("systems.process_manager.subprocess.Popen")
+    def test_start_service_inherits_streams_when_logging_disabled(
+        self, mock_popen
+    ):
+        """Processes should inherit stdout/stderr when logging is disabled."""
+
+        mock_process = Mock(pid=12345)
+        mock_popen.return_value = mock_process
+
+        pm = ProcessManager()
+
+        with patch.object(
+            settings.process,
+            "log_process_output",
+            False,
+        ):
+            pm.start_service("dashboard")
+
+        assert mock_popen.called, "Popen should be invoked to start the process"
+        _, kwargs = mock_popen.call_args
+
+        assert kwargs.get("stdout") is None
+        assert kwargs.get("stderr") is None
 
     @patch("systems.process_manager.subprocess.Popen")
     def test_start_service_file_not_found(self, mock_popen):
