@@ -145,7 +145,7 @@ class DeepLearningPredictor:
         # データ準備
         all_data = []
 
-        from models.ml_models import MLStockPredictor
+        from models.ml_stock_predictor import MLStockPredictor
 
         ml_predictor = MLStockPredictor()
 
@@ -241,7 +241,7 @@ class DeepLearningPredictor:
                 return 50.0
 
         try:
-            from models.ml_models import MLStockPredictor
+            from models.ml_stock_predictor import MLStockPredictor
 
             ml_predictor = MLStockPredictor()
 
