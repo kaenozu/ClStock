@@ -10,11 +10,11 @@ from typing import List, Optional, Dict, Any
 import pandas as pd
 
 from data.stock_data import StockDataProvider
-from ml_models.hybrid_predictor import HybridPredictor
+from models_new.hybrid.hybrid_predictor import HybridStockPredictor
+from models_new.advanced.market_sentiment_analyzer import MarketSentimentAnalyzer
+from models_new.advanced.risk_management_framework import RiskManager
+from models_new.advanced.trading_strategy_generator import StrategyGenerator
 from optimization.tse_optimizer import TSEPortfolioOptimizer
-from sentiment.sentiment_analyzer import SentimentAnalyzer
-from strategies.strategy_generator import StrategyGenerator
-from risk.risk_manager import RiskManager
 from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem
 from data_retrieval_script_generator import generate_colab_data_retrieval_script
 from config.settings import get_settings
@@ -47,9 +47,9 @@ class FullAutoInvestmentSystem:
 
     def __init__(self, max_symbols: Optional[int] = None):
         self.data_provider = StockDataProvider()
-        self.predictor = HybridPredictor()
+        self.predictor = HybridStockPredictor()
         self.optimizer = TSEPortfolioOptimizer()
-        self.sentiment_analyzer = SentimentAnalyzer()
+        self.sentiment_analyzer = MarketSentimentAnalyzer()
         self.strategy_generator = StrategyGenerator()
         self.risk_manager = RiskManager()
         self.medium_system = MediumTermPredictionSystem()
@@ -210,51 +210,95 @@ class FullAutoInvestmentSystem:
                 return None
 
             # 1. 予測モデル適用
-            predictions = self.predictor.predict(symbol, data)
-            if not predictions or 'predicted_price' not in predictions:
+            prediction_result = self.predictor.predict(symbol)
+            if not prediction_result:
                 logger.warning(f"{symbol}: 予測モデル適用失敗")
                 return None
-            
-            predicted_price = predictions['predicted_price']
+
+            predicted_price = prediction_result.prediction
+            prediction_confidence = float(getattr(prediction_result, "confidence", 0.0) or 0.0)
+            prediction_confidence = max(min(prediction_confidence, 1.0), 0.0)
             current_price = data['Close'].iloc[-1]
-            
+
             # 2. リスク分析
-            risk_analysis = self.risk_manager.analyze_risk(data, predictions)
+            risk_analysis = self._perform_portfolio_risk_analysis(
+                symbol=symbol,
+                current_price=current_price,
+                price_data=data,
+                predicted_price=predicted_price,
+            )
             if not risk_analysis:
                 logger.warning(f"{symbol}: リスク分析失敗")
                 return None
 
             # 3. 感情分析 (ニュース等はダミー)
-            sentiment_score = self.sentiment_analyzer.analyze_sentiment(
-                {"symbol": symbol}
+            news_data = data.attrs.get("news_headlines") or []
+            raw_sentiment = self.sentiment_analyzer.analyze_news_sentiment(
+                news_data if isinstance(news_data, list) else []
             )
-            
+            try:
+                sentiment_score = float(raw_sentiment)
+            except (TypeError, ValueError):
+                sentiment_score = 0.0
+            sentiment_score = max(min(sentiment_score, 1.0), -1.0)
+
             # 4. 戦略生成
-            strategy = self.strategy_generator.generate_strategy(
-                predictions, risk_analysis, sentiment_score, current_price
+            trading_strategy = self.strategy_generator.generate_momentum_strategy(
+                symbol, data
             )
-            
+
             # 5. 推奨情報構築
-            if strategy and 'entry_price' in strategy:
-                entry_price = strategy['entry_price']
-                target_price = strategy['target_price']
-                stop_loss = strategy['stop_loss']
-                
+            if trading_strategy:
+                entry_price = float(current_price)
+                stop_loss_pct = trading_strategy.risk_management.get(
+                    "stop_loss_pct", 0.05
+                )
+                take_profit_pct = trading_strategy.risk_management.get(
+                    "take_profit_pct", trading_strategy.expected_return
+                )
+
+                stop_loss = entry_price * (1 - stop_loss_pct)
+                expected_return_pct = (
+                    trading_strategy.expected_return
+                    if trading_strategy.expected_return is not None
+                    else take_profit_pct
+                )
+                target_price = entry_price * (1 + expected_return_pct)
+
+                strategy_payload = {
+                    "entry_price": entry_price,
+                    "target_price": target_price,
+                    "stop_loss": stop_loss,
+                    "expected_return": expected_return_pct,
+                    "confidence_score": trading_strategy.win_rate,
+                    "sentiment_score": sentiment_score,
+                    "predicted_price": predicted_price,
+                    "take_profit_pct": take_profit_pct,
+                    "stop_loss_pct": stop_loss_pct,
+                }
+
                 # 期待リターン計算
-                expected_return = (target_price - entry_price) / entry_price
-                
-                # 信頼度 (戦略スコアとリスクスコアから算出)
-                strategy_confidence = strategy.get('confidence_score', 0.5)
-                risk_adjusted_confidence = 1.0 - risk_analysis.risk_score
-                confidence = (strategy_confidence + risk_adjusted_confidence) / 2
-                
+                expected_return = expected_return_pct
+
+                # 信頼度 (戦略スコア、リスクスコア、予測信頼度から算出)
+                strategy_confidence = max(
+                    min(trading_strategy.win_rate, 1.0), 0.0
+                )
+                risk_score = getattr(risk_analysis, "total_risk_score", 0.5)
+                risk_adjusted_confidence = max(min(1.0 - risk_score, 1.0), 0.0)
+                confidence = (
+                    strategy_confidence
+                    + risk_adjusted_confidence
+                    + prediction_confidence
+                ) / 3
+
                 # 理由付け (リスク分析と戦略から簡易生成)
-                reasoning = self._generate_reasoning(risk_analysis, strategy)
-                
+                reasoning = self._generate_reasoning(risk_analysis, strategy_payload)
+
                 # 買い日時・売り日時 (例: 即日買い、1ヶ月後売り)
                 buy_date = datetime.now()
                 sell_date = buy_date + timedelta(days=30)
-                
+
                 return AutoRecommendation(
                     symbol=symbol,
                     company_name=data.attrs.get('info', {}).get('longName', symbol),
@@ -274,6 +318,33 @@ class FullAutoInvestmentSystem:
                 
         except Exception as e:
             logger.error(f"{symbol} 分析中にエラー発生: {e}")
+            return None
+
+    def _perform_portfolio_risk_analysis(
+        self,
+        symbol: str,
+        current_price: float,
+        price_data: pd.DataFrame,
+        predicted_price: float,
+    ):
+        try:
+            portfolio_data = {
+                "portfolio_value": current_price,
+                "cash": 0.0,
+                "positions": {symbol: current_price},
+                "target_allocation": {symbol: 1.0},
+                "expected_prices": {symbol: predicted_price},
+                "metadata": {
+                    "analysis_type": "single_stock",
+                    "generated_at": datetime.now(),
+                },
+            }
+            price_map = {symbol: price_data}
+            return self.risk_manager.analyze_portfolio_risk(
+                portfolio_data, price_map
+            )
+        except Exception as exc:
+            logger.error(f"{symbol}: ポートフォリオリスク分析の準備に失敗: {exc}")
             return None
 
     def _generate_reasoning(self, risk_analysis, strategy) -> str:
