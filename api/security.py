@@ -32,6 +32,37 @@ def reset_env_token_cache() -> None:
     _env_tokens_cache.clear()
     _env_tokens_cache_sources.clear()
 
+def _load_required_env_var(var_name: str) -> str:
+    """Fetch an environment variable or raise an explicit error."""
+
+    value = os.getenv(var_name)
+    if not value:
+        raise RuntimeError(
+            f"Missing required environment variable: {var_name}. "
+            "Set this variable before starting the application."
+        )
+    return value
+
+
+def _initialize_api_keys() -> Dict[str, str]:
+    """Initialize API keys from config or environment variables."""
+
+    try:
+        from config.secrets import API_KEYS as secrets_api_keys  # type: ignore
+
+        if not secrets_api_keys:
+            raise RuntimeError("config.secrets.API_KEYS is empty")
+
+        return dict(secrets_api_keys)
+    except ImportError:
+        dev_key = _load_required_env_var("CLSTOCK_DEV_KEY")
+        admin_key = _load_required_env_var("CLSTOCK_ADMIN_KEY")
+        return {
+            dev_key: "developer",
+            admin_key: "administrator",
+        }
+
+
 def _get_env_with_warning(var_name: str) -> Optional[str]:
     """
     環境変数を取得し、存在しない場合は警告をログに出力します。
@@ -83,37 +114,30 @@ def _get_env_tokens_from_cache() -> Dict[str, str]:
 # In production, you would use Redis or similar
 rate_limit_storage: Dict[str, Dict[str, int]] = {}
 
-# セキュリティ設定をインポート
-try:
-    from config.secrets import API_KEYS
-except ImportError:
-    # secrets.pyが存在しない場合は環境変数から取得
-    import os
+API_KEYS: Dict[str, str] = _initialize_api_keys()
+ALLOW_TEST_TOKENS = False
+TEST_TOKENS: Dict[str, str] = {}
 
-    # 環境変数からAPIキーを取得
-    dev_key = os.getenv("CLSTOCK_DEV_KEY")
-    admin_key = os.getenv("CLSTOCK_ADMIN_KEY")
 
-    missing_vars = []
-    if not dev_key:
-        missing_vars.append("CLSTOCK_DEV_KEY")
+def configure_security(
+    api_keys: Optional[Dict[str, str]] = None,
+    test_tokens: Optional[Dict[str, str]] = None,
+    enable_test_tokens: Optional[bool] = None,
+) -> None:
+    """Configure security settings, primarily for testing purposes."""
 
-    if not admin_key:
-        missing_vars.append("CLSTOCK_ADMIN_KEY")
+    global API_KEYS, TEST_TOKENS, ALLOW_TEST_TOKENS
 
-    if missing_vars:
-        missing_list = ", ".join(missing_vars)
-        error_message = (
-            "Required API key environment variables are missing: "
-            f"{missing_list}. Set these variables or provide config.secrets.API_KEYS."
-        )
-        logger.error(error_message)
-        raise RuntimeError(error_message)
+    if api_keys is not None:
+        if not api_keys:
+            raise ValueError("api_keys cannot be empty")
+        API_KEYS = dict(api_keys)
 
-    API_KEYS = {
-        dev_key: "developer",
-        admin_key: "administrator",
-    }
+    if test_tokens is not None:
+        TEST_TOKENS = dict(test_tokens)
+
+    if enable_test_tokens is not None:
+        ALLOW_TEST_TOKENS = enable_test_tokens
 
 security = HTTPBearer()
 
