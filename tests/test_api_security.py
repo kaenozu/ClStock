@@ -1,5 +1,6 @@
 """API Security のテスト"""
 
+import logging
 import os
 from importlib import reload
 from unittest.mock import Mock, patch, MagicMock
@@ -9,9 +10,13 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from fastapi.security import HTTPAuthorizationCredentials
 
+
+TEST_DEV_KEY = "test-dev-api-key"
+TEST_ADMIN_KEY = "test-admin-api-key"
+
 # Ensure required environment variables are present for module import
-os.environ.setdefault("CLSTOCK_DEV_KEY", "test-dev-key")
-os.environ.setdefault("CLSTOCK_ADMIN_KEY", "test-admin-key")
+os.environ.setdefault("CLSTOCK_DEV_KEY", TEST_DEV_KEY)
+os.environ.setdefault("CLSTOCK_ADMIN_KEY", TEST_ADMIN_KEY)
 
 import api.security as security_module
 
@@ -35,10 +40,6 @@ verify_token = security_module.verify_token
 security = security_module.security
 
 from api.secure_endpoints import router
-
-
-TEST_DEV_KEY = "test-dev-api-key"
-TEST_ADMIN_KEY = "test-admin-api-key"
 
 
 class TestAPIAuthentication:
@@ -73,6 +74,45 @@ class TestAPIAuthentication:
 
         assert exc_info.value.status_code == 401
         assert "Invalid token" in str(exc_info.value.detail)
+
+    def test_verify_token_logs_redacted_value(self, monkeypatch):
+        """ログには完全なトークン値が含まれない"""
+        from fastapi import HTTPException
+
+        monkeypatch.setenv("API_ADMIN_TOKEN", "admin-env-token")
+        monkeypatch.setenv("API_USER_TOKEN", "user-env-token")
+
+        if hasattr(security_module, "reset_env_token_cache"):
+            security_module.reset_env_token_cache()
+
+        invalid_token = "invalid_token_for_logging"
+
+        log_records = []
+
+        class _ListHandler(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:  # type: ignore[override]
+                log_records.append(record)
+
+        handler = _ListHandler(level=logging.WARNING)
+        security_module.logger.addHandler(handler)
+
+        try:
+            with pytest.raises(HTTPException):
+                verify_token(invalid_token)
+        finally:
+            security_module.logger.removeHandler(handler)
+
+        warning_messages = [
+            record.getMessage()
+            for record in log_records
+            if record.levelno == logging.WARNING
+            and "Invalid token attempt" in record.getMessage()
+        ]
+
+        assert warning_messages, "Expected invalid token warning to be logged"
+        for message in warning_messages:
+            assert invalid_token not in message
+            assert "***" in message or "[REDACTED" in message
 
     def test_verify_token_empty(self):
         """空のトークンの検証"""
@@ -153,6 +193,42 @@ class TestAPIAuthentication:
             security_module.logger.removeHandler(handler)
 
         assert len(missing_warnings_after_second_call) == 2
+
+    def test_verify_api_key_logs_redacted_value(self):
+        """APIキーのログにも完全な値が含まれない"""
+        from fastapi import HTTPException
+
+        invalid_key = "invalid_api_key_for_logging"
+        credentials = HTTPAuthorizationCredentials(
+            scheme="Bearer", credentials=invalid_key
+        )
+
+        log_records = []
+
+        class _ListHandler(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:  # type: ignore[override]
+                log_records.append(record)
+
+        handler = _ListHandler(level=logging.WARNING)
+        security_module.logger.addHandler(handler)
+
+        try:
+            with pytest.raises(HTTPException):
+                security_module.verify_api_key(credentials)
+        finally:
+            security_module.logger.removeHandler(handler)
+
+        warning_messages = [
+            record.getMessage()
+            for record in log_records
+            if record.levelno == logging.WARNING
+            and "Invalid API key attempt" in record.getMessage()
+        ]
+
+        assert warning_messages, "Expected invalid API key warning to be logged"
+        for message in warning_messages:
+            assert invalid_key not in message
+            assert "***" in message or "[REDACTED" in message
 
 
 class TestAPIEndpointSecurity:
