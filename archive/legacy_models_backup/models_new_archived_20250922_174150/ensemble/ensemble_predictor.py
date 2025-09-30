@@ -221,7 +221,7 @@ class EnsembleStockPredictor(StockPredictor):
 
         # 単一モデルインスタンスでデータ準備
         # MLStockPredictor は元のml_modelsにまだ存在するためそのまま維持
-        from models.ml_models import MLStockPredictor
+        from models.ml_stock_predictor import MLStockPredictor
 
         ml_predictor = MLStockPredictor()
 
@@ -707,7 +707,7 @@ class EnsembleStockPredictor(StockPredictor):
     def _calculate_features_fallback(self, data: pd.DataFrame) -> pd.DataFrame:
         """フォールバック特徴量計算（従来方式）"""
         try:
-            from models.ml_models import MLStockPredictor
+            from models.ml_stock_predictor import MLStockPredictor
 
             ml_predictor = MLStockPredictor()
             return ml_predictor.prepare_features(data)

@@ -5,7 +5,7 @@
 
 import logging
 from utils.logger_config import setup_logger
-from models.ml_models import MLStockPredictor
+from models.ml_stock_predictor import MLStockPredictor
 from data.stock_data import StockDataProvider
 
 # ログ設定

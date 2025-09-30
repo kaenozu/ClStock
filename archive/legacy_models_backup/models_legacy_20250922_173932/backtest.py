@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from data.stock_data import StockDataProvider
 from models.predictor import StockPredictor
-from models.ml_models import MLStockPredictor
+from models.ml_stock_predictor import MLStockPredictor
 
 logger = logging.getLogger(__name__)
 
