@@ -12,151 +12,17 @@ from typing import List, Dict, Optional, Any
 
 warnings.filterwarnings("ignore")
 
-from data.stock_data import StockDataProvider
 import logging
 from utils.logger_config import setup_logger
+from trading.base_investment_system import BaseInvestmentSystem, BACKTEST_PERIOD
 
 logger = setup_logger(__name__)
 
-
-# 投資システム共通定数
-INITIAL_CAPITAL = 1000000
-PROFIT_THRESHOLD = 15.0  # 最小利益閾値（%）
-LOSS_THRESHOLD = -5.0  # 最大損失閾値（%）
-POSITION_SIZE_FACTOR = 0.15  # ポジションサイズ係数
 
 # 超厳選システム定数
 SUPER_MIN_SCORE = 20.0
 SUPER_MIN_CONFIDENCE = 80.0
 SUPER_MAX_SYMBOLS = 10
-
-# バックテスト期間設定
-BACKTEST_PERIOD = "2y"
-DATA_PERIOD = "1y"
-
-
-class BaseInvestmentSystem:
-    """投資システムの基底クラス"""
-
-    def __init__(self, initial_capital: int = INITIAL_CAPITAL):
-        self.data_provider = StockDataProvider()
-        self.initial_capital = initial_capital
-        self.current_capital = initial_capital
-        self.positions = {}
-        self.transaction_history = []
-
-        # 閾値設定
-        self.min_profit_threshold = PROFIT_THRESHOLD
-        self.max_loss_threshold = LOSS_THRESHOLD
-        self.position_size_factor = POSITION_SIZE_FACTOR
-
-    def _get_stock_data(self, symbol: str, period: str = DATA_PERIOD) -> pd.DataFrame:
-        """株価データ取得の共通メソッド"""
-        try:
-            return self.data_provider.get_stock_data(symbol, period)
-        except Exception as e:
-            logging.warning(f"データ取得エラー {symbol}: {str(e)}")
-            return pd.DataFrame()
-
-    def _calculate_position_size(self, capital: float, confidence: float) -> float:
-        """ポジションサイズ計算の共通メソッド"""
-        base_size = capital * self.position_size_factor
-        confidence_multiplier = min(confidence / 100.0, 1.0)
-        return base_size * confidence_multiplier
-
-    def _execute_trade_order(
-        self, symbol: str, action: str, shares: int, price: float, date
-    ):
-        """取引実行の共通メソッド"""
-        if action == "BUY":
-            self._execute_buy(symbol, shares, price, date)
-        elif action == "SELL":
-            self._execute_sell(symbol, shares, price, date)
-
-    def _execute_buy(self, symbol: str, shares: int, price: float, date):
-        """買い注文実行"""
-        cost = shares * price
-        if self.current_capital >= cost:
-            self.positions[symbol] = {
-                "shares": shares,
-                "buy_price": price,
-                "buy_date": date,
-            }
-            self.current_capital -= cost
-            self._record_transaction("BUY", symbol, shares, price, date)
-
-    def _execute_sell(self, symbol: str, shares: int, price: float, date):
-        """売り注文実行"""
-        if symbol in self.positions:
-            position = self.positions[symbol]
-            profit = (price - position["buy_price"]) * shares
-
-            self.current_capital += shares * price
-            del self.positions[symbol]
-
-            self._record_transaction("SELL", symbol, shares, price, date, profit)
-
-    def _record_transaction(
-        self,
-        action: str,
-        symbol: str,
-        shares: int,
-        price: float,
-        date,
-        profit: float = 0,
-    ):
-        """取引記録"""
-        transaction = {
-            "action": action,
-            "symbol": symbol,
-            "shares": shares,
-            "price": price,
-            "date": date,
-        }
-        if action == "SELL":
-            transaction["profit"] = profit
-
-        self.transaction_history.append(transaction)
-
-    def _should_sell_position(self, symbol: str, current_price: float) -> bool:
-        """売却判定の共通ロジック"""
-        if symbol not in self.positions:
-            return False
-
-        position = self.positions[symbol]
-        change_rate = (
-            (current_price - position["buy_price"]) / position["buy_price"]
-        ) * 100
-
-        return (
-            change_rate >= self.min_profit_threshold
-            or change_rate <= self.max_loss_threshold
-        )
-
-    def _calculate_final_results(self) -> Dict[str, float]:
-        """最終結果計算の共通メソッド"""
-        # 残ポジションを現在価格で評価
-        for symbol in list(self.positions.keys()):
-            try:
-                current_data = self._get_stock_data(symbol, "1d")
-                if not current_data.empty:
-                    current_price = current_data["Close"].iloc[-1]
-                    shares = self.positions[symbol]["shares"]
-                    self.current_capital += shares * current_price
-                    del self.positions[symbol]
-            except:
-                pass
-
-        total_return = self.current_capital - self.initial_capital
-        return_rate = (total_return / self.initial_capital) * 100
-
-        return {
-            "initial_capital": self.initial_capital,
-            "final_capital": self.current_capital,
-            "total_return": total_return,
-            "return_rate": return_rate,
-            "total_trades": len(self.transaction_history),
-        }
 
 
 class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):

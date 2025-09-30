@@ -12,9 +12,9 @@ from typing import List, Dict, Optional, Any, Tuple
 
 warnings.filterwarnings("ignore")
 
-from data.stock_data import StockDataProvider
 from sklearn.preprocessing import StandardScaler
-from super_selective_system import BaseInvestmentSystem, BACKTEST_PERIOD
+from data.stock_data import StockDataProvider
+from trading.base_investment_system import BaseInvestmentSystem, BACKTEST_PERIOD
 import logging
 from utils.logger_config import setup_logger
 
