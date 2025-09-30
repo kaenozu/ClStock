@@ -14,6 +14,16 @@ from utils.logger_config import get_logger
 
 logger = get_logger(__name__)
 
+def _mask_token(token: Optional[str], visible_chars: int = 4) -> str:
+    """Return a masked representation of the provided token."""
+
+    if not token:
+        return ""
+
+    visible_chars = max(0, min(visible_chars, len(token)))
+    masked_length = len(token) - visible_chars
+    return token[:visible_chars] + ("*" * masked_length)
+
 _env_cache: Dict[str, Optional[str]] = {}
 _logged_missing_env_vars: Set[str] = set()
 _env_tokens_cache: Dict[str, str] = {}
@@ -210,7 +220,7 @@ def verify_api_key(
     token = credentials.credentials
 
     if token not in API_KEYS:
-        logger.warning(f"Invalid API key attempt: {token}")
+        logger.warning(f"Invalid API key attempt: {_mask_token(token)}")
         raise HTTPException(status_code=401, detail="Invalid API key")
 
     user_type = API_KEYS[token]
@@ -250,7 +260,7 @@ def verify_token(token: str) -> str:
     allowed_tokens = _build_allowed_tokens()
 
     if token not in allowed_tokens:
-        logger.warning(f"Invalid token attempt: {token}")
+        logger.warning(f"Invalid token attempt: {_mask_token(token)}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user_type = allowed_tokens[token]

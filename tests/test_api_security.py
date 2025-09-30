@@ -1,5 +1,6 @@
 """API Security のテスト"""
 
+import logging
 import os
 from importlib import reload
 from unittest.mock import Mock, patch, MagicMock
@@ -74,6 +75,24 @@ class TestAPIAuthentication:
         assert exc_info.value.status_code == 401
         assert "Invalid token" in str(exc_info.value.detail)
 
+    def test_verify_token_invalid_logs_masked_token(self, caplog):
+        """無効なトークンがマスクされた状態でログ出力されることを確認"""
+        from fastapi import HTTPException
+
+        invalid_token = "invalid_token"
+
+        with caplog.at_level(logging.WARNING):
+            with pytest.raises(HTTPException):
+                verify_token(invalid_token)
+
+        expected_masked = invalid_token[:4] + "*" * (len(invalid_token) - 4)
+        warning_messages = [record.getMessage() for record in caplog.records]
+        assert any(
+            "Invalid token attempt:" in message and expected_masked in message
+            for message in warning_messages
+        )
+        assert all(invalid_token not in message for message in warning_messages)
+
     def test_verify_token_empty(self):
         """空のトークンの検証"""
         from fastapi import HTTPException
@@ -91,6 +110,27 @@ class TestAPIAuthentication:
             verify_token(None)
 
         assert exc_info.value.status_code == 401
+
+    def test_verify_api_key_invalid_logs_masked_token(self, caplog):
+        """無効なAPIキーがマスクされてログ出力されることを確認"""
+        from fastapi import HTTPException
+
+        invalid_api_key = "invalid_api_token"
+        credentials = HTTPAuthorizationCredentials(
+            scheme="Bearer", credentials=invalid_api_key
+        )
+
+        with caplog.at_level(logging.WARNING):
+            with pytest.raises(HTTPException):
+                security_module.verify_api_key(credentials)
+
+        expected_masked = invalid_api_key[:4] + "*" * (len(invalid_api_key) - 4)
+        warning_messages = [record.getMessage() for record in caplog.records]
+        assert any(
+            "Invalid API key attempt:" in message and expected_masked in message
+            for message in warning_messages
+        )
+        assert all(invalid_api_key not in message for message in warning_messages)
 
     def test_verify_token_custom_admin(self, monkeypatch):
         """カスタム管理者トークンの検証"""
