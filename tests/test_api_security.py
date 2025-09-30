@@ -10,12 +10,15 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from fastapi.security import HTTPAuthorizationCredentials
 
+# Test tokens used across the suite
+TEST_DEV_KEY = "test-dev-api-key"
+TEST_ADMIN_KEY = "test-admin-api-key"
+
 # Ensure required environment variables are present for module import
 os.environ.setdefault("CLSTOCK_DEV_KEY", "test-dev-key")
 os.environ.setdefault("CLSTOCK_ADMIN_KEY", "test-admin-key")
-os.environ.setdefault("API_USER_TOKEN", "test-dev-api-key")
-os.environ.setdefault("API_ADMIN_TOKEN", "test-admin-api-key")
-
+os.environ.setdefault("API_USER_TOKEN", TEST_DEV_KEY)
+os.environ.setdefault("API_ADMIN_TOKEN", TEST_ADMIN_KEY)
 os.environ.pop("API_ENABLE_TEST_TOKENS", None)
 
 import api.security as security_module
@@ -42,10 +45,6 @@ security = security_module.security
 from api.secure_endpoints import router
 
 
-TEST_DEV_KEY = "test-dev-api-key"
-TEST_ADMIN_KEY = "test-admin-api-key"
-
-
 class TestAPIAuthentication:
     """API認証のテスト"""
 
@@ -53,6 +52,20 @@ class TestAPIAuthentication:
         """Reset cached security state between tests"""
         if hasattr(security_module, "reset_env_token_cache"):
             security_module.reset_env_token_cache()
+
+    def teardown_method(self):
+        """Restore default security configuration after test"""
+        security_module.configure_security(
+            api_keys={
+                os.environ["CLSTOCK_DEV_KEY"]: "developer",
+                os.environ["CLSTOCK_ADMIN_KEY"]: "administrator",
+            },
+            test_tokens={
+                "admin_token_secure_2024": "administrator",
+                "user_token_basic_2024": "user",
+            },
+            enable_test_tokens=True,
+        )
 
     def test_verify_token_valid_admin(self):
         """有効な管理者トークンの検証"""
@@ -84,6 +97,24 @@ class TestAPIAuthentication:
         assert exc_info.value.status_code == 401
         assert "Invalid token" in str(exc_info.value.detail)
 
+    def test_verify_token_invalid_logs_masked_token(self, caplog):
+        """無効なトークンがマスクされた状態でログ出力されることを確認"""
+        from fastapi import HTTPException
+
+        invalid_token = "invalid_token"
+
+        with caplog.at_level(logging.WARNING):
+            with pytest.raises(HTTPException):
+                verify_token(invalid_token)
+
+        expected_masked = security_module._redact_secret(invalid_token)
+        warning_messages = [record.getMessage() for record in caplog.records]
+        assert any(
+            "Invalid token attempt:" in message and expected_masked in message
+            for message in warning_messages
+        )
+        assert all(invalid_token not in message for message in warning_messages)
+
     def test_verify_token_empty(self):
         """空のトークンの検証"""
         from fastapi import HTTPException
@@ -101,6 +132,27 @@ class TestAPIAuthentication:
             verify_token(None)
 
         assert exc_info.value.status_code == 401
+
+    def test_verify_api_key_invalid_logs_masked_token(self, caplog):
+        """無効なAPIキーがマスクされてログ出力されることを確認"""
+        from fastapi import HTTPException
+
+        invalid_api_key = "invalid_api_token"
+        credentials = HTTPAuthorizationCredentials(
+            scheme="Bearer", credentials=invalid_api_key
+        )
+
+        with caplog.at_level(logging.WARNING):
+            with pytest.raises(HTTPException):
+                security_module.verify_api_key(credentials)
+
+        expected_masked = security_module._redact_secret(invalid_api_key)
+        warning_messages = [record.getMessage() for record in caplog.records]
+        assert any(
+            "Invalid API key attempt:" in message and expected_masked in message
+            for message in warning_messages
+        )
+        assert all(invalid_api_key not in message for message in warning_messages)
 
     def test_verify_token_custom_admin(self, monkeypatch):
         """カスタム管理者トークンの検証"""
@@ -175,6 +227,24 @@ class TestAPIAuthentication:
             security_module.logger.removeHandler(handler)
 
         assert len(missing_warnings_after_second_call) == 2
+
+    def test_configure_security_overrides_test_tokens(self, monkeypatch):
+        """configure_security should respect custom test tokens"""
+
+        monkeypatch.delenv("API_ENABLE_TEST_TOKENS", raising=False)
+
+        security_module.configure_security(
+            test_tokens={"custom_admin": "administrator"},
+            enable_test_tokens=True,
+        )
+
+        result = verify_token("custom_admin")
+        assert result == "administrator"
+
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException):
+            verify_token("admin_token_secure_2024")
 
 
 class TestAPIEndpointSecurity:

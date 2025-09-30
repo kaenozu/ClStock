@@ -144,12 +144,13 @@ class PersonalDashboard:
     def get_recent_predictions(self, days=7):
         """最近の予測結果取得"""
         conn = sqlite3.connect(self.db_path)
+        interval = f"-{int(days)} days"
         query = """
         SELECT * FROM predictions
-        WHERE prediction_date >= date('now', '-? days')
+        WHERE prediction_date >= date('now', ?)
         ORDER BY prediction_date DESC
         """
-        df = pd.read_sql_query(query, conn, params=(days,))
+        df = pd.read_sql_query(query, conn, params=(interval,))
         conn.close()
 
         return df.to_dict("records")
