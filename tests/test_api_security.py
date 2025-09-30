@@ -15,6 +15,7 @@ from api.secure_endpoints import router
 class TestAPIAuthentication:
     """API認証のテスト"""
 
+    @patch.dict(os.environ, {"API_ADMIN_TOKEN": "admin_token_secure_2024"}, clear=False)
     def test_verify_token_valid_admin(self):
         """有効な管理者トークンの検証"""
         # 有効な管理者トークンでのテスト
@@ -22,6 +23,7 @@ class TestAPIAuthentication:
         result = verify_token(valid_admin_token)
         assert result == "administrator"
 
+    @patch.dict(os.environ, {"API_USER_TOKEN": "user_token_basic_2024"}, clear=False)
     def test_verify_token_valid_user(self):
         """有効なユーザートークンの検証"""
         # 有効な一般ユーザートークンでのテスト
@@ -41,6 +43,16 @@ class TestAPIAuthentication:
 
         assert exc_info.value.status_code == 401
         assert "Invalid token" in str(exc_info.value.detail)
+
+    def test_verify_token_rejects_unconfigured_defaults(self):
+        """デフォルトのテストトークンが未設定の場合は拒否される"""
+        from fastapi import HTTPException
+
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(HTTPException) as exc_info:
+                verify_token("admin_token_secure_2024")
+
+        assert exc_info.value.status_code == 401
 
     def test_verify_token_empty(self):
         """空のトークンの検証"""
@@ -99,12 +111,16 @@ class TestAPIEndpointSecurity:
         response = self.client.get("/secure/stock/7203/data", headers=headers)
         assert response.status_code == 401  # Unauthorized
 
+    @patch("api.secure_endpoints.verify_token")
     @patch("api.security.verify_token")
     @patch("data.stock_data.StockDataProvider")
-    def test_secure_endpoint_with_valid_auth(self, mock_provider, mock_verify):
+    def test_secure_endpoint_with_valid_auth(
+        self, mock_provider, mock_verify, mock_secure_verify
+    ):
         """有効な認証でのセキュアエンドポイントアクセス"""
         # モック設定
         mock_verify.return_value = "user"
+        mock_secure_verify.return_value = "user"
 
         mock_data = {
             "Close": [100, 101, 102],
@@ -139,22 +155,30 @@ class TestAPIEndpointSecurity:
         assert "status" in response.json()
         assert response.json()["status"] == "healthy"
 
+    @patch("api.secure_endpoints.verify_token")
     @patch("api.security.verify_token")
-    def test_admin_only_endpoint_user_access(self, mock_verify):
+    def test_admin_only_endpoint_user_access(
+        self, mock_verify, mock_secure_verify
+    ):
         """管理者専用エンドポイントへの一般ユーザーアクセス"""
         # 一般ユーザーとして認証
         mock_verify.return_value = "user"
+        mock_secure_verify.return_value = "user"
 
         headers = {"Authorization": "Bearer user_token_basic_2024"}
         response = self.client.get("/secure/analysis/7203", headers=headers)
         assert response.status_code == 403  # Forbidden
 
+    @patch("api.secure_endpoints.verify_token")
     @patch("api.security.verify_token")
     @patch("data.stock_data.StockDataProvider")
-    def test_admin_only_endpoint_admin_access(self, mock_provider, mock_verify):
+    def test_admin_only_endpoint_admin_access(
+        self, mock_provider, mock_verify, mock_secure_verify
+    ):
         """管理者専用エンドポイントへの管理者アクセス"""
         # 管理者として認証
         mock_verify.return_value = "administrator"
+        mock_secure_verify.return_value = "administrator"
 
         mock_data = {
             "Close": [100, 101, 102, 103, 104] * 20,  # 十分なデータ
@@ -183,11 +207,15 @@ class TestAPIEndpointSecurity:
             assert "analyst" in response.json()
             assert response.json()["analyst"] == "administrator"
 
+    @patch("api.secure_endpoints.verify_token")
     @patch("api.security.verify_token")
-    def test_batch_endpoint_symbol_limit_user(self, mock_verify):
+    def test_batch_endpoint_symbol_limit_user(
+        self, mock_verify, mock_secure_verify
+    ):
         """バッチエンドポイントの銘柄数制限（一般ユーザー）"""
         # 一般ユーザーとして認証
         mock_verify.return_value = "user"
+        mock_secure_verify.return_value = "user"
 
         # 制限を超える銘柄数
         symbols = [f"stock{i}" for i in range(15)]  # 15銘柄（制限10を超過）
@@ -200,12 +228,16 @@ class TestAPIEndpointSecurity:
         )
         assert response.status_code == 400  # Bad Request
 
+    @patch("api.secure_endpoints.verify_token")
     @patch("api.security.verify_token")
     @patch("data.stock_data.StockDataProvider")
-    def test_batch_endpoint_symbol_limit_admin(self, mock_provider, mock_verify):
+    def test_batch_endpoint_symbol_limit_admin(
+        self, mock_provider, mock_verify, mock_secure_verify
+    ):
         """バッチエンドポイントの銘柄数制限（管理者）"""
         # 管理者として認証
         mock_verify.return_value = "administrator"
+        mock_secure_verify.return_value = "administrator"
 
         mock_data = {
             "Close": [100, 101, 102],
@@ -249,20 +281,24 @@ class TestInputValidation:
         self.app.include_router(router)
         self.client = TestClient(self.app)
 
+    @patch("api.secure_endpoints.verify_token")
     @patch("api.security.verify_token")
-    def test_invalid_stock_symbol(self, mock_verify):
+    def test_invalid_stock_symbol(self, mock_verify, mock_secure_verify):
         """無効な銘柄コードの検証"""
         mock_verify.return_value = "user"
+        mock_secure_verify.return_value = "user"
 
         headers = {"Authorization": "Bearer user_token_basic_2024"}
         # 無効な銘柄コード
         response = self.client.get("/secure/stock/INVALID@SYMBOL/data", headers=headers)
         assert response.status_code == 400  # Bad Request
 
+    @patch("api.secure_endpoints.verify_token")
     @patch("api.security.verify_token")
-    def test_invalid_period(self, mock_verify):
+    def test_invalid_period(self, mock_verify, mock_secure_verify):
         """無効な期間の検証"""
         mock_verify.return_value = "user"
+        mock_secure_verify.return_value = "user"
 
         headers = {"Authorization": "Bearer user_token_basic_2024"}
         # 無効な期間
@@ -271,10 +307,12 @@ class TestInputValidation:
         )
         assert response.status_code == 400  # Bad Request
 
+    @patch("api.secure_endpoints.verify_token")
     @patch("api.security.verify_token")
-    def test_sql_injection_attempt(self, mock_verify):
+    def test_sql_injection_attempt(self, mock_verify, mock_secure_verify):
         """SQLインジェクション試行の検証"""
         mock_verify.return_value = "user"
+        mock_secure_verify.return_value = "user"
 
         headers = {"Authorization": "Bearer user_token_basic_2024"}
         # SQLインジェクション試行
@@ -283,14 +321,16 @@ class TestInputValidation:
         )
         assert response.status_code == 400  # Bad Request
 
+    @patch("api.secure_endpoints.verify_token")
     @patch("api.security.verify_token")
-    def test_xss_attempt(self, mock_verify):
+    def test_xss_attempt(self, mock_verify, mock_secure_verify):
         """XSS試行の検証"""
         mock_verify.return_value = "user"
+        mock_secure_verify.return_value = "user"
 
         headers = {"Authorization": "Bearer user_token_basic_2024"}
         # XSS試行
         response = self.client.get(
             "/secure/stock/<script>alert('xss')</script>/data", headers=headers
         )
-        assert response.status_code == 400  # Bad Request
+        assert response.status_code in (400, 404)

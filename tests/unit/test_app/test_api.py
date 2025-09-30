@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, Mock
@@ -19,9 +21,12 @@ class TestAPI:
     @pytest.fixture
     def client(self):
         """テストクライアントのセットアップ"""
-        client = TestClient(app)
-        client.headers.update({"Authorization": "Bearer admin_token_secure_2024"})
-        return client
+        with patch.dict(
+            os.environ, {"API_ADMIN_TOKEN": "admin_token_secure_2024"}, clear=False
+        ):
+            client = TestClient(app)
+            client.headers.update({"Authorization": "Bearer admin_token_secure_2024"})
+            yield client
 
     @pytest.mark.api
     def test_root_endpoint(self, client):

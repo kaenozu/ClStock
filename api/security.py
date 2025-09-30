@@ -14,6 +14,12 @@ from utils.logger_config import get_logger
 
 logger = get_logger(__name__)
 
+_TEST_TOKEN_FLAG = "API_ENABLE_TEST_TOKENS"
+_TEST_TOKENS = {
+    "admin_token_secure_2024": "administrator",
+    "user_token_basic_2024": "user",
+}
+
 def _get_env_with_warning(var_name: str) -> Optional[str]:
     """
     環境変数を取得し、存在しない場合は警告をログに出力します。
@@ -143,39 +149,51 @@ def verify_api_key(
     return user_type
 
 
+def _should_include_test_tokens() -> bool:
+    """テスト用トークンを許可するかを判定"""
+
+    flag_value = os.getenv(_TEST_TOKEN_FLAG, "").strip().lower()
+    return flag_value in {"1", "true", "yes", "on"}
+
+
+def _build_allowed_tokens() -> Dict[str, str]:
+    """許可されたトークンの一覧を構築"""
+
+    tokens = dict(API_KEYS)
+
+    env_tokens = {}
+    admin_token = _get_env_with_warning("API_ADMIN_TOKEN")
+    user_token = _get_env_with_warning("API_USER_TOKEN")
+
+    if admin_token:
+        env_tokens[admin_token] = "administrator"
+
+    if user_token:
+        env_tokens[user_token] = "user"
+
+    tokens.update(env_tokens)
+
+    if _should_include_test_tokens():
+        logger.warning(
+            "Test tokens enabled via environment flag. Do not use in production."
+        )
+        tokens.update(_TEST_TOKENS)
+
+    return tokens
+
+
 def verify_token(token: str) -> str:
     """トークン検証関数（互換性のため）"""
     if not token:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    # テスト用の固定トークン
-    test_tokens = {
-        "admin_token_secure_2024": "administrator",
-        "user_token_basic_2024": "user",
-    }
+    allowed_tokens = _build_allowed_tokens()
 
-    # 環境変数から追加のトークンを取得
-    # import os # ステップ2でファイル冒頭に import された
-
-    env_tokens = {}
-    admin_token = _get_env_with_warning("API_ADMIN_TOKEN")
-    user_token = _get_env_with_warning("API_USER_TOKEN")
-    
-    # 環境変数が設定されている場合にのみ、env_tokens に追加
-    if admin_token:
-        env_tokens[admin_token] = "administrator"
-        
-    if user_token:
-        env_tokens[user_token] = "user"
-
-    # 実際のAPI_KEYSもチェック
-    all_tokens = {**API_KEYS, **test_tokens, **env_tokens}
-
-    if token not in all_tokens:
+    if token not in allowed_tokens:
         logger.warning(f"Invalid token attempt: {token}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user_type = all_tokens[token]
+    user_type = allowed_tokens[token]
     logger.info(f"Token verified for user type: {user_type}")
     return user_type
 
