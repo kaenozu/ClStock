@@ -22,7 +22,8 @@ import base64
 from .trading_strategy import TradingStrategy, TradingSignal, SignalType
 from .portfolio_manager import DemoPortfolioManager
 from .risk_manager import DemoRiskManager
-from .trade_recorder import TradeRecorder, PerformanceMetrics
+from .trade_recorder import TradeRecorder
+from .models import PerformanceMetrics
 from .performance_tracker import PerformanceTracker
 
 # 既存システム
