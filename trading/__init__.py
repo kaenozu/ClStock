@@ -6,7 +6,7 @@ ClStock デモ運用システム
 """
 
 from .demo_trader import DemoTrader
-from .backtest_engine import BacktestEngine
+from .backtest_engine import BacktestEngine, BacktestConfig
 from .performance_tracker import PerformanceTracker
 from .risk_manager import DemoRiskManager
 from .trading_strategy import TradingStrategy
@@ -16,6 +16,7 @@ from .trade_recorder import TradeRecorder
 __all__ = [
     "DemoTrader",
     "BacktestEngine",
+    "BacktestConfig",
     "PerformanceTracker",
     "DemoRiskManager",
     "TradingStrategy",

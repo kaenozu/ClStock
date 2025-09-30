@@ -41,7 +41,7 @@ class StockPredictor:
         self.ml_predictor = None
         if use_ml_model:
             try:
-                from models.ml_models import MLStockPredictor
+                from models.ml_stock_predictor import MLStockPredictor
 
                 self.ml_predictor = MLStockPredictor(model_type=ml_model_type)
             except ImportError:

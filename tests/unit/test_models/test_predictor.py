@@ -8,8 +8,8 @@ from unittest.mock import patch, Mock
 # from models.recommendation import StockRecommendation
 from models.recommendation import StockRecommendation
 
-# 新しいStockPredictorインターフェース
-from models_refactored.core.interfaces import StockPredictor
+# 互換レイヤーの具体的な予測器を利用
+from models.core import MLStockPredictor as StockPredictor
 
 # StockRecommendationは削除されたため、一時的にコメントアウト
 
@@ -21,9 +21,9 @@ class TestStockPredictor:
         """初期化のテスト"""
         predictor = StockPredictor()
         assert predictor.data_provider is not None
-        assert predictor.model is not None
+        assert predictor.model is None
         assert predictor.scaler is not None
-        assert predictor.is_trained is False
+        assert predictor.is_trained() is False
 
     @pytest.mark.unit
     def test_prepare_features(self, mock_stock_data):

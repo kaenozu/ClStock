@@ -35,7 +35,7 @@ class Precision87BreakthroughSystem(StockPredictor):
         if self._meta_learner is None:
             try:
                 # MetaLearningOptimizer は元のml_modelsにまだ存在するためそのまま維持
-                from models.ml_models import MetaLearningOptimizer
+                from models.meta_learning import MetaLearningOptimizer
 
                 self._meta_learner = MetaLearningOptimizer()
             except ImportError:
@@ -49,7 +49,7 @@ class Precision87BreakthroughSystem(StockPredictor):
         if self._dqn_agent is None:
             try:
                 # DQNReinforcementLearner は元のml_modelsにまだ存在するためそのまま維持
-                from models.ml_models import DQNReinforcementLearner
+                from models.deep_learning import DQNReinforcementLearner
 
                 self._dqn_agent = DQNReinforcementLearner()
             except ImportError:
