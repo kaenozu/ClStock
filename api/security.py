@@ -18,7 +18,11 @@ _env_cache: Dict[str, Optional[str]] = {}
 _logged_missing_env_vars: Set[str] = set()
 _env_tokens_cache: Dict[str, str] = {}
 _env_tokens_cache_sources: Dict[str, Optional[str]] = {}
-
+_TEST_TOKEN_FLAG = "API_ENABLE_TEST_TOKENS"
+_TEST_TOKENS = {
+    "admin_token_secure_2024": "administrator",
+    "user_token_basic_2024": "user",
+}
 
 def reset_env_token_cache() -> None:
     """Reset cached environment token values and warning tracking."""
@@ -27,7 +31,6 @@ def reset_env_token_cache() -> None:
     _logged_missing_env_vars.clear()
     _env_tokens_cache.clear()
     _env_tokens_cache_sources.clear()
-
 
 def _get_env_with_warning(var_name: str) -> Optional[str]:
     """
@@ -190,30 +193,42 @@ def verify_api_key(
     return user_type
 
 
+def _should_include_test_tokens() -> bool:
+    """テスト用トークンを許可するかを判定"""
+
+    flag_value = os.getenv(_TEST_TOKEN_FLAG, "").strip().lower()
+    return flag_value in {"1", "true", "yes", "on"}
+
+
+def _build_allowed_tokens() -> Dict[str, str]:
+    """許可されたトークンの一覧を構築"""
+
+    tokens = dict(API_KEYS)
+
+    env_tokens = _get_env_tokens_from_cache()
+    tokens.update(env_tokens)
+
+    if _should_include_test_tokens():
+        logger.warning(
+            "Test tokens enabled via environment flag. Do not use in production."
+        )
+        tokens.update(_TEST_TOKENS)
+
+    return tokens
+
+
 def verify_token(token: str) -> str:
     """トークン検証関数（互換性のため）"""
     if not token:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    # テスト用の固定トークン
-    test_tokens = {
-        "admin_token_secure_2024": "administrator",
-        "user_token_basic_2024": "user",
-    }
+    allowed_tokens = _build_allowed_tokens()
 
-    # 環境変数から追加のトークンを取得
-    # import os # ステップ2でファイル冒頭に import された
-
-    env_tokens = _get_env_tokens_from_cache()
-
-    # 実際のAPI_KEYSもチェック
-    all_tokens = {**API_KEYS, **test_tokens, **env_tokens}
-
-    if token not in all_tokens:
+    if token not in allowed_tokens:
         logger.warning(f"Invalid token attempt: {token}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user_type = all_tokens[token]
+    user_type = allowed_tokens[token]
     logger.info(f"Token verified for user type: {user_type}")
     return user_type
 

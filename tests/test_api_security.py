@@ -22,15 +22,17 @@ class TestAPIAuthentication:
         if hasattr(security_module, "reset_env_token_cache"):
             security_module.reset_env_token_cache()
 
-    def test_verify_token_valid_admin(self):
+    def test_verify_token_valid_admin(self, monkeypatch):
         """有効な管理者トークンの検証"""
+        monkeypatch.setenv("API_ADMIN_TOKEN", "admin_token_secure_2024")
         # 有効な管理者トークンでのテスト
         valid_admin_token = "admin_token_secure_2024"
         result = verify_token(valid_admin_token)
         assert result == "administrator"
 
-    def test_verify_token_valid_user(self):
+    def test_verify_token_valid_user(self, monkeypatch):
         """有効なユーザートークンの検証"""
+        monkeypatch.setenv("API_USER_TOKEN", "user_token_basic_2024")
         # 有効な一般ユーザートークンでのテスト
         valid_user_token = "user_token_basic_2024"
         result = verify_token(valid_user_token)
@@ -48,6 +50,16 @@ class TestAPIAuthentication:
 
         assert exc_info.value.status_code == 401
         assert "Invalid token" in str(exc_info.value.detail)
+
+    def test_verify_token_rejects_unconfigured_defaults(self):
+        """デフォルトのテストトークンが未設定の場合は拒否される"""
+        from fastapi import HTTPException
+
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(HTTPException) as exc_info:
+                verify_token("admin_token_secure_2024")
+
+        assert exc_info.value.status_code == 401
 
     def test_verify_token_empty(self):
         """空のトークンの検証"""
@@ -67,9 +79,9 @@ class TestAPIAuthentication:
 
         assert exc_info.value.status_code == 401
 
-    @patch.dict(os.environ, {"API_ADMIN_TOKEN": "custom_admin_token"})
-    def test_verify_token_custom_admin(self):
+    def test_verify_token_custom_admin(self, monkeypatch):
         """カスタム管理者トークンの検証"""
+        monkeypatch.setenv("API_ADMIN_TOKEN", "custom_admin_token")
         # 環境変数で設定されたトークンのテスト
         if hasattr(security_module, "reset_env_token_cache"):
             security_module.reset_env_token_cache()
@@ -77,9 +89,9 @@ class TestAPIAuthentication:
         result = verify_token(custom_token)
         assert result == "administrator"
 
-    @patch.dict(os.environ, {"API_USER_TOKEN": "custom_user_token"})
-    def test_verify_token_custom_user(self):
+    def test_verify_token_custom_user(self, monkeypatch):
         """カスタムユーザートークンの検証"""
+        monkeypatch.setenv("API_USER_TOKEN", "custom_user_token")
         # 環境変数で設定されたトークンのテスト
         if hasattr(security_module, "reset_env_token_cache"):
             security_module.reset_env_token_cache()
@@ -155,9 +167,11 @@ class TestAPIEndpointSecurity:
         response = self.client.get("/secure/stock/7203/data", headers=headers)
         assert response.status_code == 401  # Unauthorized
 
-    @patch("api.security.verify_token")
+    @patch("api.secure_endpoints.verify_token")
     @patch("data.stock_data.StockDataProvider")
-    def test_secure_endpoint_with_valid_auth(self, mock_provider, mock_verify):
+    def test_secure_endpoint_with_valid_auth(
+        self, mock_provider, mock_verify
+    ):
         """有効な認証でのセキュアエンドポイントアクセス"""
         # モック設定
         mock_verify.return_value = "user"
@@ -195,8 +209,10 @@ class TestAPIEndpointSecurity:
         assert "status" in response.json()
         assert response.json()["status"] == "healthy"
 
-    @patch("api.security.verify_token")
-    def test_admin_only_endpoint_user_access(self, mock_verify):
+    @patch("api.secure_endpoints.verify_token")
+    def test_admin_only_endpoint_user_access(
+        self, mock_verify
+    ):
         """管理者専用エンドポイントへの一般ユーザーアクセス"""
         # 一般ユーザーとして認証
         mock_verify.return_value = "user"
@@ -205,9 +221,11 @@ class TestAPIEndpointSecurity:
         response = self.client.get("/secure/analysis/7203", headers=headers)
         assert response.status_code == 403  # Forbidden
 
-    @patch("api.security.verify_token")
+    @patch("api.secure_endpoints.verify_token")
     @patch("data.stock_data.StockDataProvider")
-    def test_admin_only_endpoint_admin_access(self, mock_provider, mock_verify):
+    def test_admin_only_endpoint_admin_access(
+        self, mock_provider, mock_verify
+    ):
         """管理者専用エンドポイントへの管理者アクセス"""
         # 管理者として認証
         mock_verify.return_value = "administrator"
@@ -239,8 +257,10 @@ class TestAPIEndpointSecurity:
             assert "analyst" in response.json()
             assert response.json()["analyst"] == "administrator"
 
-    @patch("api.security.verify_token")
-    def test_batch_endpoint_symbol_limit_user(self, mock_verify):
+    @patch("api.secure_endpoints.verify_token")
+    def test_batch_endpoint_symbol_limit_user(
+        self, mock_verify
+    ):
         """バッチエンドポイントの銘柄数制限（一般ユーザー）"""
         # 一般ユーザーとして認証
         mock_verify.return_value = "user"
@@ -256,9 +276,11 @@ class TestAPIEndpointSecurity:
         )
         assert response.status_code == 400  # Bad Request
 
-    @patch("api.security.verify_token")
+    @patch("api.secure_endpoints.verify_token")
     @patch("data.stock_data.StockDataProvider")
-    def test_batch_endpoint_symbol_limit_admin(self, mock_provider, mock_verify):
+    def test_batch_endpoint_symbol_limit_admin(
+        self, mock_provider, mock_verify
+    ):
         """バッチエンドポイントの銘柄数制限（管理者）"""
         # 管理者として認証
         mock_verify.return_value = "administrator"
@@ -305,7 +327,7 @@ class TestInputValidation:
         self.app.include_router(router)
         self.client = TestClient(self.app)
 
-    @patch("api.security.verify_token")
+    @patch("api.secure_endpoints.verify_token")
     def test_invalid_stock_symbol(self, mock_verify):
         """無効な銘柄コードの検証"""
         mock_verify.return_value = "user"
@@ -315,7 +337,7 @@ class TestInputValidation:
         response = self.client.get("/secure/stock/INVALID@SYMBOL/data", headers=headers)
         assert response.status_code == 400  # Bad Request
 
-    @patch("api.security.verify_token")
+    @patch("api.secure_endpoints.verify_token")
     def test_invalid_period(self, mock_verify):
         """無効な期間の検証"""
         mock_verify.return_value = "user"
@@ -327,7 +349,7 @@ class TestInputValidation:
         )
         assert response.status_code == 400  # Bad Request
 
-    @patch("api.security.verify_token")
+    @patch("api.secure_endpoints.verify_token")
     def test_sql_injection_attempt(self, mock_verify):
         """SQLインジェクション試行の検証"""
         mock_verify.return_value = "user"
@@ -339,7 +361,7 @@ class TestInputValidation:
         )
         assert response.status_code == 400  # Bad Request
 
-    @patch("api.security.verify_token")
+    @patch("api.secure_endpoints.verify_token")
     def test_xss_attempt(self, mock_verify):
         """XSS試行の検証"""
         mock_verify.return_value = "user"
