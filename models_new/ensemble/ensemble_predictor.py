@@ -13,6 +13,8 @@ from pathlib import Path
 import joblib
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import TimeSeriesSplit
+from collections import defaultdict
 
 # サードパーティ ML ライブラリ
 try:
@@ -243,58 +245,111 @@ class EnsembleStockPredictor(StockPredictor):
 
         self.feature_names = features_clean.columns.tolist()
 
-        # 時系列分割
-        train_size = int(len(features_clean) * settings.model.train_test_split)
-        X_train = features_clean.iloc[:train_size]
-        X_test = features_clean.iloc[train_size:]
-        y_train = targets_clean.iloc[:train_size]
-        y_test = targets_clean.iloc[train_size:]
+        features_clean = features_clean.reset_index(drop=True)
+        targets_clean = targets_clean.reset_index(drop=True)
 
-        # 特徴量スケーリング
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
+        # 時系列分割設定
+        n_samples = len(features_clean)
+        if n_samples <= 2:
+            raise ValueError("Insufficient data for time series cross-validation")
 
-        # 各モデルを訓練
-        model_predictions = {}
-        model_scores = {}
+        n_splits = min(5, max(2, n_samples // 5))
+        if n_splits >= n_samples:
+            n_splits = n_samples - 1
 
-        for name, model in self.models.items():
-            self.logger.info(f"Training {name}...")
-            try:
-                model.fit(X_train_scaled, y_train)
+        try:
+            tscv = TimeSeriesSplit(n_splits=n_splits)
+            splits = list(tscv.split(features_clean))
+        except ValueError as exc:
+            self.logger.warning(
+                "TimeSeriesSplit configuration failed (%s); falling back to single split",
+                exc,
+            )
+            split_point = int(n_samples * settings.model.train_test_split)
+            if split_point <= 0 or split_point >= n_samples:
+                split_point = n_samples // 2
+            splits = [(np.arange(split_point), np.arange(split_point, n_samples))]
 
-                # 予測と評価
-                train_pred = model.predict(X_train_scaled)
-                test_pred = model.predict(X_test_scaled)
+        model_fold_scores: Dict[str, List[float]] = defaultdict(list)
+        aggregated_predictions: Dict[str, List[float]] = defaultdict(list)
+        ensemble_targets: List[float] = []
+        models_to_remove = set()
 
-                train_mse = mean_squared_error(y_train, train_pred)
-                test_mse = mean_squared_error(y_test, test_pred)
+        for fold_index, (train_idx, val_idx) in enumerate(splits, start=1):
+            X_train = features_clean.iloc[train_idx]
+            X_val = features_clean.iloc[val_idx]
+            y_train = targets_clean.iloc[train_idx]
+            y_val = targets_clean.iloc[val_idx]
 
-                model_predictions[name] = test_pred
-                model_scores[name] = test_mse
+            scaler_fold = StandardScaler()
+            X_train_scaled = scaler_fold.fit_transform(X_train)
+            X_val_scaled = scaler_fold.transform(X_val)
 
-                self.logger.info(
-                    f"{name} - Train MSE: {train_mse:.4f}, Test MSE: {test_mse:.4f}"
-                )
+            ensemble_targets.extend(y_val.values.tolist())
 
-            except Exception as e:
-                self.logger.error(f"Error training {name}: {str(e)}")
-                # 失敗したモデルは除外
-                del self.models[name]
-                del self.weights[name]
+            for name, model in list(self.models.items()):
+                if name in models_to_remove:
+                    continue
+
+                self.logger.info(f"Training {name} (fold {fold_index})...")
+                try:
+                    model.fit(X_train_scaled, y_train)
+                    val_pred = model.predict(X_val_scaled)
+                    fold_mse = mean_squared_error(y_val, val_pred)
+                    model_fold_scores[name].append(float(fold_mse))
+                    aggregated_predictions[name].extend(val_pred.tolist())
+                    self.logger.info(
+                        f"{name} - Fold {fold_index} MSE: {fold_mse:.4f}"
+                    )
+                except Exception as e:
+                    self.logger.error(
+                        f"Error training {name} on fold {fold_index}: {str(e)}"
+                    )
+                    models_to_remove.add(name)
+
+        for name in models_to_remove:
+            self.models.pop(name, None)
+            self.weights.pop(name, None)
+            model_fold_scores.pop(name, None)
+            aggregated_predictions.pop(name, None)
+
+        model_scores = {
+            name: float(np.mean(scores))
+            for name, scores in model_fold_scores.items()
+            if scores
+        }
 
         # 動的重み調整（性能に基づく）
-        self._adjust_weights_based_on_performance(model_scores)
+        if model_scores:
+            self._adjust_weights_based_on_performance(model_scores)
 
         # アンサンブル予測の評価
-        ensemble_pred = self._ensemble_predict_from_predictions(model_predictions)
-        ensemble_mse = mean_squared_error(y_test, ensemble_pred)
+        ensemble_mse = float("nan")
+        if aggregated_predictions and ensemble_targets:
+            model_predictions = {
+                name: np.asarray(preds, dtype=float)
+                for name, preds in aggregated_predictions.items()
+            }
+            ensemble_pred = self._ensemble_predict_from_predictions(model_predictions)
+            ensemble_targets_arr = np.asarray(ensemble_targets, dtype=float)
+            ensemble_mse = mean_squared_error(ensemble_targets_arr, ensemble_pred)
 
         self.logger.info(f"Ensemble MSE: {ensemble_mse:.4f}")
         self.logger.info(f"Final model weights: {self.weights}")
 
-        self.scaler = scaler
+        # 全データで最終学習
+        final_scaler = StandardScaler()
+        X_full_scaled = final_scaler.fit_transform(features_clean)
+
+        for name, model in list(self.models.items()):
+            try:
+                model.fit(X_full_scaled, targets_clean)
+            except Exception as e:
+                self.logger.error(f"Error final training {name}: {str(e)}")
+                self.models.pop(name, None)
+                self.weights.pop(name, None)
+
+        self.scaler = final_scaler
         self.is_trained = True
 
         # モデル保存
