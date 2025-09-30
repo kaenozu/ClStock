@@ -10,10 +10,12 @@ import subprocess
 import threading
 import time
 import signal
+import shlex
 import concurrent.futures
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -44,7 +46,7 @@ class ProcessInfo:
     """プロセス情報"""
 
     name: str
-    command: str
+    command: Union[str, Sequence[str]]
     working_dir: str = str(PROJECT_ROOT)
     env_vars: Dict[str, str] = field(default_factory=dict)
     auto_restart: bool = True
@@ -198,8 +200,18 @@ class ProcessManager:
             env.update(process_info.env_vars)
 
             # プロセス開始
+            command = process_info.command
+            if isinstance(command, str):
+                argv = shlex.split(command)
+            elif isinstance(command, Sequence):
+                argv = list(command)
+            else:
+                raise TypeError(
+                    f"Unsupported command type for service {name}: {type(command)!r}"
+                )
+
             process_info.process = subprocess.Popen(
-                process_info.command.split(),
+                argv,
                 cwd=process_info.working_dir,
                 env=env,
                 stdout=subprocess.PIPE,
@@ -353,6 +365,8 @@ class ProcessManager:
         if self.monitoring_active:
             return
 
+        # 以前の監視停止時にセットされたシャットダウンフラグをリセット
+        self._shutdown_event.clear()
         self.monitoring_active = True
         self.monitor_thread = threading.Thread(
             target=self._monitor_processes, daemon=True
@@ -371,6 +385,9 @@ class ProcessManager:
             if self.monitor_thread.is_alive():
                 logger.warning("監視スレッドの終了待機タイムアウト")
                 # デーモンスレッドなので強制終了は不要
+
+        # 再起動時の状態を明示的に初期化
+        self.monitor_thread = None
 
         logger.info("プロセス監視停止")
 
@@ -579,8 +596,32 @@ class ProcessManager:
             
             # 並列実行プールのシャットダウン
             logger.info("並列実行プールをシャットダウン")
-            self._executor.shutdown(wait=True, timeout=10)
-            
+            shutdown_deadline = time.time() + 10
+            try:
+                self._executor.shutdown(wait=False)
+            except TypeError:
+                # 古いバージョンのconcurrent.futuresではwait引数のみサポート
+                logger.debug("wait=False をサポートしないためフォールバック")
+                self._executor.shutdown(wait=True)
+                shutdown_threads = []
+            else:
+                shutdown_threads = list(getattr(self._executor, "_threads", []))
+
+            # wait=False でシャットダウンした場合は明示的にタイムアウト監視
+            if shutdown_deadline is not None and shutdown_threads:
+                for thread in shutdown_threads:
+                    remaining = shutdown_deadline - time.time()
+                    if remaining <= 0:
+                        break
+                    thread.join(timeout=remaining)
+
+                if any(thread.is_alive() for thread in shutdown_threads):
+                    logger.warning(
+                        "並列実行プールのシャットダウンがタイムアウトしました"
+                    )
+                else:
+                    logger.info("並列実行プールのシャットダウン完了")
+
             logger.info("全サービス停止完了、プロセス終了")
             # シャットダウンイベントをクリア
             self._shutdown_event.clear()

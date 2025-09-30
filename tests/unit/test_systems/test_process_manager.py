@@ -174,6 +174,26 @@ class TestProcessManager:
         assert "test_service" in pm.processes
         assert pm.processes["test_service"] is service_info
 
+    @patch("systems.process_manager.subprocess.Popen")
+    def test_start_service_with_quoted_arguments(self, mock_popen):
+        """Service commands with quoted arguments should be parsed correctly."""
+        pm = ProcessManager()
+        service_info = ProcessInfo(
+            name="quoted_service",
+            command='python -c "print(\'hello world\')"',
+        )
+        pm.register_service(service_info)
+
+        mock_process = Mock(pid=6789)
+        mock_popen.return_value = mock_process
+
+        with patch.object(ProcessManager, "_check_resource_limits", return_value=True):
+            assert pm.start_service("quoted_service") is True
+
+        mock_popen.assert_called_once()
+        args, _ = mock_popen.call_args
+        assert args[0] == ["python", "-c", "print('hello world')"]
+
     @patch("systems.process_manager.psutil")
     def test_get_system_resources(self, mock_psutil):
         """Test getting system resource information."""
@@ -211,3 +231,30 @@ class TestProcessManager:
             assert script_path.exists(), (
                 f"Script for {service.name} not found: {script_path}"
             )
+
+    def test_graceful_shutdown_uses_supported_executor_signature(self):
+        """Ensure graceful shutdown only passes supported args to executor.shutdown."""
+        pm = ProcessManager()
+
+        # Stub out heavy dependencies
+        pm.stop_all_services = MagicMock()
+
+        executor_mock = MagicMock()
+        executor_mock.shutdown = MagicMock()
+        executor_mock._threads = set()  # No threads to join during shutdown
+        pm._executor = executor_mock
+
+        pm._shutdown_event.set()
+
+        with patch("systems.process_manager.os._exit") as mock_exit:
+            pm._graceful_shutdown()
+
+        pm.stop_all_services.assert_called_once_with(force=True)
+
+        executor_mock.shutdown.assert_called_once()
+        args, kwargs = executor_mock.shutdown.call_args
+        assert args == ()
+        assert kwargs == {"wait": False}
+
+        assert not pm._shutdown_event.is_set()
+        mock_exit.assert_called_once_with(0)
