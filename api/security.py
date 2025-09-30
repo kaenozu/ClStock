@@ -221,6 +221,9 @@ def verify_api_key(
 def _should_include_test_tokens() -> bool:
     """テスト用トークンを許可するかを判定"""
 
+    if ALLOW_TEST_TOKENS:
+        return True
+
     flag_value = os.getenv(_TEST_TOKEN_FLAG, "").strip().lower()
     return flag_value in {"1", "true", "yes", "on"}
 
