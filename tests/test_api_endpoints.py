@@ -40,3 +40,16 @@ def test_get_stock_data_single_row(mock_provider_cls):
     assert payload["price_change"] == 0.0
     assert payload["price_change_percent"] == 0.0
     assert payload["current_price"] == 100.0
+
+
+@patch("api.endpoints.StockDataProvider")
+def test_get_stock_data_invalid_period_returns_400(mock_provider_cls):
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    response = client.get("/stock/7203/data?period=invalid")
+
+    assert response.status_code == 400
+    assert "Invalid period" in response.json()["detail"]
+    mock_provider_cls.assert_not_called()

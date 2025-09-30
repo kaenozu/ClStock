@@ -108,6 +108,20 @@ class TestMLStockPredictor:
         valid_scores = scores.dropna()
         assert all(0 <= score <= 100 for score in valid_scores)
 
+    def test_calculate_future_performance_score_with_insufficient_lookahead(self):
+        """Rows without lookahead data should receive neutral scores."""
+        predictor = MLStockPredictor()
+        data = pd.DataFrame(
+            {
+                "Close": [100.0, 101.0, 102.0],
+            },
+            index=pd.date_range("2023-01-01", periods=3, freq="D"),
+        )
+
+        scores = predictor._calculate_future_performance_score(data)
+
+        assert list(scores) == [50.0, 50.0, 50.0]
+
     @patch("models.core.MLStockPredictor.data_provider")
     def test_prepare_dataset_empty_symbols(self, mock_data_provider):
         """Test prepare_dataset with empty symbols list."""
