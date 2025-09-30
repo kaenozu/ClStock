@@ -249,7 +249,7 @@ def _is_test_token_flag_enabled() -> bool:
         return True
 
     flag_value = os.getenv(_TEST_TOKEN_FLAG, "").strip().lower()
-    return flag_value in {"1", "true", "yes", "on"}
+    return flag_value in {"1", "true", "yes", "on"} or bool(ALLOW_TEST_TOKENS)
 
 
 def _should_include_test_tokens() -> bool:

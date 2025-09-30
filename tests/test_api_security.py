@@ -19,6 +19,7 @@ os.environ.setdefault("CLSTOCK_DEV_KEY", "test-dev-key")
 os.environ.setdefault("CLSTOCK_ADMIN_KEY", "test-admin-key")
 os.environ.setdefault("API_USER_TOKEN", TEST_DEV_KEY)
 os.environ.setdefault("API_ADMIN_TOKEN", TEST_ADMIN_KEY)
+os.environ.pop("API_ENABLE_TEST_TOKENS", None)
 
 import api.security as security_module
 
@@ -28,7 +29,7 @@ security_module = reload(security_module)
 # Configure security module explicitly for tests
 security_module.configure_security(
     api_keys={
-        os.environ["CLSTOCK_DEV_KEY"]: "developer",
+        os.environ["CLSTOCK_DEV_KEY"]: "user",
         os.environ["CLSTOCK_ADMIN_KEY"]: "administrator",
     },
     test_tokens={
@@ -71,6 +72,11 @@ class TestAPIAuthentication:
         # 有効な管理者トークンでのテスト
         result = verify_token(TEST_ADMIN_KEY)
         assert result == "administrator"
+
+        # configure_security によって提供されたテストトークンは
+        # API_ENABLE_TEST_TOKENS を設定しなくても使用できることを検証
+        test_admin_result = verify_token("admin_token_secure_2024")
+        assert test_admin_result == "administrator"
 
     def test_verify_token_valid_user(self):
         """有効なユーザートークンの検証"""
