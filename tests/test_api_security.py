@@ -1,5 +1,6 @@
 """API Security のテスト"""
 
+import logging
 import os
 from importlib import reload
 from unittest.mock import Mock, patch, MagicMock
@@ -9,9 +10,15 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from fastapi.security import HTTPAuthorizationCredentials
 
+# Test tokens used across the suite
+TEST_DEV_KEY = "test-dev-api-key"
+TEST_ADMIN_KEY = "test-admin-api-key"
+
 # Ensure required environment variables are present for module import
 os.environ.setdefault("CLSTOCK_DEV_KEY", "test-dev-key")
 os.environ.setdefault("CLSTOCK_ADMIN_KEY", "test-admin-key")
+os.environ.setdefault("API_USER_TOKEN", TEST_DEV_KEY)
+os.environ.setdefault("API_ADMIN_TOKEN", TEST_ADMIN_KEY)
 
 import api.security as security_module
 
@@ -37,10 +44,6 @@ security = security_module.security
 from api.secure_endpoints import router
 
 
-TEST_DEV_KEY = "test-dev-api-key"
-TEST_ADMIN_KEY = "test-admin-api-key"
-
-
 class TestAPIAuthentication:
     """API認証のテスト"""
 
@@ -48,6 +51,20 @@ class TestAPIAuthentication:
         """Reset cached security state between tests"""
         if hasattr(security_module, "reset_env_token_cache"):
             security_module.reset_env_token_cache()
+
+    def teardown_method(self):
+        """Restore default security configuration after test"""
+        security_module.configure_security(
+            api_keys={
+                os.environ["CLSTOCK_DEV_KEY"]: "developer",
+                os.environ["CLSTOCK_ADMIN_KEY"]: "administrator",
+            },
+            test_tokens={
+                "admin_token_secure_2024": "administrator",
+                "user_token_basic_2024": "user",
+            },
+            enable_test_tokens=True,
+        )
 
     def test_verify_token_valid_admin(self):
         """有効な管理者トークンの検証"""
@@ -98,6 +115,12 @@ class TestAPIAuthentication:
         # 環境変数で設定されたトークンのテスト
         if hasattr(security_module, "reset_env_token_cache"):
             security_module.reset_env_token_cache()
+        security_module.configure_security(
+            api_keys={
+                os.environ["CLSTOCK_DEV_KEY"]: "user",
+                os.environ["CLSTOCK_ADMIN_KEY"]: "administrator",
+            }
+        )
         custom_token = "custom_admin_token"
         result = verify_token(custom_token)
         assert result == "administrator"
@@ -108,6 +131,12 @@ class TestAPIAuthentication:
         # 環境変数で設定されたトークンのテスト
         if hasattr(security_module, "reset_env_token_cache"):
             security_module.reset_env_token_cache()
+        security_module.configure_security(
+            api_keys={
+                os.environ["CLSTOCK_DEV_KEY"]: "user",
+                os.environ["CLSTOCK_ADMIN_KEY"]: "administrator",
+            }
+        )
         custom_token = "custom_user_token"
         result = verify_token(custom_token)
         assert result == "user"
@@ -153,6 +182,24 @@ class TestAPIAuthentication:
             security_module.logger.removeHandler(handler)
 
         assert len(missing_warnings_after_second_call) == 2
+
+    def test_configure_security_overrides_test_tokens(self, monkeypatch):
+        """configure_security should respect custom test tokens"""
+
+        monkeypatch.delenv("API_ENABLE_TEST_TOKENS", raising=False)
+
+        security_module.configure_security(
+            test_tokens={"custom_admin": "administrator"},
+            enable_test_tokens=True,
+        )
+
+        result = verify_token("custom_admin")
+        assert result == "administrator"
+
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException):
+            verify_token("admin_token_secure_2024")
 
 
 class TestAPIEndpointSecurity:
