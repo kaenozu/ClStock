@@ -81,6 +81,32 @@ cd app
 python main.py
 ```
 
+#### API 認証キーの設定
+
+セキュアな API エンドポイントを利用するには、起動する環境で API キーを明示的に設定する必要があります。
+
+- 環境変数 `CLSTOCK_DEV_KEY` と `CLSTOCK_ADMIN_KEY` を設定する。
+- もしくは `config/secrets.py` を作成し、`API_KEYS` 辞書に少なくとも開発者と管理者のキーを定義する。
+
+環境変数を利用する例：
+
+```bash
+export CLSTOCK_DEV_KEY="your-dev-api-key"
+export CLSTOCK_ADMIN_KEY="your-admin-api-key"
+```
+
+`config/secrets.py` を利用する例：
+
+```python
+# config/secrets.py
+API_KEYS = {
+    "your-dev-api-key": "developer",
+    "your-admin-api-key": "administrator",
+}
+```
+
+これらの設定が存在しない場合、API の初期化時にエラーとなります。
+
 #### API エンドポイント
 
 - `GET /recommendations?top_n=5` - 推奨銘柄ランキング（認証必要）
@@ -89,6 +115,25 @@ python main.py
 - `GET /stock/{symbol}/data` - 株価データと技術指標
 - `GET /secure/stock/{symbol}/data` - セキュアな株価データ取得（認証必要）
 - `GET /secure/analysis/{symbol}` - 高度な市場分析（管理者権限必要）
+
+#### API 認証トークンの設定
+
+運用環境では以下の環境変数を必ず設定し、デフォルトの固定トークンは使用しないでください。
+
+```bash
+export API_ADMIN_TOKEN="<強力な管理者トークン>"
+export API_USER_TOKEN="<一般ユーザー用トークン>"
+```
+
+必要に応じて FastAPI のセキュアエンドポイントに追加のトークンを紐付けたい場合は `config/secrets.py` や `CLSTOCK_DEV_KEY`/`CLSTOCK_ADMIN_KEY` などの既存設定を活用できます。
+
+ローカル開発やテストで旧来の固定トークン（`admin_token_secure_2024` など）を利用したい場合のみ、明示的に以下のフラグを有効化してください。
+
+```bash
+export API_ENABLE_TEST_TOKENS=1  # 本番環境では絶対に有効化しない
+```
+
+このフラグが無効な状態では固定トークンは一切受け付けられず、環境変数で登録したトークンのみが使用されます。
 
 ## 主要技術
 

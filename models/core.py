@@ -376,7 +376,8 @@ class MLStockPredictor(CacheablePredictor):
         if close is None:
             return pd.Series(dtype=float)
         future_returns = df[close].pct_change(periods=5).shift(-5) * 100.0
-        return future_returns.clip(-20, 20).fillna(50.0) + 50
+        future_returns = future_returns.clip(-20, 20).fillna(0.0)
+        return future_returns + 50
 
     def prepare_dataset(self, symbols: List[str]) -> pd.DataFrame:
         if not symbols:
