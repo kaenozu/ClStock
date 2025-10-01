@@ -6,6 +6,8 @@ import threading
 import time
 from typing import Optional
 
+import psutil
+
 
 from ClStock.config.settings import get_settings
 from ClStock.utils.logger_config import get_logger

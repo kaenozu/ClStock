@@ -10,11 +10,9 @@ def cross_val_score(*_, **__):  # pragma: no cover - placeholder
     raise RuntimeError("sklearn.model_selection is unavailable in this test environment")
 
 
-class TimeSeriesSplit:  # pragma: no cover - placeholder stub
-    """Placeholder for compatibility in environments without scikit-learn."""
+class TimeSeriesSplit:  # pragma: no cover - lightweight stub
+    def __init__(self, *_, **__):
+        pass
 
-    def __init__(self, *args, **kwargs):
-        self.n_splits = kwargs.get("n_splits", args[0] if args else None)
-
-    def split(self, *_, **__):
-        raise RuntimeError("TimeSeriesSplit.split is unavailable in this test environment")
+    def split(self, *_args, **_kwargs):
+        return []

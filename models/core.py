@@ -631,7 +631,7 @@ class MLStockPredictor(CacheablePredictor):
 
         return recommendation
 
-    def get_top_recommendations(self, top_n: int = 5) -> List[StockRecommendation]:
+    def get_top_recommendations(self, top_n: int = 10) -> List[StockRecommendation]:
         symbols = self.data_provider.get_all_stock_symbols()
         recommendations: List[StockRecommendation] = []
 

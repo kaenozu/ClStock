@@ -10,6 +10,7 @@ tests).
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 from datetime import datetime, timedelta
@@ -30,7 +31,8 @@ logger = logging.getLogger(__name__)
 def _normalized_symbol_seed(symbol: str) -> int:
     """Return a deterministic, non-negative seed for a ticker symbol."""
 
-    return abs(hash(symbol)) % (2**32)
+    digest = hashlib.sha256(symbol.encode("utf-8", "surrogatepass")).digest()
+    return int.from_bytes(digest[:4], "big")
 
 
 def _period_to_days(period: str) -> int:

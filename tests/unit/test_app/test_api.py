@@ -251,6 +251,7 @@ class TestAPI:
             )
             assert response.status_code == 500
             assert "推奨銘柄の取得に失敗しました" in response.json()["detail"]
+            mock_predictor.get_top_recommendations.assert_called_once_with(10)
 
     @pytest.mark.api
     def test_market_status_logic(self, client, sample_recommendation):

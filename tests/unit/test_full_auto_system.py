@@ -40,7 +40,11 @@ for module_name, class_name in [
 ]:
     _stub_module(module_name, class_name)
 
-from full_auto_system import AutoRecommendation, FullAutoInvestmentSystem
+from full_auto_system import (
+    AutoRecommendation,
+    FullAutoInvestmentSystem,
+    RiskManagerAdapter,
+)
 from models_new.base.interfaces import PredictionResult
 from models_new.advanced.risk_management_framework import (
     PortfolioRisk,
@@ -189,3 +193,26 @@ async def test_analyze_single_stock_with_empty_strategy_returns_none(monkeypatch
 
     # generate_strategy が呼び出されたことを確認
     system.strategy_generator.generate_strategy.assert_called_once()  # type: ignore[attr-defined]
+
+
+def test_perform_portfolio_risk_analysis_delegates_to_adapter():
+    system = FullAutoInvestmentSystem()
+
+    mock_manager = SimpleNamespace()
+    mock_manager.analyze_portfolio_risk = MagicMock(return_value={"risk": "ok"})  # type: ignore[attr-defined]
+    system.risk_manager = RiskManagerAdapter(manager=mock_manager)  # type: ignore[assignment]
+
+    price_data = pd.DataFrame(
+        {"Close": [100.0, 101.0]},
+        index=pd.date_range("2024-01-01", periods=2),
+    )
+
+    result = system._perform_portfolio_risk_analysis(
+        "TEST",
+        current_price=100.0,
+        price_data=price_data,
+        predicted_price=110.0,
+    )
+
+    assert result == {"risk": "ok"}
+    mock_manager.analyze_portfolio_risk.assert_called_once()  # type: ignore[attr-defined]

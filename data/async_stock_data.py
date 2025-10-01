@@ -103,7 +103,6 @@ class AsyncStockDataProvider:
         
         def fetch_data_with_retry(ticker: str, period: str):
             import yfinance as yf
-            import time
 
             # yfinanceのインスタンスを取得
             stock = yf.Ticker(ticker)
@@ -115,10 +114,9 @@ class AsyncStockDataProvider:
 
         while retry_count < max_retries:
             try:
-                import time
                 # 関数実行前に少し待機（API負荷軽減のため）
-                time.sleep(0.1)
-                
+                await asyncio.sleep(0.1)
+
                 # スレッドプールで実行
                 data = await loop.run_in_executor(None, fetch_data_with_retry, ticker, period)
                 
@@ -132,7 +130,7 @@ class AsyncStockDataProvider:
                 else:
                     logger.warning(f"No data found for ticker: {ticker} (async, attempt {retry_count + 1}/{max_retries})")
                     # 次のリトライのために少し待機
-                    time.sleep(0.5)
+                    await asyncio.sleep(0.5)
                     retry_count += 1
                     continue
             except Exception as e:
