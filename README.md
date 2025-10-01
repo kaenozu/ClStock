@@ -109,12 +109,12 @@ API_KEYS = {
 
 #### API エンドポイント
 
-- `GET /recommendations?top_n=10` - 推奨銘柄ランキング（認証必要、`top_n` を省略した場合はデフォルトの10件を返却。任意の件数を指定可能）
-- `GET /recommendation/{symbol}` - 特定銘柄の推奨（認証必要）
-- `GET /stocks` - 利用可能な銘柄一覧
-- `GET /stock/{symbol}/data` - 株価データと技術指標
-- `GET /secure/stock/{symbol}/data` - セキュアな株価データ取得（認証必要）
-- `GET /secure/analysis/{symbol}` - 高度な市場分析（管理者権限必要）
+- `GET /api/v1/recommendations?top_n=10` - 推奨銘柄ランキング（認証必要、`top_n` を省略した場合はデフォルトの10件を返却。任意の件数を指定可能）
+- `GET /api/v1/recommendation/{symbol}` - 特定銘柄の推奨（認証必要）
+- `GET /api/v1/stocks` - 利用可能な銘柄一覧
+- `GET /api/v1/stock/{symbol}/data` - 株価データと技術指標
+- `GET /api/v1/secure/stock/{symbol}/data` - セキュアな株価データ取得（認証必要）
+- `GET /api/v1/secure/analysis/{symbol}` - 高度な市場分析（管理者権限必要）
 
 #### API 認証トークンの設定
 
