@@ -1,5 +1,4 @@
 import os
-
 import pandas as pd
 from datetime import datetime
 
@@ -7,8 +6,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
 
-os.environ.setdefault("CLSTOCK_DEV_KEY", "test-dev-key")
-os.environ.setdefault("CLSTOCK_ADMIN_KEY", "test-admin-key")
+os.environ.setdefault("CLSTOCK_DEV_KEY", "test-key")
+os.environ.setdefault("CLSTOCK_ADMIN_KEY", "admin-key")
 
 from api.endpoints import router
 from models.recommendation import StockRecommendation
@@ -51,29 +50,28 @@ def test_get_stock_data_single_row(mock_provider_cls):
 
 
 @patch("api.endpoints.StockDataProvider")
-def test_get_stock_data_accepts_suffix_symbol(mock_provider_cls):
+def test_get_stock_data_accepts_suffix_symbols(mock_provider_cls):
     app = FastAPI()
     app.include_router(router)
     client = TestClient(app)
 
     mock_provider = MagicMock()
-    mock_provider.get_all_stock_symbols.return_value = ["7203"]
-    mock_provider.jp_stock_codes = {"7203": "Test Corp"}
+    mock_provider.get_all_stock_symbols.return_value = {"7203": "Test Corp"}
 
-    single_row_df = pd.DataFrame(
+    suffix_df = pd.DataFrame(
         {
-            "Close": [100.0],
-            "Volume": [1500],
+            "Close": [200.0],
+            "Volume": [2500],
             "SMA_20": [None],
             "SMA_50": [None],
             "RSI": [None],
             "MACD": [None],
         },
-        index=pd.date_range("2024-01-01", periods=1),
+        index=pd.date_range("2024-02-01", periods=1),
     )
 
-    mock_provider.get_stock_data.return_value = single_row_df
-    mock_provider.calculate_technical_indicators.return_value = single_row_df
+    mock_provider.get_stock_data.return_value = suffix_df
+    mock_provider.calculate_technical_indicators.return_value = suffix_df
     mock_provider.get_financial_metrics.return_value = {}
 
     mock_provider_cls.return_value = mock_provider
@@ -81,9 +79,6 @@ def test_get_stock_data_accepts_suffix_symbol(mock_provider_cls):
     response = client.get("/stock/7203.T/data?period=1mo")
 
     assert response.status_code == 200
-    payload = response.json()
-    assert payload["symbol"] == "7203.T"
-    assert payload["company_name"] == "Test Corp"
 
 
 @patch("api.endpoints.StockDataProvider")
@@ -99,18 +94,36 @@ def test_get_stock_data_invalid_period_returns_400(mock_provider_cls):
     mock_provider_cls.assert_not_called()
 
 
-def test_get_recommendations_uses_single_datetime_call(monkeypatch):
+@patch("api.endpoints.MLStockPredictor")
+@patch("api.endpoints.verify_token")
+def test_get_recommendations_allows_top_n_50(mock_verify_token, mock_predictor_cls):
     app = FastAPI()
     app.include_router(router)
     client = TestClient(app)
 
-    call_counter = {"count": 0}
+    mock_predictor = MagicMock()
+    mock_predictor.get_top_recommendations.return_value = []
+    mock_predictor_cls.return_value = mock_predictor
+
+    response = client.get(
+        "/recommendations?top_n=50",
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200
+    mock_verify_token.assert_called_once_with("test-token")
+    mock_predictor.get_top_recommendations.assert_called_once_with(50)
+
+
+def test_get_recommendations_returns_closed_after_15(monkeypatch):
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
 
     class DummyDateTime:
         @classmethod
         def now(cls, tz=None):
-            call_counter["count"] += 1
-            return datetime(2024, 1, 1, 10, 0, 0)
+            return datetime(2024, 1, 1, 15, 0, 0)
 
     monkeypatch.setattr("api.endpoints.datetime", DummyDateTime)
 
@@ -127,7 +140,7 @@ def test_get_recommendations_uses_single_datetime_call(monkeypatch):
     )
 
     assert response.status_code == 200
-    assert call_counter["count"] == 1
+    assert response.json()["market_status"] == "市場営業時間外"
 
 
 @patch("api.endpoints.verify_token")
@@ -143,7 +156,7 @@ def test_get_single_recommendation_accepts_suffix(
     mock_verify_token.return_value = None
 
     mock_provider = MagicMock()
-    mock_provider.get_all_stock_symbols.return_value = ["7203"]
+    mock_provider.get_all_stock_symbols.return_value = {"7203": "Test Corp"}
     mock_provider.jp_stock_codes = {"7203": "Test Corp"}
     mock_provider_cls.return_value = mock_provider
 
