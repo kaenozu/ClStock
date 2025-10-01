@@ -62,7 +62,9 @@
 ## 5. システム構成
 ### 第1段階（CUI + API）
 - **バックエンド**: Python (FastAPI)
-- **CUIクライアント**: `python recommend.py --top 5`
+- **CUIクライアント**: `python investment_advisor_cui.py --top 5`
+  - 実行ディレクトリ: リポジトリルート（`ClStock/`）
+  - 前提条件: `pip install -r requirements.txt` などで依存関係（特に NumPy などの科学計算ライブラリ）を事前にインストールしておく
 - **出力形式**: JSON + テキスト
 
 ### 第2段階（GUI）
