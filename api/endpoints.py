@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.security import HTTPAuthorizationCredentials
 
 from datetime import datetime, time
+from zoneinfo import ZoneInfo
 from dataclasses import dataclass
 from typing import List
 import pandas as pd
@@ -37,7 +38,7 @@ async def get_recommendations(
         predictor = MLStockPredictor()
         recommendations = predictor.get_top_recommendations(top_n)
 
-        current_time = datetime.now()
+        current_time = datetime.now(ZoneInfo("Asia/Tokyo"))
         market_open_time = time(9, 0)
         market_close_time = time(15, 0)
 

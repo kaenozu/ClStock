@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -123,7 +124,8 @@ def test_get_recommendations_returns_closed_after_15(monkeypatch):
     class DummyDateTime:
         @classmethod
         def now(cls, tz=None):
-            return datetime(2024, 1, 1, 15, 0, 0)
+            assert tz == ZoneInfo("Asia/Tokyo")
+            return datetime(2024, 1, 1, 15, 0, 0, tzinfo=ZoneInfo("Asia/Tokyo"))
 
     monkeypatch.setattr("api.endpoints.datetime", DummyDateTime)
 
