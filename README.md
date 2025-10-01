@@ -109,7 +109,7 @@ API_KEYS = {
 
 #### API エンドポイント
 
-- `GET /recommendations?top_n=5` - 推奨銘柄ランキング（認証必要、`top_n` を省略した場合はTOP5を返却。任意の件数を指定可能）
+- `GET /recommendations?top_n=10` - 推奨銘柄ランキング（認証必要、`top_n` を省略した場合はデフォルトの10件を返却。任意の件数を指定可能）
 - `GET /recommendation/{symbol}` - 特定銘柄の推奨（認証必要）
 - `GET /stocks` - 利用可能な銘柄一覧
 - `GET /stock/{symbol}/data` - 株価データと技術指標
