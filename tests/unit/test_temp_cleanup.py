@@ -48,6 +48,25 @@ def test_cleanup_all_removes_directories_and_files(cleanup_manager, tmp_path):
     assert not temp_dir.exists()
 
 
+def test_cleanup_by_pattern_removes_unwanted_paths(cleanup_manager, tmp_path):
+    obsolete_file = tmp_path / "obsolete_file.log"
+    obsolete_file.write_text("log")
+
+    obsolete_dir = tmp_path / "obsolete_dir"
+    obsolete_dir.mkdir()
+    (obsolete_dir / "nested.txt").write_text("nested")
+
+    keep_file = tmp_path / "keep.log"
+    keep_file.write_text("keep")
+
+    removed_count = cleanup_manager.cleanup_by_pattern(str(tmp_path / "obsolete_*"))
+
+    assert removed_count == 2
+    assert not obsolete_file.exists()
+    assert not obsolete_dir.exists()
+    assert keep_file.exists()
+
+
 def test_cleanup_unnecessary_files_removes_non_whitelisted(cleanup_manager, tmp_path):
     base_dir = tmp_path / "artifacts"
     base_dir.mkdir()
