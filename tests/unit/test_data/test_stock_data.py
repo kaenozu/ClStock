@@ -1,9 +1,48 @@
 ﻿import pandas as pd
-import pytest
+import hashlib
+import importlib.util
+import pickle
+import sys
+import types
+from pathlib import Path
 from unittest.mock import patch
 
-from data.stock_data import StockDataProvider
-from utils.exceptions import DataFetchError
+import pandas as pd
+import pytest
+
+
+def _load_stock_data_module():
+    module_name = "tests.real_stock_data"
+    if module_name in sys.modules:
+        return sys.modules[module_name]
+
+    if "joblib" not in sys.modules:
+        joblib_stub = types.ModuleType("joblib")
+
+        def _dump(obj, file):
+            pickle.dump(obj, file)
+
+        def _load(file):
+            return pickle.load(file)
+
+        joblib_stub.dump = _dump
+        joblib_stub.load = _load
+        sys.modules["joblib"] = joblib_stub
+
+    spec = importlib.util.spec_from_file_location(
+        module_name, Path(__file__).resolve().parents[3] / "data" / "stock_data.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    loader = spec.loader
+    assert loader is not None
+    loader.exec_module(module)
+    sys.modules[module_name] = module
+    return module
+
+
+stock_data_module = _load_stock_data_module()
+StockDataProvider = stock_data_module.StockDataProvider
+DataFetchError = stock_data_module.DataFetchError
 
 
 class _NullCache:
@@ -39,7 +78,7 @@ class TestStockDataProvider:
             {"Close": [100.0], "Volume": [1000]},
             index=pd.date_range("2024-01-01", periods=1),
         )
-        with patch("data.stock_data.get_cache", return_value=_NullCache()), \
+        with patch.object(stock_data_module, "get_cache", return_value=_NullCache()), \
              patch.object(provider, "_should_use_local_first", return_value=False), \
              patch.object(provider, "_load_first_available_csv", return_value=None), \
              patch.object(provider, "_download_via_yfinance", return_value=(dummy_df.copy(), "TEST1.T")):
@@ -51,7 +90,7 @@ class TestStockDataProvider:
     def test_get_stock_data_invalid_symbol_raises(self):
         provider = StockDataProvider()
         empty_df = pd.DataFrame()
-        with patch("data.stock_data.get_cache", return_value=_NullCache()), \
+        with patch.object(stock_data_module, "get_cache", return_value=_NullCache()), \
              patch.object(provider, "_should_use_local_first", return_value=False), \
              patch.object(provider, "_load_first_available_csv", return_value=None), \
              patch.object(provider, "_download_via_yfinance", return_value=(empty_df, None)):
@@ -64,7 +103,7 @@ class TestStockDataProvider:
             {"Close": [100.0], "Volume": [1000]},
             index=pd.date_range("2024-01-01", periods=1),
         )
-        with patch("data.stock_data.get_cache", return_value=_NullCache()), \
+        with patch.object(stock_data_module, "get_cache", return_value=_NullCache()), \
              patch.object(provider, "_should_use_local_first", return_value=True), \
              patch.object(provider, "_load_first_available_csv", return_value=(dummy_df.copy(), "local")), \
              patch.object(provider, "_download_via_yfinance") as mock_download:
@@ -76,7 +115,7 @@ class TestStockDataProvider:
     def test_get_stock_data_raises_when_no_sources(self):
         provider = StockDataProvider()
         empty_df = pd.DataFrame()
-        with patch("data.stock_data.get_cache", return_value=_NullCache()), \
+        with patch.object(stock_data_module, "get_cache", return_value=_NullCache()), \
              patch.object(provider, "_should_use_local_first", return_value=False), \
              patch.object(provider, "_load_first_available_csv", return_value=None), \
              patch.object(provider, "_download_via_yfinance", return_value=(empty_df, None)):
@@ -126,3 +165,29 @@ class TestStockDataProvider:
                 assert "Volume" in data.columns
         except Exception:
             pytest.skip("Network connection required for integration test")
+
+
+def test_normalized_symbol_seed_is_stable():
+    symbol = "DETERMINISTIC-SEED"
+    expected = int.from_bytes(hashlib.sha256(symbol.encode()).digest()[:4], "big")
+    assert stock_data_module._normalized_symbol_seed(symbol) == expected
+
+
+@pytest.mark.skipif(
+    not hasattr(stock_data_module, "_FallbackTicker"),
+    reason="Fallback ticker is not available when real yfinance is installed.",
+)
+def test_fallback_ticker_history_is_reproducible():
+    symbol = "PERSISTENT-FALLBACK"
+    expected_seed = int.from_bytes(hashlib.sha256(symbol.encode()).digest()[:4], "big")
+
+    first = stock_data_module._FallbackTicker(symbol)
+    second = stock_data_module._FallbackTicker(symbol)
+
+    assert first._seed == expected_seed
+    assert second._seed == expected_seed
+
+    history_first = first.history("1mo")
+    history_second = second.history("1mo")
+
+    pd.testing.assert_frame_equal(history_first, history_second)
