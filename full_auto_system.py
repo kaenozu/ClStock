@@ -555,7 +555,20 @@ class FullAutoInvestmentSystem:
                 strategy_confidence = max(
                     min(strategy.get('confidence_score', 0.0), 1.0), 0.0  # strategy から confidence_score を取得
                 )
-                risk_score = getattr(risk_analysis_for_payload, "total_risk_score", 0.5) if risk_analysis_for_payload else 0.5
+                if risk_analysis_for_payload:
+                    risk_score = getattr(risk_analysis_for_payload, "risk_score", None)
+                    if risk_score is None:
+                        raw_risk = getattr(risk_analysis_for_payload, "raw", None)
+                        if raw_risk is not None:
+                            risk_score = getattr(raw_risk, "total_risk_score", None)
+                    if risk_score is None:
+                        risk_score = getattr(risk_analysis_for_payload, "total_risk_score", 0.5)
+                else:
+                    risk_score = 0.5
+                try:
+                    risk_score = float(risk_score)
+                except (TypeError, ValueError):
+                    risk_score = 0.5
                 risk_adjusted_confidence = max(min(1.0 - risk_score, 1.0), 0.0)
                 # predictions から confidence を取得
                 prediction_confidence = predictions.get('confidence', 0.0)
