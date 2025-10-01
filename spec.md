@@ -71,7 +71,7 @@
 ### 第1段階（CUI + API）
 - **バックエンド**: Python (FastAPI)
 
-- **CUIクライアント**: `python clstock_cli.py`（例: `python clstock_cli.py system predict -s 7203`）（デフォルト: 10銘柄）
+- **CUIクライアント**: `python clstock_cli.py`（メニュー起動）や `python clstock_cli.py system predict -s 7203`（銘柄指定予測）（デフォルト: 10銘柄）
   - 実行ディレクトリ: リポジトリルート（`ClStock/`）
   - 前提条件: `pip install -r requirements.txt` などで依存関係（特に NumPy などの科学計算ライブラリ）を事前にインストールしておく
   - 将来的には、ランキング件数を指定する機能が追加される可能性があります
