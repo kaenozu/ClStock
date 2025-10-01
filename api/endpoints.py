@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.security import HTTPAuthorizationCredentials
 
 from datetime import datetime, time
+from zoneinfo import ZoneInfo
 from dataclasses import dataclass
 from typing import List
 import pandas as pd
@@ -27,7 +28,7 @@ router = APIRouter()
 
 @router.get("/recommendations", response_model=RecommendationResponse)
 async def get_recommendations(
-    top_n: int = Query(5, ge=1, le=50, description="推奨銘柄の上位N件を取得"),
+    top_n: int = Query(10, ge=1, le=50, description="推奨銘柄の上位N件を取得"),
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     try:
@@ -37,7 +38,7 @@ async def get_recommendations(
         predictor = MLStockPredictor()
         recommendations = predictor.get_top_recommendations(top_n)
 
-        current_time = datetime.now()
+        current_time = datetime.now(ZoneInfo("Asia/Tokyo"))
         market_open_time = time(9, 0)
         market_close_time = time(15, 0)
 
@@ -158,7 +159,17 @@ async def get_stock_data(
             )
 
         technical_data = data_provider.calculate_technical_indicators(data)
-        financial_metrics = data_provider.get_financial_metrics(lookup_symbol)
+        raw_financial_metrics = (
+            data_provider.get_financial_metrics(lookup_symbol) or {}
+        )
+        company_name = data_provider.jp_stock_codes.get(
+            lookup_symbol, lookup_symbol
+        )
+        financial_metrics = dict(raw_financial_metrics)
+        financial_metrics["symbol"] = validated_symbol
+        if "company_name" in financial_metrics or company_name != lookup_symbol:
+            financial_metrics["company_name"] = company_name
+        financial_metrics.setdefault("actual_ticker", lookup_symbol)
 
         current_price = float(technical_data["Close"].iloc[-1])
         price_change = 0.0
@@ -173,9 +184,7 @@ async def get_stock_data(
 
         return {
             "symbol": validated_symbol,
-            "company_name": data_provider.jp_stock_codes.get(
-                lookup_symbol, lookup_symbol
-            ),
+            "company_name": company_name,
             "current_price": current_price,
             "price_change": price_change,
             "price_change_percent": price_change_percent,
