@@ -113,6 +113,27 @@ class RiskManagerAdapter:
         self._manager = manager or RiskManager()
         self.logger = logging.getLogger(self.__class__.__name__)
 
+    def analyze_portfolio_risk(
+        self,
+        portfolio_data: Dict[str, Any],
+        price_map: Dict[str, pd.DataFrame],
+    ) -> Optional[RiskAssessment]:
+        try:
+            return self._manager.analyze_portfolio_risk(portfolio_data, price_map)
+        except AttributeError:
+            self.logger.debug(
+                "RiskManager missing analyze_portfolio_risk, falling back",
+                exc_info=True,
+            )
+            if not price_map:
+                return None
+
+            symbol, price_data = next(iter(price_map.items()))
+            return self.analyze_risk(symbol, price_data, {})
+        except Exception:
+            self.logger.exception("Portfolio risk analysis failed")
+            return None
+
     def analyze_risk(
         self,
         symbol: str,
