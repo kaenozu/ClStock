@@ -292,8 +292,13 @@ class StockDataProvider:
     # Helper methods
     # ------------------------------------------------------------------
     def _ticker_formats(self, symbol: str) -> List[str]:
-        base = symbol.split(".")[0]
-        variants = [f"{base}.T", f"{base}.TO", base]
+        normalized = symbol.upper()
+        if "." in normalized:
+            base, _ = normalized.split(".", 1)
+        else:
+            base = normalized
+
+        variants = [normalized, f"{base}.T", f"{base}.TO", base]
         seen: Dict[str, None] = {}
         result: List[str] = []
         for candidate in variants:

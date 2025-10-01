@@ -63,10 +63,10 @@ def test_get_stock_data_accepts_suffix_symbols(mock_provider_cls):
         {
             "Close": [200.0],
             "Volume": [2500],
-            "SMA_20": [None],
-            "SMA_50": [None],
-            "RSI": [None],
-            "MACD": [None],
+            "SMA_20": [210.0],
+            "SMA_50": [220.0],
+            "RSI": [55.5],
+            "MACD": [1.5],
         },
         index=pd.date_range("2024-02-01", periods=1),
     )
@@ -76,17 +76,23 @@ def test_get_stock_data_accepts_suffix_symbols(mock_provider_cls):
     mock_provider.get_financial_metrics.return_value = {
         "symbol": "7203",
         "company_name": "Test Corp",
-        "actual_ticker": "7203",
+        "actual_ticker": "7203.TO",
     }
 
     mock_provider_cls.return_value = mock_provider
 
-    response = client.get("/stock/7203.T/data?period=1mo")
+    response = client.get("/stock/7203.TO/data?period=1mo")
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["financial_metrics"]["symbol"] == "7203.T"
-    assert payload["financial_metrics"]["actual_ticker"] == "7203"
+    assert payload["financial_metrics"]["symbol"] == "7203.TO"
+    assert payload["financial_metrics"]["actual_ticker"] == "7203.TO"
+    assert payload["technical_indicators"] == {
+        "sma_20": 210.0,
+        "sma_50": 220.0,
+        "rsi": 55.5,
+        "macd": 1.5,
+    }
 
 
 @patch("api.endpoints.StockDataProvider")
