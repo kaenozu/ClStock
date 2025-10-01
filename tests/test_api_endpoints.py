@@ -72,13 +72,20 @@ def test_get_stock_data_accepts_suffix_symbols(mock_provider_cls):
 
     mock_provider.get_stock_data.return_value = suffix_df
     mock_provider.calculate_technical_indicators.return_value = suffix_df
-    mock_provider.get_financial_metrics.return_value = {}
+    mock_provider.get_financial_metrics.return_value = {
+        "symbol": "7203",
+        "company_name": "Test Corp",
+        "actual_ticker": "7203",
+    }
 
     mock_provider_cls.return_value = mock_provider
 
     response = client.get("/stock/7203.T/data?period=1mo")
 
     assert response.status_code == 200
+    payload = response.json()
+    assert payload["financial_metrics"]["symbol"] == "7203.T"
+    assert payload["financial_metrics"]["actual_ticker"] == "7203"
 
 
 @patch("api.endpoints.StockDataProvider")
