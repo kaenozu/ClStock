@@ -4,6 +4,7 @@ import uvicorn
 
 from api.endpoints import router
 from api.secure_endpoints import router as secure_router
+from api.security import add_security_middleware
 # from models.recommendation import StockRecommendation # 削除
 
 app = FastAPI(
@@ -11,6 +12,8 @@ app = FastAPI(
     description="初心者向け株式銘柄推奨システム",
     version="1.0.0",
 )
+
+add_security_middleware(app)
 
 app.include_router(router, prefix="/api/v1")
 app.include_router(secure_router, prefix="/api/v1")
