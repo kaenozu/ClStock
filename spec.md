@@ -62,7 +62,7 @@
 ## 5. システム構成
 ### 第1段階（CUI + API）
 - **バックエンド**: Python (FastAPI)
-- **CUIクライアント**: `python clstock_cli.py`（例: `python clstock_cli.py system predict -s 7203`）
+- **CUIクライアント**: `python clstock_cli.py`（例: `python clstock_cli.py system predict -s 7203`）（デフォルト: 10銘柄）
 - **出力形式**: JSON + テキスト
 
 ### 第2段階（GUI）
