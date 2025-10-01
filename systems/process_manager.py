@@ -12,13 +12,7 @@ import threading # Added for start_service
 import time # Added for start_service
 from enum import Enum # Added for start_service
 from dataclasses import dataclass, field # Added for start_service
-from pathlib import Path # Added for start_service
 from typing import Union, Sequence # Added for start_service
-
-# プロジェクトルート設定
-PROJECT_ROOT = Path(__file__).parent.parent
-import sys # Added for start_service
-sys.path.append(str(PROJECT_ROOT))
 
 from utils.logger_config import get_logger
 from config.settings import get_settings
