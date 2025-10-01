@@ -1,3 +1,8 @@
+import os
+
+os.environ.setdefault("CLSTOCK_DEV_KEY", "dev-key")
+os.environ.setdefault("CLSTOCK_ADMIN_KEY", "admin-key")
+
 import pandas as pd
 from datetime import datetime
 
@@ -57,32 +62,22 @@ def test_get_stock_data_invalid_period_returns_400(mock_provider_cls):
     mock_provider_cls.assert_not_called()
 
 
-def test_get_recommendations_uses_single_datetime_call(monkeypatch):
+@patch("api.endpoints.MLStockPredictor")
+@patch("api.endpoints.verify_token")
+def test_get_recommendations_allows_top_n_50(mock_verify_token, mock_predictor_cls):
     app = FastAPI()
     app.include_router(router)
     client = TestClient(app)
 
-    call_counter = {"count": 0}
-
-    class DummyDateTime:
-        @classmethod
-        def now(cls, tz=None):
-            call_counter["count"] += 1
-            return datetime(2024, 1, 1, 10, 0, 0)
-
-    monkeypatch.setattr("api.endpoints.datetime", DummyDateTime)
-
-    class DummyPredictor:
-        def get_top_recommendations(self, top_n):
-            return []
-
-    monkeypatch.setattr("api.endpoints.MLStockPredictor", lambda: DummyPredictor())
-    monkeypatch.setattr("api.endpoints.verify_token", lambda token: None)
+    mock_predictor = MagicMock()
+    mock_predictor.get_top_recommendations.return_value = []
+    mock_predictor_cls.return_value = mock_predictor
 
     response = client.get(
-        "/recommendations",
+        "/recommendations?top_n=50",
         headers={"Authorization": "Bearer test-token"},
     )
 
     assert response.status_code == 200
-    assert call_counter["count"] == 1
+    mock_verify_token.assert_called_once_with("test-token")
+    mock_predictor.get_top_recommendations.assert_called_once_with(50)
