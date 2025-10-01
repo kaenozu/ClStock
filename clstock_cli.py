@@ -13,9 +13,8 @@ from typing import Optional
 
 # プロジェクトルート設定
 PROJECT_ROOT = Path(__file__).parent
-sys.path.append(str(PROJECT_ROOT))
 
-from systems.process_manager import get_process_manager, ProcessStatus
+from ClStock.systems.process_manager import get_process_manager, ProcessStatus
 from utils.logger_config import get_logger
 from config.settings import get_settings
 
