@@ -6,7 +6,7 @@ import time
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-from systems.process_manager import (
+from ClStock.systems.process_manager import (
     ProcessManager,
     ProcessInfo,
     ProcessStatus,
@@ -78,7 +78,7 @@ class TestProcessManagerComprehensive:
         assert process_info.restart_count == 0
         assert process_info.last_error is None
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_service_lifecycle_complete(self, mock_popen):
         """Test complete service lifecycle: register, start, stop, restart."""
         mock_process = Mock()
@@ -107,7 +107,7 @@ class TestProcessManagerComprehensive:
         assert pm.restart_service("lifecycle_test") is True
         assert pm.processes["lifecycle_test"].status == ProcessStatus.RUNNING
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_start_service_various_failure_scenarios(self, mock_popen):
         """Test service start with various failure scenarios."""
         pm = ProcessManager()
@@ -133,7 +133,7 @@ class TestProcessManagerComprehensive:
         assert pm.processes["investment_system"].status == ProcessStatus.FAILED
         assert pm.processes["investment_system"].last_error == "generic error"
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_stop_service_scenarios(self, mock_popen):
         """Test various service stop scenarios."""
         mock_process = Mock()
@@ -157,7 +157,7 @@ class TestProcessManagerComprehensive:
         assert result is True
         assert pm.processes["dashboard"].status == ProcessStatus.STOPPED
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_stop_service_with_force(self, mock_popen):
         """Test force stopping a service."""
         mock_process = Mock()
@@ -203,7 +203,7 @@ class TestProcessManagerComprehensive:
         assert "monitoring_active" in system_status
         assert system_status["total_services"] == len(pm.processes)
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_auto_restart_functionality(self, mock_popen):
         """Test auto-restart functionality."""
         mock_process = Mock()
@@ -229,8 +229,8 @@ class TestProcessManagerComprehensive:
         assert pm.processes["restart_test"].status == ProcessStatus.RUNNING
         assert pm.processes["restart_test"].restart_count == 0
 
-    @patch("systems.process_manager.subprocess.Popen")
-    @patch("systems.process_manager.psutil.Process")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.psutil.Process")
     def test_process_health_check(self, mock_psutil_process, mock_popen):
         """Test process health check functionality."""
         mock_process = Mock()
@@ -253,7 +253,7 @@ class TestProcessManagerComprehensive:
         # Process should still be running
         assert pm.processes["dashboard"].status == ProcessStatus.RUNNING
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_stop_all_services(self, mock_popen):
         """Test stopping all services."""
         mock_process = Mock()
@@ -291,7 +291,7 @@ class TestProcessManagerComprehensive:
         assert pm.register_service(service2) is True
         assert pm.processes["test_service"].command == "python test2.py"
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_concurrent_service_operations(self, mock_popen):
         """Test concurrent service operations."""
         mock_process = Mock()
