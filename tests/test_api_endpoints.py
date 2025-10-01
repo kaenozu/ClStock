@@ -1,4 +1,6 @@
 import pandas as pd
+from datetime import datetime
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
@@ -53,3 +55,34 @@ def test_get_stock_data_invalid_period_returns_400(mock_provider_cls):
     assert response.status_code == 400
     assert "Invalid period" in response.json()["detail"]
     mock_provider_cls.assert_not_called()
+
+
+def test_get_recommendations_uses_single_datetime_call(monkeypatch):
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    call_counter = {"count": 0}
+
+    class DummyDateTime:
+        @classmethod
+        def now(cls, tz=None):
+            call_counter["count"] += 1
+            return datetime(2024, 1, 1, 10, 0, 0)
+
+    monkeypatch.setattr("api.endpoints.datetime", DummyDateTime)
+
+    class DummyPredictor:
+        def get_top_recommendations(self, top_n):
+            return []
+
+    monkeypatch.setattr("api.endpoints.MLStockPredictor", lambda: DummyPredictor())
+    monkeypatch.setattr("api.endpoints.verify_token", lambda token: None)
+
+    response = client.get(
+        "/recommendations",
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200
+    assert call_counter["count"] == 1
