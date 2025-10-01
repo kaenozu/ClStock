@@ -130,6 +130,35 @@ class TempFileCleanup:
             logger.error(f"Error during old files cleanup: {e}")
 
 
+    def cleanup_by_pattern(self, pattern: str) -> int:
+        """Remove files or directories that match the provided glob pattern."""
+
+        removed_count = 0
+        paths = glob.glob(pattern)
+
+        for path in paths:
+            try:
+                if os.path.isdir(path) and not os.path.islink(path):
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
+                removed_count += 1
+                logger.debug(f"Removed path via pattern cleanup: {path}")
+            except FileNotFoundError:
+                logger.debug(f"Path already removed before pattern cleanup: {path}")
+            except Exception as exc:
+                logger.warning(f"Failed to remove path {path} during pattern cleanup: {exc}")
+
+        if removed_count > 0:
+            logger.info(
+                "Removed %d items matching pattern '%s' during temp cleanup",
+                removed_count,
+                pattern,
+            )
+
+        return removed_count
+
+
 # Global instance
 temp_cleanup = TempFileCleanup()
 
