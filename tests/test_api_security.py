@@ -347,6 +347,31 @@ class TestAPIEndpointSecurity:
             assert "symbol" in response.json()
             assert response.json()["symbol"] == "7203"
 
+    @patch("api.secure_endpoints.verify_token")
+    @patch("api.secure_endpoints.StockDataProvider")
+    def test_secure_endpoint_unknown_symbol_returns_404(
+        self, mock_provider, mock_verify
+    ):
+        """未登録銘柄を要求した際に404を返すことを確認"""
+
+        from utils.exceptions import DataFetchError
+
+        mock_verify.return_value = "user"
+
+        mock_provider_instance = Mock()
+        mock_provider_instance.get_stock_data.side_effect = DataFetchError(
+            "UNKNOWN", "Symbol not found"
+        )
+        mock_provider.return_value = mock_provider_instance
+
+        headers = {"Authorization": f"Bearer {TEST_DEV_KEY}"}
+        response = self.client.get(
+            "/secure/stock/UNKNOWN/data", headers=headers
+        )
+
+        assert response.status_code == 404
+        assert "UNKNOWN" in response.json()["detail"]
+
     def test_health_endpoint_no_auth(self):
         """ヘルスチェックエンドポイント（認証不要）"""
         response = self.client.get("/secure/health")
