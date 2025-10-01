@@ -158,7 +158,17 @@ async def get_stock_data(
             )
 
         technical_data = data_provider.calculate_technical_indicators(data)
-        financial_metrics = data_provider.get_financial_metrics(lookup_symbol)
+        raw_financial_metrics = (
+            data_provider.get_financial_metrics(lookup_symbol) or {}
+        )
+        company_name = data_provider.jp_stock_codes.get(
+            lookup_symbol, lookup_symbol
+        )
+        financial_metrics = dict(raw_financial_metrics)
+        financial_metrics["symbol"] = validated_symbol
+        if "company_name" in financial_metrics or company_name != lookup_symbol:
+            financial_metrics["company_name"] = company_name
+        financial_metrics.setdefault("actual_ticker", lookup_symbol)
 
         current_price = float(technical_data["Close"].iloc[-1])
         price_change = 0.0
@@ -173,9 +183,7 @@ async def get_stock_data(
 
         return {
             "symbol": validated_symbol,
-            "company_name": data_provider.jp_stock_codes.get(
-                lookup_symbol, lookup_symbol
-            ),
+            "company_name": company_name,
             "current_price": current_price,
             "price_change": price_change,
             "price_change_percent": price_change_percent,
