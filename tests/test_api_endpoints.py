@@ -128,10 +128,15 @@ def test_get_recommendations_returns_closed_after_15(monkeypatch):
     monkeypatch.setattr("api.endpoints.datetime", DummyDateTime)
 
     class DummyPredictor:
+        def __init__(self) -> None:
+            self.received_top_n = None
+
         def get_top_recommendations(self, top_n):
+            self.received_top_n = top_n
             return []
 
-    monkeypatch.setattr("api.endpoints.MLStockPredictor", lambda: DummyPredictor())
+    dummy_predictor = DummyPredictor()
+    monkeypatch.setattr("api.endpoints.MLStockPredictor", lambda: dummy_predictor)
     monkeypatch.setattr("api.endpoints.verify_token", lambda token: None)
 
     response = client.get(
@@ -140,6 +145,7 @@ def test_get_recommendations_returns_closed_after_15(monkeypatch):
     )
 
     assert response.status_code == 200
+    assert dummy_predictor.received_top_n == 10
     assert response.json()["market_status"] == "市場営業時間外"
 
 
