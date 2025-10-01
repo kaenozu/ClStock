@@ -86,3 +86,31 @@ def test_get_recommendations_uses_single_datetime_call(monkeypatch):
 
     assert response.status_code == 200
     assert call_counter["count"] == 1
+
+
+def test_get_recommendations_returns_closed_after_15(monkeypatch):
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    class DummyDateTime:
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2024, 1, 1, 15, 0, 0)
+
+    monkeypatch.setattr("api.endpoints.datetime", DummyDateTime)
+
+    class DummyPredictor:
+        def get_top_recommendations(self, top_n):
+            return []
+
+    monkeypatch.setattr("api.endpoints.MLStockPredictor", lambda: DummyPredictor())
+    monkeypatch.setattr("api.endpoints.verify_token", lambda token: None)
+
+    response = client.get(
+        "/recommendations",
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["market_status"] == "市場営業時間外"
