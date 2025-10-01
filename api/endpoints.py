@@ -41,12 +41,14 @@ async def get_recommendations(
         predictor = MLStockPredictor()
         recommendations = predictor.get_top_recommendations(top_n)
 
+        current_time = datetime.now()
+
         return RecommendationResponse(
             recommendations=recommendations,
-            generated_at=datetime.now(),
+            generated_at=current_time,
             market_status=(
                 "市場営業時間外"
-                if datetime.now().hour < 9 or datetime.now().hour > 15
+                if current_time.hour < 9 or current_time.hour > 15
                 else "市場営業中"
             ),
         )
