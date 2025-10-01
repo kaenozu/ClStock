@@ -134,7 +134,7 @@ class TestAPI:
         """無効なパラメータでの推奨銘柄エンドポイントテスト"""
         # top_nが範囲外
         response = client.get(
-            "/api/v1/recommendations?top_n=15", headers=AUTH_HEADER
+            "/api/v1/recommendations?top_n=51", headers=AUTH_HEADER
         )
         assert response.status_code == 422  # Validation Error
 

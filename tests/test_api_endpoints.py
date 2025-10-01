@@ -1,3 +1,8 @@
+import os
+
+os.environ.setdefault("CLSTOCK_DEV_KEY", "dev-key")
+os.environ.setdefault("CLSTOCK_ADMIN_KEY", "admin-key")
+
 import pandas as pd
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -53,3 +58,24 @@ def test_get_stock_data_invalid_period_returns_400(mock_provider_cls):
     assert response.status_code == 400
     assert "Invalid period" in response.json()["detail"]
     mock_provider_cls.assert_not_called()
+
+
+@patch("api.endpoints.MLStockPredictor")
+@patch("api.endpoints.verify_token")
+def test_get_recommendations_allows_top_n_50(mock_verify_token, mock_predictor_cls):
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    mock_predictor = MagicMock()
+    mock_predictor.get_top_recommendations.return_value = []
+    mock_predictor_cls.return_value = mock_predictor
+
+    response = client.get(
+        "/recommendations?top_n=50",
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200
+    mock_verify_token.assert_called_once_with("test-token")
+    mock_predictor.get_top_recommendations.assert_called_once_with(50)
