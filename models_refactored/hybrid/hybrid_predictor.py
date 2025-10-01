@@ -18,6 +18,7 @@ from ..core.interfaces import (
     CacheProvider,
     PredictionResult,
     BatchPredictionResult,
+    PredictionMode,
 )
 from ..core.base_predictor import BaseStockPredictor
 from ..ensemble.ensemble_predictor import EnsemblePredictor
@@ -38,17 +39,24 @@ class RefactoredHybridPredictor(BaseStockPredictor):
         cache_provider: CacheProvider = None,
         enable_real_time_learning: bool = True,
         enable_batch_optimization: bool = True,
+        enable_cache: bool = True,
+        enable_adaptive_optimization: bool = True,
+        enable_streaming: bool = True,
+        enable_multi_gpu: bool = True,
     ):
         super().__init__(config or ModelConfiguration(), data_provider, cache_provider)
         self.logger = logging.getLogger(__name__)
 
-        # エンサンブル予測器を内部で使用
-        self.ensemble_predictor = EnsemblePredictor(
-            config=config, data_provider=data_provider, cache_provider=cache_provider
+        # エンサンブル予測器を内部で使用（互換性のため簡易初期化）
+        ensemble_model_name = (
+            config.model_type.value if config else "RefactoredHybridPredictor"
         )
+        self.ensemble_predictor = EnsemblePredictor(model_name=ensemble_model_name)
 
         # リアルタイム学習設定
         self.enable_real_time_learning = enable_real_time_learning
+        # Phase2フラグ互換性保持用の属性
+        self.real_time_learning_enabled = enable_real_time_learning
         self.learning_history = deque(maxlen=1000)  # 学習履歴
         self.prediction_errors = deque(maxlen=100)  # 予測誤差記録
 
@@ -60,6 +68,17 @@ class RefactoredHybridPredictor(BaseStockPredictor):
             "large": 100,
             "massive": 500,
         }
+
+        # 追加機能フラグ（現時点では予約。テストで指定可能にするため保持）
+        self.cache_enabled = enable_cache
+        self.adaptive_optimization_enabled = enable_adaptive_optimization
+        self.streaming_enabled = enable_streaming
+        self.multi_gpu_enabled = enable_multi_gpu
+        # 互換性のための別名も保持
+        self.enable_cache = enable_cache
+        self.enable_adaptive_optimization = enable_adaptive_optimization
+        self.enable_streaming = enable_streaming
+        self.enable_multi_gpu = enable_multi_gpu
 
         self.logger.info("RefactoredHybridPredictor initialized with Issue #9 fixes")
 
@@ -184,13 +203,68 @@ class RefactoredHybridPredictor(BaseStockPredictor):
             self.logger.error(f"Deterministic prediction failed for {symbol}: {e}")
             return self.NEUTRAL_PREDICTION_VALUE
 
+    def _record_prediction(
+        self,
+        symbol: str,
+        prediction_result: PredictionResult,
+        mode: Optional[PredictionMode] = None,
+        prediction_time: Optional[float] = None,
+    ) -> None:
+        """予測履歴とフィードバックを記録"""
+
+        # 予測履歴（Phase2互換）
+        if hasattr(self, "prediction_history") and self.prediction_history is not None:
+            history_entry = {
+                "symbol": symbol,
+                "prediction": prediction_result.prediction,
+                "confidence": prediction_result.confidence,
+                "accuracy": prediction_result.accuracy,
+                "mode": mode.value if mode else None,
+                "prediction_time": prediction_time,
+                "timestamp": datetime.now(),
+            }
+            # 実際の価格を保存できる場合は追加
+            actual_from_metadata = prediction_result.metadata.get("current_price") if prediction_result.metadata else None
+            if actual_from_metadata is not None:
+                history_entry["actual"] = actual_from_metadata
+            self.prediction_history.append(history_entry)
+
+        actual_price = (
+            prediction_result.metadata.get("current_price")
+            if prediction_result.metadata
+            else None
+        )
+        if actual_price is None:
+            actual_price = self._get_actual_market_price(symbol)
+
+        # リアルタイム学習システムへのフィードバック
+        if (
+            actual_price is not None
+            and getattr(self, "real_time_learning_enabled", False)
+            and getattr(self, "real_time_learner", None)
+        ):
+            self.real_time_learner.add_prediction_feedback(
+                prediction=prediction_result.prediction,
+                actual=actual_price,
+                symbol=symbol,
+            )
+
+        # 既存の学習履歴更新ロジックを呼び出し
+        self._record_prediction_with_actual_price(
+            symbol, prediction_result, actual_price=actual_price
+        )
+
     def _record_prediction_with_actual_price(
-        self, symbol: str, prediction_result: PredictionResult
+        self,
+        symbol: str,
+        prediction_result: PredictionResult,
+        actual_price: Optional[float] = None,
     ):
         """予測と実際の価格を記録（Issue #9修正: 実際の価格を使用）"""
         try:
             # 実際の市場価格を取得
-            actual_price = self._get_actual_market_price(symbol)
+            if actual_price is None:
+                actual_price = self._get_actual_market_price(symbol)
 
             if actual_price is not None:
                 # 予測誤差を計算
