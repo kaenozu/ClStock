@@ -21,6 +21,7 @@ from utils.validators import (
 
 # データプロバイダー
 from data.stock_data import StockDataProvider
+from utils.exceptions import DataFetchError
 
 # ログ設定
 logger = logging.getLogger(__name__)
@@ -222,6 +223,9 @@ async def get_stock_analysis(
     except ValidationError as e:
         log_validation_error(e, {"endpoint": "/secure/analysis", "symbol": symbol})
         raise HTTPException(status_code=400, detail=str(e))
+    except DataFetchError as e:
+        logger.error(f"Error in stock analysis: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
