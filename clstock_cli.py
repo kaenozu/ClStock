@@ -23,6 +23,22 @@ logger = get_logger(__name__)
 settings = get_settings()
 
 
+def _raise_cli_error(message: str) -> None:
+    """Log and raise a ClickException with the provided message."""
+
+    logger.error(message)
+    raise click.ClickException(message)
+
+
+def _bad_parameter(message: str, param_name: Optional[str] = None) -> None:
+    """Raise a BadParameter error while preserving logging."""
+
+    logger.error(message)
+    if param_name:
+        raise click.BadParameter(message, param_hint=param_name)
+    raise click.BadParameter(message)
+
+
 @click.group()
 @click.option("--verbose", "-v", is_flag=True, help="詳細ログ出力")
 def cli(verbose):
@@ -51,8 +67,7 @@ def start(name: Optional[str]):
         if manager.start_service(name):
             click.echo(f"[成功] サービス開始: {name}")
         else:
-            click.echo(f"[失敗] サービス開始失敗: {name}")
-            sys.exit(1)
+            _raise_cli_error(f"[失敗] サービス開始失敗: {name}")
     else:
         # 利用可能なサービス表示
         click.echo("利用可能なサービス:")
@@ -74,8 +89,7 @@ def stop(name: Optional[str], force: bool):
         if manager.stop_service(name, force=force):
             click.echo(f"[成功] サービス停止: {name}")
         else:
-            click.echo(f"[失敗] サービス停止失敗: {name}")
-            sys.exit(1)
+            _raise_cli_error(f"[失敗] サービス停止失敗: {name}")
     else:
         # 全サービス停止確認
         if click.confirm("全サービスを停止しますか？"):
@@ -92,8 +106,7 @@ def restart(name: str):
     if manager.restart_service(name):
         click.echo(f"[成功] サービス再起動: {name}")
     else:
-        click.echo(f"[失敗] サービス再起動失敗: {name}")
-        sys.exit(1)
+        _raise_cli_error(f"[失敗] サービス再起動失敗: {name}")
 
 
 @service.command()
@@ -187,8 +200,7 @@ def dashboard():
         click.echo("[成功] ダッシュボード起動完了")
         click.echo("📱 http://localhost:8000 でアクセスできます")
     else:
-        click.echo("[失敗] ダッシュボード起動失敗")
-        sys.exit(1)
+        _raise_cli_error("[失敗] ダッシュボード起動失敗")
 
 
 @system.command()
@@ -200,8 +212,7 @@ def demo():
     if manager.start_service("demo_trading"):
         click.echo("[成功] デモ取引開始完了")
     else:
-        click.echo("[失敗] デモ取引開始失敗")
-        sys.exit(1)
+        _raise_cli_error("[失敗] デモ取引開始失敗")
 
 
 @system.command()
@@ -210,13 +221,11 @@ def predict(symbol: str):
     """予測システムの実行"""
     # 入力バリデーション
     if not symbol or not isinstance(symbol, str):
-        click.echo("[失敗] 無効な銘柄コード")
-        sys.exit(1)
+        _bad_parameter("無効な銘柄コード", param_name="symbol")
 
     # 銘柄コードの形式チェック（数値のみ）
     if not symbol.isdigit():
-        click.echo("[失敗] 銘柄コードは数値のみ有効です")
-        sys.exit(1)
+        _bad_parameter("銘柄コードは数値のみ有効です", param_name="symbol")
 
     click.echo(f"🔮 予測システム実行: {symbol}")
 
@@ -238,8 +247,7 @@ def predict(symbol: str):
         )
 
     except Exception as e:
-        click.echo(f"[失敗] 予測実行エラー: {e}")
-        sys.exit(1)
+        _raise_cli_error(f"[失敗] 予測実行エラー: {e}")
 
 
 @system.command()
@@ -251,8 +259,7 @@ def optimize():
     if manager.start_service("optimized_system"):
         click.echo("[成功] ウルトラ最適化システム起動完了")
     else:
-        click.echo("[失敗] 最適化システム起動失敗")
-        sys.exit(1)
+        _raise_cli_error("[失敗] 最適化システム起動失敗")
 
 
 @system.command()
@@ -264,8 +271,7 @@ def integration():
     if manager.start_service("integration_test"):
         click.echo("[成功] 統合テストサービス起動完了")
     else:
-        click.echo("[失敗] 統合テストサービス起動失敗")
-        sys.exit(1)
+        _raise_cli_error("[失敗] 統合テストサービス起動失敗")
 
 
 @cli.group()
@@ -294,10 +300,10 @@ def fetch(symbol, period):
         "max",
     ]
     if period not in valid_periods:
-        click.echo(
-            f"[失敗] 無効な期間: {period}. 有効な期間: {', '.join(valid_periods)}"
+        _bad_parameter(
+            f"無効な期間: {period}. 有効な期間: {', '.join(valid_periods)}",
+            param_name="period",
         )
-        sys.exit(1)
 
     if not symbol:
         symbol = ["7203", "6758", "8306", "6861", "9984"]  # デフォルト銘柄
@@ -305,8 +311,7 @@ def fetch(symbol, period):
     # 銘柄コードのバリデーション
     for sym in symbol:
         if not isinstance(sym, str) or not sym.isdigit():
-            click.echo(f"[失敗] 無効な銘柄コード: {sym}")
-            sys.exit(1)
+            _bad_parameter(f"無効な銘柄コード: {sym}", param_name="symbol")
 
     click.echo(f"📊 データ取得: {list(symbol)} (期間: {period})")
 
@@ -328,8 +333,7 @@ def fetch(symbol, period):
         click.echo("[成功] データ取得完了")
 
     except Exception as e:
-        click.echo(f"[失敗] データ取得エラー: {e}")
-        sys.exit(1)
+        _raise_cli_error(f"[失敗] データ取得エラー: {e}")
 
 
 @cli.command()
@@ -359,9 +363,10 @@ def setup():
 
         click.echo("[成功] 必要なライブラリがインストール済み")
     except ImportError as e:
+        logger.error(f"不足ライブラリ: {e}")
         click.echo(f"[失敗] 不足ライブラリ: {e}")
         click.echo("pip install -r requirements.txt を実行してください")
-        sys.exit(1)
+        raise click.ClickException("セットアップに必要なライブラリが不足しています")
 
     click.echo("[成功] セットアップ完了")
 
