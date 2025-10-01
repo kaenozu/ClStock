@@ -40,7 +40,6 @@ for module_name, class_name in [
 ]:
     _stub_module(module_name, class_name)
 
-
 from full_auto_system import AutoRecommendation, FullAutoInvestmentSystem
 from models_new.base.interfaces import PredictionResult
 from models_new.advanced.risk_management_framework import (
@@ -138,3 +137,55 @@ async def test_analyze_single_stock_uses_new_components(monkeypatch):
 
     system.sentiment_analyzer.analyze_news_sentiment.assert_called_once()  # type: ignore[attr-defined]
     system.strategy_generator.generate_momentum_strategy.assert_called_once_with("TEST", data)  # type: ignore[attr-defined]
+
+@pytest.mark.asyncio
+async def test_analyze_single_stock_with_empty_strategy_returns_none(monkeypatch):
+    system = FullAutoInvestmentSystem()
+
+    prediction_result = PredictionResult(
+        prediction=110.0,
+        confidence=0.8,
+        accuracy=0.9,
+        timestamp=datetime.now(),
+        symbol="TEST",
+        metadata={},
+    )
+    predictor = SimpleNamespace()
+    predictor.predict = MagicMock(return_value=prediction_result)  # type: ignore[attr-defined]
+    system.predictor = predictor  # type: ignore[assignment]
+
+    portfolio_risk = PortfolioRisk(
+        total_risk_score=0.3,
+        risk_level=RiskLevel.LOW,
+        individual_metrics={},
+        risk_breakdown={},
+        recommendations=["Diversify"],
+        max_safe_position_size=0.1,
+        timestamp=datetime.now(),
+    )
+    risk_manager = SimpleNamespace()
+    risk_manager.analyze_portfolio_risk = MagicMock(return_value=portfolio_risk)  # type: ignore[attr-defined]
+    system.risk_manager = risk_manager  # type: ignore[assignment]
+
+    sentiment_analyzer = SimpleNamespace()
+    sentiment_analyzer.analyze_news_sentiment = MagicMock(return_value=0.25)  # type: ignore[attr-defined]
+    system.sentiment_analyzer = sentiment_analyzer  # type: ignore[assignment]
+
+    # 空の辞書を返すようにモックを設定
+    strategy_generator = SimpleNamespace()
+    strategy_generator.generate_strategy = MagicMock(return_value={})  # type: ignore[attr-defined]
+    system.strategy_generator = strategy_generator  # type: ignore[assignment]
+
+    data = pd.DataFrame(
+        {"Close": [100.0, 102.0], "High": [101.0, 103.0], "Low": [99.0, 101.0]},
+        index=pd.date_range("2024-01-01", periods=2),
+    )
+    data.attrs.setdefault("info", {})["longName"] = "Test Corp"
+
+    recommendation = await system._analyze_single_stock("TEST", data)
+
+    # recommendation が None であることを確認
+    assert recommendation is None
+
+    # generate_strategy が呼び出されたことを確認
+    system.strategy_generator.generate_strategy.assert_called_once()  # type: ignore[attr-defined]
