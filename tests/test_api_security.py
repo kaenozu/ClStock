@@ -402,6 +402,28 @@ class TestAPIEndpointSecurity:
             assert response.json()["analyst"] == "administrator"
 
     @patch("api.secure_endpoints.verify_token")
+    @patch("api.secure_endpoints.StockDataProvider")
+    def test_admin_only_endpoint_data_fetch_error_returns_not_found(
+        self, mock_provider, mock_verify
+    ):
+        """データ取得エラー時に404が返ることを検証"""
+        from utils.exceptions import DataFetchError
+
+        mock_verify.return_value = "administrator"
+
+        mock_provider_instance = Mock()
+        mock_provider_instance.get_stock_data.side_effect = DataFetchError(
+            "7203", "No data available"
+        )
+        mock_provider.return_value = mock_provider_instance
+
+        headers = {"Authorization": f"Bearer {TEST_ADMIN_KEY}"}
+        response = self.client.get("/secure/analysis/7203", headers=headers)
+
+        assert response.status_code == 404
+        assert "No data available" in response.json()["detail"]
+
+    @patch("api.secure_endpoints.verify_token")
     def test_batch_endpoint_symbol_limit_user(
         self, mock_verify
     ):
