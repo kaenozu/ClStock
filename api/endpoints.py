@@ -159,6 +159,15 @@ async def get_stock_data(
             )
 
         technical_data = data_provider.calculate_technical_indicators(data)
+        actual_ticker = lookup_symbol
+        if "ActualTicker" in technical_data.columns:
+            actual_ticker_series = technical_data["ActualTicker"].dropna()
+            if not actual_ticker_series.empty:
+                latest_actual_ticker = actual_ticker_series.iloc[-1]
+                if pd.notna(latest_actual_ticker):
+                    latest_actual_ticker = str(latest_actual_ticker).strip()
+                    if latest_actual_ticker:
+                        actual_ticker = latest_actual_ticker
         raw_financial_metrics = (
             data_provider.get_financial_metrics(lookup_symbol) or {}
         )
@@ -169,7 +178,7 @@ async def get_stock_data(
         financial_metrics["symbol"] = validated_symbol
         if "company_name" in financial_metrics or company_name != lookup_symbol:
             financial_metrics["company_name"] = company_name
-        financial_metrics.setdefault("actual_ticker", lookup_symbol)
+        financial_metrics.setdefault("actual_ticker", actual_ticker)
 
         current_price = float(technical_data["Close"].iloc[-1])
         price_change = 0.0

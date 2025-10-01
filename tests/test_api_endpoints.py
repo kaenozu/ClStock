@@ -90,6 +90,43 @@ def test_get_stock_data_accepts_suffix_symbols(mock_provider_cls):
 
 
 @patch("api.endpoints.StockDataProvider")
+def test_get_stock_data_actual_ticker_prefers_technical_data(mock_provider_cls):
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    mock_provider = MagicMock()
+    mock_provider.get_all_stock_symbols.return_value = {"7203": "Test Corp"}
+
+    base_df = pd.DataFrame(
+        {
+            "Close": [300.0],
+            "Volume": [3500],
+            "SMA_20": [None],
+            "SMA_50": [None],
+            "RSI": [None],
+            "MACD": [None],
+        },
+        index=pd.date_range("2024-03-01", periods=1),
+    )
+
+    technical_df = base_df.copy()
+    technical_df["ActualTicker"] = ["7203.T"]
+
+    mock_provider.get_stock_data.return_value = base_df
+    mock_provider.calculate_technical_indicators.return_value = technical_df
+    mock_provider.get_financial_metrics.return_value = {}
+
+    mock_provider_cls.return_value = mock_provider
+
+    response = client.get("/stock/7203.T/data?period=1mo")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["financial_metrics"]["actual_ticker"] == "7203.T"
+
+
+@patch("api.endpoints.StockDataProvider")
 def test_get_stock_data_invalid_period_returns_400(mock_provider_cls):
     app = FastAPI()
     app.include_router(router)
