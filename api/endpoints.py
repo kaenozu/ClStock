@@ -129,7 +129,17 @@ async def get_stock_data(
 
         data_provider = StockDataProvider()
 
-        if validated_symbol not in data_provider.get_all_stock_symbols():
+        available_symbols = set(data_provider.get_all_stock_symbols())
+        lookup_symbol = None
+
+        if validated_symbol in available_symbols:
+            lookup_symbol = validated_symbol
+        else:
+            base_symbol = validated_symbol.split(".")[0]
+            if base_symbol in available_symbols:
+                lookup_symbol = base_symbol
+
+        if lookup_symbol is None:
             raise HTTPException(
                 status_code=404, detail=f"銘柄コード {symbol} が見つかりません"
             )
@@ -158,7 +168,7 @@ async def get_stock_data(
         return {
             "symbol": validated_symbol,
             "company_name": data_provider.jp_stock_codes.get(
-                validated_symbol, validated_symbol
+                lookup_symbol, lookup_symbol
             ),
             "current_price": current_price,
             "price_change": price_change,
