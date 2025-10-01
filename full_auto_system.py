@@ -400,10 +400,9 @@ class FullAutoInvestmentSystem:
             for i, symbol in enumerate(all_symbols):
                 company_name = target_stocks.get(symbol, symbol)
                 try:
-                    data = self.data_provider.fetch_stock_data(
+                    data = self.data_provider.get_stock_data(
                         symbol,
                         period="2y",
-                        interval="1d",
                     )
                     if data is not None and not data.empty:
                         data.attrs.setdefault("info", {})["longName"] = company_name
@@ -498,8 +497,8 @@ class FullAutoInvestmentSystem:
                 return None
 
             # 1. 予測モデル適用
-            prediction_result = self.predictor.predict(symbol)
-            if not prediction_result:
+            predictions = self.predictor.predict(symbol, data)
+            if not predictions:
                 logger.warning(f"{symbol}: 予測モデル適用失敗")
                 return None
 
@@ -510,7 +509,11 @@ class FullAutoInvestmentSystem:
             risk_analysis = self.risk_manager.analyze_risk(symbol, data, predictions)
             if not risk_analysis:
                 logger.warning(f"{symbol}: リスク分析失敗")
-                return None
+                # リスク分析が失敗した場合も処理を継続するか、None を返すかを検討
+                # ここでは、リスク分析がなくても戦略生成を試みる
+                risk_analysis_for_payload = None
+            else:
+                risk_analysis_for_payload = risk_analysis
 
             # 3. 感情分析 (ニュース等はダミー)
             sentiment_result = self.sentiment_analyzer.analyze_sentiment(symbol)
@@ -521,21 +524,16 @@ class FullAutoInvestmentSystem:
             )
 
             # 5. 推奨情報構築
-            if trading_strategy:
-                entry_price = float(current_price)
-                stop_loss_pct = trading_strategy.risk_management.get(
-                    "stop_loss_pct", 0.05
-                )
-                take_profit_pct = trading_strategy.risk_management.get(
-                    "take_profit_pct", trading_strategy.expected_return
-                )
+            if strategy:  # trading_strategy -> strategy
+                entry_price = strategy.get('entry_price', float(current_price))  # 'entry_price' は strategy から取得する
+                # stop_loss_pct などは、strategy の中にあるか、デフォルト値を使う
+                stop_loss_pct = strategy.get('stop_loss_pct', 0.05)
+                take_profit_pct = strategy.get('take_profit_pct', strategy.get('expected_return', 0.0))
 
+                # stop_loss を計算
                 stop_loss = entry_price * (1 - stop_loss_pct)
-                expected_return_pct = (
-                    trading_strategy.expected_return
-                    if trading_strategy.expected_return is not None
-                    else take_profit_pct
-                )
+                # expected_return_pct を計算
+                expected_return_pct = strategy.get('expected_return', take_profit_pct)
                 target_price = entry_price * (1 + expected_return_pct)
 
                 strategy_payload = {
@@ -543,8 +541,8 @@ class FullAutoInvestmentSystem:
                     "target_price": target_price,
                     "stop_loss": stop_loss,
                     "expected_return": expected_return_pct,
-                    "confidence_score": trading_strategy.win_rate,
-                    "sentiment_score": sentiment_score,
+                    "confidence_score": strategy.get('confidence_score', 0.0),  # strategy から confidence_score を取得
+                    "sentiment_score": sentiment_result.get('sentiment_score', 0.0),  # sentiment_result から取得
                     "predicted_price": predicted_price,
                     "take_profit_pct": take_profit_pct,
                     "stop_loss_pct": stop_loss_pct,
@@ -555,10 +553,12 @@ class FullAutoInvestmentSystem:
 
                 # 信頼度 (戦略スコア、リスクスコア、予測信頼度から算出)
                 strategy_confidence = max(
-                    min(trading_strategy.win_rate, 1.0), 0.0
+                    min(strategy.get('confidence_score', 0.0), 1.0), 0.0  # strategy から confidence_score を取得
                 )
-                risk_score = getattr(risk_analysis, "total_risk_score", 0.5)
+                risk_score = getattr(risk_analysis_for_payload, "total_risk_score", 0.5) if risk_analysis_for_payload else 0.5
                 risk_adjusted_confidence = max(min(1.0 - risk_score, 1.0), 0.0)
+                # predictions から confidence を取得
+                prediction_confidence = predictions.get('confidence', 0.0)
                 confidence = (
                     strategy_confidence
                     + risk_adjusted_confidence
@@ -580,7 +580,7 @@ class FullAutoInvestmentSystem:
                     stop_loss=stop_loss,
                     expected_return=expected_return,
                     confidence=confidence,
-                    risk_level=risk_analysis.risk_level.value,
+                    risk_level=getattr(risk_analysis_for_payload, 'risk_level', type('DummyRiskLevel', (), {'value': 'unknown'})()).value,
                     buy_date=buy_date,
                     sell_date=sell_date,
                     reasoning=reasoning
