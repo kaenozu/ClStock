@@ -23,6 +23,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 
 from ClStock.utils.logger_config import get_logger
 from ClStock.config.settings import get_settings
+from ClStock.systems.resource_monitor import ResourceMonitor
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -90,6 +91,7 @@ class ProcessManager:
         self._current_memory_usage = 0.0
         self._max_system_cpu_percent = 80  # システム全体の最大CPU使用率
         self._max_system_memory_percent = 80  # システム全体の最大メモリ使用率
+        self.resource_monitor = ResourceMonitor()
 
         # デフォルトサービス定義
         self._define_default_services()
@@ -160,8 +162,9 @@ class ProcessManager:
         """リソース制限チェック"""
         with self._resource_limit_lock:
             # システム全体のリソース使用状況を取得
-            system_cpu_percent = psutil.cpu_percent(interval=1)
-            system_memory_percent = psutil.virtual_memory().percent
+            system_usage = self.resource_monitor.get_system_usage()
+            system_cpu_percent = system_usage.cpu_percent
+            system_memory_percent = system_usage.memory_percent
             
             # 新しいプロセスのリソース要件が制限を超えるかチェック
             if system_cpu_percent + process_info.max_cpu_percent > self._max_system_cpu_percent:
@@ -169,7 +172,9 @@ class ProcessManager:
                               f"現在 {system_cpu_percent:.1f}% + 要求 {process_info.max_cpu_percent}% > 制限 {self._max_system_cpu_percent}%")
                 return False
                 
-            if system_memory_percent + (process_info.max_memory_mb / psutil.virtual_memory().total * 100) > self._max_system_memory_percent:
+            total_memory = system_usage.memory_total or 1
+            requested_memory_percent = (process_info.max_memory_mb * 1024 * 1024) / total_memory * 100
+            if system_memory_percent + requested_memory_percent > self._max_system_memory_percent:
                 logger.warning(f"メモリリソース不足のため {process_info.name} の起動を延期: "
                               f"現在 {system_memory_percent:.1f}% + 要求 {process_info.max_memory_mb}MB > 制限 {self._max_system_memory_percent}%")
                 return False
@@ -471,8 +476,9 @@ class ProcessManager:
         """プロセス優先度の動的調整"""
         try:
             # システム全体のリソース使用状況を取得
-            system_cpu_percent = psutil.cpu_percent(interval=1)
-            system_memory_percent = psutil.virtual_memory().percent
+            system_usage = self.resource_monitor.get_system_usage()
+            system_cpu_percent = system_usage.cpu_percent
+            system_memory_percent = system_usage.memory_percent
 
             # 高負荷の場合、低優先度プロセスの制限を検討
             if system_cpu_percent > 80 or system_memory_percent > 80:

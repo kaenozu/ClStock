@@ -36,6 +36,10 @@ else:
 
     stub_module = types.ModuleType(__name__)
 
+    class Series:  # pragma: no cover - minimal placeholder
+        def __init__(self, *_, **__):
+            raise RuntimeError("pandas Series is unavailable in this test environment")
+
     class DataFrame:
         """Minimal subset of the pandas DataFrame API used in tests."""
 
@@ -62,6 +66,7 @@ else:
         columns = [desc[0] for desc in cursor.description] if cursor.description else []
         return DataFrame(rows, columns)
 
+    stub_module.Series = Series
     stub_module.DataFrame = DataFrame
     stub_module.read_sql_query = read_sql_query
 
