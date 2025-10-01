@@ -8,9 +8,10 @@ ClStock 取引記録・レポートシステム
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from os import PathLike
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 from trading.models import PerformanceMetrics, TaxCalculation, TradeRecord
 from trading.persistence.trade_repository import TradeRepository
@@ -22,12 +23,27 @@ from trading.tax.tax_calculator import TaxCalculator
 from .trading_strategy import SignalType
 
 
+_DEFAULT_DB_SUBPATH = Path("gemini-desktop") / "ClStock" / "data" / "trading_records.db"
+
+
+def _resolve_db_path(db_path: Optional[Union[str, PathLike]]) -> str:
+    """Resolve the database path ensuring the parent directory exists."""
+
+    if db_path is None:
+        resolved_path = Path.home() / _DEFAULT_DB_SUBPATH
+    else:
+        resolved_path = Path(db_path)
+
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    return str(resolved_path)
+
+
 class TradeRecorder:
     """取引記録・レポートシステム"""
 
     def __init__(
         self,
-        db_path: str = os.path.join("C:", "gemini-desktop", "ClStock", "data", "trading_records.db"),
+        db_path: Optional[Union[str, PathLike]] = None,
         *,
         repository: Optional[TradeRepository] = None,
         metrics_service: Optional[PerformanceMetricsService] = None,
@@ -37,8 +53,9 @@ class TradeRecorder:
     ):
         """初期化"""
 
-        self.db_path = db_path
-        self.repository = repository or TradeRepository(db_path)
+        resolved_db_path = _resolve_db_path(db_path)
+        self.db_path = resolved_db_path
+        self.repository = repository or TradeRepository(resolved_db_path)
         self.metrics_service = metrics_service or PerformanceMetricsService()
         self.chart_generator = chart_generator or ChartGenerator()
         self.export_service = export_service or ExportService()
