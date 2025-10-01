@@ -15,10 +15,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Union
 
-import psutil
 
-from config.settings import get_settings
-from utils.logger_config import get_logger
+from ClStock.config.settings import get_settings
+from ClStock.utils.logger_config import get_logger
+from ClStock.systems.resource_monitor import ResourceMonitor
 
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -77,6 +77,7 @@ class ServiceRegistry:
         self._resource_limit_lock = threading.Lock()
         self._max_system_cpu_percent = 200
         self._max_system_memory_percent = 200
+        self.resource_monitor = ResourceMonitor()
         self._define_default_services()
 
     # ------------------------------------------------------------------
@@ -139,29 +140,24 @@ class ServiceRegistry:
     # Service lifecycle operations
     # ------------------------------------------------------------------
     def _check_resource_limits(self, process_info: ProcessInfo) -> bool:
+        """リソース制限チェック"""
         with self._resource_limit_lock:
-            system_cpu_percent = psutil.cpu_percent(interval=1)
-            system_memory_percent = psutil.virtual_memory().percent
+            # システム全体のリソース使用状況を取得
+            system_usage = self.resource_monitor.get_system_usage()
+            system_cpu_percent = system_usage.cpu_percent
+            system_memory_percent = system_usage.memory_percent
 
-            if (
-                system_cpu_percent + process_info.max_cpu_percent
-                > self._max_system_cpu_percent
-            ):
-                logger.warning(
-                    "CPUリソース不足のため %s の起動を延期", process_info.name
-                )
+            # 新しいプロセスのリソース要件が制限を超えるかチェック
+            if system_cpu_percent + process_info.max_cpu_percent > self._max_system_cpu_percent:
+                logger.warning(f"CPUリソース不足のため {process_info.name} の起動を延期: "
+                              f"現在 {system_cpu_percent:.1f}% + 要求 {process_info.max_cpu_percent}% > 制限 {self._max_system_cpu_percent}%")
                 return False
 
-            memory_percent = (
-                process_info.max_memory_mb / psutil.virtual_memory().total * 100
-            )
-            if (
-                system_memory_percent + memory_percent
-                > self._max_system_memory_percent
-            ):
-                logger.warning(
-                    "メモリリソース不足のため %s の起動を延期", process_info.name
-                )
+            total_memory = system_usage.memory_total or 1
+            requested_memory_percent = (process_info.max_memory_mb * 1024 * 1024) / total_memory * 100
+            if system_memory_percent + requested_memory_percent > self._max_system_memory_percent:
+                logger.warning(f"メモリリソース不足のため {process_info.name} の起動を延期: "
+                              f"現在 {system_memory_percent:.1f}% + 要求 {process_info.max_memory_mb}MB > 制限 {self._max_system_memory_percent}%")
                 return False
 
         return True

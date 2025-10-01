@@ -7,7 +7,7 @@ import signal
 import threading
 from typing import Optional, TYPE_CHECKING
 
-from utils.logger_config import get_logger
+from ClStock.utils.logger_config import get_logger
 
 from .monitoring import MonitoringLoop
 from .service_registry import ServiceRegistry

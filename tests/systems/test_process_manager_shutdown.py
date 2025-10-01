@@ -3,7 +3,7 @@ import threading
 
 import pytest
 
-from systems.process_manager import ProcessManager
+from ClStock.systems.process_manager import ProcessManager
 
 
 class DummyExecutor:

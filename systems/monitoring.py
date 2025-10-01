@@ -6,10 +6,10 @@ import threading
 import time
 from typing import Optional
 
-import psutil
 
-from utils.logger_config import get_logger
-from config.settings import get_settings
+from ClStock.config.settings import get_settings
+from ClStock.utils.logger_config import get_logger
+from ClStock.systems.resource_monitor import ResourceMonitor
 
 from .service_registry import ProcessInfo, ProcessStatus, ServiceRegistry
 
@@ -26,6 +26,7 @@ class MonitoringLoop:
         self.monitoring_active: bool = False
         self.monitor_thread: Optional[threading.Thread] = None
         self._shutdown_event = threading.Event()
+        self.resource_monitor = ResourceMonitor()
 
     # ------------------------------------------------------------------
     # Public API
@@ -70,44 +71,42 @@ class MonitoringLoop:
     # ------------------------------------------------------------------
     def _adjust_process_priorities(self) -> None:
         try:
-            system_cpu_percent = psutil.cpu_percent(interval=1)
-            system_memory_percent = psutil.virtual_memory().percent
+            # システム全体のリソース使用状況を取得
+            system_usage = self.resource_monitor.get_system_usage()
+            system_cpu_percent = system_usage.cpu_percent
+            system_memory_percent = system_usage.memory_percent
 
+            # 高負荷の場合、低優先度プロセスの制限を検討
             if system_cpu_percent > 80 or system_memory_percent > 80:
-                logger.info(
-                    "高負荷検出: CPU %.1f%%, メモリ %.1f%%",
-                    system_cpu_percent,
-                    system_memory_percent,
-                )
-                low_priority = [
-                    p
-                    for p in self.service_registry.processes.values()
+                logger.info(f"高負荷検出: CPU {system_cpu_percent:.1f}%, メモリ {system_memory_percent:.1f}%")
+                
+                # 優先度の低いプロセスを一時停止またはリソース制限を強化
+                low_priority_processes = [
+                    p for p in self.service_registry.processes.values() 
                     if p.status == ProcessStatus.RUNNING and p.priority < 5
                 ]
-                for proc in low_priority:
-                    logger.info(
-                        "低優先度プロセス %s にリソース制限を強化", proc.name
-                    )
-                    proc.max_cpu_percent *= 0.7
-                    proc.max_memory_mb *= 0.7
+                
+                for proc_info in low_priority_processes:
+                    logger.info(f"低優先度プロセス {proc_info.name} にリソース制限を強化: CPU {proc_info.max_cpu_percent*0.7:.1f}%, メモリ {proc_info.max_memory_mb*0.7:.0f}MB")
+                    # 実際にはプロセスの制限を変更するにはより高度な制御が必要ですが、ここではログのみ
+                    proc_info.max_cpu_percent *= 0.7  # CPU制限を70%に縮小
+                    proc_info.max_memory_mb *= 0.7    # メモリ制限を70%に縮小
+
             elif system_cpu_percent < 30 and system_memory_percent < 50:
-                normal_priority = [
-                    p
-                    for p in self.service_registry.processes.values()
+                # 負荷が低い場合は制限を元に戻す
+                normal_priority_processes = [
+                    p for p in self.service_registry.processes.values() 
                     if p.status == ProcessStatus.RUNNING and p.priority < 5
                 ]
-                for proc in normal_priority:
-                    original = settings.process
-                    cpu_limit = getattr(
-                        original, "max_cpu_percent_per_process", 50
-                    )
-                    mem_limit = getattr(
-                        original, "max_memory_per_process_mb", 1000
-                    )
-                    proc.max_cpu_percent = cpu_limit
-                    proc.max_memory_mb = mem_limit
-        except Exception as exc:  # pragma: no cover - defensive logging
-            logger.error("プロセス優先度調整エラー: %s", exc)
+                
+                for proc_info in normal_priority_processes:
+                    # 制限を元の設定に戻す
+                    original_settings = settings.process  # 設定から元の値を取得
+                    proc_info.max_cpu_percent = original_settings.max_cpu_percent_per_process if hasattr(original_settings, 'max_cpu_percent_per_process') else 50
+                    proc_info.max_memory_mb = original_settings.max_memory_per_process_mb if hasattr(original_settings, 'max_memory_per_process_mb') else 1000
+                    
+        except Exception as e:
+            logger.error(f"プロセス優先度調整エラー: {e}")
 
     def _monitor_processes(self) -> None:
         while self.monitoring_active and not self._shutdown_event.is_set():
