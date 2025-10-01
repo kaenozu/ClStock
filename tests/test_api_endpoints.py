@@ -10,6 +10,7 @@ os.environ.setdefault("CLSTOCK_DEV_KEY", "test-key")
 os.environ.setdefault("CLSTOCK_ADMIN_KEY", "admin-key")
 
 from api.endpoints import router
+from models.recommendation import StockRecommendation
 
 
 @patch("api.endpoints.StockDataProvider")
@@ -140,3 +141,51 @@ def test_get_recommendations_returns_closed_after_15(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["market_status"] == "市場営業時間外"
+
+
+@patch("api.endpoints.verify_token")
+@patch("api.endpoints.MLStockPredictor")
+@patch("api.endpoints.StockDataProvider")
+def test_get_single_recommendation_accepts_suffix(
+    mock_provider_cls, mock_predictor_cls, mock_verify_token
+):
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    mock_verify_token.return_value = None
+
+    mock_provider = MagicMock()
+    mock_provider.get_all_stock_symbols.return_value = {"7203": "Test Corp"}
+    mock_provider.jp_stock_codes = {"7203": "Test Corp"}
+    mock_provider_cls.return_value = mock_provider
+
+    sample_recommendation = StockRecommendation(
+        rank=1,
+        symbol="7203",
+        company_name="Test Corp",
+        buy_timing="Now",
+        target_price=120.0,
+        stop_loss=90.0,
+        profit_target_1=110.0,
+        profit_target_2=130.0,
+        holding_period="1m",
+        score=75.0,
+        current_price=100.0,
+        recommendation_reason="Test",
+        recommendation_level="buy",
+    )
+
+    mock_predictor = MagicMock()
+    mock_predictor.generate_recommendation.return_value = sample_recommendation
+    mock_predictor_cls.return_value = mock_predictor
+
+    response = client.get(
+        "/recommendation/7203.T",
+        headers={"Authorization": "Bearer token"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["symbol"] == "7203.T"
+    assert payload["company_name"] == "Test Corp"
