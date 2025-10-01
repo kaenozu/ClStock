@@ -64,6 +64,78 @@
 - **バックエンド**: Python (FastAPI)
 - **CUIクライアント**: `python recommend.py --top 5`
 - **出力形式**: JSON + テキスト
+  - **JSONレスポンス仕様**
+    - **キーと型**
+      - `generated_at` *(string, ISO8601)*: 予測を作成した日時。
+      - `universe` *(string)*: 対象市場や指数（例: "JPXプライム"）。
+      - `ranking` *(array<object>)*: 推奨銘柄ごとの詳細情報。
+        - `rank` *(integer)*: ランキング順位。
+        - `symbol` *(string)*: 証券コード。
+        - `name` *(string)*: 銘柄名（GUIカードのタイトルとして流用）。
+        - `sector` *(string)*: 業種カテゴリ。
+        - `score` *(number)*: 推奨スコア (0-100)。
+        - `action` *(string)*: 推奨アクション（例: "buy", "hold", "sell"）。
+        - `action_text` *(string)*: CUIで表示する文章化された推奨アクション。
+        - `entry_condition` *(string)*: エントリー条件（例: 「昨日の高値を超えたら」）。
+        - `entry_price` *(object)*: 購入価格目安。
+          - `value` *(number)*: 価格（円）。
+          - `text` *(string)*: GUIで表示するフォーマット済みテキスト（例: "3,250円前後"）。
+        - `stop_loss` *(object)*: 損切りライン情報。
+          - `value` *(number)*
+          - `text` *(string)*
+        - `targets` *(array<object>)*: 目標価格候補。
+          - `value` *(number)*: 価格。
+          - `text` *(string)*: 例: "3,450円 (+6%)"。
+        - `holding_period` *(string)*: 保有期間の目安。
+        - `confidence` *(string)*: モデル信頼度（例: "高", "中"）。
+        - `notes` *(string)*: 補足コメント（ニュース・イベントなど）。
+        - `risk_level` *(string)*: リスク指標（例: "低", "中", "高"）。
+        - `chart_refs` *(object)*: GUIチャート連携用情報。
+          - `support_levels` *(array<number>)*: サポートライン価格。
+          - `resistance_levels` *(array<number>)*: レジスタンスライン価格。
+          - `indicators` *(array<string>)*: 注釈に使う主要テクニカル指標。
+    - **レスポンス例**
+      ```json
+      {
+        "generated_at": "2024-05-01T09:00:00+09:00",
+        "universe": "JPXプライム",
+        "ranking": [
+          {
+            "rank": 1,
+            "symbol": "7203",
+            "name": "トヨタ自動車",
+            "sector": "輸送用機器",
+            "score": 92.5,
+            "action": "buy",
+            "action_text": "✅ 買うタイミング: 今週中に『昨日の高値』を超えたら買い",
+            "entry_condition": "今週中に昨日の高値を上抜け",
+            "entry_price": { "value": 3250, "text": "3,250円前後" },
+            "stop_loss": { "value": 3150, "text": "3,150円（約-3%）" },
+            "targets": [
+              { "value": 3450, "text": "3,450円（+6%）" },
+              { "value": 3600, "text": "3,600円（+10%）" }
+            ],
+            "holding_period": "1〜2か月",
+            "confidence": "高",
+            "notes": "決算発表を通過し需給改善の兆し",
+            "risk_level": "中",
+            "chart_refs": {
+              "support_levels": [3150],
+              "resistance_levels": [3600],
+              "indicators": ["20日移動平均線", "ボリンジャーバンド"]
+            }
+          }
+        ]
+      }
+      ```
+  - **テキスト出力との対応関係**
+    - `ranking[].rank` → CUIの「[1位]」などの順位表示、およびGUIカードの順位バッジ。
+    - `ranking[].name` + `symbol` → CUIの銘柄行、GUIカードのタイトルとサブタイトル。
+    - `ranking[].action_text` → CUI本文の推奨文そのもの。GUIでは `action` をボタン表示、`action_text` を補足説明に使用。
+    - `ranking[].entry_price.text` / `stop_loss.text` / `targets[].text` → CUIの価格行と完全一致。GUIでは数値とラベルを分けて表示可能。
+    - `ranking[].holding_period` → CUIの「保有期間の目安」行。GUIではバッジやタイムラインに転用。
+    - `ranking[].notes` / `confidence` / `risk_level` → CUIの補足コメントに追記可能。GUIではツールチップやタグで提示。
+    - `chart_refs` → CUIでは省略可能だが、GUIチャート描画時にサポート/レジスタンスや指標情報として直接利用。
 
 ### 第2段階（GUI）
 - **フロント**: React / Next.js
