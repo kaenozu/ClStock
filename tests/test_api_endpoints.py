@@ -158,6 +158,23 @@ def test_get_recommendations_returns_closed_after_15(monkeypatch):
     assert response.json()["market_status"] == "市場営業時間外"
 
 
+def test_health_endpoint_includes_security_headers():
+    from app.main import app as main_app
+
+    client = TestClient(main_app)
+
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.headers.get("X-Content-Type-Options") == "nosniff"
+    assert response.headers.get("X-Frame-Options") == "DENY"
+    assert response.headers.get("X-XSS-Protection") == "1; mode=block"
+    assert (
+        response.headers.get("Strict-Transport-Security")
+        == "max-age=31536000; includeSubDomains"
+    )
+
+
 @patch("api.endpoints.verify_token")
 @patch("api.endpoints.MLStockPredictor")
 @patch("api.endpoints.StockDataProvider")
