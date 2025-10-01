@@ -76,16 +76,22 @@ async def get_single_recommendation(
         verify_token(credentials.credentials)
 
         # Input validation
-        symbol = validate_stock_symbol(symbol)
+        validated_symbol = validate_stock_symbol(symbol)
+        base_symbol = validated_symbol.split(".")[0]
 
         predictor = MLStockPredictor()
         data_provider = StockDataProvider()
 
-        if symbol not in data_provider.get_all_stock_symbols():
-            raise InvalidSymbolError(symbol, data_provider.get_all_stock_symbols())
+        available_symbols = data_provider.get_all_stock_symbols()
+        if base_symbol not in available_symbols:
+            raise InvalidSymbolError(validated_symbol, available_symbols)
 
-        recommendation = predictor.generate_recommendation(symbol)
+        recommendation = predictor.generate_recommendation(base_symbol)
         recommendation.rank = 1
+        recommendation.symbol = validated_symbol
+        recommendation.company_name = data_provider.jp_stock_codes.get(
+            base_symbol, recommendation.company_name
+        )
 
         return recommendation
     except InvalidSymbolError as e:
@@ -125,16 +131,18 @@ async def get_stock_data(
 ):
     try:
         validated_symbol = validate_stock_symbol(symbol)
+        base_symbol = validated_symbol.split(".")[0]
         validated_period = validate_period(period)
 
         data_provider = StockDataProvider()
 
-        if validated_symbol not in data_provider.get_all_stock_symbols():
+        available_symbols = data_provider.get_all_stock_symbols()
+        if base_symbol not in available_symbols:
             raise HTTPException(
                 status_code=404, detail=f"銘柄コード {symbol} が見つかりません"
             )
 
-        data = data_provider.get_stock_data(validated_symbol, validated_period)
+        data = data_provider.get_stock_data(base_symbol, validated_period)
 
         if data.empty:
             raise HTTPException(
@@ -142,7 +150,7 @@ async def get_stock_data(
             )
 
         technical_data = data_provider.calculate_technical_indicators(data)
-        financial_metrics = data_provider.get_financial_metrics(validated_symbol)
+        financial_metrics = data_provider.get_financial_metrics(base_symbol)
 
         current_price = float(technical_data["Close"].iloc[-1])
         price_change = 0.0
@@ -158,7 +166,7 @@ async def get_stock_data(
         return {
             "symbol": validated_symbol,
             "company_name": data_provider.jp_stock_codes.get(
-                validated_symbol, validated_symbol
+                base_symbol, base_symbol
             ),
             "current_price": current_price,
             "price_change": price_change,
