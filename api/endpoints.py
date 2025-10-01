@@ -27,7 +27,7 @@ router = APIRouter()
 
 @router.get("/recommendations", response_model=RecommendationResponse)
 async def get_recommendations(
-    top_n: int = Query(5, ge=1, le=50, description="推奨銘柄の上位N件を取得"),
+    top_n: int = Query(10, ge=1, le=50, description="推奨銘柄の上位N件を取得"),
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     try:

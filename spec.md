@@ -62,7 +62,7 @@
 ## 5. システム構成
 ### 第1段階（CUI + API）
 - **バックエンド**: Python (FastAPI)
-- **CUIクライアント**: `python recommend.py --top 5`
+- **CUIクライアント**: `python recommend.py --top 10`
 - **出力形式**: JSON + テキスト
 
 ### 第2段階（GUI）
