@@ -7,6 +7,7 @@ ClStock デモトレーダー
 
 import logging
 import os
+from pathlib import Path
 import threading
 import time
 from datetime import datetime, timedelta
@@ -637,10 +638,17 @@ class DemoTrader:
 
         # JSONファイルに保存
         filename = f"demo_session_{self.current_session.session_id}.json"
-        filepath = os.path.join("C:", "gemini-desktop", "ClStock", "data", filename)
+        output_dir_env = os.getenv("CLSTOCK_DEMO_RESULTS_DIR")
+        output_dir = (
+            Path(output_dir_env)
+            if output_dir_env
+            else Path(__file__).resolve().parents[1] / "data"
+        )
 
         try:
-            with open(filepath, "w", encoding="utf-8") as f:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            filepath = output_dir / filename
+            with filepath.open("w", encoding="utf-8") as f:
                 json.dump(session_data, f, ensure_ascii=False, indent=2, default=str)
             self.logger.info(f"セッション結果保存: {filepath}")
         except Exception as e:
