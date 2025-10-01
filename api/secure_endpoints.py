@@ -19,6 +19,8 @@ from utils.validators import (
     log_validation_error,
 )
 
+from utils.exceptions import DataFetchError
+
 # データプロバイダー
 from data.stock_data import StockDataProvider
 
@@ -83,6 +85,11 @@ async def get_stock_data(
             e, {"endpoint": "/secure/stock/data", "symbol": symbol, "period": period}
         )
         raise HTTPException(status_code=400, detail=str(e))
+    except DataFetchError as e:
+        logger.info(
+            "Stock data not found for symbol %s: %s", symbol, str(e)
+        )
+        raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
