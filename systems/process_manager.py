@@ -4,7 +4,6 @@ ClStock プロセス管理システム
 """
 
 import os
-import sys
 import psutil
 import subprocess
 import threading
@@ -21,11 +20,10 @@ from enum import Enum
 
 # プロジェクトルート設定
 PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.append(str(PROJECT_ROOT))
 
-from utils.logger_config import get_logger
-from config.settings import get_settings
-from systems.resource_monitor import ResourceMonitor
+from ClStock.utils.logger_config import get_logger
+from ClStock.config.settings import get_settings
+from ClStock.systems.resource_monitor import ResourceMonitor
 
 logger = get_logger(__name__)
 settings = get_settings()

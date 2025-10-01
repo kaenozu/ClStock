@@ -6,7 +6,7 @@ from click.testing import CliRunner
 from datetime import datetime
 
 from clstock_cli import cli
-from systems.process_manager import ProcessInfo, ProcessStatus
+from ClStock.systems.process_manager import ProcessInfo, ProcessStatus
 
 
 class TestClStockCLI:

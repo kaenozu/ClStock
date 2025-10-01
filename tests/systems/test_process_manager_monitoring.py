@@ -1,6 +1,6 @@
 import time
 
-from systems.process_manager import ProcessManager
+from ClStock.systems.process_manager import ProcessManager
 
 
 def test_monitoring_can_restart_after_stop():

@@ -5,7 +5,7 @@ import threading
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-from systems.process_manager import (
+from ClStock.systems.process_manager import (
     ProcessManager,
     ProcessInfo,
     ProcessStatus,
@@ -66,7 +66,7 @@ class TestProcessManager:
         assert process_info.restart_count == 0
         assert process_info.pid is None
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_start_service_success(self, mock_popen):
         """Test successful service start."""
         # Mock the subprocess
@@ -85,7 +85,7 @@ class TestProcessManager:
         assert pm.processes["dashboard"].pid == 12345
         mock_popen.assert_called_once()
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_start_service_already_running(self, mock_popen):
         """Test starting a service that's already running."""
         mock_process = Mock()
@@ -104,7 +104,7 @@ class TestProcessManager:
         assert result is True
         mock_popen.assert_called_once()  # Only called once
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_start_service_inherits_streams_when_logging_disabled(
         self, mock_popen
     ):
@@ -128,7 +128,7 @@ class TestProcessManager:
         assert kwargs.get("stdout") is None
         assert kwargs.get("stderr") is None
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_start_service_file_not_found(self, mock_popen):
         """Test service start failure due to file not found."""
         mock_popen.side_effect = FileNotFoundError("python not found")
@@ -153,7 +153,7 @@ class TestProcessManager:
         # Should return True (no error)
         assert result is True
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_get_service_status(self, mock_popen):
         """Test getting service status."""
         mock_process = Mock()
@@ -200,7 +200,7 @@ class TestProcessManager:
         assert "test_service" in pm.processes
         assert pm.processes["test_service"] is service_info
 
-    @patch("systems.process_manager.subprocess.Popen")
+    @patch("ClStock.systems.process_manager.subprocess.Popen")
     def test_start_service_with_quoted_arguments(self, mock_popen):
         """Service commands with quoted arguments should be parsed correctly."""
         pm = ProcessManager()
@@ -220,7 +220,7 @@ class TestProcessManager:
         args, _ = mock_popen.call_args
         assert args[0] == ["python", "-c", "print('hello world')"]
 
-    @patch("systems.process_manager.psutil")
+    @patch("ClStock.systems.process_manager.psutil")
     def test_get_system_status(self, mock_psutil):
         """Test getting system resource information."""
         # Mock psutil responses
@@ -271,7 +271,7 @@ class TestProcessManager:
 
         pm._shutdown_event.set()
 
-        with patch("systems.process_manager.os._exit") as mock_exit:
+        with patch("ClStock.systems.process_manager.os._exit") as mock_exit:
             pm._graceful_shutdown()
 
         pm.stop_all_services.assert_called_once_with(force=True)
