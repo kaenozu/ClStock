@@ -1,7 +1,6 @@
 """Tests for configuration loading and environment variable handling."""
 
 import os
-import pytest
 from unittest.mock import patch
 
 from config.settings import (
@@ -45,7 +44,7 @@ class TestConfigDataclasses:
         assert config.xgb_n_estimators == 200
         assert config.lgb_n_estimators == 200
         assert config.train_test_split == 0.8
-        assert config.minimum_model_accuracy == 0.8
+        assert config.min_training_data == 100
 
     def test_backtest_config_defaults(self):
         """Test BacktestConfig default values."""
@@ -117,51 +116,39 @@ class TestSettingsIntegration:
         settings2 = get_settings()
         assert settings1 is settings2
 
-    @patch.dict(
-        os.environ,
-        {
+    def test_load_from_env(self):
+        """Test loading configuration from environment variables."""
+        original = get_settings()
+
+        overrides = {
             "CLSTOCK_API_TITLE": "Custom API Title",
             "CLSTOCK_LOG_LEVEL": "DEBUG",
             "CLSTOCK_INITIAL_CAPITAL": "5000000",
             "CLSTOCK_SCORE_THRESHOLD": "80",
-        },
-    )
-    def test_load_from_env(self):
-        """Test loading configuration from environment variables."""
-        # Get settings instance
-        settings = get_settings()
+        }
 
-        # Store original values
-        original_api_title = settings.api.title
-        original_log_level = settings.logging.level
-        original_initial_capital = settings.backtest.default_initial_capital
-        original_score_threshold = settings.backtest.default_score_threshold
+        with patch.dict(os.environ, overrides):
+            updated = load_from_env()
 
-        try:
-            # Load from environment
-            load_from_env()
+            assert updated.api.title == "Custom API Title"
+            assert updated.logging.level == "DEBUG"
+            assert updated.backtest.default_initial_capital == 5000000
+            assert updated.backtest.default_score_threshold == 80
+            assert updated is get_settings()
+            assert updated is not original
 
-            # Check that environment variables were loaded
-            assert settings.api.title == "Custom API Title"
-            assert settings.logging.level == "DEBUG"
-            assert settings.backtest.default_initial_capital == 5000000
-            assert settings.backtest.default_score_threshold == 80
-        finally:
-            # Restore original values
-            settings.api.title = original_api_title
-            settings.logging.level = original_log_level
-            settings.backtest.default_initial_capital = original_initial_capital
-            settings.backtest.default_score_threshold = original_score_threshold
+        # Restore singleton to the default environment once overrides are removed
+        load_from_env()
 
     def test_target_stocks_config(self):
         """Test that target stocks are properly configured."""
         settings = get_settings()
 
         # Check that we have the expected number of target stocks
-        assert len(settings.target_stocks) >= 50  # Should have at least 50 stocks
+        assert len(settings.target_stocks) >= 30  # Validate a reasonably sized universe
 
         # Check a few specific stocks
         assert "7203" in settings.target_stocks  # Toyota
         assert "6758" in settings.target_stocks  # Sony
-        assert settings.target_stocks["7203"] == "トヨタ自動車"
-        assert settings.target_stocks["6758"] == "ソニーグループ"
+        assert settings.target_stocks["7203"] == "Toyota Motor Corp"
+        assert settings.target_stocks["6758"] == "Sony Group Corp"

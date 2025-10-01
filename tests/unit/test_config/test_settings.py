@@ -1,10 +1,9 @@
 """Tests for the configuration system."""
 
 import os
-import pytest
 from unittest.mock import patch
 
-from config.settings import AppSettings, load_from_env, get_settings
+from config.settings import AppSettings, create_settings, get_settings
 
 
 class TestConfiguration:
@@ -53,27 +52,9 @@ class TestConfiguration:
     )
     def test_environment_variable_loading(self):
         """Test loading configuration from environment variables."""
-        # Reset settings to test environment variable loading
-        settings = get_settings()
+        settings = create_settings()
 
-        # Store original values
-        original_api_title = settings.api.title
-        original_log_level = settings.logging.level
-        original_initial_capital = settings.backtest.default_initial_capital
-        original_score_threshold = settings.backtest.default_score_threshold
-
-        try:
-            # Load from environment
-            load_from_env()
-
-            # Check that values were updated
-            assert settings.api.title == "Test API"
-            assert settings.logging.level == "DEBUG"
-            assert settings.backtest.default_initial_capital == 2000000
-            assert settings.backtest.default_score_threshold == 75
-        finally:
-            # Restore original values
-            settings.api.title = original_api_title
-            settings.logging.level = original_log_level
-            settings.backtest.default_initial_capital = original_initial_capital
-            settings.backtest.default_score_threshold = original_score_threshold
+        assert settings.api.title == "Test API"
+        assert settings.logging.level == "DEBUG"
+        assert settings.backtest.default_initial_capital == 2000000
+        assert settings.backtest.default_score_threshold == 75

@@ -3,18 +3,25 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional
 
 from utils.cache import get_cache
 from utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
 
-def _apply_env_value(env_name: str, caster: Callable[[str], Any], apply: Callable[[Any], None]) -> None:
+def _apply_env_value(
+    env: Mapping[str, str],
+    env_name: str,
+    caster: Callable[[str], Any],
+    apply: Callable[[Any], None],
+) -> None:
     """Parse an environment variable with caster; preserve defaults if invalid."""
-    raw = os.getenv(env_name)
+    raw = env.get(env_name)
     if raw is None or raw == "":
         return
+    if not isinstance(raw, str):
+        raw = str(raw)
     try:
         value = caster(raw)
     except ValueError:
@@ -330,113 +337,134 @@ class AppSettings:
     )
 
 
-# 繧ｰ繝ｭ繝ｼ繝舌Ν險ｭ螳壹う繝ｳ繧ｹ繧ｿ繝ｳ繧ｹ
-settings = AppSettings()
+# Lazy singleton storage for application settings.
+_SETTINGS_SINGLETON: Optional["AppSettings"] = None
 
 
-def get_settings() -> AppSettings:
-    """Configuration section."""
+def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
+    """Create a new AppSettings instance with environment overrides applied."""
+    env_map: Mapping[str, str] = os.environ if env is None else env
+    settings = AppSettings()
+    load_database_settings_from_env(settings, env_map)
+    load_prediction_settings_from_env(settings, env_map)
+    load_model_settings_from_env(settings, env_map)
+    load_backtest_settings_from_env(settings, env_map)
+    load_trading_settings_from_env(settings, env_map)
+    load_api_settings_from_env(settings, env_map)
+    load_logging_settings_from_env(settings, env_map)
+    load_realtime_settings_from_env(settings, env_map)
+    load_process_settings_from_env(settings, env_map)
     return settings
 
 
-def load_from_env() -> None:
-    """Configuration section."""
-    load_database_settings_from_env()
-    load_prediction_settings_from_env()
-    load_model_settings_from_env()
-    load_backtest_settings_from_env()
-    load_trading_settings_from_env()
-    load_api_settings_from_env()
-    load_logging_settings_from_env()
-    load_realtime_settings_from_env()
-    load_process_settings_from_env()
+def create_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
+    """Return a validated AppSettings instance based on the given environment."""
+    settings = load_settings(env=env)
+    if not validate_settings(settings):
+        logger.error("Settings validation failed. Please check the configuration.")
+    return settings
 
 
-def load_database_settings_from_env():
-    """Configuration section."""
-    _apply_env_value("CLSTOCK_PERSONAL_PORTFOLIO_DB", lambda s: Path(s), lambda x: setattr(settings.database, 'personal_portfolio_db', x))
-    _apply_env_value("CLSTOCK_PREDICTION_HISTORY_DB", lambda s: Path(s), lambda x: setattr(settings.database, 'prediction_history_db', x))
-    _apply_env_value("CLSTOCK_BACKTEST_RESULTS_DB", lambda s: Path(s), lambda x: setattr(settings.database, 'backtest_results_db', x))
+def get_settings() -> AppSettings:
+    """Return the lazily instantiated global AppSettings singleton."""
+    global _SETTINGS_SINGLETON
+    if _SETTINGS_SINGLETON is None:
+        _SETTINGS_SINGLETON = create_settings()
+    return _SETTINGS_SINGLETON
 
 
-def load_prediction_settings_from_env():
-    """Configuration section."""
-    _apply_env_value("CLSTOCK_TARGET_ACCURACY", float, lambda x: setattr(settings.prediction, 'target_accuracy', x))
-    _apply_env_value("CLSTOCK_ACHIEVED_ACCURACY", float, lambda x: setattr(settings.prediction, 'achieved_accuracy', x))
-    _apply_env_value("CLSTOCK_BASELINE_ACCURACY", float, lambda x: setattr(settings.prediction, 'baseline_accuracy', x))
-    _apply_env_value("CLSTOCK_MAX_PREDICTED_CHANGE", float, lambda x: setattr(settings.prediction, 'max_predicted_change_percent', x))
-    _apply_env_value("CLSTOCK_MIN_CONFIDENCE_THRESHOLD", float, lambda x: setattr(settings.prediction, 'min_confidence_threshold', x))
-    _apply_env_value("CLSTOCK_MAX_CONFIDENCE_THRESHOLD", float, lambda x: setattr(settings.prediction, 'max_confidence_threshold', x))
+def load_from_env(env: Optional[Mapping[str, str]] = None) -> AppSettings:
+    """Refresh the global settings singleton using the provided environment mapping."""
+    global _SETTINGS_SINGLETON
+    _SETTINGS_SINGLETON = create_settings(env=env)
+    return _SETTINGS_SINGLETON
 
 
-def load_model_settings_from_env():
-    """Configuration section."""
-    _apply_env_value("CLSTOCK_XGB_N_ESTIMATORS", int, lambda x: setattr(settings.model, 'xgb_n_estimators', x))
-    _apply_env_value("CLSTOCK_XGB_MAX_DEPTH", int, lambda x: setattr(settings.model, 'xgb_max_depth', x))
-    _apply_env_value("CLSTOCK_XGB_LEARNING_RATE", float, lambda x: setattr(settings.model, 'xgb_learning_rate', x))
-    _apply_env_value("CLSTOCK_LGB_N_ESTIMATORS", int, lambda x: setattr(settings.model, 'lgb_n_estimators', x))
-    _apply_env_value("CLSTOCK_LGB_MAX_DEPTH", int, lambda x: setattr(settings.model, 'lgb_max_depth', x))
-    _apply_env_value("CLSTOCK_LGB_LEARNING_RATE", float, lambda x: setattr(settings.model, 'lgb_learning_rate', x))
-    _apply_env_value("CLSTOCK_TRAIN_TEST_SPLIT", float, lambda x: setattr(settings.model, 'train_test_split', x))
-    _apply_env_value("CLSTOCK_MIN_TRAINING_DATA", int, lambda x: setattr(settings.model, 'min_training_data', x))
+def load_database_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
+    """Apply database overrides from the environment mapping."""
+    _apply_env_value(env, "CLSTOCK_PERSONAL_PORTFOLIO_DB", lambda s: Path(s), lambda x: setattr(settings.database, 'personal_portfolio_db', x))
+    _apply_env_value(env, "CLSTOCK_PREDICTION_HISTORY_DB", lambda s: Path(s), lambda x: setattr(settings.database, 'prediction_history_db', x))
+    _apply_env_value(env, "CLSTOCK_BACKTEST_RESULTS_DB", lambda s: Path(s), lambda x: setattr(settings.database, 'backtest_results_db', x))
 
 
-def load_backtest_settings_from_env():
-    """Configuration section."""
-    _apply_env_value("CLSTOCK_INITIAL_CAPITAL", float, lambda x: setattr(settings.backtest, 'default_initial_capital', x))
-    _apply_env_value("CLSTOCK_REBALANCE_FREQUENCY", int, lambda x: setattr(settings.backtest, 'default_rebalance_frequency', x))
-    _apply_env_value("CLSTOCK_TOP_N", int, lambda x: setattr(settings.backtest, 'default_top_n', x))
-    _apply_env_value("CLSTOCK_STOP_LOSS_PCT", float, lambda x: setattr(settings.backtest, 'default_stop_loss_pct', x))
-    _apply_env_value("CLSTOCK_TAKE_PROFIT_PCT", float, lambda x: setattr(settings.backtest, 'default_take_profit_pct', x))
-    _apply_env_value("CLSTOCK_MAX_HOLDING_DAYS", int, lambda x: setattr(settings.backtest, 'default_max_holding_days', x))
-    _apply_env_value("CLSTOCK_SCORE_THRESHOLD", float, lambda x: setattr(settings.backtest, 'default_score_threshold', x))
-    _apply_env_value("CLSTOCK_DATA_PERIOD", str, lambda x: setattr(settings.backtest, 'default_data_period', x))
+def load_prediction_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
+    """Apply prediction overrides from the environment mapping."""
+    _apply_env_value(env, "CLSTOCK_TARGET_ACCURACY", float, lambda x: setattr(settings.prediction, 'target_accuracy', x))
+    _apply_env_value(env, "CLSTOCK_ACHIEVED_ACCURACY", float, lambda x: setattr(settings.prediction, 'achieved_accuracy', x))
+    _apply_env_value(env, "CLSTOCK_BASELINE_ACCURACY", float, lambda x: setattr(settings.prediction, 'baseline_accuracy', x))
+    _apply_env_value(env, "CLSTOCK_MAX_PREDICTED_CHANGE", float, lambda x: setattr(settings.prediction, 'max_predicted_change_percent', x))
+    _apply_env_value(env, "CLSTOCK_MIN_CONFIDENCE_THRESHOLD", float, lambda x: setattr(settings.prediction, 'min_confidence_threshold', x))
+    _apply_env_value(env, "CLSTOCK_MAX_CONFIDENCE_THRESHOLD", float, lambda x: setattr(settings.prediction, 'max_confidence_threshold', x))
 
 
-def load_trading_settings_from_env():
-    """Configuration section."""
-    _apply_env_value("CLSTOCK_MARKET_OPEN_HOUR", int, lambda x: setattr(settings.trading, 'market_open_hour', x))
-    _apply_env_value("CLSTOCK_MARKET_CLOSE_HOUR", int, lambda x: setattr(settings.trading, 'market_close_hour', x))
+def load_model_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
+    """Apply model overrides from the environment mapping."""
+    _apply_env_value(env, "CLSTOCK_XGB_N_ESTIMATORS", int, lambda x: setattr(settings.model, 'xgb_n_estimators', x))
+    _apply_env_value(env, "CLSTOCK_XGB_MAX_DEPTH", int, lambda x: setattr(settings.model, 'xgb_max_depth', x))
+    _apply_env_value(env, "CLSTOCK_XGB_LEARNING_RATE", float, lambda x: setattr(settings.model, 'xgb_learning_rate', x))
+    _apply_env_value(env, "CLSTOCK_LGB_N_ESTIMATORS", int, lambda x: setattr(settings.model, 'lgb_n_estimators', x))
+    _apply_env_value(env, "CLSTOCK_LGB_MAX_DEPTH", int, lambda x: setattr(settings.model, 'lgb_max_depth', x))
+    _apply_env_value(env, "CLSTOCK_LGB_LEARNING_RATE", float, lambda x: setattr(settings.model, 'lgb_learning_rate', x))
+    _apply_env_value(env, "CLSTOCK_TRAIN_TEST_SPLIT", float, lambda x: setattr(settings.model, 'train_test_split', x))
+    _apply_env_value(env, "CLSTOCK_MIN_TRAINING_DATA", int, lambda x: setattr(settings.model, 'min_training_data', x))
 
 
-def load_api_settings_from_env():
-    """Configuration section."""
-    _apply_env_value("CLSTOCK_API_TITLE", str, lambda x: setattr(settings.api, 'title', x))
-    _apply_env_value("CLSTOCK_API_DESCRIPTION", str, lambda x: setattr(settings.api, 'description', x))
-    _apply_env_value("CLSTOCK_API_VERSION", str, lambda x: setattr(settings.api, 'version', x))
-    _apply_env_value("CLSTOCK_API_MAX_TOP_N", int, lambda x: setattr(settings.api, 'max_top_n', x))
-    _apply_env_value("CLSTOCK_API_MIN_TOP_N", int, lambda x: setattr(settings.api, 'min_top_n', x))
-    _apply_env_value("CLSTOCK_AVAILABLE_PERIODS", lambda s: s.split(","), lambda x: setattr(settings.api, 'available_periods', x))
+def load_backtest_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
+    """Apply backtest overrides from the environment mapping."""
+    _apply_env_value(env, "CLSTOCK_INITIAL_CAPITAL", float, lambda x: setattr(settings.backtest, 'default_initial_capital', x))
+    _apply_env_value(env, "CLSTOCK_REBALANCE_FREQUENCY", int, lambda x: setattr(settings.backtest, 'default_rebalance_frequency', x))
+    _apply_env_value(env, "CLSTOCK_TOP_N", int, lambda x: setattr(settings.backtest, 'default_top_n', x))
+    _apply_env_value(env, "CLSTOCK_STOP_LOSS_PCT", float, lambda x: setattr(settings.backtest, 'default_stop_loss_pct', x))
+    _apply_env_value(env, "CLSTOCK_TAKE_PROFIT_PCT", float, lambda x: setattr(settings.backtest, 'default_take_profit_pct', x))
+    _apply_env_value(env, "CLSTOCK_MAX_HOLDING_DAYS", int, lambda x: setattr(settings.backtest, 'default_max_holding_days', x))
+    _apply_env_value(env, "CLSTOCK_SCORE_THRESHOLD", float, lambda x: setattr(settings.backtest, 'default_score_threshold', x))
+    _apply_env_value(env, "CLSTOCK_DATA_PERIOD", str, lambda x: setattr(settings.backtest, 'default_data_period', x))
 
 
-def load_logging_settings_from_env():
-    """Configuration section."""
-    _apply_env_value("CLSTOCK_LOG_LEVEL", str, lambda x: setattr(settings.logging, 'level', x))
-    _apply_env_value("CLSTOCK_LOG_FORMAT", str, lambda x: setattr(settings.logging, 'format', x))
-    _apply_env_value("CLSTOCK_LOG_FILE", str, lambda x: setattr(settings.logging, 'log_file', x))
+def load_trading_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
+    """Apply trading overrides from the environment mapping."""
+    _apply_env_value(env, "CLSTOCK_MARKET_OPEN_HOUR", int, lambda x: setattr(settings.trading, 'market_open_hour', x))
+    _apply_env_value(env, "CLSTOCK_MARKET_CLOSE_HOUR", int, lambda x: setattr(settings.trading, 'market_close_hour', x))
 
 
-def load_realtime_settings_from_env():
-    """Configuration section."""
-    _apply_env_value("CLSTOCK_RT_UPDATE_INTERVAL", int, lambda x: setattr(settings.realtime, 'update_interval_seconds', x))
-    _apply_env_value("CLSTOCK_RT_PATTERN_CONFIDENCE", float, lambda x: setattr(settings.realtime, 'pattern_confidence_threshold', x))
-    _apply_env_value("CLSTOCK_RT_MIN_TREND_DAYS", int, lambda x: setattr(settings.realtime, 'min_trend_days', x))
-    _apply_env_value("CLSTOCK_RT_MAX_POSITION_SIZE", float, lambda x: setattr(settings.realtime, 'max_position_size_pct', x))
-    _apply_env_value("CLSTOCK_RT_STOP_LOSS_PCT", float, lambda x: setattr(settings.realtime, 'default_stop_loss_pct', x))
-    _apply_env_value("CLSTOCK_RT_TAKE_PROFIT_PCT", float, lambda x: setattr(settings.realtime, 'default_take_profit_pct', x))
-    _apply_env_value("CLSTOCK_RT_MAX_DAILY_TRADES", int, lambda x: setattr(settings.realtime, 'max_daily_trades', x))
-    _apply_env_value("CLSTOCK_RT_MAX_TOTAL_EXPOSURE", float, lambda x: setattr(settings.realtime, 'max_total_exposure_pct', x))
-    _apply_env_value("CLSTOCK_RT_DATA_SOURCE", str, lambda x: setattr(settings.realtime, 'data_source', x))
-    _apply_env_value("CLSTOCK_RT_ORDER_EXECUTION", str, lambda x: setattr(settings.realtime, 'order_execution', x))
+def load_api_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
+    """Apply API overrides from the environment mapping."""
+    _apply_env_value(env, "CLSTOCK_API_TITLE", str, lambda x: setattr(settings.api, 'title', x))
+    _apply_env_value(env, "CLSTOCK_API_DESCRIPTION", str, lambda x: setattr(settings.api, 'description', x))
+    _apply_env_value(env, "CLSTOCK_API_VERSION", str, lambda x: setattr(settings.api, 'version', x))
+    _apply_env_value(env, "CLSTOCK_API_MAX_TOP_N", int, lambda x: setattr(settings.api, 'max_top_n', x))
+    _apply_env_value(env, "CLSTOCK_API_MIN_TOP_N", int, lambda x: setattr(settings.api, 'min_top_n', x))
+    _apply_env_value(env, "CLSTOCK_AVAILABLE_PERIODS", lambda s: s.split(","), lambda x: setattr(settings.api, 'available_periods', x))
 
 
-def load_process_settings_from_env():
-    """Configuration section."""
-    _apply_env_value("CLSTOCK_MAX_CONCURRENT_PROCESSES", int, lambda x: setattr(settings.process, 'max_concurrent_processes', x))
-    _apply_env_value("CLSTOCK_MAX_MEMORY_PER_PROCESS", int, lambda x: setattr(settings.process, 'max_memory_per_process_mb', x))
-    _apply_env_value("CLSTOCK_MAX_CPU_PERCENT", float, lambda x: setattr(settings.process, 'max_cpu_percent_per_process', x))
-    _apply_env_value("CLSTOCK_AUTO_RESTART_FAILED", lambda s: s.lower() == 'true', lambda x: setattr(settings.process, 'auto_restart_failed', x))
-    _apply_env_value("CLSTOCK_MAX_RESTART_ATTEMPTS", int, lambda x: setattr(settings.process, 'max_restart_attempts', x))
+def load_logging_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
+    """Apply logging overrides from the environment mapping."""
+    _apply_env_value(env, "CLSTOCK_LOG_LEVEL", str, lambda x: setattr(settings.logging, 'level', x))
+    _apply_env_value(env, "CLSTOCK_LOG_FORMAT", str, lambda x: setattr(settings.logging, 'format', x))
+    _apply_env_value(env, "CLSTOCK_LOG_FILE", str, lambda x: setattr(settings.logging, 'log_file', x))
+
+
+def load_realtime_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
+    """Apply realtime overrides from the environment mapping."""
+    _apply_env_value(env, "CLSTOCK_RT_UPDATE_INTERVAL", int, lambda x: setattr(settings.realtime, 'update_interval_seconds', x))
+    _apply_env_value(env, "CLSTOCK_RT_PATTERN_CONFIDENCE", float, lambda x: setattr(settings.realtime, 'pattern_confidence_threshold', x))
+    _apply_env_value(env, "CLSTOCK_RT_MIN_TREND_DAYS", int, lambda x: setattr(settings.realtime, 'min_trend_days', x))
+    _apply_env_value(env, "CLSTOCK_RT_MAX_POSITION_SIZE", float, lambda x: setattr(settings.realtime, 'max_position_size_pct', x))
+    _apply_env_value(env, "CLSTOCK_RT_STOP_LOSS_PCT", float, lambda x: setattr(settings.realtime, 'default_stop_loss_pct', x))
+    _apply_env_value(env, "CLSTOCK_RT_TAKE_PROFIT_PCT", float, lambda x: setattr(settings.realtime, 'default_take_profit_pct', x))
+    _apply_env_value(env, "CLSTOCK_RT_MAX_DAILY_TRADES", int, lambda x: setattr(settings.realtime, 'max_daily_trades', x))
+    _apply_env_value(env, "CLSTOCK_RT_MAX_TOTAL_EXPOSURE", float, lambda x: setattr(settings.realtime, 'max_total_exposure_pct', x))
+    _apply_env_value(env, "CLSTOCK_RT_DATA_SOURCE", str, lambda x: setattr(settings.realtime, 'data_source', x))
+    _apply_env_value(env, "CLSTOCK_RT_ORDER_EXECUTION", str, lambda x: setattr(settings.realtime, 'order_execution', x))
+
+
+def load_process_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
+    """Apply process overrides from the environment mapping."""
+    _apply_env_value(env, "CLSTOCK_MAX_CONCURRENT_PROCESSES", int, lambda x: setattr(settings.process, 'max_concurrent_processes', x))
+    _apply_env_value(env, "CLSTOCK_MAX_MEMORY_PER_PROCESS", int, lambda x: setattr(settings.process, 'max_memory_per_process_mb', x))
+    _apply_env_value(env, "CLSTOCK_MAX_CPU_PERCENT", float, lambda x: setattr(settings.process, 'max_cpu_percent_per_process', x))
+    _apply_env_value(env, "CLSTOCK_AUTO_RESTART_FAILED", lambda s: s.lower() == 'true', lambda x: setattr(settings.process, 'auto_restart_failed', x))
+    _apply_env_value(env, "CLSTOCK_MAX_RESTART_ATTEMPTS", int, lambda x: setattr(settings.process, 'max_restart_attempts', x))
 
 def validate_settings(settings: 'AppSettings') -> bool:
     """Configuration section."""
@@ -490,16 +518,3 @@ def validate_settings(settings: 'AppSettings') -> bool:
         return False
     
     return True
-
-# 襍ｷ蜍墓凾縺ｫ迺ｰ蠅・､画焚繧定ｪｭ縺ｿ霎ｼ縺ｿ
-load_from_env()
-
-# 險ｭ螳壹・繝舌Μ繝・・繧ｷ繝ｧ繝ｳ
-if not validate_settings(settings):
-    logger.error("Settings validation failed. Please check the configuration.")
-
-
-
-
-
-

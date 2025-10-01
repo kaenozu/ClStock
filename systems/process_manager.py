@@ -27,9 +27,6 @@ from utils.logger_config import get_logger
 from config.settings import get_settings
 
 logger = get_logger(__name__)
-settings = get_settings()
-
-
 class ProcessStatus(Enum):
     """プロセス状態"""
 
@@ -203,8 +200,9 @@ class ProcessManager:
             env = os.environ.copy()
             env.update(process_info.env_vars)
 
+            process_settings = get_settings().process
             capture_output = bool(
-                getattr(settings.process, "log_process_output", False)
+                getattr(process_settings, "log_process_output", False)
             )
 
             popen_kwargs = {
@@ -501,7 +499,7 @@ class ProcessManager:
                 
                 for proc_info in normal_priority_processes:
                     # 制限を元の設定に戻す
-                    original_settings = settings.process  # 設定から元の値を取得
+                    original_settings = get_settings().process  # 設定から元の値を取得
                     proc_info.max_cpu_percent = original_settings.max_cpu_percent_per_process if hasattr(original_settings, 'max_cpu_percent_per_process') else 50
                     proc_info.max_memory_mb = original_settings.max_memory_per_process_mb if hasattr(original_settings, 'max_memory_per_process_mb') else 1000
                     
