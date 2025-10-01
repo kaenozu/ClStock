@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.security import HTTPAuthorizationCredentials
 
-from datetime import datetime
+from datetime import datetime, time
 from dataclasses import dataclass
 from typing import List
 import pandas as pd
@@ -42,13 +42,16 @@ async def get_recommendations(
         recommendations = predictor.get_top_recommendations(top_n)
 
         current_time = datetime.now()
+        market_open_time = time(9, 0)
+        market_close_time = time(15, 0)
 
         return RecommendationResponse(
             recommendations=recommendations,
             generated_at=current_time,
             market_status=(
                 "市場営業時間外"
-                if current_time.hour < 9 or current_time.hour > 15
+                if current_time.time() < market_open_time
+                or current_time.time() >= market_close_time
                 else "市場営業中"
             ),
         )
