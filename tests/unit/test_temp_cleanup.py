@@ -65,3 +65,35 @@ def test_cleanup_by_pattern_removes_unwanted_paths(cleanup_manager, tmp_path):
     assert not obsolete_file.exists()
     assert not obsolete_dir.exists()
     assert keep_file.exists()
+
+
+def test_cleanup_unnecessary_files_removes_non_whitelisted(cleanup_manager, tmp_path):
+    base_dir = tmp_path / "artifacts"
+    base_dir.mkdir()
+
+    keep_file = base_dir / "keep.txt"
+    keep_file.write_text("keep")
+    extra_file = base_dir / "remove.log"
+    extra_file.write_text("remove")
+    nested_dir = base_dir / "subdir"
+    nested_dir.mkdir()
+    (nested_dir / "nested.txt").write_text("nested")
+
+    removed = cleanup_manager.cleanup_unnecessary_files(
+        str(base_dir), required_entries={"keep.txt", "subdir"}
+    )
+
+    assert removed == [str(extra_file)]
+    assert keep_file.exists()
+    assert not extra_file.exists()
+    assert nested_dir.exists()
+
+
+def test_cleanup_unnecessary_files_handles_missing_directory(cleanup_manager, tmp_path):
+    missing_dir = tmp_path / "does_not_exist"
+
+    removed = cleanup_manager.cleanup_unnecessary_files(
+        str(missing_dir), required_entries={"keep.txt"}
+    )
+
+    assert removed == []

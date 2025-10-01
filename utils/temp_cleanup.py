@@ -2,12 +2,12 @@
 Temporary file cleanup utilities
 """
 
-import os
-import tempfile
 import glob
 import logging
+import os
 import shutil
-from typing import Callable, List
+import tempfile
+from typing import Callable, Iterable, List, Set
 from utils.logger_config import get_logger
 from utils.context_managers import get_shutdown_manager
 
@@ -128,6 +128,42 @@ class TempFileCleanup:
 
         except Exception as e:
             logger.error(f"Error during old files cleanup: {e}")
+
+    def cleanup_unnecessary_files(
+        self, base_dir: str, required_entries: Iterable[str]
+    ) -> List[str]:
+        """Remove files or directories in base_dir that are not required."""
+        if not os.path.isdir(base_dir):
+            logger.debug(
+                "Skipped cleanup for non-existent directory: %s", base_dir
+            )
+            return []
+
+        required_set: Set[str] = set(required_entries)
+        removed: List[str] = []
+
+        for entry in os.listdir(base_dir):
+            if entry in required_set:
+                continue
+
+            full_path = os.path.join(base_dir, entry)
+
+            if os.path.isdir(full_path):
+                if self.cleanup_dir(full_path):
+                    removed.append(full_path)
+            else:
+                if self.cleanup_file(full_path):
+                    removed.append(full_path)
+
+        removed.sort()
+        if removed:
+            logger.info(
+                "Removed %d unnecessary entries from %s", len(removed), base_dir
+            )
+        else:
+            logger.debug("No unnecessary entries found in %s", base_dir)
+
+        return removed
 
 
     def cleanup_by_pattern(self, pattern: str) -> int:
