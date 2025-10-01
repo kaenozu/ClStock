@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.security import HTTPAuthorizationCredentials
 
-from datetime import datetime
+from datetime import datetime, time
 from dataclasses import dataclass
 from typing import List
 import pandas as pd
@@ -27,28 +27,27 @@ router = APIRouter()
 
 @router.get("/recommendations", response_model=RecommendationResponse)
 async def get_recommendations(
-    top_n: int = Query(5, ge=1, le=10, description="推奨銘柄の上位N件を取得"),
+    top_n: int = Query(5, ge=1, le=50, description="推奨銘柄の上位N件を取得"),
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     try:
         # Authentication verification
         verify_token(credentials.credentials)
 
-        # Input validation
-        if not (1 <= top_n <= 50):  # Stricter limit for security
-            raise ValidationError("top_n must be between 1 and 50")
-
         predictor = MLStockPredictor()
         recommendations = predictor.get_top_recommendations(top_n)
 
         current_time = datetime.now()
+        market_open_time = time(9, 0)
+        market_close_time = time(15, 0)
 
         return RecommendationResponse(
             recommendations=recommendations,
             generated_at=current_time,
             market_status=(
                 "市場営業時間外"
-                if current_time.hour < 9 or current_time.hour > 15
+                if current_time.time() < market_open_time
+                or current_time.time() >= market_close_time
                 else "市場営業中"
             ),
         )
@@ -129,7 +128,17 @@ async def get_stock_data(
 
         data_provider = StockDataProvider()
 
-        if validated_symbol not in data_provider.get_all_stock_symbols():
+        available_symbols = set(data_provider.get_all_stock_symbols())
+        lookup_symbol = None
+
+        if validated_symbol in available_symbols:
+            lookup_symbol = validated_symbol
+        else:
+            base_symbol = validated_symbol.split(".")[0]
+            if base_symbol in available_symbols:
+                lookup_symbol = base_symbol
+
+        if lookup_symbol is None:
             raise HTTPException(
                 status_code=404, detail=f"銘柄コード {symbol} が見つかりません"
             )
@@ -158,7 +167,7 @@ async def get_stock_data(
         return {
             "symbol": validated_symbol,
             "company_name": data_provider.jp_stock_codes.get(
-                validated_symbol, validated_symbol
+                lookup_symbol, lookup_symbol
             ),
             "current_price": current_price,
             "price_change": price_change,

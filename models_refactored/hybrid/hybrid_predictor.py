@@ -8,12 +8,15 @@ import numpy as np
 import logging
 import asyncio
 import time
+from dataclasses import replace
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 from collections import deque
 
 from ..core.interfaces import (
     ModelConfiguration,
+    ModelType,
+    PredictionMode,
     DataProvider,
     CacheProvider,
     PredictionResult,
@@ -21,7 +24,7 @@ from ..core.interfaces import (
     PredictionMode,
 )
 from ..core.base_predictor import BaseStockPredictor
-from ..ensemble.ensemble_predictor import EnsemblePredictor
+from ..ensemble.ensemble_predictor import RefactoredEnsemblePredictor
 
 
 class RefactoredHybridPredictor(BaseStockPredictor):
@@ -44,14 +47,49 @@ class RefactoredHybridPredictor(BaseStockPredictor):
         enable_streaming: bool = True,
         enable_multi_gpu: bool = True,
     ):
-        super().__init__(config or ModelConfiguration(), data_provider, cache_provider)
+        base_custom_params = (
+            dict(config.custom_params) if config and config.custom_params else {}
+        )
+
+        base_config = replace(
+            config or ModelConfiguration(),
+            model_type=ModelType.HYBRID,
+            custom_params=base_custom_params,
+        )
+
+        base_config.cache_enabled = enable_cache
+        base_config.custom_params.update(
+            {
+                "adaptive_optimization_enabled": enable_adaptive_optimization,
+                "streaming_enabled": enable_streaming,
+                "multi_gpu_enabled": enable_multi_gpu,
+            }
+        )
+
+        super().__init__(base_config, data_provider, cache_provider)
         self.logger = logging.getLogger(__name__)
 
-        # エンサンブル予測器を内部で使用（互換性のため簡易初期化）
-        ensemble_model_name = (
-            config.model_type.value if config else "RefactoredHybridPredictor"
+        ensemble_custom_params = dict(base_config.custom_params)
+        ensemble_custom_params.setdefault(
+            "parent_model_type", base_config.model_type.value
         )
-        self.ensemble_predictor = EnsemblePredictor(model_name=ensemble_model_name)
+
+        ensemble_config = replace(
+            base_config,
+            model_type=ModelType.ENSEMBLE,
+            custom_params=ensemble_custom_params,
+        )
+
+        # 追加機能の有効/無効状態を保持
+        self.cache_enabled = base_config.cache_enabled
+        self.adaptive_optimization_enabled = enable_adaptive_optimization
+        self.streaming_enabled = enable_streaming
+        self.multi_gpu_enabled = enable_multi_gpu
+
+        # エンサンブル予測器を内部で使用
+        self.ensemble_predictor = RefactoredEnsemblePredictor(
+            config=ensemble_config, data_provider=data_provider
+        )
 
         # リアルタイム学習設定
         self.enable_real_time_learning = enable_real_time_learning
@@ -81,6 +119,41 @@ class RefactoredHybridPredictor(BaseStockPredictor):
         self.enable_multi_gpu = enable_multi_gpu
 
         self.logger.info("RefactoredHybridPredictor initialized with Issue #9 fixes")
+
+    def _record_prediction(
+        self,
+        symbol: str,
+        prediction_result: PredictionResult,
+        prediction_mode: PredictionMode,
+        learning_rate: float,
+    ) -> None:
+        """メタデータや市場データを用いて予測結果を記録"""
+
+        # 予測モードの更新（失敗しても致命的ではないため例外は握りつぶす）
+        try:
+            if prediction_mode is not None:
+                self.set_prediction_mode(prediction_mode)
+        except Exception as exc:  # pragma: no cover - 予防的ロギング
+            self.logger.debug(
+                "Failed to update prediction mode for %s: %s", symbol, exc
+            )
+
+        # 学習率を記録しておくと後続の分析で利用可能
+        self.config.custom_params["last_learning_rate"] = learning_rate
+
+        learning_enabled = getattr(
+            self, "real_time_learning_enabled", self.enable_real_time_learning
+        )
+        if not learning_enabled:
+            return
+
+        actual_price = None
+        if prediction_result.metadata:
+            actual_price = prediction_result.metadata.get("current_price")
+
+        self._record_prediction_with_actual_price(
+            symbol, prediction_result, actual_price
+        )
 
     def _predict_implementation(self, symbol: str) -> float:
         """ハイブリッド予測の実装"""
@@ -268,7 +341,13 @@ class RefactoredHybridPredictor(BaseStockPredictor):
 
             if actual_price is not None:
                 # 予測誤差を計算
-                error = abs(prediction_result.prediction - actual_price) / actual_price
+                if actual_price != 0:
+                    error = (
+                        abs(prediction_result.prediction - actual_price)
+                        / actual_price
+                    )
+                else:  # 実際の価格が0の場合は誤差0として扱う
+                    error = 0.0
 
                 # 学習履歴に記録
                 self.learning_history.append(
@@ -284,6 +363,20 @@ class RefactoredHybridPredictor(BaseStockPredictor):
 
                 # 誤差統計を更新
                 self.prediction_errors.append(error)
+
+                # リアルタイム学習システムへフィードバック
+                learner = getattr(self, "real_time_learner", None)
+                if learner and hasattr(learner, "add_prediction_feedback"):
+                    try:
+                        learner.add_prediction_feedback(
+                            prediction_result.prediction, actual_price, symbol
+                        )
+                    except Exception as feedback_error:  # pragma: no cover - ログ用途
+                        self.logger.warning(
+                            "Real-time learner feedback failed for %s: %s",
+                            symbol,
+                            feedback_error,
+                        )
 
                 # リアルタイム学習システムの更新
                 self._update_learning_weights(error)
