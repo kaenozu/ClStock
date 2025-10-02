@@ -1,3 +1,10 @@
+from pathlib import Path
+import sys
+
+# Resolve the project root and add it to the system path
+project_root = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(project_root))
+
 """Test performance optimization models."""
 
 import pytest
@@ -7,18 +14,9 @@ from unittest.mock import MagicMock, patch
 from datetime import datetime
 from concurrent.futures import Future
 
-# 既存のインポートを修正
-# from models.performance import (
-#     ParallelStockPredictor,
-#     AdvancedCacheManager,
-#     UltraHighPerformancePredictor
-# )
-# from models.base import PredictionResult
-# from models.core import EnsembleStockPredictor
-
 # 修正されたインポート
 Mock = MagicMock
-from models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
+from ....models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
 from models.core import PredictionResult
 from models_refactored.ensemble.ensemble_predictor import (
     EnsemblePredictor as EnsembleStockPredictor,
@@ -387,7 +385,7 @@ class TestUltraHighPerformancePredictor:
         base_predictor.train.assert_called_once_with(sample_stock_data, target)
         assert predictor.is_trained() is True
 
-    @patch("data.stock_data.StockDataProvider")
+    @patch("models.performance.ThreadPoolExecutor")
     def test_predict_cache_hit(self, mock_provider_class, sample_stock_data):
         """Test predict with cache hit."""
         base_predictor = Mock()
