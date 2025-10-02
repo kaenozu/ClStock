@@ -23,6 +23,7 @@ from models_new.hybrid.prediction_modes import PredictionMode
 from data.stock_data import StockDataProvider
 from data.sector_classification import SectorClassification
 from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem
+from config.target_universe import get_target_universe
 
 
 class InvestmentAdvisorCUI:
@@ -34,124 +35,9 @@ class InvestmentAdvisorCUI:
         self.data_provider = StockDataProvider()
         self.medium_system = MediumTermPredictionSystem()
 
-        # 推奨銘柄リスト（ブルーチップ中心45銘柄）
-        self.target_symbols = [
-            # 自動車・輸送機器（安定大手のみ）
-            "7203.T",  # トヨタ自動車
-            "7267.T",  # ホンダ
-            "7201.T",  # 日産自動車
-            "7269.T",  # スズキ
-            # 電機・精密機器（ブルーチップ）
-            "6758.T",  # ソニーグループ
-            "6861.T",  # キーエンス
-            "6954.T",  # ファナック
-            "6981.T",  # 村田製作所
-            "6503.T",  # 三菱電機
-            "6702.T",  # 富士通
-            "6752.T",  # パナソニック
-            "6971.T",  # 京セラ
-            "7751.T",  # キヤノン
-            # 通信・IT（安定大手）
-            "9984.T",  # ソフトバンクグループ
-            "9433.T",  # KDDI
-            "9434.T",  # NTT
-            "9437.T",  # NTTドコモ
-            "6098.T",  # リクルートホールディングス
-            "9613.T",  # NTTデータ
-            # 金融（メガバンク・大手証券）
-            "8306.T",  # 三菱UFJ
-            "8316.T",  # 三井住友フィナンシャル
-            "8411.T",  # みずほフィナンシャル
-            "8604.T",  # 野村ホールディングス
-            # 商社（5大商社）
-            "8001.T",  # 伊藤忠商事
-            "8058.T",  # 三菱商事
-            "8031.T",  # 三井物産
-            "8053.T",  # 住友商事
-            "8002.T",  # 丸紅
-            # 医薬品・化学（安定大手）
-            "4502.T",  # 武田薬品工業
-            "4507.T",  # 塩野義製薬
-            "4503.T",  # アステラス製薬
-            "4005.T",  # 住友化学
-            "4063.T",  # 信越化学工業
-            # 素材・エネルギー（安定大手）
-            "5401.T",  # 新日鉄住金
-            "5713.T",  # 住友金属鉱山
-            "5020.T",  # ENEOS
-            # 消費・小売（ブルーチップ）
-            "7974.T",  # 任天堂
-            "8267.T",  # イオン
-            "9983.T",  # ファーストリテイリング
-            "3382.T",  # セブン&アイ
-            "2914.T",  # JT
-            "2802.T",  # 味の素
-            "4911.T",  # 資生堂
-            # 不動産・建設（安定大手）
-            "8802.T",  # 三菱地所
-            "8801.T",  # 三井不動産
-            "1801.T",  # 大成建設
-            "6367.T",  # ダイキン工業
-        ]
-
-        self.symbol_names = {
-            # 自動車・輸送機器
-            "7203.T": "トヨタ自動車",
-            "7267.T": "ホンダ",
-            "7201.T": "日産自動車",
-            "7269.T": "スズキ",
-            # 電機・精密機器
-            "6758.T": "ソニーグループ",
-            "6861.T": "キーエンス",
-            "6954.T": "ファナック",
-            "6981.T": "村田製作所",
-            "6503.T": "三菱電機",
-            "6702.T": "富士通",
-            "6752.T": "パナソニック",
-            "6971.T": "京セラ",
-            "7751.T": "キヤノン",
-            # 通信・IT
-            "9984.T": "ソフトバンクG",
-            "9433.T": "KDDI",
-            "9434.T": "NTT",
-            "9437.T": "NTTドコモ",
-            "6098.T": "リクルート",
-            "9613.T": "NTTデータ",
-            # 金融
-            "8306.T": "三菱UFJ",
-            "8316.T": "三井住友FG",
-            "8411.T": "みずほFG",
-            "8604.T": "野村HD",
-            # 商社
-            "8001.T": "伊藤忠商事",
-            "8058.T": "三菱商事",
-            "8031.T": "三井物産",
-            "8053.T": "住友商事",
-            "8002.T": "丸紅",
-            # 医薬品・化学
-            "4502.T": "武田薬品",
-            "4507.T": "塩野義製薬",
-            "4503.T": "アステラス製薬",
-            "4005.T": "住友化学",
-            "4063.T": "信越化学",
-            # 素材・エネルギー
-            "5401.T": "新日鉄住金",
-            "5713.T": "住友金属鉱山",
-            "5020.T": "ENEOS",
-            # 消費・小売
-            "7974.T": "任天堂",
-            "8267.T": "イオン",
-            "9983.T": "ファーストリテイリング",
-            "3382.T": "セブン&アイ",
-            "2914.T": "JT",
-            "2802.T": "味の素",
-            "4911.T": "資生堂",
-            # 不動産・建設
-            "8802.T": "三菱地所",
-            "8801.T": "三井不動産",
-            "1801.T": "大成建設",
-            "6367.T": "ダイキン",
-        }
+        self.target_universe = get_target_universe()
+        self.target_symbols = self.target_universe.all_formatted()
+        self.symbol_names = self.target_universe.japanese_names
 
     def get_short_term_prediction(self, symbol: str) -> Dict[str, Any]:
         """短期予測（1日、90.3%精度）"""
@@ -208,7 +94,7 @@ class InvestmentAdvisorCUI:
 
         return {
             "symbol": symbol,
-            "name": self.symbol_names.get(symbol, symbol),
+            "name": self.symbol_names.get(self.target_universe.to_base(symbol), symbol),
             "short_term": short_term,
             "medium_term": medium_term,
             "integrated_recommendation": recommendation,
@@ -349,8 +235,11 @@ class InvestmentAdvisorCUI:
         all_analyses = []
 
         for i, symbol in enumerate(self.target_symbols[:limit], 1):
+            name = self.symbol_names.get(
+                self.target_universe.to_base(symbol), symbol
+            )
             print(
-                f"分析進行: {i}/{min(limit, len(self.target_symbols))} - {self.symbol_names.get(symbol, symbol)}"
+                f"分析進行: {i}/{min(limit, len(self.target_symbols))} - {name}"
             )
 
             try:

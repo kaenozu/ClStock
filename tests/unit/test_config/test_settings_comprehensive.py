@@ -18,6 +18,7 @@ from config.settings import (
     create_settings,
     get_settings,
 )
+from config.target_universe import get_target_universe
 
 
 class TestConfigurationSystem:
@@ -93,21 +94,9 @@ class TestConfigurationSystem:
     def test_target_stocks_completeness(self):
         """Test that target stocks configuration is complete."""
         settings = get_settings()
+        universe = get_target_universe()
 
-        # Should have at least 50 stocks (as mentioned in requirements)
-        assert len(settings.target_stocks) >= 30
-
-        # Check specific well-known stocks
-        expected_stocks = {
-            "7203": "Toyota Motor Corp",
-            "6758": "Sony Group Corp",
-            "9432": "Nippon Telegraph and Telephone",
-            "8316": "Sumitomo Mitsui Financial Group",
-        }
-
-        for code, name in expected_stocks.items():
-            assert code in settings.target_stocks
-            assert settings.target_stocks[code] == name
+        assert settings.target_stocks == universe.english_names
 
     @patch.dict(
         os.environ,
