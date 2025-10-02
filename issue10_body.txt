@@ -1,0 +1,5 @@
+Description: full_auto_system.py および investment_advisor_cui.py で、archive.old_systems.medium_term_prediction.MediumTermPredictionSystem が参照されています。full_auto_system.py では optimize メソッド、investment_advisor_cui.py では get_medium_term_prediction メソッドが期待されています。これらのメソッドが存在し、期待する形式のデータを返すことを確認する必要があります。特に investment_advisor_cui.py では、戻り値の構造に密接に依存した処理（medium.get( "signals", {} ).get( ... ) ) が行われています。
+Severity: High
+Files: full_auto_system.py, investment_advisor_cui.py
+Location: 各ファイル内の MediumTermPredictionSystem の使用箇所
+Suggestion: MediumTermPredictionSystem の実装を確認し、APIの互換性を保つ、またはアダプタークラスを導入して戻り値を統一してください。

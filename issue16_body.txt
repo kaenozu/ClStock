@@ -1,0 +1,5 @@
+Description: _integrate_recommendations 関数内で、short_change > 0.5 や medium_change > 2 などの閾値が使われています。1日で0.5%、1ヶ月で2%の変動が「買い」の基準となるのは、一般的な市場状況と比べて低すぎる可能性があります。
+Severity: Medium
+File: investment_advisor_cui.py
+Location: _integrate_recommendations 関数
+Suggestion: バックテストや過去データを用いて、これらの閾値が実際に効果的であるか検証してください。

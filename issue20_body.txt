@@ -1,0 +1,5 @@
+Description: data.fetch コマンドでの期間指定 ( valid_periods リスト ) が yfinance の仕様と一致しているか確認が必要です。特に max や ytd が意図通りに動作するか。
+Severity: Low
+File: clstock_cli.py
+Location: fetch 関数
+Suggestion: yfinance の公式ドキュメントを参照し、サポートされている期間を正確に反映するようにしてください。

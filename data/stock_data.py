@@ -148,14 +148,17 @@ class StockDataProvider:
 
         return list(self.jp_stock_codes.keys())
 
-    def get_stock_data(self, symbol: str, period: str = "1y") -> pd.DataFrame:
+    def get_stock_data(self, symbol: str, period: str = "1y", start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
         """Fetch historical OHLCV data for *symbol*.
 
         The result always contains the ``Symbol``, ``ActualTicker`` and
         ``CompanyName`` columns in addition to the usual OHLCV fields.
         """
 
-        cache_key = f"stock::{symbol}::{period}"
+        if start is not None or end is not None:
+            cache_key = f"stock::{symbol}::start_{start}::end_{end}"
+        else:
+            cache_key = f"stock::{symbol}::{period}"
         cache = get_cache()
         cached = cache.get(cache_key)
         if isinstance(cached, pd.DataFrame) and not cached.empty:
@@ -164,16 +167,31 @@ class StockDataProvider:
         data: Optional[pd.DataFrame] = None
         actual_ticker: Optional[str] = None
 
-        if self._should_use_local_first(symbol):
+        # start/end が指定されている場合は、ローカルCSVは使用しない (期間指定が一致するとは限らないため)
+        if start is None and end is None and self._should_use_local_first(symbol):
             local = self._load_first_available_csv(symbol)
             if local is not None:
                 data, actual_ticker = local
 
         if data is None or data.empty:
-            data, actual_ticker = self._download_via_yfinance(symbol, period)
+            if start is not None or end is not None:
+                data, actual_ticker = self._download_via_yfinance(symbol, period=None, start=start, end=end)
+            else:
+                data, actual_ticker = self._download_via_yfinance(symbol, period)
 
         if data is None or data.empty:
             raise DataFetchError(symbol, "No historical data available")
+
+        # yfinance が実際に取得した期間を確認
+        if start is not None and end is not None:
+            actual_start = data.index.min()
+            actual_end = data.index.max()
+            print(f"StockDataProvider: Requested: {start} to {end}, Actual: {actual_start} to {actual_end}")
+            # 必要に応じて、取得範囲が要求範囲を満たしているか確認するロジックを追加
+            # 例: 休場日などの関係で、要求した期間より狭くなることは許容するが、
+            #     意図しない期間が取得されないよう、ある程度のチェックを行う。
+            # if actual_start > start or actual_end < end:
+            #     print(f"Warning: Actual data range differs significantly from requested range for {symbol}.")
 
         prepared = self._prepare_history_frame(data, symbol, actual_ticker)
         cache.set(cache_key, prepared, ttl=self.cache_ttl)
@@ -324,12 +342,15 @@ class StockDataProvider:
                         logger.debug("Failed to load local CSV %s: %s", candidate, exc)
         return None
 
-    def _download_via_yfinance(self, symbol: str, period: str) -> Tuple[pd.DataFrame, Optional[str]]:
+    def _download_via_yfinance(self, symbol: str, period: Optional[str] = "1y", start: Optional[str] = None, end: Optional[str] = None) -> Tuple[pd.DataFrame, Optional[str]]:
         last_error: Optional[Exception] = None
         for ticker in self._ticker_formats(symbol):
             try:
                 ticker_obj = yf.Ticker(ticker)
-                history = ticker_obj.history(period=period)
+                if start is not None or end is not None:
+                    history = ticker_obj.history(start=start, end=end)
+                else:
+                    history = ticker_obj.history(period=period)
                 if isinstance(history, pd.DataFrame) and not history.empty:
                     return history, ticker
             except Exception as exc:  # pragma: no cover - depends on yfinance
