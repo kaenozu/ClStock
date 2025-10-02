@@ -410,7 +410,7 @@ class TestUltraHighPerformancePredictor:
         # Base predictor should not be called due to cache hit
         base_predictor.predict.assert_not_called()
 
-    @patch("data.stock_data.StockDataProvider")
+    @patch("models.performance.StockDataProvider")
     def test_predict_cache_miss(self, mock_provider_class, sample_stock_data):
         """Test predict with cache miss."""
         base_predictor = Mock()
