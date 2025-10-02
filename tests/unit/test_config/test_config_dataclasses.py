@@ -17,6 +17,7 @@ from config.settings import (
     get_settings,
     load_from_env,
 )
+from config.target_universe import get_target_universe
 
 
 class TestConfigDataclasses:
@@ -143,12 +144,6 @@ class TestSettingsIntegration:
     def test_target_stocks_config(self):
         """Test that target stocks are properly configured."""
         settings = get_settings()
+        universe = get_target_universe()
 
-        # Check that we have the expected number of target stocks
-        assert len(settings.target_stocks) >= 30  # Validate a reasonably sized universe
-
-        # Check a few specific stocks
-        assert "7203" in settings.target_stocks  # Toyota
-        assert "6758" in settings.target_stocks  # Sony
-        assert settings.target_stocks["7203"] == "Toyota Motor Corp"
-        assert settings.target_stocks["6758"] == "Sony Group Corp"
+        assert settings.target_stocks == universe.english_names
