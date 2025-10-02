@@ -94,8 +94,8 @@ class TestConfigurationSystem:
         """Test that target stocks configuration is complete."""
         settings = get_settings()
 
-        # Should have at least 50 stocks (as mentioned in requirements)
-        assert len(settings.target_stocks) >= 30
+        # README記載の通り、デフォルトでは31銘柄が設定されていることを確認
+        assert len(settings.target_stocks) >= 31
 
         # Check specific well-known stocks
         expected_stocks = {
