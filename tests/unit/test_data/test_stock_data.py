@@ -153,8 +153,59 @@ class TestStockDataProvider:
     def test_ticker_formats_for_japanese_stock(self):
         provider = StockDataProvider()
         formats = provider._ticker_formats("7203")
-        assert formats[0] == "7203.T"
-        assert formats[-1] in {"7203", "7203.T", "7203.TO"}
+        assert formats[0] == "7203"
+        assert formats[1:] == ["7203.T", "7203.TO"]
+
+    def test_ticker_formats_preserve_suffix_priority(self):
+        provider = StockDataProvider()
+        formats = provider._ticker_formats("6758.to")
+        assert formats == ["6758.TO", "6758.T", "6758"]
+
+    def test_prepare_history_frame_defaults_to_first_ticker_format(self):
+        provider = StockDataProvider()
+        base_df = pd.DataFrame(
+            {"Close": [100.0], "Open": [99.0], "High": [101.0], "Low": [98.5], "Volume": [1500]},
+            index=pd.date_range("2024-01-01", periods=1),
+        )
+        prepared = provider._prepare_history_frame(base_df, "6758.to", actual_ticker=None)
+        assert (prepared["ActualTicker"] == "6758.TO").all()
+
+    def test_load_first_available_csv_prefers_suffix(self, tmp_path):
+        provider = StockDataProvider()
+        provider._history_dirs = [tmp_path]
+
+        preferred_path = tmp_path / "6758.TO.csv"
+        fallback_path = tmp_path / "6758.T.csv"
+
+        pd.DataFrame({"Close": [1.0]}).to_csv(preferred_path)
+        pd.DataFrame({"Close": [2.0]}).to_csv(fallback_path)
+
+        loaded = provider._load_first_available_csv("6758.to")
+        assert loaded is not None
+        df, ticker = loaded
+        assert ticker == "6758.TO"
+        expected = pd.read_csv(preferred_path, index_col=0, parse_dates=True)
+        pd.testing.assert_frame_equal(df, expected)
+
+    def test_download_via_yfinance_prefers_suffix(self, monkeypatch):
+        provider = StockDataProvider()
+
+        history_df = pd.DataFrame({"Close": [1.0], "Volume": [1000]}, index=pd.date_range("2024-01-01", periods=1))
+
+        class DummyTicker:
+            def __init__(self, ticker):
+                self.ticker = ticker
+
+            def history(self, period="1y"):
+                if self.ticker == "6758.TO":
+                    return history_df
+                return pd.DataFrame()
+
+        monkeypatch.setattr(stock_data_module.yf, "Ticker", lambda ticker: DummyTicker(ticker))
+
+        history, actual = provider._download_via_yfinance("6758.to", "1mo")
+        assert actual == "6758.TO"
+        pd.testing.assert_frame_equal(history, history_df)
 
     def test_real_stock_data_integration(self):
         provider = StockDataProvider()

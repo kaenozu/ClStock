@@ -457,38 +457,56 @@ class FullAutoInvestmentSystem:
 
                 if not optimized_portfolio or 'selected_stocks' not in optimized_portfolio:
                     print("[警告] ポートフォリオ最適化に失敗しました。空の結果が返されました。")
-                    # processed_data が空でも、self.failed_symbols に記録された銘柄のためのスクリプト生成を試みるために、
-                    # _display_recommendations を呼び出す。
                     recommendations = []
                 else:
-                    selected_stocks = optimized_portfolio['selected_stocks']
-                    print(f"[情報] 最適化完了 - 選定銘柄数: {len(selected_stocks)}")
-                    
-                    if not selected_stocks:
-                        print("[警告] 最適化結果に選定銘柄がありません。")
+                    # 最適なポートフォリオサイズの結果から選定銘柄を取得
+                    # 最も性能の良いポートフォリオを選択
+                    best_result_key = None
+                    best_performance_score = -float('inf')
+                    for size, result in optimization_results.items():
+                        backtest_result = result.get('backtest', {})
+                        performance_score = backtest_result.get('return_rate', 0) * size * 0.1  # 簡易スコア計算
+                        if performance_score > best_performance_score:
+                            best_performance_score = performance_score
+                            best_result_key = size
+
+                    if best_result_key is None:
+                        print("[警告] 最適化結果から最適なポートフォリオを選択できませんでした。")
                         recommendations = []
                     else:
-                        # 4. 個別銘柄分析と推奨生成
-                        print("[ステップ 4/4] (100%) - 個別銘柄分析と推奨生成中...")
-                        print("=" * 60)
-                        recommendations = []
-                        analysis_failed_count = 0
+                        selected_profiles = optimization_results[best_result_key].get('selected_profiles', [])
+                        selected_stocks = [profile.symbol for profile in selected_profiles]
                         
-                        for symbol in selected_stocks:
-                            try:
-                                recommendation = await self._analyze_single_stock(
-                                    symbol, processed_data.get(symbol)
-                                )
-                                if recommendation:
-                                    recommendations.append(recommendation)
-                                else:
+                        # 実際にデータがある銘柄のみを対象とする
+                        available_selected_stocks = [s for s in selected_stocks if s in processed_data]
+                        
+                        print(f"[情報] 最適化完了 - 選定銘柄数: {len(selected_profiles)} (内 {len(available_selected_stocks)} がデータ取得済み)")
+                        
+                        if not available_selected_stocks:
+                            print("[警告] 最適化結果にデータが存在する銘柄がありません。")
+                            recommendations = []
+                        else:
+                            # 4. 個別銘柄分析と推奨生成
+                            print("[ステップ 4/4] (100%) - 個別銘柄分析と推奨生成中...")
+                            print("=" * 60)
+                            recommendations = []
+                            analysis_failed_count = 0
+                            
+                            for symbol in available_selected_stocks:
+                                try:
+                                    recommendation = await self._analyze_single_stock(
+                                        symbol, processed_data.get(symbol)
+                                    )
+                                    if recommendation:
+                                        recommendations.append(recommendation)
+                                    else:
+                                        analysis_failed_count += 1
+                                        
+                                except Exception as e:
                                     analysis_failed_count += 1
-                                    
-                            except Exception as e:
-                                analysis_failed_count += 1
-                                logger.error(f"個別銘柄分析中にエラーが発生しました: {symbol} - {e}")
-                        
-                        print(f"[完了] 個別銘柄分析完了 - 成功: {len(recommendations)}銘柄, 失敗: {analysis_failed_count}銘柄")
+                                    logger.error(f"個別銘柄分析中にエラーが発生しました: {symbol} - {e}")
+                            
+                            print(f"[完了] 個別銘柄分析完了 - 成功: {len(recommendations)}銘柄, 失敗: {analysis_failed_count}銘柄")
             
             except Exception as e:
                 print(f"[エラー] ポートフォリオ最適化中に予期せぬエラーが発生しました: {e}")
