@@ -96,7 +96,23 @@ class TestConfigurationSystem:
         settings = get_settings()
         universe = get_target_universe()
 
+        # settings.target_stocks が universe.english_names と等しいことを確認
         assert settings.target_stocks == universe.english_names
+
+        # README記載の通り、デフォルトでは31銘柄が設定されていることを確認
+        assert len(settings.target_stocks) >= 31
+
+        # Check specific well-known stocks
+        expected_stocks = {
+            "7203": "Toyota Motor Corp",
+            "6758": "Sony Group Corp",
+            "9432": "Nippon Telegraph and Telephone",
+            "8316": "Sumitomo Mitsui Financial Group",
+        }
+
+        for code, name in expected_stocks.items():
+            assert code in settings.target_stocks
+            assert settings.target_stocks[code] == name
 
     @patch.dict(
         os.environ,
