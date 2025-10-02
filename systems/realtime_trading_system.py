@@ -173,9 +173,9 @@ class RiskManager:
 
         # 総エクスポージャー確認
         total_exposure = sum(float(pos["value"]) for pos in self.positions.values())
-        max_exposure = (
-            self.current_capital * self.settings.realtime.max_total_exposure_pct
-        )
+        total_account_value = self.current_capital + total_exposure
+        exposure_base = max(self.initial_capital, total_account_value)
+        max_exposure = exposure_base * self.settings.realtime.max_total_exposure_pct
 
         if total_exposure >= max_exposure:
             return {"size": 0, "reason": "総エクスポージャー上限"}
@@ -193,6 +193,12 @@ class RiskManager:
         )
 
         position_value = self.current_capital * position_ratio
+        max_additional_exposure = max_exposure - total_exposure
+        position_value = min(position_value, max_additional_exposure)
+
+        if position_value <= 0:
+            return {"size": 0, "reason": "総エクスポージャー上限"}
+
         position_size = int(position_value / current_price / 100) * 100  # 100株単位
 
         if position_size == 0:
