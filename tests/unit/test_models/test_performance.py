@@ -16,7 +16,7 @@ from concurrent.futures import Future
 
 # 修正されたインポート
 Mock = MagicMock
-from models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
+from ....models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
 from models.core import PredictionResult
 from models_refactored.ensemble.ensemble_predictor import (
     EnsemblePredictor as EnsembleStockPredictor,
@@ -385,7 +385,7 @@ class TestUltraHighPerformancePredictor:
         base_predictor.train.assert_called_once_with(sample_stock_data, target)
         assert predictor.is_trained() is True
 
-    @patch("data.stock_data.StockDataProvider")
+    @patch("models.performance.ThreadPoolExecutor")
     def test_predict_cache_hit(self, mock_provider_class, sample_stock_data):
         """Test predict with cache hit."""
         base_predictor = Mock()
