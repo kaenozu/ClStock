@@ -2,6 +2,10 @@ import os
 import pandas as pd
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import sys
+import types
+from dataclasses import dataclass, field
+from datetime import datetime as dt_datetime
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -9,6 +13,62 @@ from unittest.mock import MagicMock, patch
 
 os.environ.setdefault("CLSTOCK_DEV_KEY", "test-key")
 os.environ.setdefault("CLSTOCK_ADMIN_KEY", "admin-key")
+
+
+class _StubMLStockPredictor:
+    pass
+
+
+@dataclass
+class _StubStockRecommendation:
+    rank: int = 0
+    symbol: str = ""
+    company_name: str = ""
+    buy_timing: str = ""
+    target_price: float = 0.0
+    stop_loss: float = 0.0
+    profit_target_1: float = 0.0
+    profit_target_2: float = 0.0
+    holding_period: str = ""
+    score: float = 0.0
+    current_price: float = 0.0
+    recommendation_reason: str = ""
+    recommendation_level: str = "neutral"
+    generated_at: dt_datetime = field(default_factory=dt_datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "rank": self.rank,
+            "symbol": self.symbol,
+            "company_name": self.company_name,
+            "buy_timing": self.buy_timing,
+            "target_price": self.target_price,
+            "stop_loss": self.stop_loss,
+            "profit_target_1": self.profit_target_1,
+            "profit_target_2": self.profit_target_2,
+            "holding_period": self.holding_period,
+            "score": self.score,
+            "current_price": self.current_price,
+            "recommendation_reason": self.recommendation_reason,
+            "recommendation_level": self.recommendation_level,
+            "generated_at": self.generated_at.isoformat(),
+        }
+
+
+sys.modules.setdefault("joblib", types.ModuleType("joblib"))
+_models_pkg = sys.modules.setdefault("models", types.ModuleType("models"))
+sys.modules.setdefault("models.core", types.ModuleType("models.core"))
+sys.modules.setdefault(
+    "models.recommendation", types.ModuleType("models.recommendation")
+)
+setattr(sys.modules["models.core"], "MLStockPredictor", _StubMLStockPredictor)
+setattr(_models_pkg, "core", sys.modules["models.core"])
+setattr(
+    sys.modules["models.recommendation"],
+    "StockRecommendation",
+    _StubStockRecommendation,
+)
+setattr(_models_pkg, "recommendation", sys.modules["models.recommendation"])
 
 from api.endpoints import router
 from models.recommendation import StockRecommendation
@@ -90,7 +150,7 @@ def test_get_stock_data_accepts_suffix_symbols(mock_provider_cls):
 
 
 @patch("api.endpoints.StockDataProvider")
-def test_get_stock_data_actual_ticker_prefers_technical_data(mock_provider_cls):
+def test_get_stock_data_uses_actual_ticker_from_technical_data(mock_provider_cls):
     app = FastAPI()
     app.include_router(router)
     client = TestClient(app)
@@ -98,22 +158,20 @@ def test_get_stock_data_actual_ticker_prefers_technical_data(mock_provider_cls):
     mock_provider = MagicMock()
     mock_provider.get_all_stock_symbols.return_value = {"7203": "Test Corp"}
 
-    base_df = pd.DataFrame(
+    technical_df = pd.DataFrame(
         {
-            "Close": [300.0],
-            "Volume": [3500],
-            "SMA_20": [None],
-            "SMA_50": [None],
-            "RSI": [None],
-            "MACD": [None],
+            "Close": [300.0, 310.0],
+            "Volume": [3500, 3600],
+            "SMA_20": [None, None],
+            "SMA_50": [None, None],
+            "RSI": [None, None],
+            "MACD": [None, None],
+            "ActualTicker": ["7203.T", "7203.T"],
         },
-        index=pd.date_range("2024-03-01", periods=1),
+        index=pd.date_range("2024-03-01", periods=2),
     )
 
-    technical_df = base_df.copy()
-    technical_df["ActualTicker"] = ["7203.T"]
-
-    mock_provider.get_stock_data.return_value = base_df
+    mock_provider.get_stock_data.return_value = technical_df
     mock_provider.calculate_technical_indicators.return_value = technical_df
     mock_provider.get_financial_metrics.return_value = {}
 
