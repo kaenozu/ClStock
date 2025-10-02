@@ -1,3 +1,10 @@
+from pathlib import Path
+import sys
+
+# Resolve the project root and add it to the system path
+project_root = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(project_root))
+
 """Test performance optimization models."""
 
 import pytest
@@ -6,15 +13,6 @@ import numpy as np
 from unittest.mock import MagicMock, patch
 from datetime import datetime
 from concurrent.futures import Future
-
-# 既存のインポートを修正
-# from models.performance import (
-#     ParallelStockPredictor,
-#     AdvancedCacheManager,
-#     UltraHighPerformancePredictor
-# )
-# from models.base import PredictionResult
-# from models.core import EnsembleStockPredictor
 
 # 修正されたインポート
 Mock = MagicMock
