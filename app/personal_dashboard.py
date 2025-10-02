@@ -18,7 +18,7 @@ import uvicorn
 import pandas as pd
 import numpy as np
 
-from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+from models.precision.precision_87_system import Precision87BreakthroughSystem
 from data.stock_data import StockDataProvider
 from config.settings import get_settings
 

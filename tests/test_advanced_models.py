@@ -8,9 +8,9 @@ import pandas as pd
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-from models_refactored.advanced.prediction_dashboard import PredictionDashboard
-from models_refactored.advanced.market_sentiment_analyzer import MarketSentimentAnalyzer
-from models_refactored.core.interfaces import (
+from models.advanced.prediction_dashboard import PredictionDashboard
+from models.advanced.market_sentiment_analyzer import MarketSentimentAnalyzer
+from models.core.interfaces import (
     ModelConfiguration,
     ModelType,
     PredictionMode,
@@ -29,7 +29,7 @@ class TestPredictionDashboard:
         assert self.dashboard is not None
         assert hasattr(self.dashboard, "display_predictions")
 
-    @patch("models_refactored.ensemble.ensemble_predictor.RefactoredEnsemblePredictor")
+    @patch("models.ensemble.ensemble_predictor.RefactoredEnsemblePredictor")
     def test_display_predictions(self, mock_predictor_class):
         """予測表示のテスト"""
         # モック予測結果の設定
@@ -55,7 +55,7 @@ class TestPredictionDashboard:
         results = self.dashboard.display_predictions([])
         assert results is not None
 
-    @patch("models_refactored.ensemble.ensemble_predictor.RefactoredEnsemblePredictor")
+    @patch("models.ensemble.ensemble_predictor.RefactoredEnsemblePredictor")
     def test_dashboard_error_handling(self, mock_predictor_class):
         """ダッシュボードエラーハンドリングのテスト"""
         # エラーを発生させるモック

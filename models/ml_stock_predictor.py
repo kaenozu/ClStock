@@ -18,7 +18,7 @@ from sklearn.preprocessing import StandardScaler
 from data.stock_data import StockDataProvider
 
 try:  # pragma: no cover - optional dependency for enhanced parallelism
-    from models_refactored.ensemble.parallel_feature_calculator import (
+    from models.ensemble.parallel_feature_calculator import (
         ParallelFeatureCalculator,
     )
 except Exception:  # pragma: no cover - calculator not available in all environments

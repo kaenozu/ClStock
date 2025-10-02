@@ -348,7 +348,7 @@ class SecureProcessManager:
             # 安全なコマンド構築
             command = [
                 "python",
-                "models_new/precision/precision_87_system.py",
+                "models/precision/precision_87_system.py",
                 "--symbol",
                 sanitized_symbol,
             ]

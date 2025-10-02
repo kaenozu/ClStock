@@ -16,7 +16,7 @@ import pandas as pd
 import hashlib
 from abc import ABC, abstractmethod
 
-from models_refactored.core.interfaces import (
+from models.core.interfaces import (
     DataProvider as RealTimeDataProvider,
     PredictionResult as TickData,
     ModelConfiguration as OrderBookData,
@@ -24,7 +24,7 @@ from models_refactored.core.interfaces import (
     PredictionResult as NewsData,
     CacheProvider as DataQualityMonitor,
 )
-from models_refactored.monitoring.cache_manager import (
+from models.monitoring.cache_manager import (
     RealTimeCacheManager as AdvancedCacheManager,
 )
 from config.settings import get_settings

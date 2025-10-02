@@ -59,7 +59,7 @@ def run_comprehensive_comparison() -> Dict[str, Any]:
 
         # 87%精度システム初期化
         try:
-            from models_new.precision.precision_87_system import (
+            from models.precision.precision_87_system import (
                 Precision87BreakthroughSystem,
             )
 
@@ -71,7 +71,7 @@ def run_comprehensive_comparison() -> Dict[str, Any]:
 
         # 拡張アンサンブルシステム初期化
         try:
-            from models_new.ensemble.ensemble_predictor import EnsembleStockPredictor
+            from models.ensemble.ensemble_predictor import EnsembleStockPredictor
             from data.stock_data import StockDataProvider
 
             data_provider = StockDataProvider()

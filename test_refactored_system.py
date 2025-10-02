@@ -11,12 +11,12 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent
 sys.path.append(str(PROJECT_ROOT))
 
-from models_refactored.core.interfaces import (
+from models.core.interfaces import (
     ModelType,
     PredictionMode,
     ModelConfiguration,
 )
-from models_refactored.core.factory import PredictorFactory, create_predictor
+from models.core.factory import PredictorFactory, create_predictor
 from data.stock_data import StockDataProvider
 
 # ログ設定
@@ -118,7 +118,7 @@ class RefactoredSystemTest:
         self.logger.info("並列特徴量計算テスト開始")
 
         try:
-            from models_refactored.ensemble.parallel_feature_calculator import (
+            from models.ensemble.parallel_feature_calculator import (
                 ParallelFeatureCalculator,
             )
 

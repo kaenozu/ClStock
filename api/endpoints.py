@@ -17,7 +17,7 @@ from utils.validators import (
 )
 from utils.exceptions import DataFetchError
 
-from models.core import MLStockPredictor
+from models.legacy_core import MLStockPredictor
 from models.recommendation import StockRecommendation
 from api.schemas import RecommendationResponse
 from data.stock_data import StockDataProvider

@@ -9,11 +9,11 @@ from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from models_refactored.monitoring.cache_manager import RealTimeCacheManager
-from models_refactored.monitoring.cache_manager import AdvancedCacheManager
+from models.monitoring.cache_manager import RealTimeCacheManager
+from models.monitoring.cache_manager import AdvancedCacheManager
 
 # AdvancedCacheManager縺ｯ邨ｱ蜷医＆繧後∪縺励◆
-from models_refactored.core.interfaces import (
+from models.core.interfaces import (
     PredictionResult as TickData,
     DataProvider as OrderBookData,
 )

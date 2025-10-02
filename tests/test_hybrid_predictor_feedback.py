@@ -5,8 +5,8 @@ from datetime import datetime
 import pandas as pd
 import pytest
 
-from models_refactored.core.interfaces import PredictionResult, PredictionMode
-from models_refactored.hybrid.hybrid_predictor import RefactoredHybridPredictor
+from models.core.interfaces import PredictionResult, PredictionMode
+from models.hybrid.hybrid_predictor import RefactoredHybridPredictor
 
 
 class _StubLearner:

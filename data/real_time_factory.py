@@ -12,11 +12,11 @@ from typing import Dict, Optional, Protocol, Type, Any
 from abc import ABC, abstractmethod
 
 from config.settings import get_settings, RealTimeConfig
-from models_refactored.monitoring.cache_manager import RealTimeCacheManager
-from models_refactored.monitoring.performance_monitor import (
+from models.monitoring.cache_manager import RealTimeCacheManager
+from models.monitoring.performance_monitor import (
     ModelPerformanceMonitor as PerformanceMonitor,
 )
-from models_refactored.core.interfaces import DataProvider as RealTimeDataProvider
+from models.core.interfaces import DataProvider as RealTimeDataProvider
 from data.real_time_provider import (
     WebSocketRealTimeProvider,
     RealTimeDataQualityMonitor,

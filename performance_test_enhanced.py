@@ -31,7 +31,7 @@ def test_enhanced_ensemble_performance():
     print("=" * 80)
 
     try:
-        from models_new.ensemble.ensemble_predictor import EnsembleStockPredictor
+        from models.ensemble.ensemble_predictor import EnsembleStockPredictor
         from data.stock_data import StockDataProvider
 
         # テスト用銘柄（小規模テスト）

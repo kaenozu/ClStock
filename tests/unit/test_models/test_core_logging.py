@@ -8,7 +8,7 @@ import pytest
 @pytest.mark.usefixtures("monkeypatch")
 def test_core_reload_does_not_trigger_setup_logging(monkeypatch):
     """Reloading models.core should not mutate logging via setup_logging."""
-    import models.core as core
+    import models.legacy_core as core
 
     def _fail(*args, **kwargs):
         raise RuntimeError("setup_logging should not be called during models.core import")

@@ -44,18 +44,18 @@ def _install_fastapi_stubs() -> None:
 
     uvicorn_stub = types.ModuleType("uvicorn")
     numpy_stub = types.ModuleType("numpy")
-    models_new_stub = types.ModuleType("models_new")
-    models_new_stub.__path__ = []
-    precision_pkg = types.ModuleType("models_new.precision")
+    models_stub = types.ModuleType("models")
+    models_stub.__path__ = []
+    precision_pkg = types.ModuleType("models.precision")
     precision_pkg.__path__ = []
-    precision_module = types.ModuleType("models_new.precision.precision_87_system")
+    precision_module = types.ModuleType("models.precision.precision_87_system")
 
     class _Precision87BreakthroughSystem(SimpleNamespace):
         def predict_with_87_precision(self, symbol: str):
             return {}
 
     precision_module.Precision87BreakthroughSystem = _Precision87BreakthroughSystem
-    models_new_stub.precision = precision_pkg
+    models_stub.precision = precision_pkg
     precision_pkg.precision_87_system = precision_module
 
     sys.modules.setdefault("fastapi", fastapi_stub)
@@ -64,9 +64,9 @@ def _install_fastapi_stubs() -> None:
     sys.modules.setdefault("fastapi.staticfiles", staticfiles_stub)
     sys.modules.setdefault("uvicorn", uvicorn_stub)
     sys.modules.setdefault("numpy", numpy_stub)
-    sys.modules.setdefault("models_new", models_new_stub)
-    sys.modules.setdefault("models_new.precision", precision_pkg)
-    sys.modules.setdefault("models_new.precision.precision_87_system", precision_module)
+    sys.modules.setdefault("models", models_stub)
+    sys.modules.setdefault("models.precision", precision_pkg)
+    sys.modules.setdefault("models.precision.precision_87_system", precision_module)
 
 
 _install_fastapi_stubs()

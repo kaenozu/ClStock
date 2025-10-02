@@ -10,7 +10,7 @@ import os
 
 sys.path.append(os.path.dirname(__file__))
 
-from models_new.hybrid.hybrid_predictor import HybridStockPredictor, PredictionMode
+from models.hybrid.hybrid_predictor import HybridStockPredictor, PredictionMode
 from data.stock_data import StockDataProvider
 
 

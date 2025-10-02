@@ -9,7 +9,7 @@ from unittest.mock import patch, Mock
 from models.recommendation import StockRecommendation
 
 # 互換レイヤーの具体的な予測器を利用
-from models.core import MLStockPredictor as StockPredictor
+from models.legacy_core import MLStockPredictor as StockPredictor
 
 # StockRecommendationは削除されたため、一時的にコメントアウト
 

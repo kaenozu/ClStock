@@ -7,11 +7,11 @@ import importlib.util
 import sys
 from pathlib import Path
 
-_repo_root = str(Path(__file__).resolve().parents[1])
-_search_paths = [p for p in sys.path if p != _repo_root]
+_repo_root = Path(__file__).resolve().parents[1]
+_search_paths = [p for p in sys.path if Path(p).resolve() != _repo_root]
 _spec = importlib.machinery.PathFinder.find_spec("joblib", _search_paths)
 
-if _spec and _spec.loader:
+if _spec and _spec.loader and getattr(_spec, "origin", None) != __file__:
     _module = importlib.util.module_from_spec(_spec)
     sys.modules[__name__] = _module
     _spec.loader.exec_module(_module)

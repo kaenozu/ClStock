@@ -16,14 +16,14 @@ from unittest.mock import Mock, patch
 # )
 
 # 譁ｰ縺励＞繧､繝ｳ繝昴・繝医ヱ繧ｹ
-from models.core import (
+from models.legacy_core import (
     CacheablePredictor,
     EnsembleStockPredictor,
     PredictionResult,
     PredictorInterface,
     StockPredictor,
 )
-from models_refactored.ensemble.ensemble_predictor import (
+from models.ensemble.ensemble_predictor import (
     RefactoredEnsemblePredictor as EnsemblePredictor,
 )
 

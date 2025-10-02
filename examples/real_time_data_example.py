@@ -16,7 +16,7 @@ from data.real_time_factory import (
     MockRealTimeFactory,
     reset_real_time_system_manager,
 )
-from models_new.base.interfaces import TickData, OrderBookData, IndexData, NewsData
+from models.base.interfaces import TickData, OrderBookData, IndexData, NewsData
 from config.settings import get_settings
 
 # ログ設定

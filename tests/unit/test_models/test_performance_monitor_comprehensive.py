@@ -9,8 +9,8 @@ import json
 import tempfile
 import os
 
-from models_refactored.monitoring.performance_monitor import ModelPerformanceMonitor
-from models_refactored.core.interfaces import PredictionResult
+from models.monitoring.performance_monitor import ModelPerformanceMonitor
+from models.core.interfaces import PredictionResult
 
 
 class TestModelPerformanceMonitor:
@@ -175,13 +175,13 @@ class TestModelPerformanceMonitor:
 
         # Evaluate performance
         with patch(
-            "models_new.monitoring.performance_monitor.mean_squared_error"
+            "models.monitoring.performance_monitor.mean_squared_error"
         ) as mock_mse, patch(
-            "models_new.monitoring.performance_monitor.mean_absolute_error"
+            "models.monitoring.performance_monitor.mean_absolute_error"
         ) as mock_mae, patch(
-            "models_new.monitoring.performance_monitor.r2_score"
+            "models.monitoring.performance_monitor.r2_score"
         ) as mock_r2, patch(
-            "models_new.monitoring.performance_monitor.accuracy_score"
+            "models.monitoring.performance_monitor.accuracy_score"
         ) as mock_accuracy:
 
             # Mock the sklearn functions to return specific values
@@ -221,13 +221,13 @@ class TestModelPerformanceMonitor:
 
         # Evaluate performance with poor results that will trigger alerts
         with patch(
-            "models_new.monitoring.performance_monitor.mean_squared_error"
+            "models.monitoring.performance_monitor.mean_squared_error"
         ) as mock_mse, patch(
-            "models_new.monitoring.performance_monitor.mean_absolute_error"
+            "models.monitoring.performance_monitor.mean_absolute_error"
         ) as mock_mae, patch(
-            "models_new.monitoring.performance_monitor.r2_score"
+            "models.monitoring.performance_monitor.r2_score"
         ) as mock_r2, patch(
-            "models_new.monitoring.performance_monitor.accuracy_score"
+            "models.monitoring.performance_monitor.accuracy_score"
         ) as mock_accuracy:
 
             # Mock the sklearn functions to return poor values that will trigger alerts

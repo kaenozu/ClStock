@@ -27,7 +27,7 @@ from .trade_recorder import TradeRecorder
 
 # 既存システム
 from data.stock_data import StockDataProvider
-from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+from models.precision.precision_87_system import Precision87BreakthroughSystem
 
 
 class TradeStatus(Enum):

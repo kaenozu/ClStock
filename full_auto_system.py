@@ -11,16 +11,16 @@ from typing import List, Optional, Dict, Any
 import pandas as pd
 
 from data.stock_data import StockDataProvider
-from models_new.hybrid.hybrid_predictor import HybridStockPredictor
+from models.hybrid.hybrid_predictor import HybridStockPredictor
 from trading.tse.analysis import StockProfile
 from trading.tse.optimizer import PortfolioOptimizer
 from analysis.sentiment_analyzer import MarketSentimentAnalyzer
-from models_new.advanced.trading_strategy_generator import (
+from models.advanced.trading_strategy_generator import (
     StrategyGenerator,
     SignalGenerator,
     ActionType,
 )
-from models_new.advanced.risk_management_framework import (
+from models.advanced.risk_management_framework import (
     RiskManager,
     RiskLevel,
     PortfolioRisk,

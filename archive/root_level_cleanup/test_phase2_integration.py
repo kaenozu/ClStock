@@ -12,10 +12,10 @@ from datetime import datetime
 from typing import List, Dict, Any
 
 # Phase 2システムのインポート
-from models_new.hybrid.hybrid_predictor import HybridStockPredictor
-from models_new.hybrid.prediction_modes import PredictionMode
-from models_new.hybrid.ultra_fast_streaming import UltraFastStreamingPredictor
-from models_new.hybrid.multi_gpu_processor import (
+from models.hybrid.hybrid_predictor import HybridStockPredictor
+from models.hybrid.prediction_modes import PredictionMode
+from models.hybrid.ultra_fast_streaming import UltraFastStreamingPredictor
+from models.hybrid.multi_gpu_processor import (
     MultiGPUParallelPredictor,
     RealTimeLearningSystem,
 )

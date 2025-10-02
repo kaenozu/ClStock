@@ -18,8 +18,8 @@ from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
 
 from data.stock_data import StockDataProvider
-from models.core import StockPredictor
-from models_refactored.core.interfaces import (
+from models.legacy_core import StockPredictor
+from models.core.interfaces import (
     ModelConfiguration,
     ModelType,
     PredictionMode,
@@ -229,7 +229,7 @@ class RefactoredEnsemblePredictor:
     """Modern ensemble predictor tailored for the unit tests."""
 
     MODEL_VERSION = "1.0.0"
-    DEFAULT_MODEL_PATH = Path("models_refactored") / "artifacts" / "refactored_ensemble.joblib"
+    DEFAULT_MODEL_PATH = Path("models") / "artifacts" / "refactored_ensemble.joblib"
 
     def __init__(
         self,

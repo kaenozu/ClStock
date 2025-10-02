@@ -50,7 +50,7 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
         if self._dqn_agent is None:
             try:
                 # DQNReinforcementLearner は元のml_modelsにまだ存在するためそのまま維持
-                from models.deep_learning import DQNReinforcementLearner
+                from models.legacy_deep_learning import DQNReinforcementLearner
 
                 self._dqn_agent = DQNReinforcementLearner()
             except ImportError:

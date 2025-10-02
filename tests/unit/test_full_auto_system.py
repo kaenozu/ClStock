@@ -45,12 +45,12 @@ from full_auto_system import (
     FullAutoInvestmentSystem,
     RiskManagerAdapter,
 )
-from models_new.base.interfaces import PredictionResult
-from models_new.advanced.risk_management_framework import (
+from models.base.interfaces import PredictionResult
+from models.advanced.risk_management_framework import (
     PortfolioRisk,
     RiskLevel,
 )
-from models_new.advanced.trading_strategy_generator import (
+from models.advanced.trading_strategy_generator import (
     TradingStrategy,
     StrategyType,
 )
