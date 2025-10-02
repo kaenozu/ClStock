@@ -1,0 +1,5 @@
+Description: current_data が空またはエラーの場合、current_price を prediction * 0.98 としています。これは価格の決定に恣意的な値を使用しているため、シミュレーションの正確性が損なわれます。
+Severity: High
+File: demo_start.py
+Location: start_demo_trading 関数内の現在価格取得処理部分
+Suggestion: 価格が取得できない場合はその銘柄に対する取引をスキップする、またはより合理的な代替価格決定ロジックを実装してください。

@@ -1,0 +1,5 @@
+Description: risk_analysis_for_payload が None の場合や、risk_level が value 属性を持っていない場合に AttributeError が発生します。
+Severity: High
+File: full_auto_system.py
+Location: _analyze_single_stock 関数、_generate_reasoning 関数
+Suggestion: risk_analysis_for_payload が None でないことを確認した上で risk_level.value にアクセスしてください。

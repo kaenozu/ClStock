@@ -88,14 +88,17 @@ class Precision87BreakthroughSystem(StockPredictor):
             "components": ["base_model", "meta_learning", "dqn_reinforcement"],
         }
 
-    def predict_with_87_precision(self, symbol: str) -> Dict[str, Any]:
+    def predict_with_87_precision(self, symbol: str, start: str = None, end: str = None) -> Dict[str, Any]:
         """87%精度予測実行"""
         try:
             from data.stock_data import StockDataProvider
 
             # データ取得
             data_provider = StockDataProvider()
-            historical_data = data_provider.get_stock_data(symbol, period="1y")
+            if start is not None and end is not None:
+                historical_data = data_provider.get_stock_data(symbol, start=start, end=end)
+            else:
+                historical_data = data_provider.get_stock_data(symbol, period="1y")
             historical_data = data_provider.calculate_technical_indicators(
                 historical_data
             )

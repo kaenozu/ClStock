@@ -28,11 +28,23 @@ from archive.old_systems.medium_term_prediction import MediumTermPredictionSyste
 class InvestmentAdvisorCUI:
     """ClStock投資アドバイザー CUI版"""
 
-    def __init__(self):
+    def __init__(self, short_change_strong=0.5, short_change_moderate=0.2, short_change_weak=-0.2, short_change_strong_negative=-0.5, medium_change_strong=4, medium_change_moderate=2, medium_change_weak=1.5, medium_change_strong_negative=-4, medium_change_moderate_negative=-2, medium_change_weak_negative=-1.5):
         self.precision_system = Precision87BreakthroughSystem()
         self.hybrid_system = HybridStockPredictor()
         self.data_provider = StockDataProvider()
         self.medium_system = MediumTermPredictionSystem()
+        self.thresholds = {
+            'short_change_strong': short_change_strong,
+            'short_change_moderate': short_change_moderate,
+            'short_change_weak': short_change_weak,
+            'short_change_strong_negative': short_change_strong_negative,
+            'medium_change_strong': medium_change_strong,
+            'medium_change_moderate': medium_change_moderate,
+            'medium_change_weak': medium_change_weak,
+            'medium_change_strong_negative': medium_change_strong_negative,
+            'medium_change_moderate_negative': medium_change_moderate_negative,
+            'medium_change_weak_negative': medium_change_weak_negative,
+        }
 
         # 推奨銘柄リスト（ブルーチップ中心45銘柄）
         self.target_symbols = [
@@ -181,7 +193,7 @@ class InvestmentAdvisorCUI:
 
             # 信頼度計算（短期は90.3%精度）
             base_confidence = precision_result.get("final_confidence", 0.85)
-            short_confidence = base_confidence * 0.903  # 90.3%精度を反映
+            short_confidence = (base_confidence + 0.903) / 2  # 90.3%精度を反映（平均）
 
             return {
                 "symbol": symbol,
@@ -242,27 +254,27 @@ class InvestmentAdvisorCUI:
         sell_date = next_trading_day(one_month)
 
         # 統合判定ロジック（現実的な閾値に調整）
-        if short_change > 0.5 and medium_change > 4:
+        if short_change > self.thresholds['short_change_strong'] and medium_change > self.thresholds['medium_change_strong']:
             action = "強い買い"
             timing = f"【即座】{buy_date.strftime('%m/%d')}寄り付きで買い → {sell_date.strftime('%m/%d')}頃売却"
             confidence = (short_confidence + medium_confidence) / 2
-        elif short_change > 0.2 and medium_change > 2:
+        elif short_change > self.thresholds['short_change_moderate'] and medium_change > self.thresholds['medium_change_moderate']:
             action = "買い"
             timing = f"【今週中】{buy_date.strftime('%m/%d')}～{next_week.strftime('%m/%d')}に買い → {sell_date.strftime('%m/%d')}頃売却"
             confidence = (short_confidence + medium_confidence) / 2
-        elif short_change < -0.5 and medium_change < -4:
+        elif short_change < self.thresholds['short_change_strong_negative'] and medium_change < self.thresholds['medium_change_strong_negative']:
             action = "強い売り"
             timing = f"【即座】{buy_date.strftime('%m/%d')}寄り付きで売り → {sell_date.strftime('%m/%d')}まで避難"
             confidence = (short_confidence + medium_confidence) / 2
-        elif short_change < -0.2 and medium_change < -2:
+        elif short_change < self.thresholds['short_change_weak'] and medium_change < self.thresholds['medium_change_moderate_negative']:
             action = "売り"
             timing = f"【今週中】{buy_date.strftime('%m/%d')}～{next_week.strftime('%m/%d')}に売り → {sell_date.strftime('%m/%d')}まで様子見"
             confidence = (short_confidence + medium_confidence) / 2
-        elif medium_change > 1.5:
+        elif medium_change > self.thresholds['medium_change_weak']:
             action = "買い"
             timing = f"【1週間以内】{next_week.strftime('%m/%d')}までに買い → {sell_date.strftime('%m/%d')}頃売却検討"
             confidence = medium_confidence
-        elif medium_change < -1.5:
+        elif medium_change < self.thresholds['medium_change_weak_negative']:
             action = "売り"
             timing = f"【1週間以内】{next_week.strftime('%m/%d')}までに売り → {sell_date.strftime('%m/%d')}まで避難"
             confidence = medium_confidence
@@ -320,7 +332,7 @@ class InvestmentAdvisorCUI:
         # 総合リスクスコア計算（重み付け平均）
         risk_score = (
             vol_risk * 0.35  # ボラティリティ 35%
-            + change_risk / 10 * 0.25  # 価格変動幅 25%
+            + min(change_risk / 10, 1.0) * 0.25  # 価格変動幅 25% (最大値を1.0に制限)
             + confidence_risk * 0.25  # 信頼度逆算 25%
             + sector_risk * 0.15  # セクターリスク 15%
         )
@@ -459,10 +471,32 @@ def main():
         "--top", "-t", type=int, default=5, help="上位N銘柄表示 (デフォルト: 5)"
     )
     parser.add_argument("--details", "-d", action="store_true", help="詳細表示")
+    # 閾値設定用の引数を追加
+    parser.add_argument("--short-change-strong", type=float, default=0.5, help="短期強い変化閾値 (default: 0.5)")
+    parser.add_argument("--short-change-moderate", type=float, default=0.2, help="短期中程度変化閾値 (default: 0.2)")
+    parser.add_argument("--short-change-weak", type=float, default=-0.2, help="短期弱い変化閾値 (default: -0.2)")
+    parser.add_argument("--short-change-strong-negative", type=float, default=-0.5, help="短期強い変化閾値 (負) (default: -0.5)")
+    parser.add_argument("--medium-change-strong", type=float, default=4, help="中期強い変化閾値 (default: 4)")
+    parser.add_argument("--medium-change-moderate", type=float, default=2, help="中期中程度変化閾値 (default: 2)")
+    parser.add_argument("--medium-change-weak", type=float, default=1.5, help="中期弱い変化閾値 (default: 1.5)")
+    parser.add_argument("--medium-change-strong-negative", type=float, default=-4, help="中期強い変化閾値 (負) (default: -4)")
+    parser.add_argument("--medium-change-moderate-negative", type=float, default=-2, help="中期中程度変化閾値 (負) (default: -2)")
+    parser.add_argument("--medium-change-weak-negative", type=float, default=-1.5, help="中期弱い変化閾値 (負) (default: -1.5)")
 
     args = parser.parse_args()
 
-    advisor = InvestmentAdvisorCUI()
+    advisor = InvestmentAdvisorCUI(
+        short_change_strong=args.short_change_strong,
+        short_change_moderate=args.short_change_moderate,
+        short_change_weak=args.short_change_weak,
+        short_change_strong_negative=args.short_change_strong_negative,
+        medium_change_strong=args.medium_change_strong,
+        medium_change_moderate=args.medium_change_moderate,
+        medium_change_weak=args.medium_change_weak,
+        medium_change_strong_negative=args.medium_change_strong_negative,
+        medium_change_moderate_negative=args.medium_change_moderate_negative,
+        medium_change_weak_negative=args.medium_change_weak_negative
+    )
 
     if args.symbol:
         # 特定銘柄分析
