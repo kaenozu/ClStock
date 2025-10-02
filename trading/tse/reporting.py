@@ -228,7 +228,7 @@ class OptimizationReporter:
                 results,
             )
 
-        print(f"✅ 投資推奨レポート保存: {report_filename}")
+        print(f"[保存] 投資推奨レポート保存: {report_filename}")
         return report_filename
 
     def _write_report_content(
