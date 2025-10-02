@@ -36,4 +36,4 @@ jobs:
 
     - name: Unit tests (core performance)
       run: |
-        python -m pytest --pythonpath=. tests/unit/test_models/test_performance.py -v
+        PYTHONPATH=. python -m pytest tests/unit/test_models/test_performance.py -v
