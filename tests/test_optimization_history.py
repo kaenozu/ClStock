@@ -13,6 +13,7 @@ from unittest.mock import Mock, patch, MagicMock
 import tempfile
 import sys
 import os
+import logging
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -30,9 +31,16 @@ class TestOptimizationHistoryManager:
             yield tmpdir
 
     @pytest.fixture
-    def manager(self, temp_dir):
+    def mock_logger(self):
+        """MagicMock logger for verifying logging behavior."""
+        return MagicMock(spec=logging.Logger)
+
+    @pytest.fixture
+    def manager(self, temp_dir, mock_logger):
         """テスト用マネージャーのフィクスチャ"""
-        return OptimizationHistoryManager(history_dir=temp_dir)
+        return OptimizationHistoryManager(
+            history_dir=temp_dir, logger_instance=mock_logger
+        )
 
     @pytest.fixture
     def sample_data(self):
@@ -76,7 +84,7 @@ class TestOptimizationHistoryManager:
         assert record.description == sample_data["description"]
         assert record.is_active is False
 
-    def test_自動適用で設定が更新されること(self, manager, sample_data, temp_dir):
+    def test_自動適用で設定が更新されること(self, manager, sample_data, temp_dir, mock_logger):
         """auto_apply=Trueで設定ファイルが作成されることを確認"""
         # Arrange
         config_file = Path(temp_dir) / "config" / "optimal_stocks.json"
@@ -104,6 +112,11 @@ class TestOptimizationHistoryManager:
         assert active_record is not None
         assert active_record.id == record_id
         assert active_record.is_active is True
+        assert any(
+            "自動適用" in call.args[0]
+            for call in mock_logger.info.call_args_list
+            if call.args
+        )
 
     def test_複数の記録で最新のみアクティブになること(self, manager, sample_data):
         """複数の自動適用で最新のみアクティブになることを確認"""
@@ -157,15 +170,22 @@ class TestOptimizationHistoryManager:
         assert record1.is_active is True
         assert record2.is_active is False
 
-    def test_存在しないIDへのロールバックが失敗すること(self, manager):
+    def test_存在しないIDへのロールバックが失敗すること(self, manager, mock_logger):
         """存在しないIDへのロールバックが失敗することを確認"""
         success = manager.rollback_to("INVALID_ID")
         assert success is False
+        assert any(
+            "見つかりません" in call.args[0]
+            for call in mock_logger.error.call_args_list
+            if call.args
+        )
 
-    def test_履歴の永続化と読み込みができること(self, temp_dir, sample_data):
+    def test_履歴の永続化と読み込みができること(self, temp_dir, sample_data, mock_logger):
         """履歴が永続化され、再読み込みできることを確認"""
         # Arrange
-        manager1 = OptimizationHistoryManager(history_dir=temp_dir)
+        manager1 = OptimizationHistoryManager(
+            history_dir=temp_dir, logger_instance=mock_logger
+        )
 
         # Act - 保存
         record_id = manager1.save_optimization_result(
@@ -176,7 +196,9 @@ class TestOptimizationHistoryManager:
         )
 
         # Act - 新しいインスタンスで読み込み
-        manager2 = OptimizationHistoryManager(history_dir=temp_dir)
+        manager2 = OptimizationHistoryManager(
+            history_dir=temp_dir, logger_instance=mock_logger
+        )
 
         # Assert
         assert len(manager2.history) == 1
@@ -329,6 +351,75 @@ class TestOptimizationHistoryManager:
         # 最新の記録が最初に来ること
         assert "stock_2" in history_list[0].stocks
         assert "stock_1" in history_list[1].stocks
+
+    def test_ロガーを外部注入できること(self, manager, mock_logger):
+        """コンストラクタで渡したロガーが使用されることを確認"""
+        assert manager.logger is mock_logger
+
+    def test_get_optimal_stocks_from_config_returns_file_values(
+        self, manager, mock_logger, monkeypatch
+    ):
+        """設定ファイルから最適銘柄を読み込めることを確認"""
+
+        class DummySettings:
+            target_stocks = {str(i): f"Stock {i}" for i in range(100, 110)}
+
+        monkeypatch.setattr(
+            "config.settings.get_settings", lambda: DummySettings(), raising=False
+        )
+
+        manager.current_config_file.parent.mkdir(parents=True, exist_ok=True)
+        manager.current_config_file.write_text(
+            json.dumps({"optimal_stocks": ["AAA", "BBB", "CCC"]}),
+            encoding="utf-8",
+        )
+
+        assert manager.get_optimal_stocks_from_config() == ["AAA", "BBB", "CCC"]
+
+    def test_get_optimal_stocks_from_config_defaults_to_settings(
+        self, manager, monkeypatch
+    ):
+        """設定ファイルが無い場合に設定のデフォルト値を使用することを確認"""
+
+        class DummySettings:
+            target_stocks = {str(i): f"Stock {i}" for i in range(200, 215)}
+
+        monkeypatch.setattr(
+            "config.settings.get_settings", lambda: DummySettings(), raising=False
+        )
+
+        expected = list(DummySettings.target_stocks.keys())[:10]
+        assert manager.get_optimal_stocks_from_config() == expected
+
+    def test_get_statistics_reports_latest_timestamp(self, manager):
+        """最新のタイムスタンプが統計情報に反映されることを確認"""
+
+        base_time = datetime(2024, 1, 1, 10, 0, 0)
+
+        record_new = OptimizationRecord(
+            id="new",
+            timestamp=base_time + timedelta(hours=1),
+            stocks=["7203"],
+            performance_metrics={"return_rate": 12.0},
+            config_hash="abcd",
+            is_active=False,
+            description="new",
+        )
+
+        record_old = OptimizationRecord(
+            id="old",
+            timestamp=base_time,
+            stocks=["6758"],
+            performance_metrics={"return_rate": 10.0},
+            config_hash="efgh",
+            is_active=True,
+            description="old",
+        )
+
+        manager.history = [record_old, record_new]
+
+        stats = manager.get_statistics()
+        assert stats["latest_optimization"] == record_new.timestamp
 
 
 class TestOptimizationRecord:
