@@ -38,9 +38,63 @@ def stub_stock_data_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     stub_module.StockDataProvider = _StubStockDataProvider
     monkeypatch.setitem(sys.modules, "data.stock_data", stub_module)
 
+    models_new_module = types.ModuleType("models_new")
+    models_new_spec = ModuleSpec(name="models_new", loader=None, is_package=True)
+    models_new_spec.submodule_search_locations = []
+    models_new_module.__spec__ = models_new_spec
+    models_new_module.__path__ = []
+
+    models_new_precision_package = types.ModuleType("models_new.precision")
+    precision_spec = ModuleSpec(
+        name="models_new.precision", loader=None, is_package=True
+    )
+    precision_spec.submodule_search_locations = []
+    models_new_precision_package.__spec__ = precision_spec
+    models_new_precision_package.__path__ = []
+
+    precision_module = types.ModuleType("models_new.precision.precision_87_system")
+
+    class _StubPrecision87BreakthroughSystem:  # pragma: no cover - behaviour verified indirectly
+        def predict_with_87_precision(self, symbol: str) -> dict[str, float]:
+            return {
+                "final_prediction": 125.0,
+                "current_price": 100.0,
+                "final_confidence": 0.92,
+                "final_accuracy": 0.9,
+                "predicted_change_rate": 0.12,
+            }
+
+    precision_module.Precision87BreakthroughSystem = _StubPrecision87BreakthroughSystem
+
+    monkeypatch.setitem(sys.modules, "models_new", models_new_module)
+    monkeypatch.setitem(sys.modules, "models_new.precision", models_new_precision_package)
+    monkeypatch.setitem(
+        sys.modules, "models_new.precision.precision_87_system", precision_module
+    )
+
+    models_new_module.precision = models_new_precision_package
+    models_new_precision_package.precision_87_system = precision_module
+
+    # ``sklearn`` transitively depends on SciPy which is not available in the
+    # execution environment for these tests.  Provide a very small stand-in so
+    # the import machinery can complete successfully when ``DemoTrader`` pulls
+    # in the production trading strategy module tree.
+    scipy_module = types.ModuleType("scipy")
+    scipy_sparse_module = types.ModuleType("scipy.sparse")
+
+    def _identity(*args: object, **kwargs: object) -> None:  # pragma: no cover - trivial stub
+        return None
+
+    scipy_sparse_module.csr_matrix = _identity
+    scipy_sparse_module.issparse = lambda *args, **kwargs: False  # pragma: no cover - trivial stub
+    scipy_module.sparse = scipy_sparse_module
+
+    monkeypatch.setitem(sys.modules, "scipy", scipy_module)
+    monkeypatch.setitem(sys.modules, "scipy.sparse", scipy_sparse_module)
+
     # Provide a lightweight package spec for ``trading`` so we can import
     # ``trading.demo_trader`` without executing the heavy package ``__init__``.
-    package_path = Path(__file__).resolve().parents[1] / "trading"
+    package_path = Path(__file__).resolve().parents[2] / "trading"
     trading_package = types.ModuleType("trading")
     package_spec = ModuleSpec(name="trading", loader=None, is_package=True)
     package_spec.submodule_search_locations = [str(package_path)]
@@ -49,14 +103,16 @@ def stub_stock_data_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     monkeypatch.setitem(sys.modules, "trading", trading_package)
 
     # Ensure the repository root is on ``sys.path`` for the duration of the test.
-    repo_root = str(Path(__file__).resolve().parents[1])
+    repo_root = str(Path(__file__).resolve().parents[2])
     if repo_root not in sys.path:
         monkeypatch.syspath_prepend(repo_root)
 
     return stub_module
 
 
-def test_demo_trader_initializes_core_components(stub_stock_data_module: types.ModuleType) -> None:
+def test_demo_trader_initializes_core_components(
+    stub_stock_data_module: types.ModuleType,
+) -> None:
     """``DemoTrader`` should respect risk/precision thresholds on init."""
 
     # ``trading.demo_trader`` imports ``data.stock_data`` at module import time,
@@ -81,4 +137,3 @@ def test_demo_trader_initializes_core_components(stub_stock_data_module: types.M
     assert risk_limits.max_position_size == pytest.approx(0.1)
     assert risk_limits.max_sector_exposure == pytest.approx(0.3)
     assert risk_limits.max_drawdown == pytest.approx(0.2)
-

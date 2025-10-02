@@ -1,0 +1,5 @@
+Description: 売りポジションでは current_price * 1.05 で固定されています。これは価格が5%上昇したときに損切りすることになり、逆に利益確定のような動きになります。これは金融操作の観点から誤ったリスク管理です。
+Severity: High
+File: investment_advisor_cui.py
+Location: _integrate_recommendations 関数
+Suggestion: 売りポジションの損切り価格計算ロジックを修正してください。

@@ -3,18 +3,17 @@
 from __future__ import annotations
 
 import os  # re-exported for backward compatibility in tests
+import queue
+import re
+import shlex
+import threading
+import time
+from datetime import datetime
+from typing import Dict, Iterable, List, Optional, Sequence
+
 import psutil  # noqa: F401  # re-exported for test patches
 import subprocess  # noqa: F401  # re-exported for test patches
-from datetime import datetime
-from typing import Dict, Iterable, List, Optional
-import shlex # Added for start_service
-import threading # Added for start_service
-import time # Added for start_service
-from enum import Enum # Added for start_service
-from dataclasses import dataclass, field # Added for start_service
-from typing import Union, Sequence # Added for start_service
 
-from utils.logger_config import get_logger
 from config.settings import get_settings
 
 from .monitoring import MonitoringLoop
@@ -28,8 +27,78 @@ from .service_registry import (
 from .shutdown_coordinator import ShutdownCoordinator
 
 
+class OutputReader(threading.Thread):
+    """Asynchronously consume process output to avoid blocking pipes."""
+
+    def __init__(
+        self,
+        pipe,
+        *,
+        log_callback=None,
+        log_prefix: str = "",
+        log_file: Optional[str] = None,
+        pipe_name: str = "output",
+    ) -> None:
+        super().__init__(daemon=True)
+        self.pipe = pipe
+        self.log_callback = log_callback
+        self.log_prefix = log_prefix
+        self.log_file = log_file
+        self.pipe_name = pipe_name
+        self.lines: "queue.Queue[str]" = queue.Queue()
+        self._stop_event = threading.Event()
+
+    def run(self) -> None:  # pragma: no cover - exercised in integration tests
+        try:
+            while not self._stop_event.is_set():
+                if not self.pipe:
+                    break
+                line = self.pipe.readline()
+                if not line:
+                    break
+                formatted = line.rstrip("\n")
+                self.lines.put(formatted)
+                if self.log_callback:
+                    try:
+                        self.log_callback(formatted)
+                    except Exception:  # pragma: no cover - defensive logging
+                        logger.debug(
+                            "ログコールバック処理中にエラー", exc_info=True
+                        )
+                if self.log_file:
+                    try:
+                        with open(self.log_file, "a", encoding="utf-8") as handle:
+                            handle.write(
+                                f"[{self.log_prefix or 'process'}][{self.pipe_name}] {formatted}\n"
+                            )
+                    except Exception:  # pragma: no cover - defensive logging
+                        logger.debug("ログファイル書き込みに失敗", exc_info=True)
+        finally:
+            try:
+                if self.pipe:
+                    self.pipe.close()
+            except Exception:  # pragma: no cover - defensive logging
+                logger.debug("パイプクローズに失敗", exc_info=True)
+
+    def stop(self) -> None:
+        self._stop_event.set()
+
+    def get_recent_lines(self, limit: int = 100) -> List[str]:
+        lines: List[str] = []
+        while len(lines) < limit and not self.lines.empty():
+            try:
+                lines.append(self.lines.get_nowait())
+            except queue.Empty:  # pragma: no cover - defensive guard
+                break
+        return lines
+
+
 class ProcessManager:
     """Facade coordinating service registry, monitoring, and shutdown."""
+
+    _DANGEROUS_CHARS = re.compile(r"[;&|><`$(){}]")
+    _SAFE_ARGUMENT = re.compile(r"^[A-Za-z0-9._:@/+\-]+$")
+    _DANGEROUS_COMMANDS = {"rm", "del", "format", "shutdown", "reboot"}
 
     def __init__(
         self,
@@ -47,6 +116,62 @@ class ProcessManager:
 
         if install_signal_handlers and service_registry is None and monitoring_loop is None:
             self.shutdown_coordinator.install_signal_handlers()
+
+    # ------------------------------------------------------------------
+    # Security helpers
+    # ------------------------------------------------------------------
+    def _sanitize_argument(self, value: str) -> str:
+        sanitized = self._DANGEROUS_CHARS.sub("", value)
+        sanitized = re.sub(r"\s+", " ", sanitized).strip()
+        return sanitized
+
+    def _argument_is_safe(self, value: str) -> bool:
+        return bool(value and self._SAFE_ARGUMENT.fullmatch(value))
+
+    def _validate_command(self, command: Sequence[str]) -> bool:
+        for part in command:
+            if self._DANGEROUS_CHARS.search(part):
+                logger.warning("危険な文字が含まれるコマンドを検出: %s", part)
+                return False
+            base = os.path.basename(part).lower()
+            if base in self._DANGEROUS_COMMANDS:
+                logger.warning("危険なコマンドを検出: %s", part)
+                return False
+        return True
+
+    def _prepare_command(
+        self,
+        process_info: ProcessInfo,
+        extra_args: Optional[Sequence[str]] = None,
+    ) -> List[str]:
+        base_command = process_info.command
+        if isinstance(base_command, str):
+            argv = shlex.split(base_command)
+        elif isinstance(base_command, Sequence):
+            argv = list(base_command)
+        else:
+            raise TypeError(
+                f"Unsupported command type for service {process_info.name}: {type(base_command)!r}"
+            )
+
+        if extra_args:
+            sanitized_args: List[str] = []
+            for raw_arg in extra_args:
+                arg = str(raw_arg)
+                sanitized = self._sanitize_argument(arg)
+                if sanitized != arg.strip():
+                    logger.error("安全ではない引数が検出されました: %s", arg)
+                    raise ValueError("unsafe argument detected")
+                if not self._argument_is_safe(sanitized):
+                    logger.error("許可されていない形式の引数です: %s", arg)
+                    raise ValueError("unsafe argument detected")
+                sanitized_args.append(sanitized)
+            argv.extend(sanitized_args)
+
+        if not self._validate_command(argv):
+            raise ValueError("unsafe command detected")
+
+        return argv
 
     # ------------------------------------------------------------------
     # Properties exposing underlying state
@@ -156,7 +281,12 @@ class ProcessManager:
             raise ValueError("process_info must not be None")
         return self.service_registry.register_service(process_info)
 
-    def start_service(self, name: str) -> bool:
+    def start_service(
+        self,
+        name: str,
+        *,
+        extra_args: Optional[Sequence[str]] = None,
+    ) -> bool:
         """サービスの開始"""
         if name not in self.processes:
             logger.error(f"未登録のサービス: {name}")
@@ -198,21 +328,9 @@ class ProcessManager:
                     text=True,
                 )
 
-            # プロセス開始
-            command = process_info.command
-            if isinstance(command, str):
-                argv = shlex.split(command)
-            elif isinstance(command, Sequence):
-                argv = list(command)
-            else:
-                raise TypeError(
-                    f"Unsupported command type for service {name}: {type(command)!r}"
-                )
+            argv = self._prepare_command(process_info, extra_args=extra_args)
 
-            process_info.process = subprocess.Popen(
-                argv,
-                **popen_kwargs,
-            )
+            process_info.process = subprocess.Popen(argv, **popen_kwargs)
 
             process_info.pid = process_info.process.pid
             process_info.start_time = datetime.now()
@@ -227,6 +345,12 @@ class ProcessManager:
 
             logger.info(f"サービス開始完了: {name} (PID: {process_info.pid})")
             return True
+
+        except ValueError as exc:
+            process_info.status = ProcessStatus.FAILED
+            process_info.last_error = str(exc)
+            logger.error("サービス開始失敗 %s: %s", name, exc)
+            return False
 
         except FileNotFoundError as e:
             process_info.status = ProcessStatus.FAILED
@@ -256,38 +380,24 @@ class ProcessManager:
         if not process:
             return
 
-        def _consume_stream(stream, log_func, stream_name: str):
+        def _create_reader(stream, log_func, stream_name: str):
             if stream is None:
                 return None
-
-            def _reader():
-                try:
-                    for line in iter(stream.readline, ""):
-                        if not line:
-                            break
-                        log_func(f"[{process_info.name}][{stream_name}] {line.rstrip()}")
-                except Exception as e:
-                    logger.debug(
-                        f"{process_info.name} の {stream_name} ログ読み取り中にエラー: {e}"
-                    )
-                finally:
-                    try:
-                        stream.close()
-                    except Exception:
-                        pass
-
-            thread = threading.Thread(
-                target=_reader,
-                daemon=True,
-                name=f"{process_info.name}-{stream_name}-logger",
+            reader = OutputReader(
+                stream,
+                log_callback=lambda line: log_func(
+                    "[%s][%s] %s", process_info.name, stream_name, line
+                ),
+                log_prefix=process_info.name,
+                pipe_name=stream_name,
             )
-            thread.start()
-            return thread
+            reader.start()
+            return reader
 
-        process_info.stdout_thread = _consume_stream(
+        process_info.stdout_thread = _create_reader(
             process.stdout, logger.info, "stdout"
         )
-        process_info.stderr_thread = _consume_stream(
+        process_info.stderr_thread = _create_reader(
             process.stderr, logger.warning, "stderr"
         )
 
@@ -536,6 +646,47 @@ class ProcessManager:
             "monitoring_active": self.monitoring_active,
             "timestamp": datetime.now(),
         }
+
+    def execute_safe_command(
+        self, command: Sequence[str], timeout: int = 30
+    ) -> tuple[bool, str, str]:
+        argv = list(command)
+        if not self._validate_command(argv):
+            return False, "", "安全でないコマンドです"
+
+        try:
+            result = subprocess.run(
+                argv,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                shell=False,
+            )
+            return result.returncode == 0, result.stdout, result.stderr
+        except subprocess.TimeoutExpired:
+            return False, "", "コマンドタイムアウト"
+        except Exception as exc:  # pragma: no cover - defensive logging
+            return False, "", str(exc)
+
+    def predict_stock_safe(self, symbol: str):
+        sanitized = self._sanitize_argument(symbol)
+        if not re.fullmatch(r"^[0-9]{4}$", sanitized):
+            logger.error("無効な銘柄コード: %s", symbol)
+            return None
+
+        success, stdout, stderr = self.execute_safe_command(
+            [
+                "python",
+                "models_new/precision/precision_87_system.py",
+                "--symbol",
+                sanitized,
+            ],
+            timeout=60,
+        )
+
+        if success:
+            return {"status": "success", "output": stdout}
+        return {"status": "error", "error": stderr}
 
 
 process_manager = ProcessManager()

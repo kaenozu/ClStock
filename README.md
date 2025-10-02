@@ -158,6 +158,12 @@ pytest tests/test_api_security.py
 # 特定のテストモジュール
 pytest tests/unit/test_data/test_stock_data.py
 
+# 統合比較ユーティリティのテスト
+pytest tests/integration/test_enhanced_integration.py
+
+# データプロバイダの統合テスト
+pytest tests/integration/test_stock_data_provider.py
+
 # カバレッジレポート
 pytest --cov=.
 

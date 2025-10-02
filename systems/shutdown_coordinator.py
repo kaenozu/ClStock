@@ -44,6 +44,10 @@ class ShutdownCoordinator:
             return
 
         try:
+            if self._shutdown_thread is not None:
+                logger.info("シャットダウンは既に進行中")
+                return
+
             if self.monitoring_loop.shutdown_event.is_set():
                 logger.info("シャットダウンは既に進行中")
                 return

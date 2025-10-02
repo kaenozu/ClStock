@@ -1,0 +1,5 @@
+Description: _get_sector_risk 関数で SectorClassification.get_sector_risk が使用されていますが、このメソッドが存在し、期待する float 値を返すことを確認する必要があります。
+Severity: Medium
+File: investment_advisor_cui.py
+Location: _get_sector_risk 関数
+Suggestion: SectorClassification の実装を確認し、get_sector_risk が存在し、適切な戻り値型を返すことを保証してください。

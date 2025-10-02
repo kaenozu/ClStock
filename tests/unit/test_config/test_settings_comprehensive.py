@@ -18,6 +18,7 @@ from config.settings import (
     create_settings,
     get_settings,
 )
+from config.target_universe import get_target_universe
 
 
 class TestConfigurationSystem:
@@ -93,6 +94,10 @@ class TestConfigurationSystem:
     def test_target_stocks_completeness(self):
         """Test that target stocks configuration is complete."""
         settings = get_settings()
+        universe = get_target_universe()
+
+        # settings.target_stocks が universe.english_names と等しいことを確認
+        assert settings.target_stocks == universe.english_names
 
         # README記載の通り、デフォルトでは31銘柄が設定されていることを確認
         assert len(settings.target_stocks) >= 31

@@ -25,14 +25,12 @@ settings = get_settings()
 def _raise_cli_error(message: str) -> None:
     """Log and raise a ClickException with the provided message."""
 
-    logger.error(message)
     raise click.ClickException(message)
 
 
 def _bad_parameter(message: str, param_name: Optional[str] = None) -> None:
     """Raise a BadParameter error while preserving logging."""
 
-    logger.error(message)
     if param_name:
         raise click.BadParameter(message, param_hint=param_name)
     raise click.BadParameter(message)
@@ -234,11 +232,17 @@ def predict(symbol: str):
         logger.error(message)
         raise click.BadParameter(message, param_hint="symbol")
 
-    # 銘柄コードの形式チェック（数値のみ）
-    if not symbol.isdigit():
-        message = "[失敗] 銘柄コードは数値のみ有効です"
+    # 銘柄コードの形式チェック（数値のみ or 数値+.T）
+    is_numeric = symbol.isdigit()
+    is_numeric_with_t = symbol.endswith('.T') and symbol[:-2].isdigit()
+    if not (is_numeric or is_numeric_with_t):
+        message = "[失敗] 銘柄コードは数値のみ、または数値+.T形式で有効です"
         logger.error(message)
         raise click.BadParameter(message, param_hint="symbol")
+
+    # 銘柄コードを正規化（数値のみの場合は.Tを付与）
+    if is_numeric:
+        symbol = symbol + ".T"
 
     click.echo(f"🔮 予測システム実行: {symbol}")
 
@@ -261,7 +265,7 @@ def predict(symbol: str):
 
     except Exception as e:
         message = f"[失敗] 予測実行エラー: {e}"
-        logger.exception(message)
+        logger.error(message)
         raise click.ClickException(message)
 
 

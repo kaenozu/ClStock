@@ -1,0 +1,5 @@
+Description: execute_strategy 関数内で load_stock_data が毎日呼ばれるため、パフォーマンスが悪い。また、latest_data_cache で過去365日分を毎回取得しているのも非効率です。
+Severity: Medium
+File: backtesting.py
+Location: execute_strategy 関数
+Suggestion: バックテスト期間に必要な全データを事前に取得し、適切にキャッシュするように修正してください。

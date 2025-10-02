@@ -1,0 +1,5 @@
+Description: _optimize_portfolio の結果を元に optimization_results を参照していますが、この変数が定義されていません。これにより、NameError name 'optimization_results' is not defined でエラーになります。
+Severity: Critical
+File: full_auto_system.py
+Location: run_full_auto_analysis 関数内の「ステップ 3/4」部分
+Suggestion: self._optimize_portfolio の戻り値を optimization_results に代入する、または関連ロジックを optimized_portfolio を使用するように修正してください。

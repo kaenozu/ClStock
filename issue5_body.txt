@@ -1,0 +1,5 @@
+Description: コメントや出力には「1週間のデモ取引」とありますが、実際には1日分の取引しかシミュレートしていません。
+Severity: High
+File: demo_start.py
+Location: start_demo_trading 関数
+Suggestion: 日付ループ処理を追加して1週間分のシミュレーションを実装する、または機能名・説明を実装に合わせて修正してください。

@@ -148,14 +148,17 @@ class StockDataProvider:
 
         return list(self.jp_stock_codes.keys())
 
-    def get_stock_data(self, symbol: str, period: str = "1y") -> pd.DataFrame:
+    def get_stock_data(self, symbol: str, period: str = "1y", start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
         """Fetch historical OHLCV data for *symbol*.
 
         The result always contains the ``Symbol``, ``ActualTicker`` and
         ``CompanyName`` columns in addition to the usual OHLCV fields.
         """
 
-        cache_key = f"stock::{symbol}::{period}"
+        if start is not None or end is not None:
+            cache_key = f"stock::{symbol}::start_{start}::end_{end}"
+        else:
+            cache_key = f"stock::{symbol}::{period}"
         cache = get_cache()
         cached = cache.get(cache_key)
         if isinstance(cached, pd.DataFrame) and not cached.empty:
@@ -164,16 +167,31 @@ class StockDataProvider:
         data: Optional[pd.DataFrame] = None
         actual_ticker: Optional[str] = None
 
-        if self._should_use_local_first(symbol):
+        # start/end が指定されている場合は、ローカルCSVは使用しない (期間指定が一致するとは限らないため)
+        if start is None and end is None and self._should_use_local_first(symbol):
             local = self._load_first_available_csv(symbol)
             if local is not None:
                 data, actual_ticker = local
 
         if data is None or data.empty:
-            data, actual_ticker = self._download_via_yfinance(symbol, period)
+            if start is not None or end is not None:
+                data, actual_ticker = self._download_via_yfinance(symbol, period=None, start=start, end=end)
+            else:
+                data, actual_ticker = self._download_via_yfinance(symbol, period)
 
         if data is None or data.empty:
             raise DataFetchError(symbol, "No historical data available")
+
+        # yfinance が実際に取得した期間を確認
+        if start is not None and end is not None:
+            actual_start = data.index.min()
+            actual_end = data.index.max()
+            print(f"StockDataProvider: Requested: {start} to {end}, Actual: {actual_start} to {actual_end}")
+            # 必要に応じて、取得範囲が要求範囲を満たしているか確認するロジックを追加
+            # 例: 休場日などの関係で、要求した期間より狭くなることは許容するが、
+            #     意図しない期間が取得されないよう、ある程度のチェックを行う。
+            # if actual_start > start or actual_end < end:
+            #     print(f"Warning: Actual data range differs significantly from requested range for {symbol}.")
 
         prepared = self._prepare_history_frame(data, symbol, actual_ticker)
         cache.set(cache_key, prepared, ttl=self.cache_ttl)
@@ -324,12 +342,15 @@ class StockDataProvider:
                         logger.debug("Failed to load local CSV %s: %s", candidate, exc)
         return None
 
-    def _download_via_yfinance(self, symbol: str, period: str) -> Tuple[pd.DataFrame, Optional[str]]:
+    def _download_via_yfinance(self, symbol: str, period: Optional[str] = "1y", start: Optional[str] = None, end: Optional[str] = None) -> Tuple[pd.DataFrame, Optional[str]]:
         last_error: Optional[Exception] = None
         for ticker in self._ticker_formats(symbol):
             try:
                 ticker_obj = yf.Ticker(ticker)
-                history = ticker_obj.history(period=period)
+                if start is not None or end is not None:
+                    history = ticker_obj.history(start=start, end=end)
+                else:
+                    history = ticker_obj.history(period=period)
                 if isinstance(history, pd.DataFrame) and not history.empty:
                     return history, ticker
             except Exception as exc:  # pragma: no cover - depends on yfinance
@@ -381,3 +402,53 @@ def get_stock_data_provider() -> StockDataProvider:
         _stock_data_provider = StockDataProvider()
     return _stock_data_provider
 
+
+    def _generate_demo_data(self, symbol: str, period: str = "1y") -> pd.DataFrame:
+        """
+        デモデータを生成する
+        """
+        import pandas as pd
+        from datetime import datetime, timedelta
+        import numpy as np
+
+        # period に応じた日数を計算
+        period_map = {
+            "1d": 1,
+            "5d": 5,
+            "1mo": 30,
+            "3mo": 90,
+            "6mo": 180,
+            "1y": 365,
+            "2y": 730,
+            "5y": 1825,
+            "10y": 3650,
+            "max": 3650,  # maxも10年分とする
+        }
+        days = period_map.get(period, 365)  # デフォルトは1年
+
+        # データ生成
+        dates = pd.date_range(end=datetime.now(), periods=days, freq="D")
+        base_price = np.random.uniform(100, 1000)  # 基準価格
+        prices = [base_price]
+        volumes = []
+
+        for _ in range(1, len(dates)):
+            change_percent = np.random.uniform(-0.05, 0.05)  # -5% 〜 +5% の変動
+            new_price = prices[-1] * (1 + change_percent)
+            prices.append(new_price)
+            volumes.append(np.random.randint(1000, 100000))  # ランダムな取引量
+
+        # DataFrame に変換
+        df = pd.DataFrame({
+            "Open": prices,
+            "High": [p * np.random.uniform(1, 1.02) for p in prices],  # HighはOpenより少し高い
+            "Low": [p * np.random.uniform(0.98, 1) for p in prices],   # LowはOpenより少し低い
+            "Close": prices,
+            "Volume": volumes,
+        }, index=dates)
+
+        # 一部の値をNaNに置き換えて、検証用に使う
+        if np.random.random() > 0.9:  # 10%の確率で
+            df.loc[df.index[:5], "Close"] = np.nan  # 最初の5行をNaN
+
+        return df
