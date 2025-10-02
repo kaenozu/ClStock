@@ -16,7 +16,7 @@ from concurrent.futures import Future
 
 # 修正されたインポート
 Mock = MagicMock
-from ....models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
+from ClStock.models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
 from models.core import PredictionResult
 from models_refactored.ensemble.ensemble_predictor import (
     EnsemblePredictor as EnsembleStockPredictor,
