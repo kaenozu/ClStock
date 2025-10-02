@@ -15,6 +15,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.metrics import accuracy_score
 import joblib
+import math
 
 from data.stock_data import StockDataProvider
 from models.stock_specific_predictor import StockSpecificPredictor
@@ -183,15 +184,20 @@ class DataDriftDetector:
         try:
             data = self.data_provider.get_stock_data(symbol, period)
 
+            price_series = data["Close"].pct_change(fill_method=None)
+            volume_rolling = data["Volume"].rolling(20).mean()
+
+            start_index = 20 if len(volume_rolling) > 20 else -1
+            baseline_volume = volume_rolling.iloc[start_index]
+            latest_volume = volume_rolling.iloc[-1]
+
             stats = {
-                "volatility": data["Close"].pct_change().std(),
-                "avg_volume": data["Volume"].mean(),
-                "price_trend": (data["Close"].iloc[-1] / data["Close"].iloc[0]) - 1,
-                "volume_trend": (
-                    data["Volume"].rolling(20).mean().iloc[-1]
-                    / data["Volume"].rolling(20).mean().iloc[20]
-                )
-                - 1,
+                "volatility": self._to_float(price_series.std(skipna=True)),
+                "avg_volume": self._to_float(data["Volume"].mean(skipna=True)),
+                "price_trend": self._calculate_price_trend(data["Close"]),
+                "volume_trend": self._calculate_ratio_change(
+                    baseline_volume, latest_volume
+                ),
             }
 
             self.baseline_stats[symbol] = stats
@@ -211,24 +217,21 @@ class DataDriftDetector:
             current_data = self.data_provider.get_stock_data(symbol, current_period)
 
             current_stats = {
-                "volatility": current_data["Close"].pct_change().std(),
-                "avg_volume": current_data["Volume"].mean(),
-                "price_trend": (
-                    current_data["Close"].iloc[-1] / current_data["Close"].iloc[0]
-                )
-                - 1,
+                "volatility": self._to_float(
+                    current_data["Close"].pct_change(fill_method=None).std(skipna=True)
+                ),
+                "avg_volume": self._to_float(current_data["Volume"].mean(skipna=True)),
+                "price_trend": self._calculate_price_trend(current_data["Close"]),
             }
 
             baseline = self.baseline_stats[symbol]
 
             # ドリフト率を計算
-            volatility_drift = (
-                abs(current_stats["volatility"] - baseline["volatility"])
-                / baseline["volatility"]
+            volatility_drift = self._safe_relative_change(
+                baseline.get("volatility", 0.0), current_stats["volatility"]
             )
-            volume_drift = (
-                abs(current_stats["avg_volume"] - baseline["avg_volume"])
-                / baseline["avg_volume"]
+            volume_drift = self._safe_relative_change(
+                baseline.get("avg_volume", 0.0), current_stats["avg_volume"]
             )
 
             # ドリフト判定（30%以上の変化）
@@ -236,7 +239,7 @@ class DataDriftDetector:
 
             return {
                 "symbol": symbol,
-                "has_drift": significant_drift,
+                "has_drift": bool(significant_drift),
                 "volatility_drift": volatility_drift,
                 "volume_drift": volume_drift,
                 "current_stats": current_stats,
@@ -247,6 +250,63 @@ class DataDriftDetector:
         except Exception as e:
             logger.error(f"ドリフト検出エラー {symbol}: {e}")
             return {"symbol": symbol, "has_drift": False, "error": str(e)}
+
+    @staticmethod
+    def _safe_relative_change(baseline_value: float, current_value: float) -> float:
+        """相対変化量を安全に計算（0除算を防止）"""
+
+        if baseline_value is None or (isinstance(baseline_value, float) and math.isnan(baseline_value)):
+            baseline_value = 0.0
+
+        if current_value is None or (isinstance(current_value, float) and math.isnan(current_value)):
+            current_value = 0.0
+
+        if baseline_value == 0:
+            return float("inf") if current_value != 0 else 0.0
+
+        return abs(current_value - baseline_value) / abs(baseline_value)
+
+    @staticmethod
+    def _calculate_price_trend(close_series: pd.Series) -> float:
+        """価格トレンドを安全に計算"""
+
+        if close_series.empty:
+            return 0.0
+
+        start_price = close_series.iloc[0]
+        end_price = close_series.iloc[-1]
+
+        if pd.isna(start_price) or pd.isna(end_price) or start_price == 0:
+            return 0.0
+
+        return float((end_price / start_price) - 1)
+
+    @staticmethod
+    def _calculate_ratio_change(baseline_value: float, current_value: float) -> float:
+        """比率変化を安全に計算"""
+
+        if baseline_value is None or (isinstance(baseline_value, float) and math.isnan(baseline_value)):
+            return 0.0
+
+        if current_value is None or (isinstance(current_value, float) and math.isnan(current_value)):
+            return 0.0
+
+        if baseline_value == 0:
+            return 0.0
+
+        return float((current_value / baseline_value) - 1)
+
+    @staticmethod
+    def _to_float(value: Optional[float]) -> float:
+        """NaN安全なfloat変換"""
+
+        if value is None:
+            return 0.0
+
+        if isinstance(value, float) and math.isnan(value):
+            return 0.0
+
+        return float(value)
 
 
 class AutoRetrainingScheduler:
@@ -370,9 +430,14 @@ class AutoRetrainingScheduler:
         logger.info(f"再学習実行開始: {len(candidates)}銘柄")
 
         # 並列実行
-        with ThreadPoolExecutor(
-            max_workers=self.retraining_config["max_concurrent_retraining"]
-        ) as executor:
+        max_workers = min(
+            len(candidates), self.retraining_config["max_concurrent_retraining"]
+        )
+
+        if max_workers <= 0:
+            return
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_symbol = {
                 executor.submit(self._retrain_single_model, candidate): candidate[
                     "symbol"
