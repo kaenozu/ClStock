@@ -240,7 +240,7 @@ nodeenv==1.9.1
 notebook==7.4.5
 notebook_shim==0.2.4
 numba==0.61.2
-numpy
+numpy==1.26.4
 oauthlib==3.3.1
 opencv-python==4.11.0.86
 openpyxl==3.1.5
@@ -368,9 +368,9 @@ safety==3.6.0
 safety-schemas==0.0.14
 schedule==1.2.2
 scikit-image==0.25.2
+scipy==1.15.3
 scikit-learn==1.5.1
 scikit-optimize==0.9.0
-scipy==1.15.3
 scs==3.2.7.post2
 seaborn==0.13.2
 selenium==4.34.2
