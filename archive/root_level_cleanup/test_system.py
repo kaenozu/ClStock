@@ -14,7 +14,7 @@ def test_imports():
 
     try:
         # 87%精度システム
-        from models_new.precision.precision_87_system import (
+        from models.precision.precision_87_system import (
             Precision87BreakthroughSystem,
         )
 
@@ -77,7 +77,7 @@ def test_demo_functionality():
     print("\n=== デモ機能テスト ===")
 
     try:
-        from models_new.precision.precision_87_system import (
+        from models.precision.precision_87_system import (
             Precision87BreakthroughSystem,
         )
 

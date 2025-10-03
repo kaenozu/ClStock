@@ -57,7 +57,7 @@ def run_phase1_enhancement_tests() -> Dict[str, Any]:
     try:
         print("1. Phase 1ハイブリッドシステム初期化")
 
-        from models_new.hybrid.hybrid_predictor import (
+        from models.hybrid.hybrid_predictor import (
             HybridStockPredictor,
             PredictionMode,
         )
@@ -325,7 +325,7 @@ def test_performance_improvements(
         enhanced_confidences.append(result.confidence)
 
     # 基本システム（比較用）でのテスト
-    from models_new.hybrid.hybrid_predictor import HybridStockPredictor
+    from models.hybrid.hybrid_predictor import HybridStockPredictor
 
     basic_hybrid = HybridStockPredictor(
         enable_cache=False, enable_adaptive_optimization=False

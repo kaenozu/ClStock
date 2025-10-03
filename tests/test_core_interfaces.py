@@ -4,7 +4,7 @@ Core Interfaces のテスト
 
 import pytest
 from datetime import datetime
-from models_refactored.core.interfaces import (
+from models.core.interfaces import (
     PredictionResult,
     BatchPredictionResult,
     ModelConfiguration,

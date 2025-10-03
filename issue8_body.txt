@@ -1,0 +1,5 @@
+Description: HybridPredictorAdapter が HybridStockPredictor.predict の戻り値を dataclass として扱っていますが、その型が明示されていません。戻り値が期待する dataclass でない場合、属性アクセスで AttributeError が発生します。
+Severity: High
+File: full_auto_system.py
+Location: HybridPredictorAdapter クラスの predict メソッド
+Suggestion: 戻り値型を明確にするか、アダプター内で型チェックと検証を追加してください。

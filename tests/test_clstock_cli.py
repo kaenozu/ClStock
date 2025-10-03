@@ -78,8 +78,8 @@ def test_predict_internal_error_is_wrapped(runner, monkeypatch):
         def predict_with_87_precision(self, symbol):
             raise RuntimeError("boom")
 
-    monkeypatch.setitem(sys.modules, "models_new.precision.precision_87_system", Mock())
-    module = sys.modules["models_new.precision.precision_87_system"]
+    monkeypatch.setitem(sys.modules, "models.precision.precision_87_system", Mock())
+    module = sys.modules["models.precision.precision_87_system"]
     module.Precision87BreakthroughSystem = Mock(return_value=DummySystem())
 
     result = runner.invoke(

@@ -7,11 +7,11 @@ from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
 # 蜿､縺・odels繝・ぅ繝ｬ繧ｯ繝医Μ縺ｯ蟒・ｭ｢縺輔ｌ縺ｾ縺励◆縲Ｎodels_refactored縺ｫ遘ｻ陦梧ｸ医∩
-# from models.core import MLStockPredictor, EnsembleStockPredictor
+# from models.legacy_core import MLStockPredictor, EnsembleStockPredictor
 # from models.base import PredictionResult
 
 # 譁ｰ縺励＞import繝代せ
-from models.core import (
+from models.legacy_core import (
     EnsembleStockPredictor,
     MLStockPredictor,
     PredictionResult,

@@ -4,6 +4,9 @@ from datetime import datetime
 
 import pytest
 
+pytest.importorskip("scipy.sparse")
+
+from config.target_universe import get_target_universe
 from trading.demo_trader import DemoSession, DemoTrader
 
 
@@ -44,3 +47,12 @@ def test_save_session_results_creates_directory_and_file(tmp_path, monkeypatch):
 
     assert data["session"]["session_id"] == "unit_test"
     assert target_dir.is_dir(), "Target directory should be created"
+
+
+def test_demo_trader_default_symbols_from_universe():
+    """The demo trader should rely on the shared target universe."""
+    universe = get_target_universe()
+
+    defaults = DemoTrader._get_default_symbols()
+
+    assert defaults == universe.default_formatted()

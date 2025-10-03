@@ -1,0 +1,5 @@
+Description: _calculate_risk_level 関数内で、change_risk (価格変動幅) を10で割っています。change_risk はパーセンテージ（例: 0.5）であるため、他の項とバランスが取れているか確認が必要です。
+Severity: Medium
+File: investment_advisor_cui.py
+Location: _calculate_risk_level 関数
+Suggestion: change_risk を正規化する方法を明確にし、他のリスク要素との加重バランスを再評価してください。

@@ -1,0 +1,5 @@
+Description: predict 関数で、symbol が None の場合のチェックはされていますが、空文字列 ( "" ) の場合は除外されていません。symbol.isdigit() は空文字列に対して False を返すため、空文字列はエラーになりますが、より明示的なバリデーションが望ましいです。
+Severity: Low
+File: clstock_cli.py
+Location: predict 関数
+Suggestion: not symbol.strip() のようなチェックを追加し、空白文字のみの入力も弾くようにしてください。

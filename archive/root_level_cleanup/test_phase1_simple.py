@@ -52,7 +52,7 @@ def main():
 def test_imports():
     """インポートテスト"""
     try:
-        from models_new.hybrid.intelligent_cache import IntelligentPredictionCache
+        from models.hybrid.intelligent_cache import IntelligentPredictionCache
 
         print("   [OK] IntelligentPredictionCache インポート成功")
 
@@ -70,8 +70,8 @@ def test_imports():
 def test_cache_standalone():
     """キャッシュ単体テスト"""
     try:
-        from models_new.hybrid.intelligent_cache import IntelligentPredictionCache
-        from models_new.base.interfaces import PredictionResult
+        from models.hybrid.intelligent_cache import IntelligentPredictionCache
+        from models.base.interfaces import PredictionResult
         from datetime import datetime
 
         cache = IntelligentPredictionCache()

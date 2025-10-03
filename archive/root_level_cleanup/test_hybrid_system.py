@@ -57,7 +57,7 @@ def run_hybrid_system_tests() -> Dict[str, Any]:
     try:
         print("1. ハイブリッドシステム初期化")
 
-        from models_new.hybrid.hybrid_predictor import (
+        from models.hybrid.hybrid_predictor import (
             HybridStockPredictor,
             PredictionMode,
         )
@@ -117,7 +117,7 @@ def run_hybrid_system_tests() -> Dict[str, Any]:
 
 def test_prediction_modes(hybrid_system, test_symbols: List[str]) -> Dict[str, Any]:
     """各予測モードのテスト"""
-    from models_new.hybrid.hybrid_predictor import PredictionMode
+    from models.hybrid.hybrid_predictor import PredictionMode
 
     mode_results = {}
 
@@ -241,7 +241,7 @@ def test_hybrid_performance(hybrid_system, test_symbols: List[str]) -> Dict[str,
 
 def test_integration_features(hybrid_system, test_symbols: List[str]) -> Dict[str, Any]:
     """統合機能のテスト"""
-    from models_new.hybrid.hybrid_predictor import PredictionMode
+    from models.hybrid.hybrid_predictor import PredictionMode
 
     integration_data = {}
 

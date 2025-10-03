@@ -1,0 +1,5 @@
+Description: total_score から normalized_score を計算する際に、float(total_score) を 3.0 で除算しています。これは total_score の最大値が 4.0 (つまり、RiskLevel.VERY_HIGH に 4 を割り当てている) ことを前提としています。この前提がコード上に明示されていません。
+Severity: Low
+File: full_auto_system.py
+Location: RiskManagerAdapter クラスの analyze_risk メソッド
+Suggestion: リスクレベルの定義 ( RiskLevel enum ) とスコア計算の関係を明確にするコメントを追加するか、計算ロジックを列挙型定義から動的に導出するように変更してください。

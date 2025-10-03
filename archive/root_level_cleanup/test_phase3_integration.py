@@ -6,25 +6,26 @@ Phase 3機能統合テスト
 """
 
 import logging
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 
 # Phase 3システムのインポート
-from models_new.advanced.market_sentiment_analyzer import (
+from models.advanced.market_sentiment_analyzer import (
     MarketSentimentAnalyzer,
     SentimentData,
 )
-from models_new.advanced.prediction_dashboard import (
+from models.advanced.prediction_dashboard import (
     PredictionDashboard,
     VisualizationData,
 )
-from models_new.advanced.trading_strategy_generator import (
+from models.advanced.trading_strategy_generator import (
     AutoTradingStrategyGenerator,
     StrategyType,
 )
-from models_new.advanced.risk_management_framework import RiskManager
+from models.advanced.risk_management_framework import RiskManager
 
 # ログ設定
 logging.basicConfig(
@@ -196,7 +197,15 @@ class Phase3IntegrationTester:
             dashboard_html = dashboard.create_dashboard(viz_data)
 
             # ダッシュボード保存テスト
-            save_success = dashboard.save_dashboard(viz_data, "test_dashboard.html")
+            output_path = (
+                Path(__file__).resolve().parents[2]
+                / "tests"
+                / "resources"
+                / "test_dashboard.html"
+            )
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            save_success = dashboard.save_dashboard(viz_data, str(output_path))
 
             # ダッシュボード状況確認
             dashboard_status = dashboard.get_dashboard_status()

@@ -15,6 +15,52 @@ from utils.logger_config import get_logger
 logger = get_logger(__name__)
 
 
+def _handler_is_active(handler: logging.Handler) -> bool:
+    """Return True if the handler still has an open stream to write to."""
+
+    stream = getattr(handler, "stream", None)
+    if stream is None:
+        return True
+    return not getattr(stream, "closed", False)
+
+
+def _safe_log(level: str, message: str) -> None:
+    """Log a message while tolerating already-shutdown logging handlers."""
+
+    if not getattr(logger, "handlers", None) or not any(
+        _handler_is_active(handler) for handler in logger.handlers
+    ):
+        _print_fallback(level, message)
+        return
+
+    try:
+        getattr(logger, level)(message)
+    except Exception:
+        _print_fallback(level, message)
+
+
+def _print_fallback(level: str, message: str) -> None:
+    prefix = level.upper()
+    try:
+        print(f"{prefix}: {message}")
+    except Exception:
+        # As a last resort swallow the logging error to avoid masking the
+        # original shutdown flow.
+        pass
+
+
+def _info(message: str) -> None:
+    _safe_log("info", message)
+
+
+def _warning(message: str) -> None:
+    _safe_log("warning", message)
+
+
+def _error(message: str) -> None:
+    _safe_log("error", message)
+
+
 class GracefulShutdownManager:
     """Manages graceful shutdown of the application"""
 
@@ -32,11 +78,11 @@ class GracefulShutdownManager:
             signal.signal(signal.SIGTERM, self._signal_handler)
         except (ValueError, AttributeError):
             # Not available on all platforms (e.g., Windows)
-            logger.warning("Signal handlers not available on this platform")
+            _warning("Signal handlers not available on this platform")
 
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals"""
-        logger.info(f"Received signal {signum}, initiating graceful shutdown")
+        _info(f"Received signal {signum}, initiating graceful shutdown")
         self.shutdown()
         # Exit the process after shutdown
         sys.exit(0)
@@ -51,14 +97,14 @@ class GracefulShutdownManager:
             return
 
         self.is_shutting_down = True
-        logger.info("Initiating graceful shutdown...")
+        _info("Initiating graceful shutdown...")
 
         # Call all registered shutdown handlers
         for handler in self.shutdown_handlers:
             try:
                 handler()
             except Exception as e:
-                logger.error(f"Error during shutdown handler execution: {e}")
+                _error(f"Error during shutdown handler execution: {e}")
 
         # Perform final cleanup
         self._final_cleanup()
@@ -70,18 +116,20 @@ class GracefulShutdownManager:
             from utils.cache import shutdown_cache
 
             shutdown_cache()
-            logger.info("Cache shutdown completed")
+            _info("Cache shutdown completed")
         except Exception as e:
-            logger.error(f"Error during cache shutdown: {e}")
+            _error(f"Error during cache shutdown: {e}")
+
+        # Log completion before shutting down logging handlers to avoid writing
+        # to closed streams once ``logging.shutdown`` has been invoked.
+        _info("Graceful shutdown completed")
+        _info("Shutting down logging")
 
         # Close logging
         try:
             logging.shutdown()
-            logger.info("Logging shutdown completed")
         except Exception as e:
-            logger.error(f"Error during logging shutdown: {e}")
-
-        logger.info("Graceful shutdown completed")
+            _error(f"Error during logging shutdown: {e}")
 
 
 # Global instance
@@ -106,7 +154,7 @@ def managed_resource(resource_factory: Callable, cleanup_func: Callable):
             try:
                 cleanup_func(resource)
             except Exception as e:
-                logger.error(f"Error cleaning up resource: {e}")
+                _error(f"Error cleaning up resource: {e}")
 
 
 @contextmanager
@@ -122,7 +170,7 @@ def network_connection(connection_factory: Callable):
         connection = connection_factory()
         yield connection
     except Exception as e:
-        logger.error(f"Network connection error: {e}")
+        _error(f"Network connection error: {e}")
         raise
     finally:
         if connection is not None:
@@ -132,7 +180,7 @@ def network_connection(connection_factory: Callable):
                 elif hasattr(connection, "disconnect"):
                     connection.disconnect()
             except Exception as e:
-                logger.error(f"Error closing network connection: {e}")
+                _error(f"Error closing network connection: {e}")
 
 
 @contextmanager
@@ -161,7 +209,7 @@ def file_lock(lock_file_path: str, timeout: int = 30):
                 # Lock file exists, wait and retry
                 time.sleep(0.1)
             except Exception as e:
-                logger.error(f"Error creating lock file: {e}")
+                _error(f"Error creating lock file: {e}")
                 raise
 
         if not lock_acquired:
@@ -175,7 +223,7 @@ def file_lock(lock_file_path: str, timeout: int = 30):
             try:
                 os.remove(lock_file_path)
             except Exception as e:
-                logger.error(f"Error removing lock file: {e}")
+                _error(f"Error removing lock file: {e}")
 
 
 def register_shutdown_handler(handler: Callable[[], None]):

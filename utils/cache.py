@@ -131,9 +131,20 @@ class DataCache:
                     return None
 
                 # TTLチェック
-                if time.time() > cache_data["expires_at"]:
+                current_time = time.time()
+                if current_time > cache_data["expires_at"]:
                     cache_path.unlink()  # 期限切れファイルを削除
                     return None
+
+                # アクセス時にlast_accessを更新してLRU制御に反映
+                cache_data["last_access"] = current_time
+                try:
+                    with open(cache_path, "wb") as f:
+                        joblib.dump(cache_data, f)
+                except Exception as write_error:
+                    logger.warning(
+                        f"Cache metadata update error for {cache_key}: {write_error}"
+                    )
 
                 logger.debug(f"Cache hit: {cache_key}")
                 return cache_data["value"]
