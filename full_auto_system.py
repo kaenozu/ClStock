@@ -138,6 +138,7 @@ class RiskManagerAdapter:
 
             symbol, price_data = next(iter(price_map.items()))
             return self.analyze_risk(symbol, price_data, {})
+
         except Exception:
             self.logger.exception("Portfolio risk analysis failed")
             return None
@@ -583,7 +584,7 @@ class FullAutoInvestmentSystem:
                             print("=" * 60)
                             recommendations = []
                             analysis_failed_count = 0
-
+                            
                             for symbol in available_selected_stocks:
                                 try:
                                     recommendation = await self._analyze_single_stock(
@@ -593,15 +594,12 @@ class FullAutoInvestmentSystem:
                                         recommendations.append(recommendation)
                                     else:
                                         analysis_failed_count += 1
-
+                                        
                                 except Exception as e:
                                     analysis_failed_count += 1
                                     logger.error(f"個別銘柄分析中にエラーが発生しました: {symbol} - {e}")
-
-                            print(
-                                f"[完了] 個別銘柄分析完了 - 成功: {len(recommendations)}銘柄, "
-                                f"失敗: {analysis_failed_count}銘柄"
-                            )
+                            
+                            print(f"[完了] 個別銘柄分析完了 - 成功: {len(recommendations)}銘柄, 失敗: {analysis_failed_count}銘柄")
             
             except Exception as e:
                 print(f"[エラー] ポートフォリオ最適化中に予期せぬエラーが発生しました: {e}")
