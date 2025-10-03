@@ -45,6 +45,7 @@ def _redact_secret(value: Optional[str], visible: int = 4) -> str:
 
     return f"{value[:visible]}***{value[-visible:]}"
 
+
 def reset_env_token_cache() -> None:
     """Reset cached environment token values and warning tracking."""
 
@@ -52,6 +53,7 @@ def reset_env_token_cache() -> None:
     _logged_missing_env_vars.clear()
     _env_tokens_cache.clear()
     _env_tokens_cache_sources.clear()
+
 
 def _load_required_env_var(var_name: str) -> str:
     """Fetch an environment variable or raise an explicit error."""
@@ -368,3 +370,4 @@ def add_security_middleware(app: FastAPI):
         return response
 
     logger.info("Security middleware added to application")
+

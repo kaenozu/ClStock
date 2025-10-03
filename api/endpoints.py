@@ -3,8 +3,6 @@ from fastapi.security import HTTPAuthorizationCredentials
 
 from datetime import datetime, time
 from zoneinfo import ZoneInfo
-from dataclasses import dataclass
-from typing import List
 import pandas as pd
 
 # セキュリティと検証機能
@@ -18,7 +16,6 @@ from utils.validators import (
 from utils.exceptions import DataFetchError
 
 from models.legacy_core import MLStockPredictor
-from models.recommendation import StockRecommendation
 from api.schemas import RecommendationResponse
 from data.stock_data import StockDataProvider
 
@@ -101,6 +98,7 @@ async def get_single_recommendation(
     except PredictionError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
+        logger.error(f"推奨情報の取得中にエラーが発生しました: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"推奨情報の取得に失敗しました: {str(e)}"
         )
