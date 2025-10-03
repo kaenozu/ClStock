@@ -92,10 +92,51 @@ except ModuleNotFoundError:  # pragma: no cover - hit in constrained envs
         def fast_info(self) -> SimpleNamespace:
             return self._fast_info
 
-        def history(self, period: str = "1y", interval: str = "1d") -> pd.DataFrame:
-            length = max(5, _period_to_days(period))
-            end = datetime.utcnow().date()
-            index = pd.date_range(end - timedelta(days=length + 5), periods=length, freq="B")
+        def history(
+            self,
+            period: str = "1y",
+            interval: str = "1d",
+            start: Optional[str] = None,
+            end: Optional[str] = None,
+        ) -> pd.DataFrame:
+            def _empty_frame(index: pd.DatetimeIndex) -> pd.DataFrame:
+                return pd.DataFrame(
+                    {
+                        "Open": pd.Series(dtype="float64"),
+                        "High": pd.Series(dtype="float64"),
+                        "Low": pd.Series(dtype="float64"),
+                        "Close": pd.Series(dtype="float64"),
+                        "Volume": pd.Series(dtype="int64"),
+                    },
+                    index=index,
+                )
+
+            def _normalize(value: Optional[str]) -> Optional[pd.Timestamp]:
+                if value is None:
+                    return None
+                ts = pd.to_datetime(value)
+                if isinstance(ts, pd.DatetimeIndex):  # defensive, though unlikely
+                    ts = ts[0]
+                if ts.tzinfo is not None:
+                    ts = ts.tz_convert(None)
+                return ts.normalize()
+
+            start_ts = _normalize(start)
+            end_ts = _normalize(end)
+
+            if start_ts is not None or end_ts is not None:
+                if end_ts is None:
+                    end_ts = pd.Timestamp.utcnow().normalize()
+                if start_ts is None:
+                    default_length = max(5, _period_to_days(period))
+                    start_ts = (end_ts - pd.tseries.offsets.BDay(default_length - 1)).normalize()
+                if end_ts < start_ts:
+                    return _empty_frame(pd.DatetimeIndex([], dtype="datetime64[ns]"))
+                index = pd.bdate_range(start=start_ts, end=end_ts)
+            else:
+                length = max(5, _period_to_days(period))
+                end_date = datetime.utcnow().date()
+                index = pd.bdate_range(end_date - timedelta(days=length + 5), periods=length)
 
             base = 90 + (self._seed % 60)
             variation = (self._seed % 13) - 6
@@ -104,6 +145,9 @@ except ModuleNotFoundError:  # pragma: no cover - hit in constrained envs
                 index=index,
                 dtype="float",
             )
+            if close.empty:
+                return _empty_frame(index)
+
             open_ = close.shift(1, fill_value=close.iloc[0] - 0.5)
             high = pd.concat([open_, close], axis=1).max(axis=1) + 0.3
             low = pd.concat([open_, close], axis=1).min(axis=1) - 0.3
