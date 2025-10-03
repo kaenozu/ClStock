@@ -6,6 +6,7 @@ Phase 3機能統合テスト
 """
 
 import logging
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -196,7 +197,15 @@ class Phase3IntegrationTester:
             dashboard_html = dashboard.create_dashboard(viz_data)
 
             # ダッシュボード保存テスト
-            save_success = dashboard.save_dashboard(viz_data, "test_dashboard.html")
+            output_path = (
+                Path(__file__).resolve().parents[2]
+                / "tests"
+                / "resources"
+                / "test_dashboard.html"
+            )
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            save_success = dashboard.save_dashboard(viz_data, str(output_path))
 
             # ダッシュボード状況確認
             dashboard_status = dashboard.get_dashboard_status()

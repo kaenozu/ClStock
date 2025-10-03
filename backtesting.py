@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from data.stock_data import StockDataProvider
 from config.settings import get_settings
+from collections import deque, defaultdict
 
 # full_auto_system から必要なクラスをインポート
 from full_auto_system import HybridPredictorAdapter, SentimentAnalyzerAdapter, RiskManagerAdapter, StrategyGeneratorAdapter
@@ -55,35 +56,10 @@ class BacktestEngine:
     def load_stock_data(self, symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
         """
         指定された期間の株価データを読み込む
-        yfinance は period でしか期間を指定できないため、start_date と end_date を period に変換して取得し、範囲を絞る
+        start と end パラメータを使用して、正確な期間のデータを取得する
         """
-        # yfinance は period でしか期間を指定できないため、start_date と end_date から period を推定
-        start = datetime.strptime(start_date, '%Y-%m-%d')
-        end = datetime.strptime(end_date, '%Y-%m-%d')
-        delta = end - start
-        days = delta.days
-        
-        # 期間に応じて適切な period を選択
-        if days <= 5:
-            period = "5d"
-        elif days <= 30:
-            period = "1mo"
-        elif days <= 90:
-            period = "3mo"
-        elif days <= 180:
-            period = "6mo"
-        elif days <= 365:
-            period = "1y"
-        elif days <= 730:
-            period = "2y"
-        else:
-            period = "5y"
-        
-        # StockDataProvider を使用してデータ取得
-        df = self.data_provider.get_stock_data(symbol, period=period)
-        
-        # 指定された範囲に絞る
-        df = df[(df.index >= start_date) & (df.index <= end_date)]
+        # StockDataProvider を使用してデータ取得 (start と end を使用)
+        df = self.data_provider.get_stock_data(symbol, start=start_date, end=end_date)
         
         if df.empty:
             raise ValueError(f"No data found for symbol {symbol} between {start_date} and {end_date}")
@@ -318,38 +294,45 @@ class BacktestEngine:
                 result.max_drawdown = np.min(drawdown) if drawdown.size > 0 else 0.0
                 
                 # 勝率の計算 (取引履歴から)
-                # 買いポジションの損益を計算 (売却時)
-                buy_transactions = [t for t in self.transaction_history if t['action'] == 'BUY']
-                sell_transactions = [t for t in self.transaction_history if t['action'] == 'SELL']
-                
-                # 各売却に対して、対応する買いを特定し、損益を計算 (簡易版)
-                # 実際には、FIFO (先入先出) で計算すべき
+                # FIFO マッチング
+                buy_queue: Dict[str, deque] = defaultdict(deque)
+                sell_queue: Dict[str, deque] = defaultdict(deque)
+
+                for transaction in self.transaction_history:
+                    symbol = transaction['symbol']
+                    action = transaction['action']
+                    quantity = transaction['quantity']
+                    price = transaction['price']
+                    if action == 'BUY':
+                        buy_queue[symbol].append({'quantity': quantity, 'price': price})
+                    elif action == 'SELL':
+                        sell_queue[symbol].append({'quantity': quantity, 'price': price})
+
                 profit_count = 0
                 total_trades = 0
-                for sell in sell_transactions:
-                    # 売却数量に対応する買いを特定 (簡易版: 最も古い買いから)
-                    remaining_quantity = sell['quantity']
-                    for buy in buy_transactions:
-                        if buy['symbol'] == sell['symbol'] and buy['quantity'] > 0:
-                            matched_quantity = min(remaining_quantity, buy['quantity'])
-                            buy['quantity'] -= matched_quantity
-                            remaining_quantity -= matched_quantity
-                            if buy['quantity'] <= 0:
-                                buy['quantity'] = 0  # 表示用に0に設定 (実際の資産とは関係ない)
-                            
-                            # 損益計算 (売却価格 - 購入価格) * 数量 - 手数料
-                            # 簡略化: 手数料を無視し、均等価格で計算
-                            avg_buy_price = buy['price'] if 'price' in buy else buy.get('total_cost', buy.get('cost_before_fee', 0)) / buy.get('quantity', 1)
-                            profit = (sell['price'] - avg_buy_price) * matched_quantity
-                            if profit > 0:
-                                profit_count += 1
-                            total_trades += 1
-                            
-                            if remaining_quantity == 0:
-                                break
-                    if remaining_quantity > 0:
-                        print(f"Warning: Could not match all quantities for sell transaction of {sell['quantity']} shares of {sell['symbol']}")
-                
+
+                for symbol, sell_deque in sell_queue.items():
+                    buy_deque = buy_queue[symbol]
+                    while sell_deque and buy_deque:
+                        sell_item = sell_deque[0]
+                        buy_item = buy_deque[0]
+
+                        matched_quantity = min(sell_item['quantity'], buy_item['quantity'])
+                        # 注: 負の quantity にならないように、0 以下になった場合は pop する前に確認する
+                        sell_item['quantity'] -= matched_quantity
+                        buy_item['quantity'] -= matched_quantity
+
+                        if sell_item['quantity'] <= 0:
+                            sell_deque.popleft()
+                        if buy_item['quantity'] <= 0:
+                            buy_deque.popleft()
+
+                        profit = (sell_item['price'] - buy_item['price']) * matched_quantity
+                        if profit > 0:
+                            profit_count += 1
+
+                        total_trades += 1
+
                 result.win_rate = profit_count / total_trades if total_trades > 0 else 0.0
 
         result.trades = self.transaction_history
@@ -412,13 +395,13 @@ class BacktestEngine:
         print(f"Total Trades: {len(result.trades)}")
         print("="*50)
 
-    def run_backtest(self, strategy_func, period_start: str, period_end: str) -> BacktestResult:
+    def run_backtest(self, symbols_to_trade: List[str], strategy_func, period_start: str, period_end: str) -> BacktestResult:
         """
         バックテストを実行して結果を返す
         """
-        print(f"Starting backtest from {period_start} to {period_end}")
+        print(f"Starting backtest for symbols {symbols_to_trade} from {period_start} to {period_end}")
         # 戦略を実行
-        self.execute_strategy(strategy_func, None, period_start, period_end)
+        self.execute_strategy(symbols_to_trade, period_start, period_end, strategy_func)
         # 評価指標を計算
         result = self.calculate_metrics()
         print(f"Backtest completed. Final capital: {result.final_capital}, Total return: {result.total_return:.2%}")
@@ -434,7 +417,7 @@ if __name__ == "__main__":
         return {"000001": "BUY"}  # ダミーの推奨
 
     # バックテストの実行
-    result = engine.run_backtest(dummy_strategy, "2023-01-01", "2023-12-31")
+    result = engine.run_backtest(["000001"], dummy_strategy, "2023-01-01", "2023-12-31")
 
     # 結果の表示
     print(f"Total Return: {result.total_return:.2%}")

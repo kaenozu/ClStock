@@ -1,0 +1,476 @@
+{
+  "optimization_timestamp": "20250930_172647",
+  "optimization_summary": {
+    "best_portfolio_size": 30,
+    "total_return_rate": "16.77%",
+    "total_profit": 167735.0926513672,
+    "total_trades": 213
+  },
+  "portfolio_comparison": {
+    "10_stocks": {
+      "return_rate": "8.09%",
+      "total_profit": 80949.08569335938,
+      "total_trades": 67
+    },
+    "15_stocks": {
+      "return_rate": "13.67%",
+      "total_profit": 136725.4793701172,
+      "total_trades": 103
+    },
+    "20_stocks": {
+      "return_rate": "15.68%",
+      "total_profit": 156816.77966308594,
+      "total_trades": 142
+    },
+    "25_stocks": {
+      "return_rate": "15.70%",
+      "total_profit": 157014.77856445312,
+      "total_trades": 184
+    },
+    "30_stocks": {
+      "return_rate": "16.77%",
+      "total_profit": 167735.0926513672,
+      "total_trades": 213
+    }
+  },
+  "optimal_portfolio": [
+    {
+      "symbol": "4004.T",
+      "sector": "chemicals",
+      "combined_score": 26.71,
+      "profit_potential": 44.06,
+      "diversity_score": 1.19,
+      "volatility": 0.4526,
+      "market_cap": 8024619936
+    },
+    {
+      "symbol": "1605.T",
+      "sector": "energy",
+      "combined_score": 15.7,
+      "profit_potential": 18.68,
+      "diversity_score": 1.57,
+      "volatility": 0.3299,
+      "market_cap": 19588826921
+    },
+    {
+      "symbol": "6504.T",
+      "sector": "manufacturing",
+      "combined_score": 14.04,
+      "profit_potential": 18.23,
+      "diversity_score": 1.19,
+      "volatility": 0.4278,
+      "market_cap": 7810309590
+    },
+    {
+      "symbol": "8035.T",
+      "sector": "tech",
+      "combined_score": 20.0,
+      "profit_potential": 31.16,
+      "diversity_score": 1.73,
+      "volatility": 0.5028,
+      "market_cap": 107961171950
+    },
+    {
+      "symbol": "9022.T",
+      "sector": "automotive",
+      "combined_score": 12.25,
+      "profit_potential": 7.12,
+      "diversity_score": 1.21,
+      "volatility": 0.2302,
+      "market_cap": 10730412232
+    },
+    {
+      "symbol": "2914.T",
+      "sector": "consumer",
+      "combined_score": 12.69,
+      "profit_potential": 7.68,
+      "diversity_score": 1.33,
+      "volatility": 0.2267,
+      "market_cap": 25124243233
+    },
+    {
+      "symbol": "4502.T",
+      "sector": "healthcare",
+      "combined_score": 9.58,
+      "profit_potential": -1.22,
+      "diversity_score": 1.32,
+      "volatility": 0.1943,
+      "market_cap": 18215739783
+    },
+    {
+      "symbol": "2282.T",
+      "sector": "food",
+      "combined_score": 15.05,
+      "profit_potential": 12.69,
+      "diversity_score": 0.85,
+      "volatility": 0.2268,
+      "market_cap": 2676690832
+    },
+    {
+      "symbol": "4324.T",
+      "sector": "telecom",
+      "combined_score": 13.6,
+      "profit_potential": 15.27,
+      "diversity_score": 1.21,
+      "volatility": 0.3468,
+      "market_cap": 4183932830
+    },
+    {
+      "symbol": "8771.T",
+      "sector": "finance",
+      "combined_score": 12.12,
+      "profit_potential": 12.27,
+      "diversity_score": 1.21,
+      "volatility": 0.3456,
+      "market_cap": 299305024
+    },
+    {
+      "symbol": "9104.T",
+      "sector": "transport",
+      "combined_score": 4.43,
+      "profit_potential": -3.2,
+      "diversity_score": 1.33,
+      "volatility": 0.3454,
+      "market_cap": 23905510684
+    },
+    {
+      "symbol": "1963.T",
+      "sector": "realestate",
+      "combined_score": 12.91,
+      "profit_potential": 14.32,
+      "diversity_score": 0.97,
+      "volatility": 0.356,
+      "market_cap": 2288368102
+    },
+    {
+      "symbol": "9984.T",
+      "sector": "tech",
+      "combined_score": 15.09,
+      "profit_potential": 21.08,
+      "diversity_score": 1.73,
+      "volatility": 0.4859,
+      "market_cap": 183230539370
+    },
+    {
+      "symbol": "5101.T",
+      "sector": "energy",
+      "combined_score": 12.79,
+      "profit_potential": 13.94,
+      "diversity_score": 1.57,
+      "volatility": 0.3638,
+      "market_cap": 3800372915
+    },
+    {
+      "symbol": "1808.T",
+      "sector": "realestate",
+      "combined_score": 12.66,
+      "profit_potential": 5.28,
+      "diversity_score": 0.88,
+      "volatility": 0.195,
+      "market_cap": 2105683985
+    },
+    {
+      "symbol": "1893.T",
+      "sector": "realestate",
+      "combined_score": 12.56,
+      "profit_potential": 10.76,
+      "diversity_score": 0.97,
+      "volatility": 0.2804,
+      "market_cap": 2007398263
+    },
+    {
+      "symbol": "6758.T",
+      "sector": "tech",
+      "combined_score": 12.29,
+      "profit_potential": 12.6,
+      "diversity_score": 1.45,
+      "volatility": 0.3504,
+      "market_cap": 69037945370
+    },
+    {
+      "symbol": "8267.T",
+      "sector": "consumer",
+      "combined_score": 12.01,
+      "profit_potential": 6.3,
+      "diversity_score": 1.33,
+      "volatility": 0.2264,
+      "market_cap": 12032851793
+    },
+    {
+      "symbol": "7201.T",
+      "sector": "automotive",
+      "combined_score": 11.87,
+      "profit_potential": 14.68,
+      "diversity_score": 1.32,
+      "volatility": 0.4734,
+      "market_cap": 14289302827
+    },
+    {
+      "symbol": "8002.T",
+      "sector": "finance",
+      "combined_score": 11.79,
+      "profit_potential": 11.16,
+      "diversity_score": 1.21,
+      "volatility": 0.332,
+      "market_cap": 19511363350
+    },
+    {
+      "symbol": "5201.T",
+      "sector": "manufacturing",
+      "combined_score": 11.7,
+      "profit_potential": 8.24,
+      "diversity_score": 1.09,
+      "volatility": 0.2656,
+      "market_cap": 4660036519
+    },
+    {
+      "symbol": "4578.T",
+      "sector": "consumer",
+      "combined_score": 11.59,
+      "profit_potential": 8.79,
+      "diversity_score": 1.33,
+      "volatility": 0.2843,
+      "market_cap": 9685279906
+    },
+    {
+      "symbol": "9432.T",
+      "sector": "tech",
+      "combined_score": 11.3,
+      "profit_potential": -0.43,
+      "diversity_score": 1.32,
+      "volatility": 0.1699,
+      "market_cap": 26237338535
+    },
+    {
+      "symbol": "8031.T",
+      "sector": "finance",
+      "combined_score": 10.97,
+      "profit_potential": 9.59,
+      "diversity_score": 1.21,
+      "volatility": 0.334,
+      "market_cap": 28129217934
+    },
+    {
+      "symbol": "7269.T",
+      "sector": "automotive",
+      "combined_score": 10.97,
+      "profit_potential": 10.37,
+      "diversity_score": 1.21,
+      "volatility": 0.3591,
+      "market_cap": 16563024326
+    },
+    {
+      "symbol": "6752.T",
+      "sector": "manufacturing",
+      "combined_score": 10.95,
+      "profit_potential": 10.18,
+      "diversity_score": 1.09,
+      "volatility": 0.3513,
+      "market_cap": 14832709944
+    },
+    {
+      "symbol": "8802.T",
+      "sector": "realestate",
+      "combined_score": 10.63,
+      "profit_potential": 8.01,
+      "diversity_score": 0.97,
+      "volatility": 0.3056,
+      "market_cap": 16293105152
+    },
+    {
+      "symbol": "4523.T",
+      "sector": "consumer",
+      "combined_score": 10.54,
+      "profit_potential": 7.56,
+      "diversity_score": 1.33,
+      "volatility": 0.3045,
+      "market_cap": 7052001331
+    },
+    {
+      "symbol": "2269.T",
+      "sector": "food",
+      "combined_score": 10.46,
+      "profit_potential": 0.55,
+      "diversity_score": 0.77,
+      "volatility": 0.1909,
+      "market_cap": 3587295393
+    },
+    {
+      "symbol": "2802.T",
+      "sector": "consumer",
+      "combined_score": 10.4,
+      "profit_potential": 6.24,
+      "diversity_score": 1.33,
+      "volatility": 0.2808,
+      "market_cap": 12663880327
+    }
+  ],
+  "sector_analysis": {
+    "chemicals": {
+      "count": 1,
+      "total_score": 26.711098383065682,
+      "symbols": [
+        "4004.T"
+      ],
+      "avg_score": 26.711098383065682
+    },
+    "energy": {
+      "count": 2,
+      "total_score": 28.490396678172885,
+      "symbols": [
+        "1605.T",
+        "5101.T"
+      ],
+      "avg_score": 14.245198339086443
+    },
+    "manufacturing": {
+      "count": 3,
+      "total_score": 36.69610101572596,
+      "symbols": [
+        "6504.T",
+        "5201.T",
+        "6752.T"
+      ],
+      "avg_score": 12.232033671908653
+    },
+    "tech": {
+      "count": 4,
+      "total_score": 58.673370435839786,
+      "symbols": [
+        "8035.T",
+        "9984.T",
+        "6758.T",
+        "9432.T"
+      ],
+      "avg_score": 14.668342608959946
+    },
+    "automotive": {
+      "count": 3,
+      "total_score": 35.08803335892897,
+      "symbols": [
+        "9022.T",
+        "7201.T",
+        "7269.T"
+      ],
+      "avg_score": 11.69601111964299
+    },
+    "consumer": {
+      "count": 5,
+      "total_score": 57.22946325198038,
+      "symbols": [
+        "2914.T",
+        "8267.T",
+        "4578.T",
+        "4523.T",
+        "2802.T"
+      ],
+      "avg_score": 11.445892650396075
+    },
+    "healthcare": {
+      "count": 1,
+      "total_score": 9.57568720663562,
+      "symbols": [
+        "4502.T"
+      ],
+      "avg_score": 9.57568720663562
+    },
+    "food": {
+      "count": 2,
+      "total_score": 25.505719124130827,
+      "symbols": [
+        "2282.T",
+        "2269.T"
+      ],
+      "avg_score": 12.752859562065414
+    },
+    "telecom": {
+      "count": 1,
+      "total_score": 13.603957688213278,
+      "symbols": [
+        "4324.T"
+      ],
+      "avg_score": 13.603957688213278
+    },
+    "finance": {
+      "count": 3,
+      "total_score": 34.890523990794016,
+      "symbols": [
+        "8771.T",
+        "8002.T",
+        "8031.T"
+      ],
+      "avg_score": 11.630174663598005
+    },
+    "transport": {
+      "count": 1,
+      "total_score": 4.429258760602392,
+      "symbols": [
+        "9104.T"
+      ],
+      "avg_score": 4.429258760602392
+    },
+    "realestate": {
+      "count": 4,
+      "total_score": 48.7631463472772,
+      "symbols": [
+        "1963.T",
+        "1808.T",
+        "1893.T",
+        "8802.T"
+      ],
+      "avg_score": 12.1907865868193
+    }
+  },
+  "top_performers": [
+    {
+      "symbol": "4004.T",
+      "sector": "chemicals",
+      "combined_score": 26.71
+    },
+    {
+      "symbol": "8035.T",
+      "sector": "tech",
+      "combined_score": 20.0
+    },
+    {
+      "symbol": "1605.T",
+      "sector": "energy",
+      "combined_score": 15.7
+    },
+    {
+      "symbol": "9984.T",
+      "sector": "tech",
+      "combined_score": 15.09
+    },
+    {
+      "symbol": "2282.T",
+      "sector": "food",
+      "combined_score": 15.05
+    },
+    {
+      "symbol": "6504.T",
+      "sector": "manufacturing",
+      "combined_score": 14.04
+    },
+    {
+      "symbol": "4324.T",
+      "sector": "telecom",
+      "combined_score": 13.6
+    },
+    {
+      "symbol": "1963.T",
+      "sector": "realestate",
+      "combined_score": 12.91
+    },
+    {
+      "symbol": "5101.T",
+      "sector": "energy",
+      "combined_score": 12.79
+    },
+    {
+      "symbol": "2914.T",
+      "sector": "consumer",
+      "combined_score": 12.69
+    }
+  ]
+}

@@ -183,7 +183,19 @@ class SystemMonitor:
 
         except Exception as e:
             logger.error(f"システムメトリクス収集エラー: {e}")
-            raise
+            # 障害時でも監視ループを継続できるように安全なデフォルト値を返す
+            return SystemMetrics(
+                timestamp=datetime.now(),
+                cpu_percent=0.0,
+                memory_percent=0.0,
+                memory_available_mb=0.0,
+                disk_usage_percent=0.0,
+                disk_free_gb=0.0,
+                network_sent_mb=0.0,
+                network_recv_mb=0.0,
+                active_processes=0,
+                load_average=None,
+            )
 
     def _collect_process_metrics(self):
         """プロセスメトリクス収集"""

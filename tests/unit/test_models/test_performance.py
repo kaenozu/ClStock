@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 import sys
 
 # Resolve the project root and add it to the system path
@@ -14,11 +14,11 @@ from unittest.mock import MagicMock, patch
 from datetime import datetime
 from concurrent.futures import Future
 
-# 修正されたインポート
+# 菫ｮ豁｣縺輔ｌ縺溘う繝ｳ繝昴・繝・
 Mock = MagicMock
-from ....models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
-from models.legacy_core import PredictionResult
-from models.ensemble.ensemble_predictor import (
+from ClStock.models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
+from models.core import PredictionResult
+from models_refactored.ensemble.ensemble_predictor import (
     EnsemblePredictor as EnsembleStockPredictor,
 )
 
@@ -410,7 +410,7 @@ class TestUltraHighPerformancePredictor:
         # Base predictor should not be called due to cache hit
         base_predictor.predict.assert_not_called()
 
-    @patch("data.stock_data.StockDataProvider")
+    @patch("models.performance.StockDataProvider")
     def test_predict_cache_miss(self, mock_provider_class, sample_stock_data):
         """Test predict with cache miss."""
         base_predictor = Mock()

@@ -123,6 +123,7 @@ def compare_prediction_systems(
         "precision_87_results": [],
         "enhanced_results": [],
         "comparison_metrics": {},
+        "symbols": list(test_symbols),
     }
 
     for symbol in test_symbols:
@@ -248,6 +249,8 @@ def compare_system_performance(
         "batch_processing": {},
         "memory_efficiency": {},
         "scalability": {},
+        "tested_symbols": list(test_symbols),
+        "psutil_available": False,
     }
 
     # バッチ処理性能比較
@@ -301,6 +304,8 @@ def compare_system_performance(
 
         print(f"     メモリ使用量: {final_memory - initial_memory:.1f}MB増加")
 
+        performance_data["psutil_available"] = True
+
     except ImportError:
         print("     psutilが利用できないため、メモリ測定をスキップ")
 
@@ -315,6 +320,10 @@ def compare_system_features(precision_system, enhanced_system) -> Dict[str, Any]
         "precision_87_features": {},
         "enhanced_features": {},
         "advantage_analysis": {},
+        "systems_available": {
+            "precision_87": bool(precision_system),
+            "enhanced": bool(enhanced_system),
+        },
     }
 
     # 87%精度システムの特徴

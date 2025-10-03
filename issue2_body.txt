@@ -1,0 +1,5 @@
+Description: run_backtest 関数内で execute_strategy を呼び出す際、引数の順序が間違っています。execute_strategy( strategy_func, None, period_start, period_end ) となっており、None が period_start に渡され、period_start の値が銘柄リストとして解釈されます。これにより、エラーまたは意図しない動作が発生します。
+Severity: High
+File: backtesting.py
+Location: run_backtest 関数
+Suggestion: execute_strategy 関数の仕様に合わせて、run_backtest から呼び出す際の引数順序を修正してください。

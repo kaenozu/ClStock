@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional
 
 from utils.cache import get_cache
 from utils.logger_config import setup_logger
+from .target_universe import get_target_universe
 
 logger = setup_logger(__name__)
 
@@ -301,39 +302,7 @@ class AppSettings:
 
     # 蟇ｾ雎｡驫俶氛
     target_stocks: Dict[str, str] = field(
-        default_factory=lambda: {
-            "7203": "Toyota Motor Corp",
-            "6758": "Sony Group Corp",
-            "9432": "Nippon Telegraph and Telephone",
-            "9434": "SoftBank Corp",
-            "6701": "NEC Corp",
-            "8316": "Sumitomo Mitsui Financial Group",
-            "8411": "Mizuho Financial Group",
-            "8306": "MUFG Bank",
-            "8058": "Mitsubishi Corp",
-            "8001": "Itochu Corp",
-            "8002": "Marubeni Corp",
-            "8031": "Mitsui & Co",
-            "6902": "Denso Corp",
-            "7267": "Honda Motor Co",
-            "6501": "Hitachi Ltd",
-            "6503": "Mitsubishi Electric",
-            "7751": "Canon Inc",
-            "8035": "Tokyo Electron",
-            "6770": "Alps Alpine",
-            "9433": "KDDI Corp",
-            "6502": "Toshiba Corp",
-            "6752": "Panasonic Holdings",
-            "6954": "Fanuc Corp",
-            "6861": "Keyence Corp",
-            "4523": "Eisai Co",
-            "4578": "Otsuka Holdings",
-            "7201": "Nissan Motor Co",
-            "7261": "Mazda Motor Corp",
-            "7269": "Suzuki Motor Corp",
-            "4901": "Fujifilm Holdings",
-            "4502": "Takeda Pharmaceutical",
-        }
+        default_factory=lambda: get_target_universe().english_names
     )
 
 

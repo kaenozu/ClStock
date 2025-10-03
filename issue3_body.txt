@@ -1,0 +1,5 @@
+Description: 買い注文と売り注文を単純にマッチングしているため、実際の損益計算や勝率が不正確になります。
+Severity: High
+File: backtesting.py
+Location: calculate_metrics 関数内の勝率計算部分 ( buy_transactions, sell_transactions の処理 )
+Suggestion: FIFOまたは他の正確なマッチングアルゴリズムを実装してください。

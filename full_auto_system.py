@@ -11,7 +11,8 @@ from typing import List, Optional, Dict, Any
 import pandas as pd
 
 from data.stock_data import StockDataProvider
-from models.hybrid.hybrid_predictor import HybridStockPredictor
+from models_new.hybrid.hybrid_predictor import HybridStockPredictor
+from models_new.hybrid.prediction_result import PredictionResult
 from trading.tse.analysis import StockProfile
 from trading.tse.optimizer import PortfolioOptimizer
 from analysis.sentiment_analyzer import MarketSentimentAnalyzer
@@ -71,6 +72,12 @@ class HybridPredictorAdapter:
 
     def predict(self, symbol: str, data: Optional[pd.DataFrame]) -> Dict[str, Any]:
         result = self._predictor.predict(symbol)
+
+        # 戻り値が PredictionResult であることを確認
+        if not isinstance(result, PredictionResult):
+            logger.warning(f"{symbol}: HybridStockPredictor.predict が PredictionResult 以外の型を返しました: {type(result)}")
+            # フォールバックとして、空の辞書を返す
+            return {}
 
         return {
             "predicted_price": float(result.prediction),
@@ -165,7 +172,11 @@ class RiskManagerAdapter:
             return portfolio_risk
 
         total_score = getattr(portfolio_risk, "total_risk_score", 2.0)
-        normalized_score = max(0.0, min((float(total_score) - 1.0) / 3.0, 1.0))
+        # total_score は RiskManager により [MIN_RISK_SCORE, MAX_RISK_SCORE] の範囲を想定
+        MIN_RISK_SCORE = 1.0
+        MAX_RISK_SCORE = 4.0
+        # total_score を [0.0, 1.0] に正規化
+        normalized_score = max(0.0, min((float(total_score) - MIN_RISK_SCORE) / (MAX_RISK_SCORE - MIN_RISK_SCORE), 1.0))
         risk_level = getattr(portfolio_risk, "risk_level", RiskLevel.MEDIUM)
         max_position = getattr(portfolio_risk, "max_safe_position_size", 0.05)
         recommendations = getattr(portfolio_risk, "recommendations", [])
@@ -377,11 +388,11 @@ class FullAutoInvestmentSystem:
 
     def _optimize_portfolio(
         self, processed_data: Dict[str, pd.DataFrame]
-    ) -> Dict[str, List[str]]:
+    ) -> Dict[str, List[StockProfile]]:
         profiles = self._build_stock_profiles(processed_data)
 
         if not profiles:
-            return {"selected_stocks": []}
+            return {"selected_stocks": [], "selected_profiles": []}
 
         if hasattr(self.optimizer, "optimize_portfolio"):
             selected_profiles = self.optimizer.optimize_portfolio(profiles)
@@ -390,7 +401,8 @@ class FullAutoInvestmentSystem:
         else:
             raise AttributeError("Optimizer does not support portfolio optimisation methods")
 
-        return {"selected_stocks": [profile.symbol for profile in selected_profiles]}
+        selected_stocks = [profile.symbol for profile in selected_profiles]
+        return {"selected_stocks": selected_stocks, "selected_profiles": selected_profiles}
 
     async def run_full_auto_analysis(self) -> List[AutoRecommendation]:
         """完全自動分析実行"""
@@ -459,24 +471,15 @@ class FullAutoInvestmentSystem:
                     print("[警告] ポートフォリオ最適化に失敗しました。空の結果が返されました。")
                     recommendations = []
                 else:
-                    # 最適なポートフォリオサイズの結果から選定銘柄を取得
-                    # 最も性能の良いポートフォリオを選択
-                    best_result_key = None
-                    best_performance_score = -float('inf')
-                    for size, result in optimization_results.items():
-                        backtest_result = result.get('backtest', {})
-                        performance_score = backtest_result.get('return_rate', 0) * size * 0.1  # 簡易スコア計算
-                        if performance_score > best_performance_score:
-                            best_performance_score = performance_score
-                            best_result_key = size
+                    # selected_profiles を optimized_portfolio から取得
+                    selected_profiles = optimized_portfolio.get('selected_profiles', [])
+                    # selected_stocks を optimized_portfolio から取得
+                    selected_stocks = optimized_portfolio.get('selected_stocks', [])
 
-                    if best_result_key is None:
-                        print("[警告] 最適化結果から最適なポートフォリオを選択できませんでした。")
+                    if not selected_profiles: # selected_profiles が空の場合もチェック
+                        print("[警告] 最適化結果から選定されたプロファイルがありません。")
                         recommendations = []
                     else:
-                        selected_profiles = optimization_results[best_result_key].get('selected_profiles', [])
-                        selected_stocks = [profile.symbol for profile in selected_profiles]
-                        
                         # 実際にデータがある銘柄のみを対象とする
                         available_selected_stocks = [s for s in selected_stocks if s in processed_data]
                         
@@ -632,7 +635,7 @@ class FullAutoInvestmentSystem:
                     stop_loss=stop_loss,
                     expected_return=expected_return,
                     confidence=confidence,
-                    risk_level=getattr(risk_analysis_for_payload, 'risk_level', type('DummyRiskLevel', (), {'value': 'unknown'})()).value,
+                    risk_level=getattr(getattr(risk_analysis_for_payload, 'risk_level', type("DummyRiskLevel", (), {"value": "unknown"})()), "value", "unknown"),
                     buy_date=buy_date,
                     sell_date=sell_date,
                     reasoning=reasoning
@@ -683,9 +686,9 @@ class FullAutoInvestmentSystem:
             reasons.append("中期待リターン")
             
         # リスクレベルの低さ
-        if risk_analysis and risk_analysis.risk_level.value == "low":
+        if risk_analysis and hasattr(risk_analysis, 'risk_level') and risk_analysis.risk_level and hasattr(risk_analysis.risk_level, 'value') and risk_analysis.risk_level.value == "low":
             reasons.append("低リスク")
-        elif risk_analysis and risk_analysis.risk_level.value == "medium":
+        elif risk_analysis and hasattr(risk_analysis, 'risk_level') and risk_analysis.risk_level and hasattr(risk_analysis.risk_level, 'value') and risk_analysis.risk_level.value == "medium":
             reasons.append("中程度リスク")
             
         if not reasons:
@@ -781,7 +784,6 @@ class FullAutoInvestmentSystem:
 
         self.logger.info("Saved Google Colab data retrieval script to %s", script_file_path)
         print(f"[INFO] Saved Google Colab data retrieval script to {script_file_path}")
-
 
 
 def build_cli_parser() -> argparse.ArgumentParser:
