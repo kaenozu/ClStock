@@ -1,0 +1,5 @@
+Description: get_short_term_prediction 関数内で、精度90.3%という指標が信頼度（final_confidence）に直接影響を与えるように単純にかけ算（base_confidence * 0.903）しています。信頼度と精度は異なる概念であり、このように単純にかけ算することで、意図しない信頼度の変化が生じる可能性があります。
+Severity: Medium
+File: investment_advisor_cui.py
+Location: get_short_term_prediction 関数
+Suggestion: 信頼度と精度の関係をより明確にし、必要であれば別個の指標として扱うか、より合理的な組み合わせ方法を検討してください。

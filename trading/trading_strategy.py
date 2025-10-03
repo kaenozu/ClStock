@@ -14,7 +14,7 @@ import pandas as pd
 import numpy as np
 
 # 既存システムインポート
-from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+from models.precision.precision_87_system import Precision87BreakthroughSystem
 from data.stock_data import StockDataProvider
 
 

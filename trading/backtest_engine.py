@@ -34,6 +34,7 @@ from .backtest import (
 
 # 既存システム
 from data.stock_data import StockDataProvider
+from config.target_universe import get_target_universe
 from models_new.precision.precision_87_system import Precision87BreakthroughSystem
 
 
@@ -356,20 +357,10 @@ class BacktestEngine:
         # 平日のみ（簡略化）
         return date.weekday() < 5
 
-    def _get_default_symbols(self) -> List[str]:
+    @staticmethod
+    def _get_default_symbols() -> List[str]:
         """デフォルト銘柄リスト"""
-        return [
-            "6758.T",
-            "7203.T",
-            "8306.T",
-            "9984.T",
-            "6861.T",
-            "4502.T",
-            "6503.T",
-            "7201.T",
-            "8001.T",
-            "9022.T",
-        ]
+        return get_target_universe().default_formatted()
 
     def _empty_backtest_result(self) -> BacktestResult:
         """空のバックテスト結果"""

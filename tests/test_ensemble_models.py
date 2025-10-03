@@ -8,8 +8,8 @@ import pandas as pd
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-from models_refactored.ensemble.ensemble_predictor import RefactoredEnsemblePredictor
-from models_refactored.core.interfaces import (
+from models.ensemble.ensemble_predictor import RefactoredEnsemblePredictor
+from models.core.interfaces import (
     ModelConfiguration,
     ModelType,
     PredictionMode,

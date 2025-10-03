@@ -158,6 +158,12 @@ pytest tests/test_api_security.py
 # 特定のテストモジュール
 pytest tests/unit/test_data/test_stock_data.py
 
+# 統合比較ユーティリティのテスト
+pytest tests/integration/test_enhanced_integration.py
+
+# データプロバイダの統合テスト
+pytest tests/integration/test_stock_data_provider.py
+
 # カバレッジレポート
 pytest --cov=.
 
@@ -186,7 +192,7 @@ ClStock/
 
 ## 対象銘柄
 
-- 東証4000銘柄に対応（デフォルトで50銘柄が設定済み）
+- 東証4000銘柄に対応（デフォルトでは流動性と業種バランスを考慮した31銘柄を厳選）
 
 ## 出力例
 

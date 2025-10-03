@@ -95,3 +95,4 @@ flake8_analysis_after_e722_fix.txt
 
 # Temporary commit message file
 commit_message.txt
+.qwen/ 

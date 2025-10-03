@@ -6,8 +6,8 @@ basic introspection helpers required by higher level integration tests.
 
 import pytest
 
-from models_refactored.core.interfaces import ModelConfiguration, ModelType
-from models_refactored.ensemble.ensemble_predictor import RefactoredEnsemblePredictor
+from models.core.interfaces import ModelConfiguration, ModelType
+from models.ensemble.ensemble_predictor import RefactoredEnsemblePredictor
 
 
 def test_predictor_is_instantiable_without_arguments():

@@ -17,141 +17,39 @@ import argparse
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from models_new.precision.precision_87_system import Precision87BreakthroughSystem
-from models_new.hybrid.hybrid_predictor import HybridStockPredictor
-from models_new.hybrid.prediction_modes import PredictionMode
+from models.precision.precision_87_system import Precision87BreakthroughSystem
+from models.hybrid.hybrid_predictor import HybridStockPredictor
+from models.hybrid.prediction_modes import PredictionMode
 from data.stock_data import StockDataProvider
 from data.sector_classification import SectorClassification
 from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem
+from config.target_universe import get_target_universe
 
 
 class InvestmentAdvisorCUI:
     """ClStock投資アドバイザー CUI版"""
 
-    def __init__(self):
+    def __init__(self, short_change_strong=0.5, short_change_moderate=0.2, short_change_weak=-0.2, short_change_strong_negative=-0.5, medium_change_strong=4, medium_change_moderate=2, medium_change_weak=1.5, medium_change_strong_negative=-4, medium_change_moderate_negative=-2, medium_change_weak_negative=-1.5):
         self.precision_system = Precision87BreakthroughSystem()
         self.hybrid_system = HybridStockPredictor()
         self.data_provider = StockDataProvider()
         self.medium_system = MediumTermPredictionSystem()
-
-        # 推奨銘柄リスト（ブルーチップ中心45銘柄）
-        self.target_symbols = [
-            # 自動車・輸送機器（安定大手のみ）
-            "7203.T",  # トヨタ自動車
-            "7267.T",  # ホンダ
-            "7201.T",  # 日産自動車
-            "7269.T",  # スズキ
-            # 電機・精密機器（ブルーチップ）
-            "6758.T",  # ソニーグループ
-            "6861.T",  # キーエンス
-            "6954.T",  # ファナック
-            "6981.T",  # 村田製作所
-            "6503.T",  # 三菱電機
-            "6702.T",  # 富士通
-            "6752.T",  # パナソニック
-            "6971.T",  # 京セラ
-            "7751.T",  # キヤノン
-            # 通信・IT（安定大手）
-            "9984.T",  # ソフトバンクグループ
-            "9433.T",  # KDDI
-            "9434.T",  # NTT
-            "9437.T",  # NTTドコモ
-            "6098.T",  # リクルートホールディングス
-            "9613.T",  # NTTデータ
-            # 金融（メガバンク・大手証券）
-            "8306.T",  # 三菱UFJ
-            "8316.T",  # 三井住友フィナンシャル
-            "8411.T",  # みずほフィナンシャル
-            "8604.T",  # 野村ホールディングス
-            # 商社（5大商社）
-            "8001.T",  # 伊藤忠商事
-            "8058.T",  # 三菱商事
-            "8031.T",  # 三井物産
-            "8053.T",  # 住友商事
-            "8002.T",  # 丸紅
-            # 医薬品・化学（安定大手）
-            "4502.T",  # 武田薬品工業
-            "4507.T",  # 塩野義製薬
-            "4503.T",  # アステラス製薬
-            "4005.T",  # 住友化学
-            "4063.T",  # 信越化学工業
-            # 素材・エネルギー（安定大手）
-            "5401.T",  # 新日鉄住金
-            "5713.T",  # 住友金属鉱山
-            "5020.T",  # ENEOS
-            # 消費・小売（ブルーチップ）
-            "7974.T",  # 任天堂
-            "8267.T",  # イオン
-            "9983.T",  # ファーストリテイリング
-            "3382.T",  # セブン&アイ
-            "2914.T",  # JT
-            "2802.T",  # 味の素
-            "4911.T",  # 資生堂
-            # 不動産・建設（安定大手）
-            "8802.T",  # 三菱地所
-            "8801.T",  # 三井不動産
-            "1801.T",  # 大成建設
-            "6367.T",  # ダイキン工業
-        ]
-
-        self.symbol_names = {
-            # 自動車・輸送機器
-            "7203.T": "トヨタ自動車",
-            "7267.T": "ホンダ",
-            "7201.T": "日産自動車",
-            "7269.T": "スズキ",
-            # 電機・精密機器
-            "6758.T": "ソニーグループ",
-            "6861.T": "キーエンス",
-            "6954.T": "ファナック",
-            "6981.T": "村田製作所",
-            "6503.T": "三菱電機",
-            "6702.T": "富士通",
-            "6752.T": "パナソニック",
-            "6971.T": "京セラ",
-            "7751.T": "キヤノン",
-            # 通信・IT
-            "9984.T": "ソフトバンクG",
-            "9433.T": "KDDI",
-            "9434.T": "NTT",
-            "9437.T": "NTTドコモ",
-            "6098.T": "リクルート",
-            "9613.T": "NTTデータ",
-            # 金融
-            "8306.T": "三菱UFJ",
-            "8316.T": "三井住友FG",
-            "8411.T": "みずほFG",
-            "8604.T": "野村HD",
-            # 商社
-            "8001.T": "伊藤忠商事",
-            "8058.T": "三菱商事",
-            "8031.T": "三井物産",
-            "8053.T": "住友商事",
-            "8002.T": "丸紅",
-            # 医薬品・化学
-            "4502.T": "武田薬品",
-            "4507.T": "塩野義製薬",
-            "4503.T": "アステラス製薬",
-            "4005.T": "住友化学",
-            "4063.T": "信越化学",
-            # 素材・エネルギー
-            "5401.T": "新日鉄住金",
-            "5713.T": "住友金属鉱山",
-            "5020.T": "ENEOS",
-            # 消費・小売
-            "7974.T": "任天堂",
-            "8267.T": "イオン",
-            "9983.T": "ファーストリテイリング",
-            "3382.T": "セブン&アイ",
-            "2914.T": "JT",
-            "2802.T": "味の素",
-            "4911.T": "資生堂",
-            # 不動産・建設
-            "8802.T": "三菱地所",
-            "8801.T": "三井不動産",
-            "1801.T": "大成建設",
-            "6367.T": "ダイキン",
+        self.thresholds = {
+            'short_change_strong': short_change_strong,
+            'short_change_moderate': short_change_moderate,
+            'short_change_weak': short_change_weak,
+            'short_change_strong_negative': short_change_strong_negative,
+            'medium_change_strong': medium_change_strong,
+            'medium_change_moderate': medium_change_moderate,
+            'medium_change_weak': medium_change_weak,
+            'medium_change_strong_negative': medium_change_strong_negative,
+            'medium_change_moderate_negative': medium_change_moderate_negative,
+            'medium_change_weak_negative': medium_change_weak_negative,
         }
+
+        self.target_universe = get_target_universe()
+        self.target_symbols = self.target_universe.all_formatted()
+        self.symbol_names = self.target_universe.japanese_names
 
     def get_short_term_prediction(self, symbol: str) -> Dict[str, Any]:
         """短期予測（1日、90.3%精度）"""
@@ -181,7 +79,7 @@ class InvestmentAdvisorCUI:
 
             # 信頼度計算（短期は90.3%精度）
             base_confidence = precision_result.get("final_confidence", 0.85)
-            short_confidence = base_confidence * 0.903  # 90.3%精度を反映
+            short_confidence = (base_confidence + 0.903) / 2  # 90.3%精度を反映（平均）
 
             return {
                 "symbol": symbol,
@@ -208,7 +106,7 @@ class InvestmentAdvisorCUI:
 
         return {
             "symbol": symbol,
-            "name": self.symbol_names.get(symbol, symbol),
+            "name": self.symbol_names.get(self.target_universe.to_base(symbol), symbol),
             "short_term": short_term,
             "medium_term": medium_term,
             "integrated_recommendation": recommendation,
@@ -242,27 +140,27 @@ class InvestmentAdvisorCUI:
         sell_date = next_trading_day(one_month)
 
         # 統合判定ロジック（現実的な閾値に調整）
-        if short_change > 0.5 and medium_change > 4:
+        if short_change > self.thresholds['short_change_strong'] and medium_change > self.thresholds['medium_change_strong']:
             action = "強い買い"
             timing = f"【即座】{buy_date.strftime('%m/%d')}寄り付きで買い → {sell_date.strftime('%m/%d')}頃売却"
             confidence = (short_confidence + medium_confidence) / 2
-        elif short_change > 0.2 and medium_change > 2:
+        elif short_change > self.thresholds['short_change_moderate'] and medium_change > self.thresholds['medium_change_moderate']:
             action = "買い"
             timing = f"【今週中】{buy_date.strftime('%m/%d')}～{next_week.strftime('%m/%d')}に買い → {sell_date.strftime('%m/%d')}頃売却"
             confidence = (short_confidence + medium_confidence) / 2
-        elif short_change < -0.5 and medium_change < -4:
+        elif short_change < self.thresholds['short_change_strong_negative'] and medium_change < self.thresholds['medium_change_strong_negative']:
             action = "強い売り"
             timing = f"【即座】{buy_date.strftime('%m/%d')}寄り付きで売り → {sell_date.strftime('%m/%d')}まで避難"
             confidence = (short_confidence + medium_confidence) / 2
-        elif short_change < -0.2 and medium_change < -2:
+        elif short_change < self.thresholds['short_change_weak'] and medium_change < self.thresholds['medium_change_moderate_negative']:
             action = "売り"
             timing = f"【今週中】{buy_date.strftime('%m/%d')}～{next_week.strftime('%m/%d')}に売り → {sell_date.strftime('%m/%d')}まで様子見"
             confidence = (short_confidence + medium_confidence) / 2
-        elif medium_change > 1.5:
+        elif medium_change > self.thresholds['medium_change_weak']:
             action = "買い"
             timing = f"【1週間以内】{next_week.strftime('%m/%d')}までに買い → {sell_date.strftime('%m/%d')}頃売却検討"
             confidence = medium_confidence
-        elif medium_change < -1.5:
+        elif medium_change < self.thresholds['medium_change_weak_negative']:
             action = "売り"
             timing = f"【1週間以内】{next_week.strftime('%m/%d')}までに売り → {sell_date.strftime('%m/%d')}まで避難"
             confidence = medium_confidence
@@ -320,7 +218,7 @@ class InvestmentAdvisorCUI:
         # 総合リスクスコア計算（重み付け平均）
         risk_score = (
             vol_risk * 0.35  # ボラティリティ 35%
-            + change_risk / 10 * 0.25  # 価格変動幅 25%
+            + min(change_risk / 10, 1.0) * 0.25  # 価格変動幅 25% (最大値を1.0に制限)
             + confidence_risk * 0.25  # 信頼度逆算 25%
             + sector_risk * 0.15  # セクターリスク 15%
         )
@@ -349,8 +247,11 @@ class InvestmentAdvisorCUI:
         all_analyses = []
 
         for i, symbol in enumerate(self.target_symbols[:limit], 1):
+            name = self.symbol_names.get(
+                self.target_universe.to_base(symbol), symbol
+            )
             print(
-                f"分析進行: {i}/{min(limit, len(self.target_symbols))} - {self.symbol_names.get(symbol, symbol)}"
+                f"分析進行: {i}/{min(limit, len(self.target_symbols))} - {name}"
             )
 
             try:
@@ -459,10 +360,32 @@ def main():
         "--top", "-t", type=int, default=5, help="上位N銘柄表示 (デフォルト: 5)"
     )
     parser.add_argument("--details", "-d", action="store_true", help="詳細表示")
+    # 閾値設定用の引数を追加
+    parser.add_argument("--short-change-strong", type=float, default=0.5, help="短期強い変化閾値 (default: 0.5)")
+    parser.add_argument("--short-change-moderate", type=float, default=0.2, help="短期中程度変化閾値 (default: 0.2)")
+    parser.add_argument("--short-change-weak", type=float, default=-0.2, help="短期弱い変化閾値 (default: -0.2)")
+    parser.add_argument("--short-change-strong-negative", type=float, default=-0.5, help="短期強い変化閾値 (負) (default: -0.5)")
+    parser.add_argument("--medium-change-strong", type=float, default=4, help="中期強い変化閾値 (default: 4)")
+    parser.add_argument("--medium-change-moderate", type=float, default=2, help="中期中程度変化閾値 (default: 2)")
+    parser.add_argument("--medium-change-weak", type=float, default=1.5, help="中期弱い変化閾値 (default: 1.5)")
+    parser.add_argument("--medium-change-strong-negative", type=float, default=-4, help="中期強い変化閾値 (負) (default: -4)")
+    parser.add_argument("--medium-change-moderate-negative", type=float, default=-2, help="中期中程度変化閾値 (負) (default: -2)")
+    parser.add_argument("--medium-change-weak-negative", type=float, default=-1.5, help="中期弱い変化閾値 (負) (default: -1.5)")
 
     args = parser.parse_args()
 
-    advisor = InvestmentAdvisorCUI()
+    advisor = InvestmentAdvisorCUI(
+        short_change_strong=args.short_change_strong,
+        short_change_moderate=args.short_change_moderate,
+        short_change_weak=args.short_change_weak,
+        short_change_strong_negative=args.short_change_strong_negative,
+        medium_change_strong=args.medium_change_strong,
+        medium_change_moderate=args.medium_change_moderate,
+        medium_change_weak=args.medium_change_weak,
+        medium_change_strong_negative=args.medium_change_strong_negative,
+        medium_change_moderate_negative=args.medium_change_moderate_negative,
+        medium_change_weak_negative=args.medium_change_weak_negative
+    )
 
     if args.symbol:
         # 特定銘柄分析

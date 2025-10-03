@@ -1,0 +1,5 @@
+Description: yfinance は start と end パラメータをサポートしているように見えますが (コメントでは period と記載)、実際には period を計算してから範囲内を絞っています。yfinance の API 仕様により、start と end が正しく機能しない場合、期待される期間のデータが取得できない可能性があります。
+Severity: Low
+File: backtesting.py
+Location: load_stock_data 関数
+Suggestion: yfinance の最新の動作を確認し、必要に応じて start と end を直接使用するか、period の計算をより正確に行うようにしてください。
