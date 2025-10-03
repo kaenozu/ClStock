@@ -172,7 +172,8 @@ async def get_stock_data(
         financial_metrics["symbol"] = validated_symbol
         if "company_name" in financial_metrics or company_name != lookup_symbol:
             financial_metrics["company_name"] = company_name
-        financial_metrics.setdefault("actual_ticker", actual_ticker_value)
+        if not financial_metrics.get("actual_ticker"):
+            financial_metrics["actual_ticker"] = actual_ticker_value
 
         current_price = float(technical_data["Close"].iloc[-1])
         price_change = 0.0

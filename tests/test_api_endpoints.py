@@ -58,11 +58,14 @@ class _StubStockRecommendation:
 sys.modules.setdefault("joblib", types.ModuleType("joblib"))
 _models_pkg = sys.modules.setdefault("models", types.ModuleType("models"))
 sys.modules.setdefault("models.core", types.ModuleType("models.core"))
+sys.modules.setdefault("models.legacy_core", types.ModuleType("models.legacy_core"))
 sys.modules.setdefault(
     "models.recommendation", types.ModuleType("models.recommendation")
 )
 setattr(sys.modules["models.core"], "MLStockPredictor", _StubMLStockPredictor)
+setattr(sys.modules["models.legacy_core"], "MLStockPredictor", _StubMLStockPredictor)
 setattr(_models_pkg, "core", sys.modules["models.core"])
+setattr(_models_pkg, "legacy_core", sys.modules["models.legacy_core"])
 setattr(
     sys.modules["models.recommendation"],
     "StockRecommendation",
@@ -188,6 +191,46 @@ def test_get_stock_data_uses_actual_ticker_from_technical_data(mock_provider_cls
     assert response.status_code == 200
     payload = response.json()
     assert payload["financial_metrics"]["actual_ticker"] == "7203.T"
+
+
+@patch("api.endpoints.StockDataProvider")
+def test_get_stock_data_includes_actual_ticker(mock_provider_cls):
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    mock_provider = MagicMock()
+    mock_provider.get_all_stock_symbols.return_value = {"7203": "Test Corp"}
+
+    fallback_ticker = "7203.F"
+    technical_df = pd.DataFrame(
+        {
+            "Close": [400.0, 405.0],
+            "Volume": [4500, 4600],
+            "SMA_20": [None, None],
+            "SMA_50": [None, None],
+            "RSI": [None, None],
+            "MACD": [None, None],
+            "ActualTicker": [fallback_ticker, fallback_ticker],
+        },
+        index=pd.date_range("2024-04-01", periods=2),
+    )
+
+    mock_provider.get_stock_data.return_value = technical_df
+    mock_provider.calculate_technical_indicators.return_value = technical_df
+    mock_provider.get_financial_metrics.return_value = {
+        "symbol": "7203",
+        "company_name": "Test Corp",
+        "actual_ticker": None,
+    }
+
+    mock_provider_cls.return_value = mock_provider
+
+    response = client.get("/stock/7203/data?period=1mo")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["financial_metrics"]["actual_ticker"] == fallback_ticker
 
 
 @patch("api.endpoints.StockDataProvider")
