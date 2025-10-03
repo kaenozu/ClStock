@@ -15,6 +15,7 @@ from models_new.hybrid.hybrid_predictor import HybridStockPredictor
 from models_new.hybrid.prediction_result import PredictionResult
 from trading.tse.analysis import StockProfile
 from trading.tse.optimizer import PortfolioOptimizer
+from trading.tse.backtester import PortfolioBacktester
 from analysis.sentiment_analyzer import MarketSentimentAnalyzer
 from models.advanced.trading_strategy_generator import (
     StrategyGenerator,
@@ -394,14 +395,101 @@ class FullAutoInvestmentSystem:
         if not profiles:
             return {"selected_stocks": [], "selected_profiles": []}
 
-        if hasattr(self.optimizer, "optimize_portfolio"):
-            selected_profiles = self.optimizer.optimize_portfolio(profiles)
-        elif hasattr(self.optimizer, "optimize"):
-            selected_profiles = self.optimizer.optimize(profiles)  # type: ignore[attr-defined]
-        else:
-            raise AttributeError("Optimizer does not support portfolio optimisation methods")
+        try:
+            candidate_sizes = list(getattr(self, "portfolio_sizes", []))
+        except Exception:
+            candidate_sizes = []
 
-        selected_stocks = [profile.symbol for profile in selected_profiles]
+        if not candidate_sizes:
+            try:
+                from trading.tse.optimizer import PORTFOLIO_SIZES as DEFAULT_SIZES
+            except Exception:
+                DEFAULT_SIZES = []
+
+            candidate_sizes = [size for size in DEFAULT_SIZES if isinstance(size, int) and size > 0]
+
+        max_available = len(profiles)
+        if max_available > 0 and max_available not in candidate_sizes:
+            candidate_sizes.append(max_available)
+
+        unique_sizes = sorted({size for size in candidate_sizes if isinstance(size, int) and size > 0})
+
+        if not unique_sizes:
+            unique_sizes = [max_available]
+
+        backtester = PortfolioBacktester(self.data_provider)
+        optimization_results: Dict[int, Dict[str, Any]] = {}
+
+        for size in unique_sizes:
+            try:
+                if hasattr(self.optimizer, "optimize_portfolio"):
+                    selected_profiles = self.optimizer.optimize_portfolio(profiles, target_size=size)
+                elif hasattr(self.optimizer, "optimize"):
+                    selected_profiles = self.optimizer.optimize(profiles, target_size=size)  # type: ignore[attr-defined]
+                else:
+                    raise AttributeError(
+                        "Optimizer does not support portfolio optimisation methods"
+                    )
+
+                if not isinstance(selected_profiles, list):
+                    selected_profiles = []
+
+                backtest_result: Optional[Dict[str, Any]] = None
+                selected_symbols = [profile.symbol for profile in selected_profiles if hasattr(profile, "symbol")]
+
+                if selected_symbols:
+                    try:
+                        backtest_result = backtester.backtest_portfolio(selected_symbols)
+                    except Exception:
+                        logger.exception("バックテストに失敗しました (size=%s)", size)
+
+                optimization_results[size] = {
+                    "selected_profiles": selected_profiles,
+                    "backtest": backtest_result,
+                }
+            except Exception:
+                logger.exception("ポートフォリオ最適化処理中にエラーが発生しました (size=%s)", size)
+
+        # 最適な結果を選択（最も高いリターンを持つ結果）
+        best_candidate = None
+        best_return = -float("inf")
+        fallback_candidate = None
+
+        for size, result in optimization_results.items():
+            if not isinstance(result, dict):
+                continue
+
+            selected_profiles = result.get("selected_profiles") or []
+            if not selected_profiles:
+                continue
+
+            if fallback_candidate is None:
+                fallback_candidate = (size, selected_profiles, result.get("backtest"))
+
+            backtest_data = result.get("backtest") or {}
+            return_rate = None
+            if isinstance(backtest_data, dict):
+                try:
+                    raw_rate = backtest_data.get("return_rate")
+                    if raw_rate is not None:
+                        return_rate = float(raw_rate)
+                except (TypeError, ValueError):
+                    return_rate = None
+
+            if return_rate is not None and return_rate > best_return:
+                best_return = return_rate
+                best_candidate = (size, selected_profiles, backtest_data)
+
+        final_candidate = best_candidate or fallback_candidate
+
+        if final_candidate is None:
+            # 何らかの理由で最適な結果がない場合は最初のプロファイルを使用
+            first_result = next(iter(optimization_results.values()), {"selected_profiles": [], "backtest": {}})
+            selected_profiles = first_result.get("selected_profiles", [])
+        else:
+            best_size, selected_profiles, backtest_data = final_candidate
+
+        selected_stocks = [profile.symbol for profile in selected_profiles if hasattr(profile, "symbol")]
         return {"selected_stocks": selected_stocks, "selected_profiles": selected_profiles}
 
     async def run_full_auto_analysis(self) -> List[AutoRecommendation]:
@@ -467,7 +555,7 @@ class FullAutoInvestmentSystem:
             try:
                 optimized_portfolio = self._optimize_portfolio(processed_data)
 
-                if not optimized_portfolio or 'selected_stocks' not in optimized_portfolio:
+                if not optimized_portfolio:
                     print("[警告] ポートフォリオ最適化に失敗しました。空の結果が返されました。")
                     recommendations = []
                 else:
@@ -482,19 +570,20 @@ class FullAutoInvestmentSystem:
                     else:
                         # 実際にデータがある銘柄のみを対象とする
                         available_selected_stocks = [s for s in selected_stocks if s in processed_data]
-                        
-                        print(f"[情報] 最適化完了 - 選定銘柄数: {len(selected_profiles)} (内 {len(available_selected_stocks)} がデータ取得済み)")
-                        
+
+                        print(
+                            f"[情報] 最適化完了 - 選定銘柄数: {len(selected_profiles)} (内 {len(available_selected_stocks)} がデータ取得済み)"
+                        )
+
                         if not available_selected_stocks:
                             print("[警告] 最適化結果にデータが存在する銘柄がありません。")
                             recommendations = []
                         else:
-                            # 4. 個別銘柄分析と推奨生成
                             print("[ステップ 4/4] (100%) - 個別銘柄分析と推奨生成中...")
                             print("=" * 60)
                             recommendations = []
                             analysis_failed_count = 0
-                            
+
                             for symbol in available_selected_stocks:
                                 try:
                                     recommendation = await self._analyze_single_stock(
@@ -504,12 +593,15 @@ class FullAutoInvestmentSystem:
                                         recommendations.append(recommendation)
                                     else:
                                         analysis_failed_count += 1
-                                        
+
                                 except Exception as e:
                                     analysis_failed_count += 1
                                     logger.error(f"個別銘柄分析中にエラーが発生しました: {symbol} - {e}")
-                            
-                            print(f"[完了] 個別銘柄分析完了 - 成功: {len(recommendations)}銘柄, 失敗: {analysis_failed_count}銘柄")
+
+                            print(
+                                f"[完了] 個別銘柄分析完了 - 成功: {len(recommendations)}銘柄, "
+                                f"失敗: {analysis_failed_count}銘柄"
+                            )
             
             except Exception as e:
                 print(f"[エラー] ポートフォリオ最適化中に予期せぬエラーが発生しました: {e}")
