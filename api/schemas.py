@@ -2,9 +2,28 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, ConfigDict
+
+
+class EntryPriceSchema(BaseModel):
+    """Entry price information."""
+    min: float
+    max: float
+
+
+class TargetSchema(BaseModel):
+    """Target price information."""
+    label: str
+    price: float
+
+
+class ChartRefsSchema(BaseModel):
+    """Chart reference information."""
+    support_levels: List[float]
+    resistance_levels: List[float]
+    indicators: List[str]
 
 
 class StockRecommendationSchema(BaseModel):
@@ -12,18 +31,24 @@ class StockRecommendationSchema(BaseModel):
 
     rank: int
     symbol: str
-    company_name: str
-    buy_timing: str
-    target_price: float
-    stop_loss: float
-    profit_target_1: float
-    profit_target_2: float
-    holding_period: str
+    name: str  # company_name -> name に変更
+    sector: Optional[str] = None  # 追加
     score: float
-    current_price: float
-    recommendation_reason: str
-    recommendation_level: Optional[str] = None
-    generated_at: Optional[datetime] = None
+    action: str  # 追加
+    action_text: Optional[str] = None  # 追加 (CUI向け)
+    entry_condition: Optional[str] = None  # 追加
+    entry_price: EntryPriceSchema  # target_price -> entry_price (object) に変更
+    stop_loss: float
+    targets: List[TargetSchema]  # profit_target_1, profit_target_2 -> targets (array<object>) に変更
+    holding_period_days: int  # holding_period (str) -> holding_period_days (int) に変更
+    confidence: Optional[float] = None  # 追加
+    rationale: Optional[str] = None  # recommendation_reason -> rationale に変更
+    notes: Optional[str] = None  # 追加
+    risk_level: Optional[str] = None  # 追加
+    chart_refs: Optional[ChartRefsSchema] = None  # 追加
+
+    # current_price は一旦維持
+    current_price: Optional[float] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,8 +56,9 @@ class StockRecommendationSchema(BaseModel):
 class RecommendationResponse(BaseModel):
     """Top level schema returned by the recommendations endpoint."""
 
-    recommendations: List[StockRecommendationSchema]
+    items: List[StockRecommendationSchema]  # recommendations -> items に変更
     generated_at: datetime
     market_status: str
+    top_n: int
 
     model_config = ConfigDict(from_attributes=True)
