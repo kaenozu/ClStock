@@ -175,6 +175,9 @@ class StockDataProvider:
 
         if data is None or data.empty:
             if start is not None or end is not None:
+                # yfinance の start と end パラメータを直接使用して、指定された期間のデータを取得
+                # yfinance は start と end の日付文字列を解析し、該当する期間のデータを取得する
+                # ただし、休場日やデータの可用性により、実際の取得期間が要求期間と異なる場合がある
                 data, actual_ticker = self._download_via_yfinance(symbol, period=None, start=start, end=end)
             else:
                 data, actual_ticker = self._download_via_yfinance(symbol, period)

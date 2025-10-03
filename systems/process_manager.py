@@ -677,7 +677,7 @@ class ProcessManager:
         success, stdout, stderr = self.execute_safe_command(
             [
                 "python",
-                "models_new/precision/precision_87_system.py",
+                "models/precision/precision_87_system.py",
                 "--symbol",
                 sanitized,
             ],

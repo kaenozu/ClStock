@@ -13,17 +13,17 @@ from config.target_universe import get_target_universe
 def advisor(monkeypatch):
     """Provide an instance of InvestmentAdvisorCUI with lightweight dependencies."""
     stub_modules = {
-        "models_new": types.ModuleType("models_new"),
-        "models_new.precision": types.ModuleType("models_new.precision"),
-        "models_new.precision.precision_87_system": types.ModuleType(
-            "models_new.precision.precision_87_system"
+        "models": types.ModuleType("models"),
+        "models.precision": types.ModuleType("models.precision"),
+        "models.precision.precision_87_system": types.ModuleType(
+            "models.precision.precision_87_system"
         ),
-        "models_new.hybrid": types.ModuleType("models_new.hybrid"),
-        "models_new.hybrid.hybrid_predictor": types.ModuleType(
-            "models_new.hybrid.hybrid_predictor"
+        "models.hybrid": types.ModuleType("models.hybrid"),
+        "models.hybrid.hybrid_predictor": types.ModuleType(
+            "models.hybrid.hybrid_predictor"
         ),
-        "models_new.hybrid.prediction_modes": types.ModuleType(
-            "models_new.hybrid.prediction_modes"
+        "models.hybrid.prediction_modes": types.ModuleType(
+            "models.hybrid.prediction_modes"
         ),
         "archive": types.ModuleType("archive"),
         "archive.old_systems": types.ModuleType("archive.old_systems"),
@@ -37,16 +37,16 @@ def advisor(monkeypatch):
 
     for name, module in stub_modules.items():
         monkeypatch.setitem(sys.modules, name, module)
-        if name in {"models_new", "models_new.precision", "models_new.hybrid", "archive", "archive.old_systems", "data"}:
+        if name in {"models", "models.precision", "models.hybrid", "archive", "archive.old_systems", "data"}:
             module.__path__ = []  # type: ignore[attr-defined]
 
-    stub_modules["models_new.precision.precision_87_system"].Precision87BreakthroughSystem = (  # type: ignore[attr-defined]
+    stub_modules["models.precision.precision_87_system"].Precision87BreakthroughSystem = (  # type: ignore[attr-defined]
         lambda: SimpleNamespace()
     )
-    stub_modules["models_new.hybrid.hybrid_predictor"].HybridStockPredictor = (  # type: ignore[attr-defined]
+    stub_modules["models.hybrid.hybrid_predictor"].HybridStockPredictor = (  # type: ignore[attr-defined]
         lambda: SimpleNamespace()
     )
-    stub_modules["models_new.hybrid.prediction_modes"].PredictionMode = SimpleNamespace()  # type: ignore[attr-defined]
+    stub_modules["models.hybrid.prediction_modes"].PredictionMode = SimpleNamespace()  # type: ignore[attr-defined]
     stub_modules["archive.old_systems.medium_term_prediction"].MediumTermPredictionSystem = (  # type: ignore[attr-defined]
         lambda: SimpleNamespace()
     )

@@ -35,7 +35,7 @@ from .backtest import (
 # 既存システム
 from data.stock_data import StockDataProvider
 from config.target_universe import get_target_universe
-from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+from models.precision.precision_87_system import Precision87BreakthroughSystem
 
 
 @dataclass

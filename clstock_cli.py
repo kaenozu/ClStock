@@ -24,13 +24,15 @@ settings = get_settings()
 
 def _raise_cli_error(message: str) -> None:
     """Log and raise a ClickException with the provided message."""
-
+    
+    logger.error(message)
     raise click.ClickException(message)
 
 
 def _bad_parameter(message: str, param_name: Optional[str] = None) -> None:
     """Raise a BadParameter error while preserving logging."""
-
+    
+    logger.error(f"Bad parameter {param_name}: {message}" if param_name else f"Bad parameter: {message}")
     if param_name:
         raise click.BadParameter(message, param_hint=param_name)
     raise click.BadParameter(message)
@@ -227,7 +229,7 @@ def demo():
 def predict(symbol: str):
     """予測システムの実行"""
     # 入力バリデーション
-    if not symbol or not isinstance(symbol, str):
+    if not symbol or not isinstance(symbol, str) or not symbol.strip():
         message = "[失敗] 無効な銘柄コード"
         logger.error(message)
         raise click.BadParameter(message, param_hint="symbol")
@@ -309,18 +311,22 @@ def data():
 def fetch(symbol, period):
     """株価データの取得"""
     # 入力バリデーション
+    # yfinance がサポートする期間 (https://pypi.org/project/yfinance/ 参照)
+    # 1d: 1日, 5d: 5日, 1mo: 1ヶ月, 3mo: 3ヶ月, 6mo: 6ヶ月
+    # 1y: 1年, 2y: 2年, 5y: 5年, 10y: 10年
+    # ytd: 年初来 (Year to Date), max: 利用可能な最も長い期間
     valid_periods = [
-        "1d",
-        "5d",
-        "1mo",
-        "3mo",
-        "6mo",
-        "1y",
-        "2y",
-        "5y",
-        "10y",
-        "ytd",
-        "max",
+        "1d",   # 1日
+        "5d",   # 5日
+        "1mo",  # 1ヶ月
+        "3mo",  # 3ヶ月
+        "6mo",  # 6ヶ月
+        "1y",   # 1年
+        "2y",   # 2年
+        "5y",   # 5年
+        "10y",  # 10年
+        "ytd",  # 年初来 (Year to Date)
+        "max",  # 利用可能な最も長い期間
     ]
     if period not in valid_periods:
         message = (

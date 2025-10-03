@@ -175,8 +175,10 @@ class RiskManagerAdapter:
 
         total_score = getattr(portfolio_risk, "total_risk_score", 2.0)
         # total_score は RiskManager により [MIN_RISK_SCORE, MAX_RISK_SCORE] の範囲を想定
-        MIN_RISK_SCORE = 1.0
-        MAX_RISK_SCORE = 4.0
+        # RiskLevel enum との対応関係:
+        # RiskLevel.LOW = 1.0, RiskLevel.MEDIUM = 2.0, RiskLevel.HIGH = 3.0, RiskLevel.VERY_HIGH = 4.0
+        MIN_RISK_SCORE = 1.0  # RiskLevel.LOW
+        MAX_RISK_SCORE = 4.0  # RiskLevel.VERY_HIGH
         # total_score を [0.0, 1.0] に正規化
         normalized_score = max(0.0, min((float(total_score) - MIN_RISK_SCORE) / (MAX_RISK_SCORE - MIN_RISK_SCORE), 1.0))
         risk_level = getattr(portfolio_risk, "risk_level", RiskLevel.MEDIUM)
@@ -717,6 +719,13 @@ class FullAutoInvestmentSystem:
                 buy_date = datetime.now()
                 sell_date = buy_date + timedelta(days=30)
 
+                # risk_analysis_for_payload が None の場合や risk_level が存在しない場合に備えて安全にアクセス
+                risk_level_value = "unknown"
+                if risk_analysis_for_payload is not None:
+                    risk_level_attr = getattr(risk_analysis_for_payload, 'risk_level', None)
+                    if risk_level_attr is not None:
+                        risk_level_value = getattr(risk_level_attr, 'value', 'unknown')
+
                 return AutoRecommendation(
                     symbol=symbol,
                     company_name=data.attrs.get('info', {}).get('longName', symbol),
@@ -725,7 +734,7 @@ class FullAutoInvestmentSystem:
                     stop_loss=stop_loss,
                     expected_return=expected_return,
                     confidence=confidence,
-                    risk_level=getattr(getattr(risk_analysis_for_payload, 'risk_level', type("DummyRiskLevel", (), {"value": "unknown"})()), "value", "unknown"),
+                    risk_level=risk_level_value,
                     buy_date=buy_date,
                     sell_date=sell_date,
                     reasoning=reasoning

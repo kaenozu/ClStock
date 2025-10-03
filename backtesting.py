@@ -149,11 +149,26 @@ class BacktestEngine:
         strategy_func: カスタム戦略関数 (未指定の場合は full_auto_system の戦略を使用)
         """
         print(f"Executing strategy for symbols: {symbols_to_trade} from {period_start} to {period_end}")
+        
+        # バックテスト期間の全データを事前に取得
+        print("Loading historical data for all symbols...")
+        historical_data_cache: Dict[str, pd.DataFrame] = {}
+        for symbol in symbols_to_trade:
+            try:
+                df = self.load_stock_data(symbol, period_start, period_end)
+                if not df.empty:
+                    historical_data_cache[symbol] = df
+                    print(f"  Loaded {len(df)} records for {symbol}")
+                else:
+                    print(f"  Warning: No data found for {symbol} during {period_start} to {period_end}")
+            except Exception as e:
+                print(f"  Error loading data for {symbol}: {e}")
+        
         # 日付範囲でループ
         current_date = datetime.strptime(period_start, '%Y-%m-%d')
         end_date = datetime.strptime(period_end, '%Y-%m-%d')
 
-        # 各銘柄の直近のデータをキャッシュ
+        # 各銘柄の直近のデータをキャッシュ（必要な範囲のみ）
         latest_data_cache: Dict[str, pd.DataFrame] = {}
 
         while current_date <= end_date:
@@ -162,16 +177,21 @@ class BacktestEngine:
                 # その日の価格データを取得
                 current_prices = {}
                 for symbol in symbols_to_trade:
-                    try:
-                        # 1日分のデータを取得
-                        df = self.load_stock_data(symbol, current_date.strftime('%Y-%m-%d'), current_date.strftime('%Y-%m-%d'))
-                        if not df.empty:
+                    # 事前に取得したデータから該当日のデータを抽出
+                    if symbol in historical_data_cache:
+                        df = historical_data_cache[symbol]
+                        # current_dateのデータを取得
+                        current_date_str = current_date.strftime('%Y-%m-%d')
+                        day_df = df[df.index.strftime('%Y-%m-%d') == current_date_str]
+                        if not day_df.empty:
                             # Open価格を注文価格として使用
-                            current_price = df['Open'].iloc[0]
+                            current_price = day_df['Open'].iloc[0]
                             current_prices[symbol] = current_price
                             
-                            # 最新データをキャッシュ
-                            latest_data_cache[symbol] = self.load_stock_data(symbol, (current_date - pd.Timedelta(days=365)).strftime('%Y-%m-%d'), current_date.strftime('%Y-%m-%d'))
+                            # 最新データをキャッシュ（過去90日分のみ）
+                            start_lookback_date = current_date - pd.Timedelta(days=90)
+                            filtered_df = df[(df.index >= start_lookback_date) & (df.index <= current_date)]
+                            latest_data_cache[symbol] = filtered_df
                         else:
                             # データがなければ、前日の価格を取得
                             # キャッシュを確認
@@ -182,13 +202,13 @@ class BacktestEngine:
                                 if not prev_data.empty:
                                     prev_price = prev_data['Close'].iloc[-1]
                                     current_prices[symbol] = prev_price
-                                    print(f"Using previous price {prev_price} for {symbol} on {current_date.strftime('%Y-%m-%d')}")
+                                    print(f"  Using previous price {prev_price} for {symbol} on {current_date.strftime('%Y-%m-%d')}")
                                 else:
-                                    print(f"No previous data available for {symbol} before {current_date.strftime('%Y-%m-%d')}")
+                                    print(f"  No previous data available for {symbol} before {current_date.strftime('%Y-%m-%d')}")
                             else:
-                                print(f"No data available for {symbol} on {current_date.strftime('%Y-%m-%d')}")
-                    except Exception as e:
-                        print(f"Error loading data for {symbol} on {current_date.strftime('%Y-%m-%d')}: {e}")
+                                print(f"  No data available for {symbol} on {current_date.strftime('%Y-%m-%d')}")
+                    else:
+                        print(f"  No historical data loaded for {symbol}")
                 
                 if strategy_func:
                     # カスタム戦略関数を呼び出す

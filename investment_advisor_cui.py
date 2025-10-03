@@ -29,22 +29,37 @@ from config.target_universe import get_target_universe
 class InvestmentAdvisorCUI:
     """ClStock投資アドバイザー CUI版"""
 
-    def __init__(self, short_change_strong=0.5, short_change_moderate=0.2, short_change_weak=-0.2, short_change_strong_negative=-0.5, medium_change_strong=4, medium_change_moderate=2, medium_change_weak=1.5, medium_change_strong_negative=-4, medium_change_moderate_negative=-2, medium_change_weak_negative=-1.5):
+    def __init__(self, 
+                 # 短期変化閾値（1日単位、パーセンテージ）
+                 short_change_strong=1.0,      # 1日で1.0%以上の変動（強い変化）
+                 short_change_moderate=0.5,     # 1日で0.5%以上の変動（中程度変化）
+                 short_change_weak=-0.5,        # 1日で0.5%以上の下落（弱い変化、マイナス）
+                 short_change_strong_negative=-1.0,  # 1日で1.0%以上の下落（強い変化、マイナス）
+                 
+                 # 中期変化閾値（1ヶ月単位、パーセンテージ）
+                 medium_change_strong=8,        # 1ヶ月で8%以上の変動（強い変化）
+                 medium_change_moderate=4,      # 1ヶ月で4%以上の変動（中程度変化）
+                 medium_change_weak=2,          # 1ヶ月で2%以上の変動（弱い変化）
+                 medium_change_strong_negative=-8,  # 1ヶ月で8%以上の下落（強い変化、マイナス）
+                 medium_change_moderate_negative=-4,  # 1ヶ月で4%以上の下落（中程度変化、マイナス）
+                 medium_change_weak_negative=-2):   # 1ヶ月で2%以上の下落（弱い変化、マイナス）
         self.precision_system = Precision87BreakthroughSystem()
         self.hybrid_system = HybridStockPredictor()
         self.data_provider = StockDataProvider()
         self.medium_system = MediumTermPredictionSystem()
+        # 価格変動閾値設定（現実的な市場変動を反映）
+        # 短期変化（1日単位）、中期変化（1ヶ月単位）の閾値
         self.thresholds = {
-            'short_change_strong': short_change_strong,
-            'short_change_moderate': short_change_moderate,
-            'short_change_weak': short_change_weak,
-            'short_change_strong_negative': short_change_strong_negative,
-            'medium_change_strong': medium_change_strong,
-            'medium_change_moderate': medium_change_moderate,
-            'medium_change_weak': medium_change_weak,
-            'medium_change_strong_negative': medium_change_strong_negative,
-            'medium_change_moderate_negative': medium_change_moderate_negative,
-            'medium_change_weak_negative': medium_change_weak_negative,
+            'short_change_strong': short_change_strong,              # 1日で1.0%以上の変動（強い変化）
+            'short_change_moderate': short_change_moderate,         # 1日で0.5%以上の変動（中程度変化）
+            'short_change_weak': short_change_weak,                 # 1日で0.5%以上の下落（弱い変化、マイナス）
+            'short_change_strong_negative': short_change_strong_negative,  # 1日で1.0%以上の下落（強い変化、マイナス）
+            'medium_change_strong': medium_change_strong,            # 1ヶ月で8%以上の変動（強い変化）
+            'medium_change_moderate': medium_change_moderate,       # 1ヶ月で4%以上の変動（中程度変化）
+            'medium_change_weak': medium_change_weak,               # 1ヶ月で2%以上の変動（弱い変化）
+            'medium_change_strong_negative': medium_change_strong_negative,  # 1ヶ月で8%以上の下落（強い変化、マイナス）
+            'medium_change_moderate_negative': medium_change_moderate_negative,  # 1ヶ月で4%以上の下落（中程度変化、マイナス）
+            'medium_change_weak_negative': medium_change_weak_negative,  # 1ヶ月で2%以上の下落（弱い変化、マイナス）
         }
 
         self.target_universe = get_target_universe()
@@ -77,9 +92,11 @@ class InvestmentAdvisorCUI:
 
             final_prediction = current_price * (1 + adjusted_change)
 
-            # 信頼度計算（短期は90.3%精度）
-            base_confidence = precision_result.get("final_confidence", 0.85)
-            short_confidence = (base_confidence + 0.903) / 2  # 90.3%精度を反映（平均）
+            # 信頼度計算（短期予測モデルの信頼度をそのまま使用）
+            short_confidence = precision_result.get("final_confidence", 0.85)
+            
+            # 精度情報（別個のフィールドとして保持）
+            accuracy_estimate = 90.3  # 短期予測モデルの過去の精度（パーセンテージ）
 
             return {
                 "symbol": symbol,
@@ -88,7 +105,7 @@ class InvestmentAdvisorCUI:
                 "predicted_price": final_prediction,
                 "price_change_percent": adjusted_change * 100,
                 "confidence": short_confidence,
-                "accuracy_estimate": 90.3,
+                "accuracy_estimate": accuracy_estimate,
                 "volatility": short_volatility,
                 "prediction_timestamp": datetime.now(),
             }
@@ -216,6 +233,9 @@ class InvestmentAdvisorCUI:
         sector_risk = self._get_sector_risk(symbol)
 
         # 総合リスクスコア計算（重み付け平均）
+        # change_riskはパーセンテージ単位のため、10で割って0-1の範囲に正規化
+        # 例: 50% (0.5) の変動 → 0.05、100% (1.0) の変動 → 0.10
+        # 最大値を1.0に制限して、過剰なリスクスコアを防ぐ
         risk_score = (
             vol_risk * 0.35  # ボラティリティ 35%
             + min(change_risk / 10, 1.0) * 0.25  # 価格変動幅 25% (最大値を1.0に制限)
