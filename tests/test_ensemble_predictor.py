@@ -15,8 +15,8 @@ import numpy as np
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from models_refactored.ensemble.ensemble_predictor import RefactoredEnsemblePredictor
-from models_refactored.core.interfaces import PredictionResult
+from models.ensemble.ensemble_predictor import RefactoredEnsemblePredictor
+from models.core.interfaces import PredictionResult
 
 
 class TestEnsembleStockPredictor(unittest.TestCase):
@@ -92,7 +92,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         self.assertIn("lightgbm", deps)
 
     @patch(
-        "models_refactored.ensemble.ensemble_predictor.RefactoredEnsemblePredictor.predict_score"
+        "models.ensemble.ensemble_predictor.RefactoredEnsemblePredictor.predict_score"
     )
     def test_predict_with_valid_input(self, mock_predict_score):
         """有効入力での予測テスト"""
@@ -250,7 +250,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
         self.assertEqual(self.predictor.models["test_model"], mock_model)
         self.assertEqual(self.predictor.weights["test_model"], 0.8)
 
-    @patch("models_refactored.ensemble.ensemble_predictor.joblib.dump")
+    @patch("models.ensemble.ensemble_predictor.joblib.dump")
     def test_save_ensemble(self, mock_dump):
         """アンサンブル保存テスト"""
         self.predictor.models = {"model1": Mock()}
@@ -261,7 +261,7 @@ class TestEnsembleStockPredictor(unittest.TestCase):
 
         mock_dump.assert_called_once()
 
-    @patch("models_refactored.ensemble.ensemble_predictor.joblib.load")
+    @patch("models.ensemble.ensemble_predictor.joblib.load")
     @patch("pathlib.Path.exists")
     def test_load_ensemble_success(self, mock_exists, mock_load):
         """アンサンブル読み込み（成功）テスト"""

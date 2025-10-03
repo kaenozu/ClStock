@@ -50,7 +50,7 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
         if self._dqn_agent is None:
             try:
                 # DQNReinforcementLearner は元のml_modelsにまだ存在するためそのまま維持
-                from models.deep_learning import DQNReinforcementLearner
+                from models.legacy_deep_learning import DQNReinforcementLearner
 
                 self._dqn_agent = DQNReinforcementLearner()
             except ImportError:
@@ -89,14 +89,17 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
             "components": ["base_model", "meta_learning", "dqn_reinforcement"],
         }
 
-    def predict_with_87_precision(self, symbol: str) -> Dict[str, Any]:
+    def predict_with_87_precision(self, symbol: str, start: str = None, end: str = None) -> Dict[str, Any]:
         """87%精度予測実行"""
         try:
             from data.stock_data import StockDataProvider
 
             # データ取得
             data_provider = StockDataProvider()
-            historical_data = data_provider.get_stock_data(symbol, period="1y")
+            if start is not None and end is not None:
+                historical_data = data_provider.get_stock_data(symbol, start=start, end=end)
+            else:
+                historical_data = data_provider.get_stock_data(symbol, period="1y")
             historical_data = data_provider.calculate_technical_indicators(
                 historical_data
             )

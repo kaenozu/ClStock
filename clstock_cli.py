@@ -248,7 +248,7 @@ def predict(symbol: str):
 
     try:
         # 直接予測システムを実行
-        from models_new.precision.precision_87_system import (
+        from models.precision.precision_87_system import (
             Precision87BreakthroughSystem,
         )
 

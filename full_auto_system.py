@@ -16,12 +16,12 @@ from models_new.hybrid.prediction_result import PredictionResult
 from trading.tse.analysis import StockProfile
 from trading.tse.optimizer import PortfolioOptimizer
 from analysis.sentiment_analyzer import MarketSentimentAnalyzer
-from models_new.advanced.trading_strategy_generator import (
+from models.advanced.trading_strategy_generator import (
     StrategyGenerator,
     SignalGenerator,
     ActionType,
 )
-from models_new.advanced.risk_management_framework import (
+from models.advanced.risk_management_framework import (
     RiskManager,
     RiskLevel,
     PortfolioRisk,

@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any
 import random
 import pandas as pd
 
-from models_new.base.interfaces import (
+from models.base.interfaces import (
     RealTimeDataProvider,
     TickData,
     OrderBookData,

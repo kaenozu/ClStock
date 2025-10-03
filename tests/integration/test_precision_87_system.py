@@ -42,7 +42,7 @@ class Precision87TestSystem:
         try:
             logger.info("=== 87%精度突破システム初期化 ===")
 
-            from models_refactored.precision.precision_87_system import (
+            from models.precision.precision_87_system import (
                 Precision87BreakthroughSystem,
             )
 

@@ -17,9 +17,9 @@ import argparse
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from models_new.precision.precision_87_system import Precision87BreakthroughSystem
-from models_new.hybrid.hybrid_predictor import HybridStockPredictor
-from models_new.hybrid.prediction_modes import PredictionMode
+from models.precision.precision_87_system import Precision87BreakthroughSystem
+from models.hybrid.hybrid_predictor import HybridStockPredictor
+from models.hybrid.prediction_modes import PredictionMode
 from data.stock_data import StockDataProvider
 from data.sector_classification import SectorClassification
 from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem

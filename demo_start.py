@@ -38,7 +38,7 @@ def start_demo_trading():
         print("📊 システム初期化中...")
 
         # 87%精度システム初期化
-        from models_new.precision.precision_87_system import (
+        from models.precision.precision_87_system import (
             Precision87BreakthroughSystem,
         )
 
@@ -234,7 +234,7 @@ def start_demo_trading():
         print(f"❌ システムエラー: {str(e)}")
         print("📝 まず以下を確認してください:")
         print("  1. 必要なライブラリがインストールされているか")
-        print("  2. models_new/モジュールが正しく配置されているか")
+        print("  2. models/モジュールが正しく配置されているか")
         print("  3. インターネット接続でデータが取得できるか")
         return None
 

@@ -459,7 +459,7 @@ class RealTimeCacheManager(AdvancedCacheManager):
 
     def cache_tick_data(self, tick_data, max_history: Optional[int] = None) -> None:
         """ティックデータを時系列キャッシュに保存"""
-        from models_new.base.interfaces import TickData
+        from models.base.interfaces import TickData
 
         if not isinstance(tick_data, TickData):
             logger.warning("Invalid tick data type for caching")
@@ -497,7 +497,7 @@ class RealTimeCacheManager(AdvancedCacheManager):
         self, order_book_data, max_history: Optional[int] = None
     ) -> None:
         """板情報データを時系列キャッシュに保存"""
-        from models_new.base.interfaces import OrderBookData
+        from models.base.interfaces import OrderBookData
 
         if not isinstance(order_book_data, OrderBookData):
             logger.warning("Invalid order book data type for caching")
