@@ -52,7 +52,7 @@ def stub_stock_data_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     models_new_precision_package.__spec__ = precision_spec
     models_new_precision_package.__path__ = []
 
-    precision_module = types.ModuleType("models_new.precision.precision_87_system")
+    precision_module = types.ModuleType("models.precision.precision_87_system")
 
     class _StubPrecision87BreakthroughSystem:  # pragma: no cover - behaviour verified indirectly
         def predict_with_87_precision(self, symbol: str) -> dict[str, float]:

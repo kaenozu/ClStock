@@ -48,7 +48,7 @@ def _create_fastapi_stubs():
     precision_pkg = types.ModuleType("models_new.precision")
     precision_pkg.__path__ = []
 
-    precision_module = types.ModuleType("models_new.precision.precision_87_system")
+    precision_module = types.ModuleType("models.precision.precision_87_system")
 
     class _Precision87BreakthroughSystem(SimpleNamespace):
         def predict_with_87_precision(self, symbol: str):
