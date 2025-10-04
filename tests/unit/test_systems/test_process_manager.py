@@ -1,5 +1,6 @@
 "Tests for the process manager system."
 
+from pathlib import Path
 import pytest
 import threading
 from unittest.mock import Mock, patch, MagicMock
@@ -54,7 +55,20 @@ class TestProcessManager:
         assert optimized.command == "python ultra_optimized_system.py"
 
         selective = pm.processes["selective_system"]
-        assert selective.command == "python performance_test_enhanced.py"
+        assert selective.command == "python selective_system.py"
+
+    def test_selective_system_command_points_to_existing_file(self):
+        """The selective system should point to an existing executable."""
+        pm = ProcessManager()
+
+        selective = pm.processes["selective_system"]
+
+        # Extract the path to the executable/script from the command string.
+        command_parts = selective.command.split(maxsplit=1)
+        assert len(command_parts) == 2, "Command should include interpreter and script"
+
+        script_path = Path(command_parts[1])
+        assert script_path.exists(), f"Executable '{script_path}' should exist"
 
     def test_process_info_initialization(self):
         """Test ProcessInfo dataclass initialization."""

@@ -392,7 +392,7 @@ def performance_monitor():
         import subprocess
 
         result = subprocess.run(
-            ["python", "performance_test_enhanced.py"], capture_output=True, text=True  # nosec B603, B607
+            ["python", "selective_system.py"], capture_output=True, text=True  # nosec B603, B607
         )
         print(result.stdout)
         if result.stderr:
