@@ -135,6 +135,26 @@ export API_ENABLE_TEST_TOKENS=1  # 本番環境では絶対に有効化しない
 
 このフラグが無効な状態では固定トークンは一切受け付けられず、環境変数で登録したトークンのみが使用されます。
 
+## マーケットデータ設定と運用手順
+
+最新版では疑似乱数ベースのフォールバックを廃止し、信頼できるデータ供給経路のみを使用します。運用時には以下の環境変数を利用してマーケットデータプロバイダーを構成してください。
+
+- `CLSTOCK_MARKET_DATA_PROVIDER` — `local_csv` / `http_api` / `hybrid` を選択。デフォルトはローカルCSVを参照します。
+- `CLSTOCK_MARKET_DATA_LOCAL_CACHE` — 信頼できるCSVキャッシュのディレクトリ。
+- `CLSTOCK_MARKET_DATA_EXTRA_CACHES` — 追加のキャッシュディレクトリを OS のパス区切り記号で連結して指定します。
+- `CLSTOCK_MARKET_DATA_API_BASE` — 社内もしくは公式APIエンドポイントのベースURL。
+- `CLSTOCK_MARKET_DATA_API_TOKEN` / `CLSTOCK_MARKET_DATA_API_KEY` / `CLSTOCK_MARKET_DATA_API_SECRET` — 認証に必要なトークンやキー。
+- `CLSTOCK_MARKET_DATA_API_TIMEOUT` / `CLSTOCK_MARKET_DATA_VERIFY_SSL` — HTTPアクセスのタイムアウトや証明書検証設定。
+
+### 推奨運用フロー
+
+1. 運用環境に上記環境変数を設定し、`config/settings.py` の `MarketDataConfig` に読み込ませます。
+2. ローカルキャッシュを利用する場合は、市場データの取得ジョブで最新CSVを `CLSTOCK_MARKET_DATA_LOCAL_CACHE` 配下に更新してください。
+3. リモートAPIを利用する場合は、APIトークンのローテーションとタイムアウト監視を行い、障害時の通知を仕組み化します。
+4. システム起動前に `pytest tests/test_data_providers.py::TestStockDataProvider::test_trusted_market_data_used_when_yfinance_unavailable` を実行し、設定したデータ経路が正常に利用されるか確認することを推奨します。
+
+設定された経路でデータを取得できない場合、`get_stock_data` および `get_multiple_stocks` は `DataFetchError` / `BatchDataFetchError` を送出し、欠損銘柄と部分的に取得できたデータを明示します。
+
 ## 主要技術
 
 - 🧠 **87%精度突破統合システム** - メタラーニング・DQN強化学習統合

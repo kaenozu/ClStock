@@ -1,38 +1,30 @@
 """Stock market data utilities used throughout the project.
 
-The original implementation of this module was partially removed which left
-the application without a working ``StockDataProvider``.  This file restores a
-compact yet fully functional provider along with a deterministic fallback
-``yfinance`` stub so the rest of the codebase can continue to work in
-environments where the real dependency is unavailable (for example during
-tests).
+The provider integrates with the configurable ``MarketDataConfig`` settings to
+prioritise trusted market data sources such as local CSV caches or approved
+HTTP APIs.  When those sources are unavailable it can fall back to live
+``yfinance`` requests if the dependency is installed.  Pseudo-random fallback
+data generation has been removed to ensure production runs always use real
+market data.
 """
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Dict, Iterable, List, Optional, Tuple, Any
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Any
 
 import pandas as pd
 
 from config.settings import get_settings
 from utils.cache import get_cache
-from utils.exceptions import DataFetchError
+from utils.exceptions import BatchDataFetchError, DataFetchError
 
 
 logger = logging.getLogger(__name__)
-
-
-def _normalized_symbol_seed(symbol: str) -> int:
-    """Return a deterministic, non-negative seed for a ticker symbol."""
-
-    digest = hashlib.sha256(symbol.encode("utf-8", "surrogatepass")).digest()
-    return int.from_bytes(digest[:4], "big")
 
 
 def _period_to_days(period: str) -> int:
@@ -54,117 +46,23 @@ def _period_to_days(period: str) -> int:
     return mapping.get(period, 120)
 
 
+def _normalize_timestamp(value: Optional[str]) -> Optional[pd.Timestamp]:
+    if value is None or value == "":
+        return None
+    ts = pd.to_datetime(value)
+    if isinstance(ts, pd.DatetimeIndex):
+        ts = ts[0]
+    if ts.tzinfo is not None:
+        ts = ts.tz_convert(None)
+    return ts.normalize()
+
+
 try:  # pragma: no cover - exercised indirectly through tests
     import yfinance as yf  # type: ignore
+    YFINANCE_AVAILABLE = True
 except ModuleNotFoundError:  # pragma: no cover - hit in constrained envs
-
-    class _FallbackTicker:
-        """Minimal stand-in for ``yfinance.Ticker``.
-
-        It produces deterministic pseudo-random data so higher level code can
-        continue to operate without network access.
-        """
-
-        def __init__(self, symbol: str) -> None:
-            self.symbol = symbol
-            self._seed = _normalized_symbol_seed(symbol)
-            base_price = 80 + (self._seed % 100) / 2
-            self._info = {
-                "shortName": f"{symbol} Corp",
-                "marketCap": 100_000_000 + (self._seed % 10_000_000),
-                "forwardPE": 10.0 + (self._seed % 2000) / 200,
-                "trailingPE": 12.0 + (self._seed % 3000) / 200,
-                "dividendYield": 0.01 + ((self._seed // 5) % 200) / 10_000,
-                "beta": 1.0 + (self._seed % 500) / 1000,
-            }
-
-            self._fast_info = SimpleNamespace(
-                last_price=base_price + 1.5,
-                previous_close=base_price,
-                ten_day_average_volume=150_000 + (self._seed % 50_000),
-            )
-
-        @property
-        def info(self) -> Dict[str, float]:
-            return self._info
-
-        @property
-        def fast_info(self) -> SimpleNamespace:
-            return self._fast_info
-
-        def history(
-            self,
-            period: str = "1y",
-            interval: str = "1d",
-            start: Optional[str] = None,
-            end: Optional[str] = None,
-        ) -> pd.DataFrame:
-            def _empty_frame(index: pd.DatetimeIndex) -> pd.DataFrame:
-                return pd.DataFrame(
-                    {
-                        "Open": pd.Series(dtype="float64"),
-                        "High": pd.Series(dtype="float64"),
-                        "Low": pd.Series(dtype="float64"),
-                        "Close": pd.Series(dtype="float64"),
-                        "Volume": pd.Series(dtype="int64"),
-                    },
-                    index=index,
-                )
-
-            def _normalize(value: Optional[str]) -> Optional[pd.Timestamp]:
-                if value is None:
-                    return None
-                ts = pd.to_datetime(value)
-                if isinstance(ts, pd.DatetimeIndex):  # defensive, though unlikely
-                    ts = ts[0]
-                if ts.tzinfo is not None:
-                    ts = ts.tz_convert(None)
-                return ts.normalize()
-
-            start_ts = _normalize(start)
-            end_ts = _normalize(end)
-
-            if start_ts is not None or end_ts is not None:
-                if end_ts is None:
-                    end_ts = pd.Timestamp.utcnow().normalize()
-                if start_ts is None:
-                    default_length = max(5, _period_to_days(period))
-                    start_ts = (end_ts - pd.tseries.offsets.BDay(default_length - 1)).normalize()
-                if end_ts < start_ts:
-                    return _empty_frame(pd.DatetimeIndex([], dtype="datetime64[ns]"))
-                index = pd.bdate_range(start=start_ts, end=end_ts)
-            else:
-                length = max(5, _period_to_days(period))
-                end_date = datetime.utcnow().date()
-                index = pd.bdate_range(end_date - timedelta(days=length + 5), periods=length)
-
-            base = 90 + (self._seed % 60)
-            variation = (self._seed % 13) - 6
-            close = pd.Series(
-                [base + variation * (i % 5) * 0.5 for i in range(len(index))],
-                index=index,
-                dtype="float",
-            )
-            if close.empty:
-                return _empty_frame(index)
-
-            open_ = close.shift(1, fill_value=close.iloc[0] - 0.5)
-            high = pd.concat([open_, close], axis=1).max(axis=1) + 0.3
-            low = pd.concat([open_, close], axis=1).min(axis=1) - 0.3
-            volume = pd.Series(
-                [100_000 + ((self._seed + i) % 20_000) for i in range(len(index))],
-                index=index,
-                dtype="int64",
-            )
-            return pd.DataFrame(
-                {"Open": open_, "High": high, "Low": low, "Close": close, "Volume": volume},
-                index=index,
-            )
-
-    class yf:  # type: ignore
-        @staticmethod
-        def Ticker(symbol: str) -> _FallbackTicker:
-            return _FallbackTicker(symbol)
+    yf = None  # type: ignore
+    YFINANCE_AVAILABLE = False
 
 
 class StockDataProvider:
@@ -180,9 +78,27 @@ class StockDataProvider:
         # Always keep codes sorted for deterministic behaviour
         self.jp_stock_codes: Dict[str, str] = dict(sorted(settings.target_stocks.items()))
         self.cache_ttl = int(os.getenv("CLSTOCK_STOCK_CACHE_TTL", "1800"))
-        default_data_dir = Path(os.getenv("CLSTOCK_DATA_DIR", Path(__file__).resolve().parent))
-        self._history_dirs: List[Path] = [default_data_dir / "historical", Path(settings.database.personal_portfolio_db).parent]
-        self._history_dirs = [path for path in self._history_dirs if path and path.exists()]
+        default_data_dir = Path(
+            os.getenv("CLSTOCK_DATA_DIR", Path(__file__).resolve().parent)
+        )
+        default_history = default_data_dir / "historical"
+
+        market_config = getattr(settings, "market_data", None)
+        configured_dirs: List[Path] = []
+        if market_config is not None:
+            if getattr(market_config, "local_cache_dir", None):
+                configured_dirs.append(Path(market_config.local_cache_dir))
+            for extra in getattr(market_config, "extra_cache_dirs", []):
+                configured_dirs.append(Path(extra))
+
+        portfolio_parent = Path(settings.database.personal_portfolio_db).parent
+        candidate_dirs: List[Path] = []
+        candidate_dirs.extend(configured_dirs)
+        candidate_dirs.append(default_history)
+        candidate_dirs.append(portfolio_parent)
+
+        self._history_dirs = self._deduplicate_existing_paths(candidate_dirs)
+        self.market_data_config = market_config
 
     # ------------------------------------------------------------------
     # Public API
@@ -192,12 +108,14 @@ class StockDataProvider:
 
         return list(self.jp_stock_codes.keys())
 
-    def get_stock_data(self, symbol: str, period: str = "1y", start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
-        """Fetch historical OHLCV data for *symbol*.
-
-        The result always contains the ``Symbol``, ``ActualTicker`` and
-        ``CompanyName`` columns in addition to the usual OHLCV fields.
-        """
+    def get_stock_data(
+        self,
+        symbol: str,
+        period: str = "1y",
+        start: Optional[str] = None,
+        end: Optional[str] = None,
+    ) -> pd.DataFrame:
+        """Fetch historical OHLCV data for *symbol*."""
 
         if start is not None or end is not None:
             cache_key = f"stock::{symbol}::start_{start}::end_{end}"
@@ -210,35 +128,39 @@ class StockDataProvider:
 
         data: Optional[pd.DataFrame] = None
         actual_ticker: Optional[str] = None
+        ticker_candidates = self._ticker_formats(symbol)
 
-        # start/end が指定されている場合は、ローカルCSVは使用しない (期間指定が一致するとは限らないため)
-        if start is None and end is None and self._should_use_local_first(symbol):
-            local = self._load_first_available_csv(symbol)
-            if local is not None:
-                data, actual_ticker = local
+        try:
+            data, actual_ticker = self._fetch_trusted_source(
+                symbol, ticker_candidates, period, start, end
+            )
+        except DataFetchError:
+            raise
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.debug("Trusted data source failed for %s: %s", symbol, exc)
 
-        if data is None or data.empty:
+        if (data is None or data.empty) and YFINANCE_AVAILABLE:
             if start is not None or end is not None:
-                # yfinance の start と end パラメータを直接使用して、指定された期間のデータを取得
-                # yfinance は start と end の日付文字列を解析し、該当する期間のデータを取得する
-                # ただし、休場日やデータの可用性により、実際の取得期間が要求期間と異なる場合がある
-                data, actual_ticker = self._download_via_yfinance(symbol, period=None, start=start, end=end)
+                data, actual_ticker = self._download_via_yfinance(
+                    symbol, period=None, start=start, end=end
+                )
             else:
                 data, actual_ticker = self._download_via_yfinance(symbol, period)
 
         if data is None or data.empty:
             raise DataFetchError(symbol, "No historical data available")
 
-        # yfinance が実際に取得した期間を確認
         if start is not None and end is not None:
             actual_start = data.index.min()
             actual_end = data.index.max()
-            print(f"StockDataProvider: Requested: {start} to {end}, Actual: {actual_start} to {actual_end}")
-            # 必要に応じて、取得範囲が要求範囲を満たしているか確認するロジックを追加
-            # 例: 休場日などの関係で、要求した期間より狭くなることは許容するが、
-            #     意図しない期間が取得されないよう、ある程度のチェックを行う。
-            # if actual_start > start or actual_end < end:
-            #     print(f"Warning: Actual data range differs significantly from requested range for {symbol}.")
+            logger.debug(
+                "StockDataProvider window for %s: requested %s-%s, actual %s-%s",
+                symbol,
+                start,
+                end,
+                actual_start,
+                actual_end,
+            )
 
         prepared = self._prepare_history_frame(data, symbol, actual_ticker)
         cache.set(cache_key, prepared, ttl=self.cache_ttl)
@@ -247,17 +169,29 @@ class StockDataProvider:
     def get_multiple_stocks(
         self, symbols: Iterable[str], period: str = "1y"
     ) -> Dict[str, pd.DataFrame]:
-        """Fetch data for multiple symbols, skipping those that fail."""
+        """Fetch data for multiple symbols, raising on missing data."""
 
-        result: Dict[str, pd.DataFrame] = {}
+        results: Dict[str, pd.DataFrame] = {}
+        failures: Dict[str, DataFetchError] = {}
+
         for symbol in symbols:
             try:
-                result[symbol] = self.get_stock_data(symbol, period)
-            except DataFetchError:
-                logger.debug("Skipping symbol %s due to missing data", symbol)
-        return result
+                results[symbol] = self.get_stock_data(symbol, period)
+            except DataFetchError as exc:
+                failures[symbol] = exc
 
-    def calculate_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
+        if failures:
+            details = "; ".join(str(exc) for exc in failures.values())
+            raise BatchDataFetchError(
+                failed_symbols=list(failures.keys()),
+                partial_results=results,
+                details=details or None,
+            )
+
+        return results
+
+    def calculate_technical_indicators(
+self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate a selection of technical indicators."""
 
         if data is None or data.empty:
@@ -356,6 +290,190 @@ class StockDataProvider:
     # ------------------------------------------------------------------
     # Helper methods
     # ------------------------------------------------------------------
+    def _fetch_trusted_source(
+        self,
+        symbol: str,
+        ticker_candidates: Sequence[str],
+        period: Optional[str],
+        start: Optional[str],
+        end: Optional[str],
+    ) -> Tuple[pd.DataFrame, Optional[str]]:
+        config = getattr(self, "market_data_config", None)
+        start_ts = _normalize_timestamp(start)
+        end_ts = _normalize_timestamp(end)
+
+        if config is None:
+            if self._should_use_local_first(symbol):
+                return self._fetch_from_local_csv(symbol, period, start_ts, end_ts)
+            return pd.DataFrame(), None
+
+        provider = getattr(config, "provider", "local_csv").lower()
+
+        if provider == "local_csv":
+            return self._fetch_from_local_csv(symbol, period, start_ts, end_ts)
+
+        if provider == "http_api":
+            return self._fetch_from_http_api(
+                symbol, ticker_candidates, period, start, end, start_ts, end_ts
+            )
+
+        if provider == "hybrid":
+            local_data, actual = self._fetch_from_local_csv(
+                symbol, period, start_ts, end_ts
+            )
+            if not local_data.empty:
+                return local_data, actual
+            return self._fetch_from_http_api(
+                symbol, ticker_candidates, period, start, end, start_ts, end_ts
+            )
+
+        if self._should_use_local_first(symbol):
+            return self._fetch_from_local_csv(symbol, period, start_ts, end_ts)
+        return pd.DataFrame(), None
+
+    def _fetch_from_local_csv(
+        self,
+        symbol: str,
+        period: Optional[str],
+        start_ts: Optional[pd.Timestamp],
+        end_ts: Optional[pd.Timestamp],
+    ) -> Tuple[pd.DataFrame, Optional[str]]:
+        local = self._load_first_available_csv(symbol)
+        if local is None:
+            return pd.DataFrame(), None
+        data, actual_ticker = local
+        if data.empty:
+            return data.copy(), actual_ticker
+        if not isinstance(data.index, pd.DatetimeIndex):
+            data.index = pd.to_datetime(data.index)
+        data.sort_index(inplace=True)
+        trimmed = self._trim_time_window(data, period, start_ts, end_ts)
+        return trimmed, actual_ticker
+
+    def _fetch_from_http_api(
+        self,
+        symbol: str,
+        ticker_candidates: Sequence[str],
+        period: Optional[str],
+        start: Optional[str],
+        end: Optional[str],
+        start_ts: Optional[pd.Timestamp],
+        end_ts: Optional[pd.Timestamp],
+    ) -> Tuple[pd.DataFrame, Optional[str]]:
+        config = getattr(self, "market_data_config", None)
+        if config is None or not getattr(config, "api_base_url", None):
+            return pd.DataFrame(), None
+        try:
+            import requests  # type: ignore
+        except ModuleNotFoundError as exc:  # pragma: no cover - dependency missing
+            raise DataFetchError(
+                symbol,
+                "requests library is required for HTTP market data retrieval",
+                str(exc),
+            ) from exc
+
+        headers: Dict[str, str] = {}
+        if getattr(config, "api_token", None):
+            headers["Authorization"] = f"Bearer {config.api_token}"
+        if getattr(config, "api_key", None):
+            headers["X-API-KEY"] = config.api_key
+        if getattr(config, "api_secret", None):
+            headers["X-API-SECRET"] = config.api_secret
+
+        base_url = str(config.api_base_url).rstrip("/")
+        request_errors: List[str] = []
+        format_errors: List[str] = []
+
+        for ticker in ticker_candidates:
+            params = {"symbol": ticker}
+            if period:
+                params["period"] = period
+            if start:
+                params["start"] = start
+            if end:
+                params["end"] = end
+
+            try:
+                response = requests.get(
+                    f"{base_url}/historical",
+                    params=params,
+                    headers=headers,
+                    timeout=getattr(config, "api_timeout", 10.0),
+                    verify=getattr(config, "verify_ssl", True),
+                )
+                response.raise_for_status()
+                payload = response.json()
+            except Exception as exc:  # pragma: no cover - network errors
+                request_errors.append(f"{ticker}: {exc}")
+                continue
+
+            records = payload.get("data") if isinstance(payload, dict) else payload
+            if not isinstance(records, list):
+                format_errors.append(f"{ticker}: unexpected response format")
+                continue
+
+            frame = pd.DataFrame.from_records(records)
+            if frame.empty:
+                continue
+
+            if "Date" in frame.columns:
+                frame.index = pd.to_datetime(frame.pop("Date"))
+            elif "date" in frame.columns:
+                frame.index = pd.to_datetime(frame.pop("date"))
+            else:
+                frame.index = pd.to_datetime(frame.index)
+
+            frame.sort_index(inplace=True)
+            frame = self._trim_time_window(frame, period, start_ts, end_ts)
+            if frame.empty:
+                continue
+
+            return frame, ticker
+
+        if request_errors:
+            raise DataFetchError(
+                symbol,
+                "Trusted market data request failed",
+                "; ".join(request_errors),
+            )
+
+        provider = getattr(config, "provider", "local_csv").lower()
+        if format_errors and provider == "http_api":
+            raise DataFetchError(
+                symbol,
+                "Trusted market data response format invalid",
+                "; ".join(format_errors),
+            )
+
+        return pd.DataFrame(), None
+
+    def _trim_time_window(
+        self,
+        data: pd.DataFrame,
+        period: Optional[str],
+        start_ts: Optional[pd.Timestamp],
+        end_ts: Optional[pd.Timestamp],
+    ) -> pd.DataFrame:
+        if data.empty:
+            return data.copy()
+
+        result = data.copy()
+        if not isinstance(result.index, pd.DatetimeIndex):
+            result.index = pd.to_datetime(result.index)
+
+        if start_ts is not None:
+            result = result[result.index >= start_ts]
+        if end_ts is not None:
+            result = result[result.index <= end_ts]
+
+        if period and start_ts is None and end_ts is None and not result.empty:
+            days = _period_to_days(period)
+            if days > 0:
+                cutoff = result.index.max() - pd.to_timedelta(days, unit="D")
+                result = result[result.index >= cutoff]
+
+        return result
+
     def _ticker_formats(self, symbol: str) -> List[str]:
         normalized = symbol.upper()
         if "." in normalized:
@@ -372,9 +490,34 @@ class StockDataProvider:
                 result.append(candidate)
         return result
 
+    def _deduplicate_existing_paths(self, directories: Sequence[Path]) -> List[Path]:
+        seen = set()
+        existing: List[Path] = []
+        for directory in directories:
+            if directory is None:
+                continue
+            path = Path(directory).expanduser().resolve()
+            if path in seen:
+                continue
+            seen.add(path)
+            if path.exists():
+                existing.append(path)
+        return existing
+
     def _should_use_local_first(self, symbol: str) -> bool:  # pragma: no cover - logic is trivial
-        prefer_local = os.getenv("CLSTOCK_PREFER_LOCAL_DATA", "0").lower()
-        return prefer_local in {"1", "true", "yes"}
+        prefer_local = os.getenv("CLSTOCK_PREFER_LOCAL_DATA", "auto").lower()
+        if prefer_local in {"1", "true", "yes"}:
+            return True
+        if prefer_local in {"0", "false", "no"}:
+            return False
+
+        config = getattr(self, "market_data_config", None)
+        if config is not None and getattr(config, "provider", "local_csv").lower() in {
+            "local_csv",
+            "hybrid",
+        }:
+            return True
+        return False
 
     def _load_first_available_csv(self, symbol: str) -> Optional[Tuple[pd.DataFrame, str]]:
         for ticker in self._ticker_formats(symbol):
@@ -389,7 +532,18 @@ class StockDataProvider:
                         logger.debug("Failed to load local CSV %s: %s", candidate, exc)
         return None
 
-    def _download_via_yfinance(self, symbol: str, period: Optional[str] = "1y", start: Optional[str] = None, end: Optional[str] = None) -> Tuple[pd.DataFrame, Optional[str]]:
+    def _download_via_yfinance(
+        self,
+        symbol: str,
+        period: Optional[str] = "1y",
+        start: Optional[str] = None,
+        end: Optional[str] = None,
+    ) -> Tuple[pd.DataFrame, Optional[str]]:
+        if not YFINANCE_AVAILABLE or yf is None:
+            raise DataFetchError(
+                symbol,
+                "yfinance is not available for live market data retrieval",
+            )
         last_error: Optional[Exception] = None
         for ticker in self._ticker_formats(symbol):
             try:
