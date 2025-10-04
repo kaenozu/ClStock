@@ -132,3 +132,26 @@ def calculate_roc(prices: pd.Series, period: int = 12) -> pd.Series:
         return ((prices - prices.shift(period)) / prices.shift(period)) * 100
     except Exception:
         return pd.Series([0] * len(prices), index=prices.index)
+
+
+def calculate_keltner_channels(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    window: int = 20,
+    multiplier: float = 2.0,
+) -> pd.DataFrame:
+    """ケルトナーチャネル計算"""
+    try:
+        typical_price = (high + low + close) / 3
+        middle_band = typical_price.ewm(span=window, adjust=False).mean()
+        atr = calculate_atr(high, low, close, period=window)
+
+        upper_band = middle_band + (multiplier * atr)
+        lower_band = middle_band - (multiplier * atr)
+
+        return pd.DataFrame(
+            {"Upper": upper_band, "Middle": middle_band, "Lower": lower_band}
+        )
+    except Exception:
+        return pd.DataFrame({"Upper": close, "Middle": close, "Lower": close})
