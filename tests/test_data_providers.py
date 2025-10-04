@@ -4,11 +4,38 @@ Data Providers のテスト
 
 import pytest
 import pandas as pd
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime, timedelta
+import importlib.util
+import sys
+import types
+from pathlib import Path
+from unittest.mock import patch, MagicMock
 
-import data.stock_data as stock_data_module
-from data.stock_data import StockDataProvider
+from config.settings import AppSettings, DatabaseConfig
+
+
+def _load_real_stock_data_module():
+    module_name = "tests.real_stock_data_module"
+    if module_name in sys.modules:
+        return sys.modules[module_name]
+
+    spec = importlib.util.spec_from_file_location(
+        module_name, Path(__file__).resolve().parent.parent / "data" / "stock_data.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    loader = spec.loader
+    assert loader is not None
+    loader.exec_module(module)
+    sys.modules[module_name] = module
+    return module
+
+
+stock_data_module = _load_real_stock_data_module()
+StockDataProvider = stock_data_module.StockDataProvider
+
+try:
+    from config.settings import MarketDataConfig
+except ImportError:  # pragma: no cover - backward compatibility guard
+    MarketDataConfig = None  # type: ignore
 
 
 class TestStockDataProvider:
@@ -23,8 +50,7 @@ class TestStockDataProvider:
         assert self.provider is not None
         assert hasattr(self.provider, "get_stock_data")
 
-    @patch("yfinance.download")
-    def test_get_stock_data_success(self, mock_yfinance):
+    def test_get_stock_data_success(self, monkeypatch):
         """正常な株価データ取得のテスト"""
         # モックデータの設定
         mock_data = pd.DataFrame(
@@ -38,7 +64,12 @@ class TestStockDataProvider:
             index=pd.date_range("2023-01-01", periods=5),
         )
 
-        mock_yfinance.return_value = mock_data
+        dummy_ticker = types.SimpleNamespace(
+            history=lambda period=None, start=None, end=None: mock_data
+        )
+        dummy_yf = types.SimpleNamespace(Ticker=lambda symbol: dummy_ticker)
+        monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", True)
+        monkeypatch.setattr(stock_data_module, "yf", dummy_yf)
 
         # データ取得テスト
         result = self.provider.get_stock_data("TESTMOCK", "1mo")
@@ -47,8 +78,7 @@ class TestStockDataProvider:
         assert result is not None
         assert isinstance(result, pd.DataFrame)
 
-    @patch("yfinance.download")
-    def test_get_stock_data_with_japanese_symbol(self, mock_yfinance):
+    def test_get_stock_data_with_japanese_symbol(self, monkeypatch):
         """日本株式での株価データ取得テスト"""
         # モックデータの設定
         mock_data = pd.DataFrame(
@@ -62,7 +92,12 @@ class TestStockDataProvider:
             index=pd.date_range("2023-01-01", periods=5),
         )
 
-        mock_yfinance.return_value = mock_data
+        dummy_ticker = types.SimpleNamespace(
+            history=lambda period=None, start=None, end=None: mock_data
+        )
+        dummy_yf = types.SimpleNamespace(Ticker=lambda symbol: dummy_ticker)
+        monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", True)
+        monkeypatch.setattr(stock_data_module, "yf", dummy_yf)
 
         # 日本株データ取得テスト
         result = self.provider.get_stock_data("7203.T", "3mo")
@@ -92,8 +127,7 @@ class TestStockDataProvider:
             # 例外が発生してもテストは通る
             pass
 
-    @patch("yfinance.download")
-    def test_calculate_technical_indicators(self, mock_yfinance):
+    def test_calculate_technical_indicators(self):
         """テクニカル指標計算のテスト"""
         # 十分なデータを持つモック
         dates = pd.date_range("2023-01-01", periods=50)
@@ -138,8 +172,7 @@ class TestStockDataProvider:
         result = self.provider.calculate_technical_indicators(mock_data)
         assert result is not None
 
-    @patch("yfinance.download")
-    def test_data_validation(self, mock_yfinance):
+    def test_data_validation(self, monkeypatch):
         """データ検証のテスト"""
         # 異常値を含むデータ
         mock_data = pd.DataFrame(
@@ -153,66 +186,98 @@ class TestStockDataProvider:
             index=pd.date_range("2023-01-01", periods=5),
         )
 
-        mock_yfinance.return_value = mock_data
+        dummy_ticker = types.SimpleNamespace(
+            history=lambda period=None, start=None, end=None: mock_data
+        )
+        dummy_yf = types.SimpleNamespace(Ticker=lambda symbol: dummy_ticker)
+        monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", True)
+        monkeypatch.setattr(stock_data_module, "yf", dummy_yf)
 
         # データ取得と検証
         result = self.provider.get_stock_data("7203", "1mo")
         assert result is not None
 
-    def test_get_stock_data_dummy_fallback_handles_negative_hash(self, monkeypatch):
-        """Fallback ダミーデータが負のハッシュでも動作することを検証"""
 
-        class DummyYF:
-            @staticmethod
-            def Ticker(symbol):
-                class DummyTicker:
-                    def __init__(self, symbol):
-                        self._symbol = symbol
-                        self.info = {
-                            "longName": "Dummy Corp",
-                            "sector": "Dummy Sector",
-                            "industry": "Dummy Industry",
-                            "currentPrice": 1000,
-                        }
+    def test_trusted_market_data_used_when_yfinance_unavailable(self, tmp_path, monkeypatch):
+        """設定された信頼できるデータソースが利用されることを検証する"""
 
-                    def history(self, period, interval):
-                        import numpy as np
+        if MarketDataConfig is None:
+            pytest.skip("MarketDataConfig not available in current settings implementation")
 
-                        seed = stock_data_module._normalized_symbol_seed(self._symbol)
-                        np.random.seed(seed)
-                        end = datetime.now()
-                        index = pd.date_range(end - timedelta(days=4), periods=5, freq="D")
-                        base_price = 1000 + seed % 1000
-                        close = base_price + np.arange(len(index))
-                        data = {
-                            "Close": close,
-                            "Open": close,
-                            "High": close,
-                            "Low": close,
-                            "Volume": np.random.randint(1_000, 10_000, size=len(index)),
-                        }
-                        df = pd.DataFrame(data, index=index)
-                        df.index.name = "Date"
-                        return df
+        csv_dir = tmp_path / "historical"
+        csv_dir.mkdir()
+        index = pd.date_range("2024-01-01", periods=5, freq="B")
+        raw = pd.DataFrame(
+            {
+                "Open": [100 + i for i in range(5)],
+                "High": [101 + i for i in range(5)],
+                "Low": [99 + i for i in range(5)],
+                "Close": [100.5 + i for i in range(5)],
+                "Volume": [1000 + i for i in range(5)],
+            },
+            index=index,
+        )
+        raw.to_csv(csv_dir / "REALTEST.T.csv")
 
-                return DummyTicker(symbol)
+        settings = AppSettings()
+        settings.target_stocks = {"REALTEST": "Real Test Corp"}
+        settings.database = DatabaseConfig(personal_portfolio_db=tmp_path / "portfolio.db")
+        settings.market_data = MarketDataConfig(
+            provider="local_csv",
+            local_cache_dir=csv_dir,
+            api_base_url=None,
+            api_token="dummy-token",
+        )
 
-        monkeypatch.setattr(stock_data_module, "yf", DummyYF)
+        monkeypatch.setattr(stock_data_module, "get_settings", lambda: settings)
+        provider = StockDataProvider()
 
-        negative_symbol = None
-        for idx in range(1000):
-            candidate = f"NEGATIVE_HASH_{idx}"
-            if hash(f"{candidate}.T") < 0:
-                negative_symbol = candidate
-                break
+        monkeypatch.setattr(
+            provider,
+            "_download_via_yfinance",
+            MagicMock(side_effect=AssertionError("yfinance should not be called")),
+        )
 
-        if negative_symbol is None:
-            pytest.skip("Could not find symbol with negative hash in test run")
+        frame = provider.get_stock_data("REALTEST", period="1mo")
 
-        result = self.provider.get_stock_data(negative_symbol, "1mo")
+        assert list(frame["Close"]) == list(raw["Close"])
+        assert (frame["Symbol"] == "REALTEST").all()
+        assert (frame["CompanyName"] == "Real Test Corp").all()
 
-        assert isinstance(result, pd.DataFrame)
-        assert not result.empty
+    def test_get_multiple_stocks_reports_missing_symbols(self, tmp_path, monkeypatch):
+        """複数銘柄取得時に欠損があれば明確なエラーが返ることを検証"""
+
+        if MarketDataConfig is None:
+            pytest.skip("MarketDataConfig not available in current settings implementation")
+
+        csv_dir = tmp_path / "historical"
+        csv_dir.mkdir()
+        available_df = pd.DataFrame(
+            {"Open": [1.0], "High": [1.0], "Low": [1.0], "Close": [1.0], "Volume": [100]},
+            index=pd.date_range("2024-01-01", periods=1),
+        )
+        available_df.to_csv(csv_dir / "ONLYONE.T.csv")
+
+        settings = AppSettings()
+        settings.target_stocks = {"ONLYONE": "Only One Corp", "MISSING": "Missing Corp"}
+        settings.database = DatabaseConfig(personal_portfolio_db=tmp_path / "portfolio.db")
+        settings.market_data = MarketDataConfig(
+            provider="local_csv",
+            local_cache_dir=csv_dir,
+            api_base_url=None,
+            api_token="dummy-token",
+        )
+
+        monkeypatch.setattr(stock_data_module, "get_settings", lambda: settings)
+        provider = StockDataProvider()
+
+        with pytest.raises(stock_data_module.BatchDataFetchError) as excinfo:
+            provider.get_multiple_stocks(["ONLYONE", "MISSING"], period="1mo")
+
+        error = excinfo.value
+        assert "MISSING" in error.failed_symbols
+        assert "ONLYONE" in error.partial_results
+        assert error.partial_results["ONLYONE"]["Symbol"].eq("ONLYONE").all()
 
 
 class TestDataValidation:
