@@ -119,7 +119,7 @@ class ServiceRegistry:
             ),
             "selective_system": ProcessInfo(
                 name="selective_system",
-                command="python performance_test_enhanced.py",
+                command="python selective_system.py",
                 working_dir=str(PROJECT_ROOT),
             ),
         }
