@@ -1,16 +1,17 @@
-"""
-Asynchronous stock data provider
-"""
+"""Asynchronous stock data provider"""
 
 import asyncio
+import logging
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple, Union
+
 import aiohttp
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Union
-import logging
-from utils.logger_config import setup_logger
-from utils.exceptions import DataFetchError, InvalidSymbolError, NetworkError
+
+from data.stock_data import StockDataProvider
 from utils.connection_pool import get_http_pool
+from utils.exceptions import DataFetchError, InvalidSymbolError, NetworkError
+from utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -24,6 +25,8 @@ class AsyncStockDataProvider:
         settings = get_settings()
         self.jp_stock_codes: Dict[str, str] = settings.target_stocks
         self._session = None
+        self._sync_provider: Optional[StockDataProvider] = None
+        self._last_yfinance_error: Optional[str] = None
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp client session"""
@@ -56,6 +59,9 @@ class AsyncStockDataProvider:
             return cached_data
 
         try:
+            sync_provider = self._get_sync_provider()
+            ticker_candidates = sync_provider._ticker_formats(symbol)
+
             if symbol in self.jp_stock_codes:
                 ticker = f"{symbol}.T"
             else:
@@ -63,19 +69,41 @@ class AsyncStockDataProvider:
 
             logger.info(f"Fetching data for {symbol} (period: {period})")
 
-            # Use yfinance with async wrapper
+            trusted_data: Optional[pd.DataFrame] = None
+            actual_ticker: Optional[str] = None
+
+            try:
+                trusted_data, actual_ticker = await self._fetch_trusted_source_async(
+                    sync_provider, symbol, ticker_candidates, period
+                )
+            except DataFetchError:
+                raise
+            except Exception as exc:
+                logger.debug(
+                    "Trusted source fetch failed for %s: %s", symbol, exc
+                )
+
+            if trusted_data is not None and not trusted_data.empty:
+                prepared = sync_provider._prepare_history_frame(
+                    trusted_data, symbol, actual_ticker
+                )
+                cache.set(cache_key, prepared, ttl=1800)
+                return prepared
+
             data = await self._fetch_with_yfinance_async(ticker, period)
 
             if data.empty:
-                raise DataFetchError(symbol, "No historical data available")
+                raise DataFetchError(
+                    symbol,
+                    "Failed to fetch data via yfinance",
+                    self._last_yfinance_error or "yfinance returned empty dataset",
+                )
 
-            data["Symbol"] = symbol
-            data["CompanyName"] = self.jp_stock_codes.get(symbol, symbol)
+            prepared = sync_provider._prepare_history_frame(data, symbol, ticker)
 
-            # Save to cache (30 minutes)
-            cache.set(cache_key, data, ttl=1800)
+            cache.set(cache_key, prepared, ttl=1800)
 
-            return data
+            return prepared
 
         except InvalidSymbolError as e:
             logger.error(f"Invalid symbol error for {symbol}: {str(e)}")
@@ -100,6 +128,8 @@ class AsyncStockDataProvider:
         # リトライ回数の設定
         max_retries = 3
         retry_count = 0
+        self._last_yfinance_error = None
+        last_exception: Optional[Exception] = None
         
         def fetch_data_with_retry(ticker: str, period: str):
             import yfinance as yf
@@ -134,6 +164,8 @@ class AsyncStockDataProvider:
                     retry_count += 1
                     continue
             except Exception as e:
+                last_exception = e
+                self._last_yfinance_error = str(e) or repr(e)
                 # より詳細なエラー情報をログに出力
                 logger.error(f"Failed to fetch data for {ticker} (async): {str(e)} (type: {type(e).__name__}), attempt {retry_count + 1}/{max_retries}")
                 # 例外の詳細をログに出力
@@ -156,7 +188,118 @@ class AsyncStockDataProvider:
         
         # 全てのリトライが失敗した場合
         logger.error(f"All retry attempts failed for {ticker} (async)")
+        if last_exception is not None and not self._last_yfinance_error:
+            self._last_yfinance_error = str(last_exception) or repr(last_exception)
+        if self._last_yfinance_error is None:
+            self._last_yfinance_error = "yfinance returned empty dataset"
         return pd.DataFrame()  # 空のDataFrameを返す
+
+    def _get_sync_provider(self) -> StockDataProvider:
+        if self._sync_provider is None:
+            self._sync_provider = StockDataProvider()
+        return self._sync_provider
+
+    async def _fetch_trusted_source_async(
+        self,
+        sync_provider: StockDataProvider,
+        symbol: str,
+        ticker_candidates: List[str],
+        period: Optional[str],
+    ) -> Tuple[pd.DataFrame, Optional[str]]:
+        start_ts = None
+        end_ts = None
+        config = getattr(sync_provider, "market_data_config", None)
+
+        if config is None:
+            if sync_provider._should_use_local_first(symbol):
+                return await self._fetch_from_local_async(
+                    sync_provider, symbol, period, start_ts, end_ts
+                )
+            return pd.DataFrame(), None
+
+        provider_name = getattr(config, "provider", "local_csv").lower()
+
+        if provider_name == "local_csv":
+            return await self._fetch_from_local_async(
+                sync_provider, symbol, period, start_ts, end_ts
+            )
+
+        if provider_name == "http_api":
+            return await self._fetch_from_http_async(
+                sync_provider,
+                symbol,
+                ticker_candidates,
+                period,
+                start=None,
+                end=None,
+                start_ts=start_ts,
+                end_ts=end_ts,
+            )
+
+        if provider_name == "hybrid":
+            local_data, actual = await self._fetch_from_local_async(
+                sync_provider, symbol, period, start_ts, end_ts
+            )
+            if not local_data.empty:
+                return local_data, actual
+            return await self._fetch_from_http_async(
+                sync_provider,
+                symbol,
+                ticker_candidates,
+                period,
+                start=None,
+                end=None,
+                start_ts=start_ts,
+                end_ts=end_ts,
+            )
+
+        if sync_provider._should_use_local_first(symbol):
+            return await self._fetch_from_local_async(
+                sync_provider, symbol, period, start_ts, end_ts
+            )
+        return pd.DataFrame(), None
+
+    async def _fetch_from_local_async(
+        self,
+        sync_provider: StockDataProvider,
+        symbol: str,
+        period: Optional[str],
+        start_ts: Optional[pd.Timestamp],
+        end_ts: Optional[pd.Timestamp],
+    ) -> Tuple[pd.DataFrame, Optional[str]]:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            sync_provider._fetch_from_local_csv,
+            symbol,
+            period,
+            start_ts,
+            end_ts,
+        )
+
+    async def _fetch_from_http_async(
+        self,
+        sync_provider: StockDataProvider,
+        symbol: str,
+        ticker_candidates: List[str],
+        period: Optional[str],
+        start: Optional[str],
+        end: Optional[str],
+        start_ts: Optional[pd.Timestamp],
+        end_ts: Optional[pd.Timestamp],
+    ) -> Tuple[pd.DataFrame, Optional[str]]:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,
+            sync_provider._fetch_from_http_api,
+            symbol,
+            ticker_candidates,
+            period,
+            start,
+            end,
+            start_ts,
+            end_ts,
+        )
 
     async def get_multiple_stocks(
         self, symbols: List[str], period: str = "1y"
