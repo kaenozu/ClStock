@@ -16,7 +16,7 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple, Any
 
 import pandas as pd
 
@@ -434,6 +434,184 @@ class StockDataProvider:
         df["ActualTicker"] = actual_ticker or self._ticker_formats(symbol)[0]
         df["CompanyName"] = self.jp_stock_codes.get(symbol, symbol)
         return df
+
+    # ------------------------------------------------------------------
+    # Extended data methods
+    # ------------------------------------------------------------------
+    def get_extended_financial_metrics(self, symbol: str) -> Dict[str, Optional[float]]:
+        """Return a dictionary with extended financial metrics."""
+        # 既存の get_financial_metrics をベースに、infoから追加のデータを取得
+        base_metrics = self.get_financial_metrics(symbol)
+        actual_ticker = base_metrics.get("actual_ticker")
+
+        if not actual_ticker:
+            # tickerが見つからなかった場合は、Noneを返す
+            return {}
+
+        cache_key = f"extended_financial::{symbol}"
+        cache = get_cache()
+        cached = cache.get(cache_key)
+        if isinstance(cached, dict):
+            return cached
+
+        extended_metrics = base_metrics.copy()
+
+        for ticker in self._ticker_formats(symbol):
+            try:
+                ticker_obj = yf.Ticker(ticker)
+                info = getattr(ticker_obj, "info", {}) or {}
+
+                # 基本的な財務指標以外のデータを取得
+                # 例: revenue, grossProfits, operatingCashflow, ebitda, totalDebt, totalCash, debtToEquity
+                # 他にも、ROE, ROA, ROICなどの計算に必要な生データも取得
+                keys_to_fetch = [
+                    "revenue", "grossProfits", "operatingCashflow", "ebitda", "totalDebt", "totalCash",
+                    "debtToEquity", "returnOnAssets", "returnOnEquity", "earningsQuarterlyGrowth",
+                    "quarterlyEarningsGrowth", "quarterlyRevenueGrowth"
+                    # 必要に応じて他のキーも追加
+                ]
+
+                for key in keys_to_fetch:
+                    value = info.get(key)
+                    if value is not None:
+                        # value は数値または文字列の可能性があるため、数値に変換を試みる
+                        try:
+                            if isinstance(value, str):
+                                # 文字列が '1.23M', '45.67B' のような形式の場合、数値化が必要
+                                # 今回は数値として解釈できない場合はNoneのままとする
+                                float_value = float(value)
+                                extended_metrics[key] = float_value
+                            elif isinstance(value, (int, float)):
+                                extended_metrics[key] = float(value)
+                            else:
+                                extended_metrics[key] = None
+                        except (ValueError, TypeError):
+                            extended_metrics[key] = None
+                    else:
+                        extended_metrics[key] = None
+
+                # データが取得できたtickerを記録
+                if extended_metrics.get("revenue") is not None or extended_metrics.get("totalCash") is not None:
+                    extended_metrics["actual_ticker"] = ticker
+                    break
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.debug("Failed to retrieve extended financial metrics for %s via %s: %s", symbol, ticker, exc)
+                continue
+
+        cache.set(cache_key, extended_metrics, ttl=self.cache_ttl)
+        return extended_metrics
+
+
+    def get_dividend_data(self, symbol: str) -> Dict[str, Optional[float]]:
+        """Return a dictionary with dividend-related data."""
+        cache_key = f"dividend::{symbol}"
+        cache = get_cache()
+        cached = cache.get(cache_key)
+        if isinstance(cached, dict):
+            return cached
+
+        dividend_data: Dict[str, Optional[float]] = {
+            "symbol": symbol,
+            "dividend_rate": None, # dividendRate
+            "dividend_yield": None, # dividendYield (already in get_financial_metrics but included here for completeness)
+            "ex_dividend_date": None, # exDividendDate (date string)
+            "actual_ticker": None,
+        }
+
+        for ticker in self._ticker_formats(symbol):
+            try:
+                ticker_obj = yf.Ticker(ticker)
+                info = getattr(ticker_obj, "info", {}) or {}
+
+                # dividendRate, dividendYield, exDividendDate を取得
+                # exDividendDate は文字列で返ってくる可能性があるため、str型も考慮
+                dividend_data["dividend_rate"] = info.get("dividendRate")
+                dividend_data["dividend_yield"] = info.get("dividendYield")
+                ex_date_raw = info.get("exDividendDate")
+                if ex_date_raw:
+                    try:
+                        # exDividendDate が数値 (timestamp) か文字列 (YYYY-MM-DD) か確認
+                        if isinstance(ex_date_raw, (int, float)):
+                            dividend_data["ex_dividend_date"] = pd.to_datetime(ex_date_raw, unit='s').date().isoformat()
+                        elif isinstance(ex_date_raw, str):
+                            # strの場合は、既に YYYY-MM-DD 形式であると仮定
+                            dividend_data["ex_dividend_date"] = ex_date_raw
+                        else:
+                            dividend_data["ex_dividend_date"] = None
+                    except:
+                        dividend_data["ex_dividend_date"] = None
+                else:
+                    dividend_data["ex_dividend_date"] = None
+
+                dividend_data["actual_ticker"] = ticker
+                break
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.debug("Failed to retrieve dividend data for %s via %s: %s", symbol, ticker, exc)
+                continue
+
+        cache.set(cache_key, dividend_data, ttl=self.cache_ttl)
+        return dividend_data
+
+
+    def get_news_data(self, symbol: str) -> List[Dict[str, Any]]:
+        """Return a list of news articles for a symbol."""
+        cache_key = f"news::{symbol}"
+        cache = get_cache()
+        cached = cache.get(cache_key)
+        if isinstance(cached, list):
+            return cached
+
+        news_data: List[Dict[str, Any]] = []
+
+        for ticker in self._ticker_formats(symbol):
+            try:
+                ticker_obj = yf.Ticker(ticker)
+                # news プロパティが存在するか確認
+                if hasattr(ticker_obj, 'news'):
+                    news = getattr(ticker_obj, 'news', [])
+                    if news:
+                        # news は list of dict
+                        # 必要に応じてフィルタリングや整形を行う
+                        # 例: providerPublishTime を datetime に変換
+                        processed_news = []
+                        for item in news:
+                            processed_item = {
+                                "title": item.get("title"),
+                                "publisher": item.get("publisher"),
+                                "link": item.get("link"),
+                                "type": item.get("type"),
+                                "id": item.get("id"),
+                                "publish_time": item.get("providerPublishTime"),
+                                # 'provider' や他のキーも必要に応じて展開
+                            }
+                            if processed_item["publish_time"]:
+                                try:
+                                    # timestamp が秒単位かミリ秒単位か確認
+                                    # Yahoo Finance は秒単位で返す模様
+                                    processed_item["publish_time"] = pd.to_datetime(processed_item["publish_time"], unit='s')
+                                except:
+                                    # 変換失敗時は元の値を保持
+                                    pass
+                            processed_news.append(processed_item)
+
+                        news_data = processed_news
+                        break  # 一番最初に取得できたニュースを使用
+                else:
+                    logger.debug(f"'news' attribute not found for ticker {ticker}. This might be due to yfinance version or API limitations.")
+                    news_data = []
+                    break
+
+            except AttributeError as e:
+                # 'news' attribute がない場合
+                logger.debug(f"AttributeError for ticker {ticker}: {e}")
+                news_data = []
+                break
+            except Exception as exc:  # pragma: no cover - depends on yfinance
+                logger.debug("Failed to retrieve news data for %s via %s: %s", symbol, ticker, exc)
+                continue
+
+        cache.set(cache_key, news_data, ttl=self.cache_ttl)
+        return news_data
 
 
 # Backwards compatibility helper -------------------------------------------------

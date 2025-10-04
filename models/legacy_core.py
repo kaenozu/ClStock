@@ -16,7 +16,32 @@ import json
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
+
+try:
+    from sklearn.preprocessing import StandardScaler
+    import xgboost as xgb
+    _xgb_available = True
+except ImportError:
+    class StandardScaler:
+        def __init__(self):
+            self.mean_ = None
+            self.scale_ = None
+
+        def fit(self, X):
+            self.mean_ = np.mean(X, axis=0)
+            self.scale_ = np.std(X, axis=0)
+            # Avoid division by zero
+            self.scale_ = np.where(self.scale_ == 0, 1.0, self.scale_)
+            return self
+
+        def transform(self, X):
+            if self.mean_ is None or self.scale_ is None:
+                raise ValueError("Scaler has not been fitted yet.")
+            return (X - self.mean_) / self.scale_
+
+        def fit_transform(self, X):
+            return self.fit(X).transform(X)
+    _xgb_available = False
 
 from data.stock_data import StockDataProvider
 from models.recommendation import StockRecommendation
@@ -248,7 +273,24 @@ class MLStockPredictor(CacheablePredictor):
         super().__init__(cache_size=cache_size, data_provider=data_provider)
         self.model_type = model_type
         self.scaler: StandardScaler = StandardScaler()
-        self.model: Optional[_SimpleRegressor] = None
+        # xgboostが利用可能かを判定して初期化
+        if _xgb_available and model_type == "xgboost":
+            self.model: Optional[Any] = xgb.XGBRegressor(
+                n_estimators=100,
+                max_depth=6,
+                learning_rate=0.1,
+                random_state=42,
+            )
+        else:
+            # フォールバック用のモデル
+            if _xgb_available:
+                # xgboostは利用可能だが、model_typeが"xgboost"でない場合
+                # ここでは _SimpleRegressor を使用する例
+                # 必要に応じて他のモデルタイプも考慮
+                self.model: Optional[_SimpleRegressor] = _SimpleRegressor()
+            else:
+                # xgboostが利用不可能な場合
+                self.model = _SimpleRegressor()
         self.feature_names: List[str] = []
         self.model_directory = Path("models_cache")
         self.model_directory.mkdir(exist_ok=True)
@@ -404,7 +446,7 @@ class MLStockPredictor(CacheablePredictor):
         self.feature_names = list(numeric.columns)
         self.scaler.fit(numeric.values)
         X_scaled = self.scaler.transform(numeric.values)
-        self.model = _SimpleRegressor()
+        # self.model = _SimpleRegressor()  # XGBoostなどの場合、インスタンスは__init__で作成済み
         self.model.fit(X_scaled, list(targets))
         self._is_trained = True
 

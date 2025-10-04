@@ -2,8 +2,12 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
+except ImportError:
+    plt = None
+    mdates = None
 from data.stock_data import StockDataProvider
 from config.settings import get_settings
 from collections import deque, defaultdict
@@ -25,6 +29,7 @@ class BacktestResult:
         self.annual_return: float = 0.0
         self.volatility: float = 0.0
         self.sharpe_ratio: float = 0.0
+        self.sortino_ratio: float = 0.0  # 追加
         self.max_drawdown: float = 0.0
         self.win_rate: float = 0.0
 
@@ -308,6 +313,14 @@ class BacktestEngine:
                 risk_free_rate = 0.02
                 result.sharpe_ratio = (result.annual_return - risk_free_rate) / result.volatility if result.volatility != 0 else 0.0
 
+                # ソルティノレシオ (無リスクレートを例として2%とする)
+                # 下行リターン: 正のリターンを0とした標準偏差
+                downside_returns = [r if r < 0 else 0 for r in daily_returns]
+                downside_std = np.std(downside_returns) if len(downside_returns) > 0 else 0.0
+                # 年間化
+                downside_std_annualized = downside_std * np.sqrt(252)
+                result.sortino_ratio = (result.annual_return - risk_free_rate) / downside_std_annualized if downside_std_annualized != 0 else 0.0
+
                 # 最大ドローダウンの計算
                 running_max = np.maximum.accumulate(values)
                 drawdown = (values - running_max) / running_max
@@ -364,6 +377,10 @@ class BacktestEngine:
         """
         バックテスト結果をプロットする
         """
+        if plt is None:
+            print("matplotlib not available, skipping plot.")
+            return
+
         if not result.portfolio_values:
             print("No portfolio values to plot.")
             return
@@ -390,8 +407,9 @@ class BacktestEngine:
         ax.grid(True)
 
         # X軸のフォーマットを日付に
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-        ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+        if mdates is not None:
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+            ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
         plt.xticks(rotation=45)
 
         plt.tight_layout()
@@ -411,6 +429,7 @@ class BacktestEngine:
         print(f"Volatility (Ann.): {result.volatility:.4f}")
         print(f"Sharpe Ratio: {result.sharpe_ratio:.4f}")
         print(f"Max Drawdown: {result.max_drawdown:.2%}")
+        print(f"Sortino Ratio: {result.sortino_ratio:.4f}")  # 追加
         print(f"Win Rate: {result.win_rate:.2%}")
         print(f"Total Trades: {len(result.trades)}")
         print("="*50)

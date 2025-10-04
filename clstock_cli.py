@@ -18,6 +18,8 @@ from ClStock.systems.process_manager import get_process_manager, ProcessStatus
 from ClStock.utils.logger_config import get_logger
 from ClStock.config.settings import get_settings
 
+from investment_advisor_cui import InvestmentAdvisorCUI  # 追加
+
 logger = get_logger(__name__)
 settings = get_settings()
 
@@ -227,13 +229,7 @@ def demo():
 @system.command()
 @click.option("--symbol", "-s", default="7203", help="銘柄コード (デフォルト: 7203)")
 def predict(symbol: str):
-    """予測システムの実行"""
-    # 入力バリデーション
-    if not symbol or not isinstance(symbol, str) or not symbol.strip():
-        message = "[失敗] 無効な銘柄コード"
-        logger.error(message)
-        raise click.BadParameter(message, param_hint="symbol")
-
+    """予測システムの実行 (CUI表示改善版)"""
     # 銘柄コードの形式チェック（数値のみ or 数値+.T）
     is_numeric = symbol.isdigit()
     is_numeric_with_t = symbol.endswith('.T') and symbol[:-2].isdigit()
@@ -249,21 +245,27 @@ def predict(symbol: str):
     click.echo(f"🔮 予測システム実行: {symbol}")
 
     try:
-        # 直接予測システムを実行
-        from models.precision.precision_87_system import (
-            Precision87BreakthroughSystem,
-        )
+        advisor = InvestmentAdvisorCUI() # インスタンス生成
+        analysis = advisor.get_comprehensive_analysis(symbol) # 分析実行
+        # analysisの内容を整形して出力 (display_recommendationsの一部を流用)
+        integrated = analysis["integrated_recommendation"]
+        short = analysis["short_term"]
+        medium = analysis["medium_term"]
+        name = analysis['name']
 
-        system = Precision87BreakthroughSystem()
-        result = system.predict_with_87_precision(symbol)
-
-        click.echo(f"💡 予測結果:")
-        click.echo(f"  価格予測: {result['final_prediction']:.1f}")
-        click.echo(f"  信頼度: {result['final_confidence']:.1%}")
-        click.echo(f"  推定精度: {result['final_accuracy']:.1f}%")
-        click.echo(
-            f"  87%達成: {'[成功] YES' if result['precision_87_achieved'] else '[失敗] NO'}"
-        )
+        click.echo(f"💡 投資判断:")
+        click.echo(f"  銘柄: {name} ({symbol})")
+        click.echo(f"  推奨: {integrated['action']}")
+        click.echo(f"  タイミング: {integrated['timing']}")
+        click.echo(f"  現在価格: {short['current_price']:,.0f}円")
+        click.echo(f"  短期見通し: {integrated['short_term_outlook']} (1日)")
+        click.echo(f"  中期見通し: {integrated['medium_term_outlook']} (1ヶ月)")
+        click.echo(f"  信頼度: {integrated['confidence']:.1%}")
+        click.echo(f"  リスク: {integrated['risk_level']}")
+        if integrated["action"] in ["強い買い", "買い"]:
+            click.echo(f"  目標価格: {integrated['target_price']:,.0f}円")
+            click.echo(f"  損切価格: {integrated['stop_loss']:,.0f}円")
+        # 必要に応じて medium_signals や reasoning も表示
 
     except Exception as e:
         message = f"[失敗] 予測実行エラー: {e}"
