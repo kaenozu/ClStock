@@ -3,10 +3,7 @@ ClStock カスタム例外クラス
 より具体的なエラーハンドリングのために定義
 """
 
-from typing import Optional
-
-
-from typing import Optional, Any, List
+from typing import Any, Dict, List, Optional
 
 
 class ClStockException(Exception):
@@ -34,6 +31,22 @@ class DataFetchError(ClStockException):
     ):
         self.symbol = symbol
         super().__init__(f"Data fetch error for {symbol}: {message}", details)
+
+
+class BatchDataFetchError(DataFetchError):
+    """複数銘柄のデータ取得失敗を表すエラー"""
+
+    def __init__(
+        self,
+        failed_symbols: List[str],
+        partial_results: Optional[Dict[str, Any]] = None,
+        message: str = "Failed to fetch data for multiple symbols",
+        details: Optional[str] = None,
+    ):
+        self.failed_symbols = failed_symbols
+        self.partial_results = partial_results or {}
+        symbol_repr = ", ".join(failed_symbols)
+        super().__init__(symbol_repr, message, details)
 
 
 class InsufficientDataError(ClStockException):

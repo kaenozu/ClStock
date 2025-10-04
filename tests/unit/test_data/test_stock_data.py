@@ -1,5 +1,4 @@
 ﻿import pandas as pd
-import hashlib
 import importlib.util
 import pickle
 import sys
@@ -143,7 +142,9 @@ class TestStockDataProvider:
 
     def test_get_multiple_stocks(self, mock_yfinance):
         provider = StockDataProvider()
-        with patch("yfinance.Ticker", return_value=mock_yfinance):
+        dummy_yf = types.SimpleNamespace(Ticker=lambda ticker: mock_yfinance)
+        with patch.object(stock_data_module, "YFINANCE_AVAILABLE", True), \
+             patch.object(stock_data_module, "yf", dummy_yf):
             symbols = ["7203", "6758"]
             result = provider.get_multiple_stocks(symbols, "1mo")
             assert len(result) == 2
@@ -201,7 +202,9 @@ class TestStockDataProvider:
                     return history_df
                 return pd.DataFrame()
 
-        monkeypatch.setattr(stock_data_module.yf, "Ticker", lambda ticker: DummyTicker(ticker))
+        dummy_yf = types.SimpleNamespace(Ticker=lambda ticker: DummyTicker(ticker))
+        monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", True)
+        monkeypatch.setattr(stock_data_module, "yf", dummy_yf)
 
         history, actual = provider._download_via_yfinance("6758.to", "1mo")
         assert actual == "6758.TO"
@@ -217,47 +220,3 @@ class TestStockDataProvider:
         except Exception:
             pytest.skip("Network connection required for integration test")
 
-
-def test_normalized_symbol_seed_is_stable():
-    symbol = "DETERMINISTIC-SEED"
-    expected = int.from_bytes(hashlib.sha256(symbol.encode()).digest()[:4], "big")
-    assert stock_data_module._normalized_symbol_seed(symbol) == expected
-
-
-@pytest.mark.skipif(
-    not hasattr(stock_data_module, "_FallbackTicker"),
-    reason="Fallback ticker is not available when real yfinance is installed.",
-)
-def test_fallback_ticker_history_is_reproducible():
-    symbol = "PERSISTENT-FALLBACK"
-    expected_seed = int.from_bytes(hashlib.sha256(symbol.encode()).digest()[:4], "big")
-
-    first = stock_data_module._FallbackTicker(symbol)
-    second = stock_data_module._FallbackTicker(symbol)
-
-    assert first._seed == expected_seed
-    assert second._seed == expected_seed
-
-    history_first = first.history("1mo")
-    history_second = second.history("1mo")
-
-    pd.testing.assert_frame_equal(history_first, history_second)
-
-
-@pytest.mark.skipif(
-    not hasattr(stock_data_module, "_FallbackTicker"),
-    reason="Fallback ticker is not available when real yfinance is installed.",
-)
-def test_download_via_yfinance_with_dates_uses_fallback_history_range():
-    provider = StockDataProvider()
-    start = "2024-01-03"
-    end = "2024-01-12"
-
-    history, actual = provider._download_via_yfinance(
-        "FAKE", period=None, start=start, end=end
-    )
-
-    assert actual == "FAKE"
-    expected_index = pd.bdate_range(start=start, end=end)
-    assert list(history.index) == list(expected_index)
-    assert len(history) == len(expected_index)

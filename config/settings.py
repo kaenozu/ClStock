@@ -50,6 +50,23 @@ class DatabaseConfig:
 
 
 @dataclass
+class MarketDataConfig:
+    """Market data provider settings and credentials."""
+
+    provider: str = "local_csv"
+    local_cache_dir: Path = field(
+        default_factory=lambda: PROJECT_ROOT / "data" / "historical"
+    )
+    extra_cache_dirs: List[Path] = field(default_factory=list)
+    api_base_url: Optional[str] = None
+    api_token: Optional[str] = None
+    api_key: Optional[str] = None
+    api_secret: Optional[str] = None
+    api_timeout: float = 10.0
+    verify_ssl: bool = True
+
+
+@dataclass
 class PredictionConfig:
     """Prediction thresholds and metrics."""
 
@@ -291,6 +308,7 @@ class AppSettings:
     """Configuration section."""
 
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
+    market_data: MarketDataConfig = field(default_factory=MarketDataConfig)
     prediction: PredictionConfig = field(default_factory=PredictionConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     backtest: BacktestConfig = field(default_factory=BacktestConfig)
@@ -315,6 +333,7 @@ def load_settings(env: Optional[Mapping[str, str]] = None) -> AppSettings:
     env_map: Mapping[str, str] = os.environ if env is None else env
     settings = AppSettings()
     load_database_settings_from_env(settings, env_map)
+    load_market_data_settings_from_env(settings, env_map)
     load_prediction_settings_from_env(settings, env_map)
     load_model_settings_from_env(settings, env_map)
     load_backtest_settings_from_env(settings, env_map)
@@ -354,6 +373,65 @@ def load_database_settings_from_env(settings: "AppSettings", env: Mapping[str, s
     _apply_env_value(env, "CLSTOCK_PERSONAL_PORTFOLIO_DB", lambda s: Path(s), lambda x: setattr(settings.database, 'personal_portfolio_db', x))
     _apply_env_value(env, "CLSTOCK_PREDICTION_HISTORY_DB", lambda s: Path(s), lambda x: setattr(settings.database, 'prediction_history_db', x))
     _apply_env_value(env, "CLSTOCK_BACKTEST_RESULTS_DB", lambda s: Path(s), lambda x: setattr(settings.database, 'backtest_results_db', x))
+
+
+def load_market_data_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
+    """Apply market data overrides from the environment mapping."""
+
+    _apply_env_value(
+        env,
+        "CLSTOCK_MARKET_DATA_PROVIDER",
+        str,
+        lambda x: setattr(settings.market_data, "provider", x.lower()),
+    )
+    _apply_env_value(
+        env,
+        "CLSTOCK_MARKET_DATA_LOCAL_CACHE",
+        lambda s: Path(s),
+        lambda x: setattr(settings.market_data, "local_cache_dir", x),
+    )
+    _apply_env_value(
+        env,
+        "CLSTOCK_MARKET_DATA_EXTRA_CACHES",
+        lambda s: [Path(part.strip()) for part in s.split(os.pathsep) if part.strip()],
+        lambda x: setattr(settings.market_data, "extra_cache_dirs", x),
+    )
+    _apply_env_value(
+        env,
+        "CLSTOCK_MARKET_DATA_API_BASE",
+        str,
+        lambda x: setattr(settings.market_data, "api_base_url", x),
+    )
+    _apply_env_value(
+        env,
+        "CLSTOCK_MARKET_DATA_API_TOKEN",
+        str,
+        lambda x: setattr(settings.market_data, "api_token", x),
+    )
+    _apply_env_value(
+        env,
+        "CLSTOCK_MARKET_DATA_API_KEY",
+        str,
+        lambda x: setattr(settings.market_data, "api_key", x),
+    )
+    _apply_env_value(
+        env,
+        "CLSTOCK_MARKET_DATA_API_SECRET",
+        str,
+        lambda x: setattr(settings.market_data, "api_secret", x),
+    )
+    _apply_env_value(
+        env,
+        "CLSTOCK_MARKET_DATA_API_TIMEOUT",
+        float,
+        lambda x: setattr(settings.market_data, "api_timeout", x),
+    )
+    _apply_env_value(
+        env,
+        "CLSTOCK_MARKET_DATA_VERIFY_SSL",
+        lambda s: s.lower() in {"1", "true", "yes"},
+        lambda x: setattr(settings.market_data, "verify_ssl", x),
+    )
 
 
 def load_prediction_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
@@ -480,7 +558,14 @@ def validate_settings(settings: 'AppSettings') -> bool:
     # 繝ｭ繧ｰ險ｭ螳・
     if settings.api.max_top_n < settings.api.min_top_n:
         errors.append(f"max_top_n ({settings.api.max_top_n}) cannot be less than min_top_n ({settings.api.min_top_n})")
-    
+
+    valid_providers = {"local_csv", "http_api", "hybrid"}
+    provider = settings.market_data.provider.lower()
+    if provider not in valid_providers:
+        errors.append(f"Unsupported market data provider: {settings.market_data.provider}")
+    if provider in {"http_api", "hybrid"} and not settings.market_data.api_base_url:
+        errors.append("api_base_url must be configured when using remote market data providers")
+
     if errors:
         for error in errors:
             logger.error(f"Settings validation error: {error}")
