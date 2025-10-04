@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -544,22 +545,73 @@ self, data: pd.DataFrame) -> pd.DataFrame:
                 symbol,
                 "yfinance is not available for live market data retrieval",
             )
+        max_attempts = 3
+        base_backoff = 0.5
         last_error: Optional[Exception] = None
+        attempt_messages: List[str] = []
+
         for ticker in self._ticker_formats(symbol):
-            try:
-                ticker_obj = yf.Ticker(ticker)
-                if start is not None or end is not None:
-                    history = ticker_obj.history(start=start, end=end)
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    ticker_obj = yf.Ticker(ticker)
+                    if start is not None or end is not None:
+                        history = ticker_obj.history(start=start, end=end)
+                    else:
+                        history = ticker_obj.history(period=period)
+                    if isinstance(history, pd.DataFrame) and not history.empty:
+                        return history, ticker
+                    logger.debug(
+                        "yfinance returned empty history for %s via %s (attempt %d/%d)",
+                        symbol,
+                        ticker,
+                        attempt,
+                        max_attempts,
+                    )
+                except Exception as exc:  # pragma: no cover - depends on yfinance
+                    last_error = exc
+                    attempt_messages.append(f"{ticker} attempt {attempt}: {exc}")
+                    logger.debug(
+                        "yfinance attempt %d/%d for %s via %s failed: %s",
+                        attempt,
+                        max_attempts,
+                        symbol,
+                        ticker,
+                        exc,
+                    )
                 else:
-                    history = ticker_obj.history(period=period)
-                if isinstance(history, pd.DataFrame) and not history.empty:
-                    return history, ticker
-            except Exception as exc:  # pragma: no cover - depends on yfinance
-                last_error = exc
-                logger.debug("Failed to download %s via yfinance: %s", ticker, exc)
-        if last_error:
-            logger.warning("All yfinance attempts failed for %s: %s", symbol, last_error)
-        return pd.DataFrame(), None
+                    # Empty history without exception should not trigger a retry delay.
+                    continue
+
+                if attempt < max_attempts:
+                    backoff = base_backoff * (2 ** (attempt - 1))
+                    logger.debug(
+                        "Retrying yfinance download for %s via %s in %.2fs",
+                        symbol,
+                        ticker,
+                        backoff,
+                    )
+                    time.sleep(backoff)
+
+            logger.debug("Moving to next ticker candidate for %s after %s attempts", symbol, ticker)
+
+        if last_error is not None:
+            aggregated = "; ".join(attempt_messages) or str(last_error)
+            logger.warning(
+                "All yfinance attempts failed for %s after %d retries: %s",
+                symbol,
+                max(len(attempt_messages), 1),
+                aggregated,
+            )
+            raise DataFetchError(
+                symbol,
+                "Failed to download data via yfinance",
+                str(last_error),
+            )
+
+        raise DataFetchError(
+            symbol,
+            "yfinance returned no data",
+        )
 
     def _prepare_history_frame(
         self, data: pd.DataFrame, symbol: str, actual_ticker: Optional[str]

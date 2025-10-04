@@ -210,6 +210,75 @@ class TestStockDataProvider:
         assert actual == "6758.TO"
         pd.testing.assert_frame_equal(history, history_df)
 
+    def test_download_via_yfinance_retries_on_transient_error(self, monkeypatch):
+        provider = StockDataProvider()
+
+        history_df = pd.DataFrame(
+            {"Close": [123.0], "Volume": [2000]},
+            index=pd.date_range("2024-01-01", periods=1),
+        )
+
+        attempt_counter = {"count": 0}
+
+        class FlakyTicker:
+            def __init__(self, ticker):
+                self.ticker = ticker
+
+            def history(self, period="1y", start=None, end=None):
+                attempt_counter["count"] += 1
+                if attempt_counter["count"] == 1:
+                    raise RuntimeError("temporary network glitch")
+                return history_df
+
+        dummy_yf = types.SimpleNamespace(Ticker=lambda ticker: FlakyTicker(ticker))
+
+        monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", True)
+        monkeypatch.setattr(stock_data_module, "yf", dummy_yf)
+        monkeypatch.setattr(
+            stock_data_module,
+            "time",
+            types.SimpleNamespace(sleep=lambda *_: None),
+            raising=False,
+        )
+
+        history, actual_ticker = provider._download_via_yfinance("6758", "1mo")
+
+        assert attempt_counter["count"] == 2
+        assert actual_ticker is not None
+        pd.testing.assert_frame_equal(history, history_df)
+
+    def test_download_via_yfinance_raises_with_last_error_details(self, monkeypatch):
+        provider = StockDataProvider()
+
+        attempt_counter = {"count": 0}
+        last_message = "permanent outage"
+
+        class FailingTicker:
+            def __init__(self, ticker):
+                self.ticker = ticker
+
+            def history(self, period="1y", start=None, end=None):
+                attempt_counter["count"] += 1
+                raise RuntimeError(f"{last_message} #{attempt_counter['count']}")
+
+        dummy_yf = types.SimpleNamespace(Ticker=lambda ticker: FailingTicker(ticker))
+
+        monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", True)
+        monkeypatch.setattr(stock_data_module, "yf", dummy_yf)
+        monkeypatch.setattr(
+            stock_data_module,
+            "time",
+            types.SimpleNamespace(sleep=lambda *_: None),
+            raising=False,
+        )
+
+        with pytest.raises(DataFetchError) as excinfo:
+            provider._download_via_yfinance("6758", "1mo")
+
+        assert attempt_counter["count"] >= 1
+        assert excinfo.value.details is not None
+        assert last_message in excinfo.value.details
+
     def test_real_stock_data_integration(self):
         provider = StockDataProvider()
         try:
