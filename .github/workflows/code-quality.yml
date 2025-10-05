@@ -30,7 +30,7 @@ jobs:
     - name: Security audit with bandit
       run: |
         bandit -r . -f json -o bandit-security-report.json
-        bandit -r . --severity-level medium --exit-zero
+        bandit -r . --severity-level medium --exit-zero -v
 
     - name: Dependency vulnerability check
       run: |
