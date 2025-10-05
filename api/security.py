@@ -19,6 +19,11 @@ _env_cache: Dict[str, Optional[str]] = {}
 _logged_missing_env_vars: Set[str] = set()
 _env_tokens_cache: Dict[str, str] = {}
 _env_tokens_cache_sources: Dict[str, Optional[str]] = {}
+_API_KEYS_CACHE: Optional[Dict[str, str]] = None
+
+DUMMY_DEV_API_KEY = "clstock-dev-placeholder"
+DUMMY_ADMIN_API_KEY = "clstock-admin-placeholder"
+UNCONFIGURED_ROLE = "unconfigured"
 _TEST_TOKEN_FLAG = "API_ENABLE_TEST_TOKENS"
 _TEST_TOKENS = {
     "admin_token_secure_2024": "administrator",
@@ -53,22 +58,20 @@ def reset_env_token_cache() -> None:
     _logged_missing_env_vars.clear()
     _env_tokens_cache.clear()
     _env_tokens_cache_sources.clear()
+    global _API_KEYS_CACHE
+    _API_KEYS_CACHE = None
 
 
-def _load_required_env_var(var_name: str) -> str:
-    """Fetch an environment variable or raise an explicit error."""
+def _set_api_keys_cache(new_keys: Dict[str, str]) -> Dict[str, str]:
+    """Store API keys in the local cache."""
 
-    value = os.getenv(var_name)
-    if not value:
-        raise RuntimeError(
-            f"Missing required environment variable: {var_name}. "
-            "Set this variable before starting the application."
-        )
-    return value
+    global _API_KEYS_CACHE
+    _API_KEYS_CACHE = dict(new_keys)
+    return _API_KEYS_CACHE
 
 
 def _initialize_api_keys() -> Dict[str, str]:
-    """Initialize API keys from config or environment variables."""
+    """Initialize API keys from config or environment variables lazily."""
 
     try:
         from config.secrets import API_KEYS as secrets_api_keys  # type: ignore
@@ -78,12 +81,44 @@ def _initialize_api_keys() -> Dict[str, str]:
 
         return dict(secrets_api_keys)
     except ImportError:
-        dev_key = _load_required_env_var("CLSTOCK_DEV_KEY")
-        admin_key = _load_required_env_var("CLSTOCK_ADMIN_KEY")
+        dev_key = os.getenv("CLSTOCK_DEV_KEY")
+        admin_key = os.getenv("CLSTOCK_ADMIN_KEY")
+
+        missing_vars = [
+            name
+            for name, value in (
+                ("CLSTOCK_DEV_KEY", dev_key),
+                ("CLSTOCK_ADMIN_KEY", admin_key),
+            )
+            if not value
+        ]
+
+        if missing_vars:
+            logger.error(
+                "Missing environment variables for API keys: %s. "
+                "Using temporary placeholder keys; configure secrets before production use.",
+                ", ".join(missing_vars),
+            )
+            return {
+                DUMMY_DEV_API_KEY: UNCONFIGURED_ROLE,
+                DUMMY_ADMIN_API_KEY: UNCONFIGURED_ROLE,
+            }
+
         return {
             dev_key: "developer",
             admin_key: "administrator",
         }
+
+
+def _get_api_keys(force_refresh: bool = False) -> Dict[str, str]:
+    """Return the configured API keys, loading them lazily when required."""
+
+    global _API_KEYS_CACHE
+
+    if force_refresh or _API_KEYS_CACHE is None:
+        _set_api_keys_cache(_initialize_api_keys())
+
+    return _API_KEYS_CACHE if _API_KEYS_CACHE is not None else {}
 
 
 def _get_env_with_warning(var_name: str) -> Optional[str]:
@@ -136,7 +171,6 @@ def _get_env_tokens_from_cache() -> Dict[str, str]:
 # In production, you would use Redis or similar
 rate_limit_storage: Dict[str, Dict[str, int]] = {}
 
-API_KEYS: Dict[str, str] = _initialize_api_keys()
 ALLOW_TEST_TOKENS = False
 TEST_TOKENS: Dict[str, str] = dict(_TEST_TOKENS)
 
@@ -148,12 +182,14 @@ def configure_security(
 ) -> None:
     """Configure security settings, primarily for testing purposes."""
 
-    global API_KEYS, TEST_TOKENS, ALLOW_TEST_TOKENS
+    global TEST_TOKENS, ALLOW_TEST_TOKENS
 
     if api_keys is not None:
         if not api_keys:
             raise ValueError("api_keys cannot be empty")
-        API_KEYS = dict(api_keys)
+        _set_api_keys_cache(api_keys)
+    else:
+        _get_api_keys(force_refresh=True)
 
     if test_tokens is not None:
         TEST_TOKENS = dict(test_tokens)
@@ -231,14 +267,24 @@ def verify_api_key(
     """Verify API key and return user type"""
     token = credentials.credentials
 
-    if token not in API_KEYS:
+    api_keys = _get_api_keys()
+
+    if token not in api_keys:
         logger.warning(
             "Invalid API key attempt: %s",
             _redact_secret(token),
         )
         raise HTTPException(status_code=401, detail="Invalid API key")
 
-    user_type = API_KEYS[token]
+    user_type = api_keys[token]
+    if user_type == UNCONFIGURED_ROLE:
+        logger.error(
+            "Placeholder API key used while security configuration is incomplete."
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="API keys are not configured. Contact the system administrator.",
+        )
     logger.info(f"API key verified for user type: {user_type}")
     return user_type
 
@@ -259,7 +305,7 @@ def _should_include_test_tokens() -> bool:
 def _build_allowed_tokens() -> Dict[str, str]:
     """許可されたトークンの一覧を構築"""
 
-    tokens = dict(API_KEYS)
+    tokens = dict(_get_api_keys())
 
     env_tokens = _get_env_tokens_from_cache()
     tokens.update(env_tokens)
@@ -293,6 +339,14 @@ def verify_token(token: str) -> str:
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user_type = allowed_tokens[token]
+    if user_type == UNCONFIGURED_ROLE:
+        logger.error(
+            "Placeholder API token used while security configuration is incomplete."
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="API tokens are not configured. Contact the system administrator.",
+        )
     logger.info(f"Token verified for user type: {user_type}")
     return user_type
 
