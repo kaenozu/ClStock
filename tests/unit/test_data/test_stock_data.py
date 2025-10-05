@@ -140,6 +140,40 @@ class TestStockDataProvider:
             assert required_keys.issubset(metrics.keys())
             assert metrics["symbol"] == "7203"
 
+    def test_get_financial_metrics_returns_defaults_when_yfinance_unavailable(
+        self, monkeypatch
+    ):
+        provider = StockDataProvider()
+        monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", False)
+
+        class _SentinelYF:
+            def __init__(self):
+                self.called = False
+
+            def Ticker(self, *_args, **_kwargs):
+                self.called = True
+                raise AssertionError("yfinance should not be accessed when unavailable")
+
+        sentinel = _SentinelYF()
+        monkeypatch.setattr(stock_data_module, "yf", sentinel)
+        monkeypatch.setattr(stock_data_module, "get_cache", lambda: _NullCache())
+
+        metrics = provider.get_financial_metrics("7203")
+
+        assert metrics == {
+            "symbol": "7203",
+            "company_name": provider.jp_stock_codes.get("7203", "7203"),
+            "market_cap": None,
+            "pe_ratio": None,
+            "dividend_yield": None,
+            "beta": None,
+            "last_price": None,
+            "previous_close": None,
+            "ten_day_average_volume": None,
+            "actual_ticker": None,
+        }
+        assert not sentinel.called
+
     def test_get_multiple_stocks(self, mock_yfinance):
         provider = StockDataProvider()
         dummy_yf = types.SimpleNamespace(Ticker=lambda ticker: mock_yfinance)
@@ -150,6 +184,58 @@ class TestStockDataProvider:
             assert len(result) == 2
             assert "7203" in result
             assert "6758" in result
+
+    def test_get_dividend_data_returns_defaults_when_yfinance_unavailable(
+        self, monkeypatch
+    ):
+        provider = StockDataProvider()
+        monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", False)
+
+        class _SentinelYF:
+            def __init__(self):
+                self.called = False
+
+            def Ticker(self, *_args, **_kwargs):
+                self.called = True
+                raise AssertionError("yfinance should not be accessed when unavailable")
+
+        sentinel = _SentinelYF()
+        monkeypatch.setattr(stock_data_module, "yf", sentinel)
+        monkeypatch.setattr(stock_data_module, "get_cache", lambda: _NullCache())
+
+        dividend_data = provider.get_dividend_data("7203")
+
+        assert dividend_data == {
+            "symbol": "7203",
+            "dividend_rate": None,
+            "dividend_yield": None,
+            "ex_dividend_date": None,
+            "actual_ticker": None,
+        }
+        assert not sentinel.called
+
+    def test_get_news_data_returns_empty_when_yfinance_unavailable(
+        self, monkeypatch
+    ):
+        provider = StockDataProvider()
+        monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", False)
+
+        class _SentinelYF:
+            def __init__(self):
+                self.called = False
+
+            def Ticker(self, *_args, **_kwargs):
+                self.called = True
+                raise AssertionError("yfinance should not be accessed when unavailable")
+
+        sentinel = _SentinelYF()
+        monkeypatch.setattr(stock_data_module, "yf", sentinel)
+        monkeypatch.setattr(stock_data_module, "get_cache", lambda: _NullCache())
+
+        news_data = provider.get_news_data("7203")
+
+        assert news_data == []
+        assert not sentinel.called
 
     def test_ticker_formats_for_japanese_stock(self):
         provider = StockDataProvider()

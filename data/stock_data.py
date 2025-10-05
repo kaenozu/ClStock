@@ -255,6 +255,10 @@ self, data: pd.DataFrame) -> pd.DataFrame:
             "actual_ticker": None,
         }
 
+        if not YFINANCE_AVAILABLE or yf is None:
+            cache.set(cache_key, metrics, ttl=self.cache_ttl)
+            return metrics
+
         for ticker in self._ticker_formats(symbol):
             try:
                 ticker_obj = yf.Ticker(ticker)
@@ -662,6 +666,10 @@ self, data: pd.DataFrame) -> pd.DataFrame:
 
         extended_metrics = base_metrics.copy()
 
+        if not YFINANCE_AVAILABLE or yf is None:
+            cache.set(cache_key, extended_metrics, ttl=self.cache_ttl)
+            return extended_metrics
+
         for ticker in self._ticker_formats(symbol):
             try:
                 ticker_obj = yf.Ticker(ticker)
@@ -724,6 +732,10 @@ self, data: pd.DataFrame) -> pd.DataFrame:
             "actual_ticker": None,
         }
 
+        if not YFINANCE_AVAILABLE or yf is None:
+            cache.set(cache_key, dividend_data, ttl=self.cache_ttl)
+            return dividend_data
+
         for ticker in self._ticker_formats(symbol):
             try:
                 ticker_obj = yf.Ticker(ticker)
@@ -768,6 +780,10 @@ self, data: pd.DataFrame) -> pd.DataFrame:
             return cached
 
         news_data: List[Dict[str, Any]] = []
+
+        if not YFINANCE_AVAILABLE or yf is None:
+            cache.set(cache_key, news_data, ttl=self.cache_ttl)
+            return news_data
 
         for ticker in self._ticker_formats(symbol):
             try:
