@@ -255,38 +255,84 @@ self, data: pd.DataFrame) -> pd.DataFrame:
             "actual_ticker": None,
         }
 
+        if not YFINANCE_AVAILABLE or yf is None:
+            cache.set(cache_key, metrics, ttl=self.cache_ttl)
+            return metrics
+
         for ticker in self._ticker_formats(symbol):
             try:
-                ticker_obj = yf.Ticker(ticker)
-                info = getattr(ticker_obj, "info", {}) or {}
-                fast = getattr(ticker_obj, "fast_info", None)
-
-                metrics.update(
-                    {
-                        "market_cap": info.get("marketCap", metrics["market_cap"]),
-                        "pe_ratio": info.get("forwardPE") or info.get("trailingPE"),
-                        "dividend_yield": info.get("dividendYield"),
-                        "beta": info.get("beta", metrics["beta"]),
-                    }
-                )
-
-                if fast is not None:
-                    metrics["last_price"] = getattr(fast, "last_price", metrics["last_price"])
-                    metrics["previous_close"] = getattr(
-                        fast, "previous_close", metrics["previous_close"]
-                    )
-                    metrics["ten_day_average_volume"] = getattr(
-                        fast, "ten_day_average_volume", metrics["ten_day_average_volume"]
-                    )
-
-                metrics["actual_ticker"] = ticker
-                break
+                if self._fetch_financial_metrics_via_yfinance(ticker, metrics):
+                    break
             except Exception as exc:  # pragma: no cover - defensive
                 logger.debug("Failed to retrieve financial metrics for %s via %s: %s", symbol, ticker, exc)
                 continue
 
         cache.set(cache_key, metrics, ttl=self.cache_ttl)
         return metrics
+
+    def _fetch_financial_metrics_via_yfinance(
+        self, ticker: str, metrics: Dict[str, Optional[float]]
+    ) -> bool:
+        """Populate *metrics* using ``yfinance`` for the given *ticker*.
+
+        The helper guards against missing dependencies or partial responses and
+        returns ``True`` only when some data was successfully retrieved.
+        """
+
+        if not YFINANCE_AVAILABLE or yf is None:
+            return False
+
+        try:
+            ticker_obj = yf.Ticker(ticker)
+        except Exception as exc:  # pragma: no cover - defensive guard
+            logger.debug("Failed to instantiate yfinance ticker %s: %s", ticker, exc)
+            return False
+
+        info = getattr(ticker_obj, "info", {}) or {}
+        fast = getattr(ticker_obj, "fast_info", None)
+
+        has_data = False
+
+        market_cap = info.get("marketCap")
+        if market_cap is not None:
+            metrics["market_cap"] = market_cap
+            has_data = True
+
+        pe_ratio = info.get("forwardPE") or info.get("trailingPE")
+        if pe_ratio is not None:
+            metrics["pe_ratio"] = pe_ratio
+            has_data = True
+
+        dividend_yield = info.get("dividendYield")
+        if dividend_yield is not None:
+            metrics["dividend_yield"] = dividend_yield
+            has_data = True
+
+        beta = info.get("beta")
+        if beta is not None:
+            metrics["beta"] = beta
+            has_data = True
+
+        if fast is not None:
+            last_price = getattr(fast, "last_price", None)
+            if last_price is not None:
+                metrics["last_price"] = last_price
+                has_data = True
+
+            previous_close = getattr(fast, "previous_close", None)
+            if previous_close is not None:
+                metrics["previous_close"] = previous_close
+                has_data = True
+
+            ten_day_average_volume = getattr(fast, "ten_day_average_volume", None)
+            if ten_day_average_volume is not None:
+                metrics["ten_day_average_volume"] = ten_day_average_volume
+                has_data = True
+
+        if has_data:
+            metrics["actual_ticker"] = ticker
+
+        return has_data
 
     # ------------------------------------------------------------------
     # Helper methods
@@ -662,6 +708,10 @@ self, data: pd.DataFrame) -> pd.DataFrame:
 
         extended_metrics = base_metrics.copy()
 
+        if not YFINANCE_AVAILABLE or yf is None:
+            cache.set(cache_key, extended_metrics, ttl=self.cache_ttl)
+            return extended_metrics
+
         for ticker in self._ticker_formats(symbol):
             try:
                 ticker_obj = yf.Ticker(ticker)
@@ -724,6 +774,10 @@ self, data: pd.DataFrame) -> pd.DataFrame:
             "actual_ticker": None,
         }
 
+        if not YFINANCE_AVAILABLE or yf is None:
+            cache.set(cache_key, dividend_data, ttl=self.cache_ttl)
+            return dividend_data
+
         for ticker in self._ticker_formats(symbol):
             try:
                 ticker_obj = yf.Ticker(ticker)
@@ -768,6 +822,10 @@ self, data: pd.DataFrame) -> pd.DataFrame:
             return cached
 
         news_data: List[Dict[str, Any]] = []
+
+        if not YFINANCE_AVAILABLE or yf is None:
+            cache.set(cache_key, news_data, ttl=self.cache_ttl)
+            return news_data
 
         for ticker in self._ticker_formats(symbol):
             try:

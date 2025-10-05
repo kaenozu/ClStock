@@ -6,6 +6,7 @@ import sys
 import types
 from dataclasses import dataclass, field
 from datetime import datetime as dt_datetime
+import pytest
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -302,6 +303,41 @@ def test_get_recommendations_returns_closed_after_15(monkeypatch):
     assert response.json()["market_status"] == "市場営業時間外"
 
 
+def test_get_recommendations_returns_closed_after_weekend(monkeypatch):
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    class DummyDateTime:
+        @classmethod
+        def now(cls, tz=None):
+            assert tz == ZoneInfo("Asia/Tokyo")
+            return datetime(2024, 1, 6, 10, 0, 0, tzinfo=ZoneInfo("Asia/Tokyo"))
+
+    monkeypatch.setattr("api.endpoints.datetime", DummyDateTime)
+
+    class DummyPredictor:
+        def __init__(self) -> None:
+            self.received_top_n = None
+
+        def get_top_recommendations(self, top_n):
+            self.received_top_n = top_n
+            return []
+
+    dummy_predictor = DummyPredictor()
+    monkeypatch.setattr("api.endpoints.MLStockPredictor", lambda: dummy_predictor)
+    monkeypatch.setattr("api.endpoints.verify_token", lambda token: None)
+
+    response = client.get(
+        "/recommendations",
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200
+    assert dummy_predictor.received_top_n == 10
+    assert response.json()["market_status"] == "市場営業時間外"
+
+
 def test_health_endpoint_includes_security_headers():
     from app.main import app as main_app
 
@@ -365,3 +401,56 @@ def test_get_single_recommendation_accepts_suffix(
     payload = response.json()
     assert payload["symbol"] == "7203.T"
     assert payload["company_name"] == "Test Corp"
+
+
+@patch("api.endpoints.verify_token")
+@patch("api.endpoints.MLStockPredictor")
+@patch("api.endpoints.StockDataProvider")
+def test_get_single_recommendation_entry_price_centered_on_current_price(
+    mock_provider_cls, mock_predictor_cls, mock_verify_token
+):
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    mock_verify_token.return_value = None
+
+    mock_provider = MagicMock()
+    mock_provider.get_all_stock_symbols.return_value = {"7203": "Test Corp"}
+    mock_provider.jp_stock_codes = {"7203": "Test Corp"}
+    mock_provider_cls.return_value = mock_provider
+
+    sample_recommendation = StockRecommendation(
+        rank=1,
+        symbol="7203",
+        company_name="Test Corp",
+        buy_timing="Now",
+        target_price=150.0,
+        stop_loss=90.0,
+        profit_target_1=110.0,
+        profit_target_2=130.0,
+        holding_period="1m",
+        score=80.0,
+        current_price=100.0,
+        recommendation_reason="Test",
+        recommendation_level="buy",
+    )
+
+    mock_predictor = MagicMock()
+    mock_predictor.generate_recommendation.return_value = sample_recommendation
+    mock_predictor_cls.return_value = mock_predictor
+
+    response = client.get(
+        "/recommendation/7203",
+        headers={"Authorization": "Bearer token"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    entry_price = payload["entry_price"]
+    expected_min = sample_recommendation.current_price * 0.97
+    expected_max = sample_recommendation.current_price * 1.03
+
+    assert entry_price["min"] == pytest.approx(expected_min)
+    assert entry_price["max"] == pytest.approx(expected_max)

@@ -55,11 +55,10 @@ def stock_recommendation_to_schema(stock_rec: StockRecommendation) -> StockRecom
         except:
             holding_period_days = 30  # エラー時デフォルト
 
-    # target_price (float) -> entry_price (object) の変換 (価格帯をどう設定するか)
-    # 簡易的に、target_priceを中央値として、±5%の範囲をmin/maxとする
-    price_range_pct = 0.05
-    entry_price_min = stock_rec.target_price * (1 - price_range_pct)
-    entry_price_max = stock_rec.target_price * (1 + price_range_pct)
+    # entry_price は current_price を中心に±3%の範囲を設定する
+    price_range_pct = 0.03
+    entry_price_min = stock_rec.current_price * (1 - price_range_pct)
+    entry_price_max = stock_rec.current_price * (1 + price_range_pct)
     entry_price = EntryPriceSchema(min=entry_price_min, max=entry_price_max)
 
     # profit_target_1, profit_target_2 (float) -> targets (List[object]) の変換
@@ -126,14 +125,17 @@ async def get_recommendations(
         current_time = datetime.now(ZoneInfo("Asia/Tokyo"))
         market_open_time = time(9, 0)
         market_close_time = time(15, 0)
+        is_weekend = current_time.weekday() >= 5
+        is_market_hours = (
+            market_open_time <= current_time.time() < market_close_time
+        )
 
         return RecommendationResponse(
             items=recommendations, # recommendations -> items に変更
             generated_at=current_time,
             market_status=(
                 "市場営業時間外"
-                if current_time.time() < market_open_time
-                or current_time.time() >= market_close_time
+                if is_weekend or not is_market_hours
                 else "市場営業中"
             ),
             top_n=top_n, # top_n フィールドも追加
