@@ -12,7 +12,7 @@ plotly>=5.0.0
 dash>=2.10.0
 gym>=0.21.0
 stable-baselines3>=2.0.0
-scipy>=1.10.0,<2.0.0
+
 shap>=0.40.0
 # Development Dependencies
 black==24.10.0
