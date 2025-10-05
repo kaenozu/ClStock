@@ -19,7 +19,7 @@ if "data.stock_data" not in sys.modules:
     sys.modules["data.stock_data"] = dummy_stock_data
     setattr(data, "stock_data", dummy_stock_data)
 
-from models_new.ensemble.ensemble_predictor import EnsembleStockPredictor
+from models.ensemble.ensemble_predictor import EnsembleStockPredictor
 
 
 class IdentityScaler:
@@ -108,9 +108,9 @@ def test_train_ensemble_uses_time_series_split_scores_for_weights():
     ), patch(
         "models.ml_stock_predictor.MLStockPredictor"
     ) as mock_ml_predictor_cls, patch(
-        "models_new.ensemble.ensemble_predictor.StandardScaler"
+        "models.ensemble.ensemble_predictor.StandardScaler"
     ) as mock_scaler_cls, patch(
-        "models_new.ensemble.ensemble_predictor.TimeSeriesSplit",
+        "models.ensemble.ensemble_predictor.TimeSeriesSplit",
         return_value=DummyTimeSeriesSplit(splits),
         create=True,
     ), patch.object(

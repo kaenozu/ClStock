@@ -14,14 +14,14 @@ from trading.backtest import BacktestOptimizer, BacktestRunner, generate_backtes
 def backtest_engine_module(monkeypatch):
     """Load ``trading.backtest_engine`` with lightweight stubs."""
 
-    dummy_precision_module = types.ModuleType("models_new.precision.precision_87_system")
+    dummy_precision_module = types.ModuleType("models.precision.precision_87_system")
 
     class _Precision:
         pass
 
     dummy_precision_module.Precision87BreakthroughSystem = _Precision
     monkeypatch.setitem(
-        sys.modules, "models_new.precision.precision_87_system", dummy_precision_module
+        sys.modules, "models.precision.precision_87_system", dummy_precision_module
     )
 
     dummy_data_module = types.ModuleType("data.stock_data")

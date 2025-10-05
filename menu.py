@@ -111,7 +111,7 @@ def run_hybrid_prediction():
     print(f"\n{Colors.CYAN}ハイブリッド予測実行中...{Colors.ENDC}")
 
     try:
-        from models_new.hybrid.hybrid_predictor import (
+        from models.hybrid.hybrid_predictor import (
             HybridStockPredictor,
             PredictionMode,
         )
@@ -256,7 +256,7 @@ def run_precision_87():
     print(f"\n{Colors.YELLOW}87%精度予測実行中...{Colors.ENDC}")
 
     try:
-        from models_new.precision.precision_87_system import (
+        from models.precision.precision_87_system import (
             Precision87BreakthroughSystem,
         )
 
@@ -289,7 +289,7 @@ def run_enhanced_ensemble():
     print(f"\n{Colors.YELLOW}高速予測実行中...{Colors.ENDC}")
 
     try:
-        from models_new.ensemble.ensemble_predictor import EnsembleStockPredictor
+        from models.ensemble.ensemble_predictor import EnsembleStockPredictor
         from data.stock_data import StockDataProvider
 
         data_provider = StockDataProvider()

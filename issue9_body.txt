@@ -1,0 +1,5 @@
+Description: backtesting.py, demo_start.py, full_auto_system.py, integration_test_enhanced.py, investment_advisor_cui.py の複数ファイルで、models_new.precision.precision_87_system.Precision87BreakthroughSystem が参照されています。このモデルがプロジェクト内に存在しない場合、これらのスクリプトは実行時に ImportError で失敗します。
+Severity: High
+Files: backtesting.py, demo_start.py, full_auto_system.py, integration_test_enhanced.py, investment_advisor_cui.py
+Location: 各ファイル内の Precision87BreakthroughSystem の import 部分
+Suggestion: このモデルの存在を確認するか、存在しない場合はダミークラスを提供する、またはこれらのファイルでモデルを使用する前に存在チェックを行うようにしてください。

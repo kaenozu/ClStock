@@ -1,14 +1,19 @@
 import os
 import sys
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from types import ModuleType
+from unittest.mock import Mock, MagicMock, patch
 
 import pandas as pd
 import pytest
-from types import ModuleType
 
-# プロジェクトルートをパスに追加
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# プロジェクトルートをパスに追加し、旧スタブをクリア
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+for legacy_module in ("models", "models_new", "models_refactored"):
+    sys.modules.pop(legacy_module, None)
 
 # data.stock_data は構文エラーを含むため、テストでは簡易スタブを注入する
 if "data.stock_data" not in sys.modules:

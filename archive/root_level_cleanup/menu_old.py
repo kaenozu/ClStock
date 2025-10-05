@@ -92,7 +92,7 @@ def run_87_prediction():
     print(f"\n{Colors.YELLOW}予測実行中...{Colors.ENDC}")
 
     try:
-        from models_new.precision.precision_87_system import (
+        from models.precision.precision_87_system import (
             Precision87BreakthroughSystem,
         )
 
@@ -136,7 +136,7 @@ def run_hybrid_prediction():
     print(f"\n{Colors.YELLOW}ハイブリッド予測実行中...{Colors.ENDC}")
 
     try:
-        from models_new.hybrid.hybrid_predictor import (
+        from models.hybrid.hybrid_predictor import (
             HybridStockPredictor,
             PredictionMode,
         )

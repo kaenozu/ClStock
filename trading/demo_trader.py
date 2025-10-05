@@ -27,7 +27,8 @@ from .trade_recorder import TradeRecorder
 
 # 既存システム
 from data.stock_data import StockDataProvider
-from models_new.precision.precision_87_system import Precision87BreakthroughSystem
+from config.target_universe import get_target_universe
+from models.precision.precision_87_system import Precision87BreakthroughSystem
 
 
 class TradeStatus(Enum):
@@ -610,20 +611,10 @@ class DemoTrader:
             return False
         return 9 <= now.hour < 15
 
-    def _get_default_symbols(self) -> List[str]:
+    @staticmethod
+    def _get_default_symbols() -> List[str]:
         """デフォルト対象銘柄取得"""
-        return [
-            "6758.T",
-            "7203.T",
-            "8306.T",
-            "9984.T",
-            "6861.T",  # 主要株
-            "4502.T",
-            "6503.T",
-            "7201.T",
-            "8001.T",
-            "9022.T",  # 追加株
-        ]
+        return get_target_universe().default_formatted()
 
     def _save_session_results(self):
         """セッション結果保存"""

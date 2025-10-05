@@ -12,16 +12,17 @@ import pandas as pd
 
 from data.stock_data import StockDataProvider
 from models_new.hybrid.hybrid_predictor import HybridStockPredictor
+from models_new.hybrid.prediction_result import PredictionResult
 from trading.tse.analysis import StockProfile
 from trading.tse.optimizer import PortfolioOptimizer
 from trading.tse.backtester import PortfolioBacktester
 from analysis.sentiment_analyzer import MarketSentimentAnalyzer
-from models_new.advanced.trading_strategy_generator import (
+from models.advanced.trading_strategy_generator import (
     StrategyGenerator,
     SignalGenerator,
     ActionType,
 )
-from models_new.advanced.risk_management_framework import (
+from models.advanced.risk_management_framework import (
     RiskManager,
     RiskLevel,
     PortfolioRisk,
@@ -72,6 +73,12 @@ class HybridPredictorAdapter:
 
     def predict(self, symbol: str, data: Optional[pd.DataFrame]) -> Dict[str, Any]:
         result = self._predictor.predict(symbol)
+
+        # 戻り値が PredictionResult であることを確認
+        if not isinstance(result, PredictionResult):
+            logger.warning(f"{symbol}: HybridStockPredictor.predict が PredictionResult 以外の型を返しました: {type(result)}")
+            # フォールバックとして、空の辞書を返す
+            return {}
 
         return {
             "predicted_price": float(result.prediction),
@@ -131,6 +138,7 @@ class RiskManagerAdapter:
 
             symbol, price_data = next(iter(price_map.items()))
             return self.analyze_risk(symbol, price_data, {})
+
         except Exception:
             self.logger.exception("Portfolio risk analysis failed")
             return None
@@ -166,7 +174,13 @@ class RiskManagerAdapter:
             return portfolio_risk
 
         total_score = getattr(portfolio_risk, "total_risk_score", 2.0)
-        normalized_score = max(0.0, min((float(total_score) - 1.0) / 3.0, 1.0))
+        # total_score は RiskManager により [MIN_RISK_SCORE, MAX_RISK_SCORE] の範囲を想定
+        # RiskLevel enum との対応関係:
+        # RiskLevel.LOW = 1.0, RiskLevel.MEDIUM = 2.0, RiskLevel.HIGH = 3.0, RiskLevel.VERY_HIGH = 4.0
+        MIN_RISK_SCORE = 1.0  # RiskLevel.LOW
+        MAX_RISK_SCORE = 4.0  # RiskLevel.VERY_HIGH
+        # total_score を [0.0, 1.0] に正規化
+        normalized_score = max(0.0, min((float(total_score) - MIN_RISK_SCORE) / (MAX_RISK_SCORE - MIN_RISK_SCORE), 1.0))
         risk_level = getattr(portfolio_risk, "risk_level", RiskLevel.MEDIUM)
         max_position = getattr(portfolio_risk, "max_safe_position_size", 0.05)
         recommendations = getattr(portfolio_risk, "recommendations", [])
@@ -378,11 +392,11 @@ class FullAutoInvestmentSystem:
 
     def _optimize_portfolio(
         self, processed_data: Dict[str, pd.DataFrame]
-    ) -> Dict[int, Dict[str, Any]]:
+    ) -> Dict[str, List[StockProfile]]:
         profiles = self._build_stock_profiles(processed_data)
 
         if not profiles:
-            return {}
+            return {"selected_stocks": [], "selected_profiles": []}
 
         try:
             candidate_sizes = list(getattr(self, "portfolio_sizes", []))
@@ -439,7 +453,47 @@ class FullAutoInvestmentSystem:
             except Exception:
                 logger.exception("ポートフォリオ最適化処理中にエラーが発生しました (size=%s)", size)
 
-        return optimization_results
+        # 最適な結果を選択（最も高いリターンを持つ結果）
+        best_candidate = None
+        best_return = -float("inf")
+        fallback_candidate = None
+
+        for size, result in optimization_results.items():
+            if not isinstance(result, dict):
+                continue
+
+            selected_profiles = result.get("selected_profiles") or []
+            if not selected_profiles:
+                continue
+
+            if fallback_candidate is None:
+                fallback_candidate = (size, selected_profiles, result.get("backtest"))
+
+            backtest_data = result.get("backtest") or {}
+            return_rate = None
+            if isinstance(backtest_data, dict):
+                try:
+                    raw_rate = backtest_data.get("return_rate")
+                    if raw_rate is not None:
+                        return_rate = float(raw_rate)
+                except (TypeError, ValueError):
+                    return_rate = None
+
+            if return_rate is not None and return_rate > best_return:
+                best_return = return_rate
+                best_candidate = (size, selected_profiles, backtest_data)
+
+        final_candidate = best_candidate or fallback_candidate
+
+        if final_candidate is None:
+            # 何らかの理由で最適な結果がない場合は最初のプロファイルを使用
+            first_result = next(iter(optimization_results.values()), {"selected_profiles": [], "backtest": {}})
+            selected_profiles = first_result.get("selected_profiles", [])
+        else:
+            best_size, selected_profiles, backtest_data = final_candidate
+
+        selected_stocks = [profile.symbol for profile in selected_profiles if hasattr(profile, "symbol")]
+        return {"selected_stocks": selected_stocks, "selected_profiles": selected_profiles}
 
     async def run_full_auto_analysis(self) -> List[AutoRecommendation]:
         """完全自動分析実行"""
@@ -508,61 +562,20 @@ class FullAutoInvestmentSystem:
                     print("[警告] ポートフォリオ最適化に失敗しました。空の結果が返されました。")
                     recommendations = []
                 else:
-                    best_candidate = None
-                    best_return = -float("inf")
-                    fallback_candidate = None
+                    # selected_profiles を optimized_portfolio から取得
+                    selected_profiles = optimized_portfolio.get('selected_profiles', [])
+                    # selected_stocks を optimized_portfolio から取得
+                    selected_stocks = optimized_portfolio.get('selected_stocks', [])
 
-                    for size, result in optimized_portfolio.items():
-                        if not isinstance(result, dict):
-                            continue
-
-                        selected_profiles = result.get("selected_profiles") or []
-                        if not selected_profiles:
-                            continue
-
-                        if fallback_candidate is None:
-                            fallback_candidate = (size, selected_profiles, result.get("backtest"))
-
-                        backtest_data = result.get("backtest") or {}
-                        return_rate = None
-                        if isinstance(backtest_data, dict):
-                            try:
-                                raw_rate = backtest_data.get("return_rate")
-                                if raw_rate is not None:
-                                    return_rate = float(raw_rate)
-                            except (TypeError, ValueError):
-                                return_rate = None
-
-                        if return_rate is not None and return_rate > best_return:
-                            best_return = return_rate
-                            best_candidate = (size, selected_profiles, backtest_data)
-
-                    final_candidate = best_candidate or fallback_candidate
-
-                    if final_candidate is None:
-                        print("[警告] 最適化結果から有効なポートフォリオを選択できませんでした。")
+                    if not selected_profiles: # selected_profiles が空の場合もチェック
+                        print("[警告] 最適化結果から選定されたプロファイルがありません。")
                         recommendations = []
                     else:
-                        best_size, selected_profiles, backtest_data = final_candidate
-                        selected_stocks = [profile.symbol for profile in selected_profiles if hasattr(profile, "symbol")]
-
+                        # 実際にデータがある銘柄のみを対象とする
                         available_selected_stocks = [s for s in selected_stocks if s in processed_data]
 
-                        if isinstance(backtest_data, dict) and backtest_data.get("return_rate") is not None:
-                            try:
-                                rate_value = float(backtest_data.get("return_rate"))
-                                return_rate_display = f"{rate_value:.2f}%"
-                            except (TypeError, ValueError):
-                                return_rate_display = "N/A"
-                        else:
-                            return_rate_display = "N/A"
-
                         print(
-                            f"[情報] 最適化完了 - 最適サイズ: {best_size}銘柄, "
-                            f"バックテストリターン: {return_rate_display}"
-                        )
-                        print(
-                            f"[情報] 選定銘柄数: {len(selected_profiles)} (内 {len(available_selected_stocks)} がデータ取得済み)"
+                            f"[情報] 最適化完了 - 選定銘柄数: {len(selected_profiles)} (内 {len(available_selected_stocks)} がデータ取得済み)"
                         )
 
                         if not available_selected_stocks:
@@ -573,7 +586,7 @@ class FullAutoInvestmentSystem:
                             print("=" * 60)
                             recommendations = []
                             analysis_failed_count = 0
-
+                            
                             for symbol in available_selected_stocks:
                                 try:
                                     recommendation = await self._analyze_single_stock(
@@ -583,15 +596,12 @@ class FullAutoInvestmentSystem:
                                         recommendations.append(recommendation)
                                     else:
                                         analysis_failed_count += 1
-
+                                        
                                 except Exception as e:
                                     analysis_failed_count += 1
                                     logger.error(f"個別銘柄分析中にエラーが発生しました: {symbol} - {e}")
-
-                            print(
-                                f"[完了] 個別銘柄分析完了 - 成功: {len(recommendations)}銘柄, "
-                                f"失敗: {analysis_failed_count}銘柄"
-                            )
+                            
+                            print(f"[完了] 個別銘柄分析完了 - 成功: {len(recommendations)}銘柄, 失敗: {analysis_failed_count}銘柄")
             
             except Exception as e:
                 print(f"[エラー] ポートフォリオ最適化中に予期せぬエラーが発生しました: {e}")
@@ -709,6 +719,13 @@ class FullAutoInvestmentSystem:
                 buy_date = datetime.now()
                 sell_date = buy_date + timedelta(days=30)
 
+                # risk_analysis_for_payload が None の場合や risk_level が存在しない場合に備えて安全にアクセス
+                risk_level_value = "unknown"
+                if risk_analysis_for_payload is not None:
+                    risk_level_attr = getattr(risk_analysis_for_payload, 'risk_level', None)
+                    if risk_level_attr is not None:
+                        risk_level_value = getattr(risk_level_attr, 'value', 'unknown')
+
                 return AutoRecommendation(
                     symbol=symbol,
                     company_name=data.attrs.get('info', {}).get('longName', symbol),
@@ -717,7 +734,7 @@ class FullAutoInvestmentSystem:
                     stop_loss=stop_loss,
                     expected_return=expected_return,
                     confidence=confidence,
-                    risk_level=getattr(risk_analysis_for_payload, 'risk_level', type('DummyRiskLevel', (), {'value': 'unknown'})()).value,
+                    risk_level=risk_level_value,
                     buy_date=buy_date,
                     sell_date=sell_date,
                     reasoning=reasoning
@@ -768,9 +785,9 @@ class FullAutoInvestmentSystem:
             reasons.append("中期待リターン")
             
         # リスクレベルの低さ
-        if risk_analysis and risk_analysis.risk_level.value == "low":
+        if risk_analysis and hasattr(risk_analysis, 'risk_level') and risk_analysis.risk_level and hasattr(risk_analysis.risk_level, 'value') and risk_analysis.risk_level.value == "low":
             reasons.append("低リスク")
-        elif risk_analysis and risk_analysis.risk_level.value == "medium":
+        elif risk_analysis and hasattr(risk_analysis, 'risk_level') and risk_analysis.risk_level and hasattr(risk_analysis.risk_level, 'value') and risk_analysis.risk_level.value == "medium":
             reasons.append("中程度リスク")
             
         if not reasons:
@@ -866,7 +883,6 @@ class FullAutoInvestmentSystem:
 
         self.logger.info("Saved Google Colab data retrieval script to %s", script_file_path)
         print(f"[INFO] Saved Google Colab data retrieval script to {script_file_path}")
-
 
 
 def build_cli_parser() -> argparse.ArgumentParser:

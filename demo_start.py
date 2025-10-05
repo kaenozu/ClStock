@@ -16,7 +16,6 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-
 def start_demo_trading():
     """デモ取引を開始する"""
     print("=" * 60)
@@ -39,7 +38,7 @@ def start_demo_trading():
         print("📊 システム初期化中...")
 
         # 87%精度システム初期化
-        from models_new.precision.precision_87_system import (
+        from models.precision.precision_87_system import (
             Precision87BreakthroughSystem,
         )
 
@@ -52,8 +51,8 @@ def start_demo_trading():
         data_provider = StockDataProvider()
         print("✅ データプロバイダー初期化完了")
 
-        # 簡単なデモ取引実行
-        print("\n🔄 デモ取引シミュレーション開始...")
+        # 簡単なデモ取引実行 (日次)
+        print("\n🔄 デモ取引シミュレーション開始 (日次)...")
 
         portfolio = {
             "cash": initial_money,
@@ -62,82 +61,131 @@ def start_demo_trading():
             "daily_pnl": [],
         }
 
-        # 各銘柄で予測実行
-        for symbol in target_stocks:
-            print(f"\n📊 {symbol} 分析中...")
+        # 各営業日で予測・取引実行
+        import datetime
+        start_date = datetime.datetime.now().date()
+        end_date = start_date + datetime.timedelta(days=7)
+        business_dates = pd.bdate_range(start=start_date, end=end_date, freq='B').date
 
-            try:
-                # 87%精度予測実行
-                result = precision_system.predict_with_87_precision(symbol)
+        for trade_date_obj in business_dates:
+            trade_date_str = trade_date_obj.strftime('%Y-%m-%d')
+            print(f"\n📅 {trade_date_str} の分析・取引開始...")
+            daily_pnl = 0.0
 
-                prediction = result["final_prediction"]
-                confidence = result["final_confidence"]
-                accuracy = result["final_accuracy"]
-                achieved_87 = result["precision_87_achieved"]
+            for symbol in target_stocks:
+                print(f"📊 {symbol} 分析中...")
 
-                print(f"  💡 予測結果:")
-                print(f"    価格予測: {prediction:.1f}")
-                print(f"    信頼度: {confidence:.1%}")
-                print(f"    推定精度: {accuracy:.1f}%")
-                print(f"    87%達成: {'✅ YES' if achieved_87 else '❌ NO'}")
+                predict_start_date = trade_date_obj - datetime.timedelta(days=365)
+                predict_start_str = predict_start_date.strftime('%Y-%m-%d')
 
-                # 取引判断（簡単版）
-                if achieved_87 and confidence > 0.7:
-                    # 高精度・高信頼度の場合は取引実行
-                    position_size = min(
-                        100000, portfolio["cash"] * 0.1
-                    )  # 最大10万円または資金の10%
+                try:
+                    # 87%精度予測実行 (trade_date - 1day までのデータを使用)
+                    result = precision_system.predict_with_87_precision(symbol, start=predict_start_str, end=(trade_date_obj - datetime.timedelta(days=1)).strftime('%Y-%m-%d'))
 
-                    if position_size > 10000 and portfolio["cash"] >= position_size:
-                        # 実際の現在価格を取得
-                        try:
-                            current_data = data_provider.get_stock_data(symbol, "1d")
-                            if not current_data.empty:
-                                current_price = float(current_data["Close"].iloc[-1])
-                            else:
-                                # データが取得できない場合のみ予測価格を使用
-                                current_price = prediction * 0.98
-                                print(
-                                    f"  ⚠️  {symbol} の現在価格が取得できないため、予測価格を使用"
-                                )
-                        except Exception as e:
-                            # エラーの場合は予測価格を使用
-                            current_price = prediction * 0.98
+                    prediction = result["final_prediction"]
+                    confidence = result["final_confidence"]
+                    accuracy = result["final_accuracy"]
+                    achieved_87 = result["precision_87_achieved"]
+
+                    print(f"  💡 予測結果:")
+                    print(f"    価格予測: {prediction:.1f}")
+                    print(f"    信頼度: {confidence:.1%}")
+                    print(f"    推定精度: {accuracy:.1f}%")
+                    print(f"    87%達成: {'✅ YES' if achieved_87 else '❌ NO'}")
+
+                    # trade_date の実際の価格を取得
+                    current_price = None
+                    try:
+                        current_data = data_provider.get_stock_data(symbol, start=trade_date_str, end=trade_date_str)
+                        if not current_data.empty:
+                            current_price = float(current_data["Close"].iloc[-1])
+                        else:
+                            print(f"  📅 {symbol} は {trade_date_str} が休場日の可能性 - スキップ")
+                            continue # その銘柄のループを次に進める
+                    except Exception as e:
+                        print(f"  ⚠️  {symbol} の価格取得エラー (start={trade_date_str}, end={trade_date_str}): {str(e)} - スキップ")
+                        continue # その銘柄のループを次に進める
+
+                    # 取引判断（簡単版）: 予測 < 実際 -> 上昇したと予測漏れ -> BUY
+                    # これは、予測が実際より低かった場合に買うという戦略です。
+                    # 逆に、予測 > 実際 -> 下落したと予測したが実際は高かった -> SELL という判断もできます。
+                    # ここでは、87%達成かつ信頼度70%以上かつ予測価格が実際の価格より低い場合に買いとします。
+                    if achieved_87 and confidence > 0.7 and prediction < current_price:
+                        # 高精度・高信頼度かつ予測より価格が高かった場合は、買いと解釈
+                        position_size = min(
+                            100000, portfolio["cash"] * 0.1
+                        )  # 最大10万円または資金の10%
+
+                        if position_size > 10000 and portfolio["cash"] >= position_size and current_price is not None:
+                            shares = int(position_size / current_price)
+
+                            portfolio["positions"][symbol] = {
+                                "shares": shares,
+                                "buy_price": current_price,
+                                "current_value": shares * current_price,
+                            }
+                            portfolio["cash"] -= shares * current_price
+
+                            trade_record = {
+                                "symbol": symbol,
+                                "action": "BUY",
+                                "shares": shares,
+                                "price": current_price,
+                                "amount": shares * current_price,
+                                "confidence": confidence,
+                                "accuracy": accuracy,
+                                "timestamp": datetime.now(),
+                            }
+                            portfolio["trades"].append(trade_record)
+
+                            daily_pnl -= shares * current_price # 買いなので、現金が減る（PNL的にはマイナス）
+
                             print(
-                                f"  ⚠️  {symbol} の価格取得エラー: {str(e)} - 予測価格を使用"
+                                f"  🔥 取引実行: {shares}株 買い注文 (単価: {current_price:.0f}円)"
                             )
+                        else:
+                            print(f"  ⏸️ 資金不足または現在価格が不明のため取引見送り")
+                    # 売却判断: 保有している銘柄かつ、価格が買値より十分上がった場合
+                    elif symbol in portfolio["positions"]:
+                        held_info = portfolio["positions"][symbol]
+                        buy_price = held_info["buy_price"]
+                        profit_threshold = buy_price * 1.05 # 5%利益が出ているか
+                        if current_price >= profit_threshold:
+                            shares_to_sell = held_info["shares"]
+                            sell_amount = shares_to_sell * current_price
+                            portfolio["cash"] += sell_amount
+                            daily_pnl += sell_amount # 売却で現金が増える（PNL的にはプラッス）
+                            sold_position_value = held_info["current_value"]
+                            daily_pnl -= sold_position_value # 売却したポジションの価値を引く（PNL的にはマイナス）
 
-                        shares = int(position_size / current_price)
+                            trade_record = {
+                                "symbol": symbol,
+                                "action": "SELL",
+                                "shares": shares_to_sell,
+                                "price": current_price,
+                                "amount": sell_amount,
+                                "confidence": confidence, # 売却時の信頼度は不明なため、直近の予測の信頼度を流用
+                                "accuracy": accuracy,
+                                "timestamp": datetime.now(),
+                            }
+                            portfolio["trades"].append(trade_record)
 
-                        portfolio["positions"][symbol] = {
-                            "shares": shares,
-                            "buy_price": current_price,
-                            "current_value": shares * current_price,
-                        }
-                        portfolio["cash"] -= shares * current_price
+                            del portfolio["positions"][symbol] # ポジションを削除
 
-                        trade_record = {
-                            "symbol": symbol,
-                            "action": "BUY",
-                            "shares": shares,
-                            "price": current_price,
-                            "amount": shares * current_price,
-                            "confidence": confidence,
-                            "accuracy": accuracy,
-                            "timestamp": datetime.now(),
-                        }
-                        portfolio["trades"].append(trade_record)
-
-                        print(
-                            f"  🔥 取引実行: {shares}株 買い注文 (単価: {current_price:.0f}円)"
-                        )
+                            print(
+                                f"  💰 取引実行: {shares_to_sell}株 売り注文 (単価: {current_price:.0f}円)"
+                            )
+                        else:
+                            print(f"  📈 {symbol} 保有中、売却基準未達 (現在: {current_price:.0f}, 買値: {buy_price:.0f})")
                     else:
-                        print(f"  ⏸️ 資金不足のため取引見送り")
-                else:
-                    print(f"  ⏸️ 基準未達のため取引見送り")
+                        print(f"  ⏸️ 基準未達のため取引見送り")
 
-            except Exception as e:
-                print(f"  ❌ エラー: {symbol} の分析に失敗 - {str(e)}")
+                except Exception as e:
+                    print(f"  ❌ エラー: {symbol} の {trade_date_str} 分析に失敗 - {str(e)}")
+
+            # 1日分のループが終わったので、その日の損益を記録
+            portfolio["daily_pnl"].append((trade_date_obj, daily_pnl))
+            print(f"  💰 {trade_date_str} の損益: {daily_pnl:.0f}円")
 
         # 結果表示
         print("\n" + "=" * 60)
@@ -186,10 +234,9 @@ def start_demo_trading():
         print(f"❌ システムエラー: {str(e)}")
         print("📝 まず以下を確認してください:")
         print("  1. 必要なライブラリがインストールされているか")
-        print("  2. models_new/モジュールが正しく配置されているか")
+        print("  2. models/モジュールが正しく配置されているか")
         print("  3. インターネット接続でデータが取得できるか")
         return None
-
 
 def show_help():
     """使い方の説明"""

@@ -1,0 +1,5 @@
+Description: _raise_cli_error や _bad_parameter 関数内で、logger.error でログを記録した後に click.ClickException を発生させています。click.ClickException は標準エラー出力にメッセージを出力します。logger.error を使用しているため、エラーメッセージが重複して記録される可能性があります。
+Severity: Medium
+File: clstock_cli.py
+Location: _raise_cli_error, _bad_parameter 関数
+Suggestion: logger と click のエラーハンドリングの重複を避ける、または logger.exception を使用してスタックトレースも記録するように検討してください。

@@ -26,7 +26,7 @@ def _ensure_module(path: str) -> types.ModuleType:
     return module
 
 
-hybrid_module = _ensure_module("models_new.hybrid.hybrid_predictor")
+hybrid_module = _ensure_module("models.hybrid.hybrid_predictor")
 
 
 class _StubHybridStockPredictor:
@@ -83,7 +83,7 @@ class _StubPortfolioOptimizer:
 trading_optimizer_module.PortfolioOptimizer = _StubPortfolioOptimizer
 
 
-strategy_module = _ensure_module("models_new.advanced.trading_strategy_generator")
+strategy_module = _ensure_module("models.advanced.trading_strategy_generator")
 
 
 class _StubActionType(Enum):
@@ -106,7 +106,7 @@ strategy_module.StrategyGenerator = _StubStrategyGenerator
 strategy_module.SignalGenerator = _StubSignalGenerator
 
 
-risk_module = _ensure_module("models_new.advanced.risk_management_framework")
+risk_module = _ensure_module("models.advanced.risk_management_framework")
 
 
 class _StubRiskLevel(Enum):
@@ -155,7 +155,7 @@ settings_module.get_settings = lambda: SimpleNamespace()
 
 
 from full_auto_system import FullAutoInvestmentSystem, RiskAssessment
-from models_new.advanced.risk_management_framework import RiskLevel
+from models.advanced.risk_management_framework import RiskLevel
 
 
 @pytest.mark.asyncio

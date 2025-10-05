@@ -322,15 +322,39 @@ class ServiceRegistry:
                 except subprocess.TimeoutExpired:
                     logger.warning("タイムアウト、強制終了: %s", name)
                     process_info.process.kill()
-                    process_info.process.wait(timeout=10)
+                    try:
+                        process_info.process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        logger.error("強制終了後もプロセスが終了しません: %s", name)
+                        return False
 
             process_info.status = ProcessStatus.STOPPED
             process_info.pid = None
             process_info.process = None
-            if process_info.stdout_thread and process_info.stdout_thread.is_alive():
-                process_info.stdout_thread.join(timeout=1)
-            if process_info.stderr_thread and process_info.stderr_thread.is_alive():
-                process_info.stderr_thread.join(timeout=1)
+            if process_info.stdout_thread:
+                stop = getattr(process_info.stdout_thread, "stop", None)
+                if callable(stop):
+                    stop()
+                join = getattr(process_info.stdout_thread, "join", None)
+                if callable(join):
+                    is_alive = getattr(process_info.stdout_thread, "is_alive", None)
+                    if callable(is_alive):
+                        if is_alive():
+                            join(timeout=1)
+                    else:
+                        join(timeout=1)
+            if process_info.stderr_thread:
+                stop = getattr(process_info.stderr_thread, "stop", None)
+                if callable(stop):
+                    stop()
+                join = getattr(process_info.stderr_thread, "join", None)
+                if callable(join):
+                    is_alive = getattr(process_info.stderr_thread, "is_alive", None)
+                    if callable(is_alive):
+                        if is_alive():
+                            join(timeout=1)
+                    else:
+                        join(timeout=1)
             process_info.stdout_thread = None
             process_info.stderr_thread = None
 

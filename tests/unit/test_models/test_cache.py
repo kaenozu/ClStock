@@ -109,6 +109,24 @@ class TestDataCache:
         assert self.cache.get("normal") == "value"
         assert self.cache.get("expiring") is None
 
+    def test_lru_eviction_respects_recent_access(self):
+        """最近アクセスしたエントリがLRUで保持されることを確認"""
+        limited_cache = DataCache(self.temp_dir, default_ttl=10, max_size=2)
+
+        limited_cache.set("key1", "value1")
+        time.sleep(0.05)
+        limited_cache.set("key2", "value2")
+
+        # key1にアクセスして最新利用としてマーク
+        assert limited_cache.get("key1") == "value1"
+
+        # 新しいエントリの追加で最も使用されていないkey2が削除されるはず
+        limited_cache.set("key3", "value3")
+
+        assert limited_cache.get("key1") == "value1"
+        assert limited_cache.get("key2") is None
+        assert limited_cache.get("key3") == "value3"
+
     def test_cache_key_generation(self):
         """キャッシュキー生成のテスト"""
         key1 = self.cache._get_cache_key("func", "arg1", "arg2", kwarg1="value1")

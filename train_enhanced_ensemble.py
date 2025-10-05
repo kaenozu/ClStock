@@ -63,7 +63,7 @@ def main():
 def run_enhanced_ensemble_training() -> Dict[str, Any]:
     """拡張アンサンブルモデルの訓練実行"""
     try:
-        from models_new.ensemble.ensemble_predictor import EnsembleStockPredictor
+        from models.ensemble.ensemble_predictor import EnsembleStockPredictor
         from data.stock_data import StockDataProvider
 
         print("1. データプロバイダー初期化")
@@ -162,7 +162,7 @@ def select_training_symbols(data_provider) -> List[str]:
 def evaluate_trained_model() -> Dict[str, Any]:
     """訓練済みモデルの評価"""
     try:
-        from models_new.ensemble.ensemble_predictor import EnsembleStockPredictor
+        from models.ensemble.ensemble_predictor import EnsembleStockPredictor
         from data.stock_data import StockDataProvider
 
         print("5. 訓練済みモデルの読み込み")

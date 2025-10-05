@@ -72,7 +72,15 @@ class AdvancedRiskManager:
         """ポートフォリオVaR（Value at Risk）計算"""
 
         if len(self.positions) == 0:
-            return {"var": 0, "cvar": 0, "portfolio_volatility": 0}
+            return {
+                "var": 0,
+                "cvar": 0,
+                "var_rate": 0,
+                "cvar_rate": 0,
+                "portfolio_volatility": 0,
+                "confidence_level": confidence_level,
+                "total_portfolio_value": 0,
+            }
 
         try:
             # 各ポジションのリターンデータ取得
@@ -94,7 +102,15 @@ class AdvancedRiskManager:
                 position_values[symbol] = position["size"] * current_price
 
             if len(returns_data) == 0:
-                return {"var": 0, "cvar": 0, "portfolio_volatility": 0}
+                return {
+                    "var": 0,
+                    "cvar": 0,
+                    "var_rate": 0,
+                    "cvar_rate": 0,
+                    "portfolio_volatility": 0,
+                    "confidence_level": confidence_level,
+                    "total_portfolio_value": sum(position_values.values()),
+                }
 
             # リターンマトリックス作成
             returns_df = pd.DataFrame(returns_data).fillna(0)
@@ -137,13 +153,26 @@ class AdvancedRiskManager:
 
         except Exception as e:
             logging.error(f"VaR計算エラー: {e}")
-            return {"var": 0, "cvar": 0, "portfolio_volatility": 0}
+            return {
+                "var": 0,
+                "cvar": 0,
+                "var_rate": 0,
+                "cvar_rate": 0,
+                "portfolio_volatility": 0,
+                "confidence_level": confidence_level,
+                "total_portfolio_value": 0,
+            }
 
     def monitor_correlation_changes(self, lookback_days: int = 60) -> dict:
         """銘柄間相関の変化監視"""
 
         if len(self.positions) < 2:
-            return {"correlation_risk": "低", "max_correlation": 0}
+            return {
+                "correlation_risk": "低",
+                "max_correlation": 0,
+                "avg_correlation": 0,
+                "high_correlation_pairs": [],
+            }
 
         try:
             symbols = list(self.positions.keys())
@@ -157,7 +186,12 @@ class AdvancedRiskManager:
                     returns_data[symbol] = daily_returns.tail(lookback_days)
 
             if len(returns_data) < 2:
-                return {"correlation_risk": "低", "max_correlation": 0}
+                return {
+                    "correlation_risk": "低",
+                    "max_correlation": 0,
+                    "avg_correlation": 0,
+                    "high_correlation_pairs": [],
+                }
 
             # 相関マトリックス計算
             returns_df = pd.DataFrame(returns_data).fillna(0)
@@ -170,7 +204,12 @@ class AdvancedRiskManager:
                     correlations.append(abs(correlation_matrix.iloc[i, j]))
 
             if len(correlations) == 0:
-                return {"correlation_risk": "低", "max_correlation": 0}
+                return {
+                    "correlation_risk": "低",
+                    "max_correlation": 0,
+                    "avg_correlation": 0,
+                    "high_correlation_pairs": [],
+                }
 
             max_correlation = max(correlations)
             avg_correlation = np.mean(correlations)
@@ -204,7 +243,12 @@ class AdvancedRiskManager:
 
         except Exception as e:
             logging.error(f"相関監視エラー: {e}")
-            return {"correlation_risk": "不明", "max_correlation": 0}
+            return {
+                "correlation_risk": "不明",
+                "max_correlation": 0,
+                "avg_correlation": 0,
+                "high_correlation_pairs": [],
+            }
 
     def calculate_position_sizing_kelly(
         self,
@@ -311,7 +355,12 @@ class AdvancedRiskManager:
 
         except Exception as e:
             logging.error(f"ドローダウン評価エラー: {e}")
-            return {"current_drawdown": 0, "risk_level": "不明"}
+            return {
+                "current_drawdown": 0,
+                "risk_level": "不明",
+                "position_details": [],
+                "recommendation": "リスク水準正常: 現在の戦略継続",
+            }
 
     def _get_drawdown_recommendation(self, drawdown_pct: float) -> str:
         """ドローダウンに基づく推奨アクション"""
@@ -336,8 +385,9 @@ class AdvancedRiskManager:
         risk_scores = []
 
         # VaRスコア
-        if var_result["total_portfolio_value"] > 0:
-            var_ratio = var_result["var"] / var_result["total_portfolio_value"]
+        total_portfolio_value = var_result.get("total_portfolio_value", 0)
+        if total_portfolio_value > 0:
+            var_ratio = var_result.get("var", 0) / total_portfolio_value
             var_score = min(100, var_ratio * 1000)  # VaR比率をスコア化
             risk_scores.append(var_score)
 
@@ -385,8 +435,9 @@ class AdvancedRiskManager:
         recommendations = []
 
         # VaRベースの推奨
-        if var_result.get("total_portfolio_value", 0) > 0:
-            var_ratio = var_result["var"] / var_result["total_portfolio_value"]
+        total_portfolio_value = var_result.get("total_portfolio_value", 0)
+        if total_portfolio_value > 0:
+            var_ratio = var_result.get("var", 0) / total_portfolio_value
             if var_ratio > 0.1:
                 recommendations.append("VaRが10%超過: ポジションサイズ縮小推奨")
 

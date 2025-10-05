@@ -5,13 +5,13 @@
 """
 
 import json
-import os
 import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 import hashlib
+import logging
 
 # 定数定義
 DEFAULT_KEEP_RECORDS = 30
@@ -36,13 +36,15 @@ class OptimizationRecord:
 class OptimizationHistoryManager:
     """最適化履歴管理クラス"""
 
-    def __init__(self, history_dir: str = "optimization_history"):
-        import logging
-
-        self.logger = logging.getLogger(__name__)
+    def __init__(
+        self,
+        history_dir: str = "optimization_history",
+        logger_instance: Optional[logging.Logger] = None,
+    ):
+        self.logger = logger_instance or logging.getLogger(__name__)
 
         self.history_dir = Path(history_dir)
-        self.history_dir.mkdir(exist_ok=True)
+        self.history_dir.mkdir(parents=True, exist_ok=True)
 
         self.history_file = self.history_dir / "history.json"
         self.backup_dir = self.history_dir / "backups"
@@ -55,7 +57,8 @@ class OptimizationHistoryManager:
         self.history: List[OptimizationRecord] = self._load_history()
 
         self.logger.info(
-            f"OptimizationHistoryManager initialized with {len(self.history)} existing records"
+            "OptimizationHistoryManager initialized with %d existing records",
+            len(self.history),
         )
 
     def _load_history(self) -> List[OptimizationRecord]:
@@ -79,15 +82,16 @@ class OptimizationHistoryManager:
                         continue
 
                 self.logger.info(
-                    f"Successfully loaded {len(records)} records from history"
+                    "Successfully loaded %d records from history",
+                    len(records),
                 )
                 return records
 
         except json.JSONDecodeError as e:
-            self.logger.error(f"Invalid JSON in history file: {e}")
+            self.logger.error("Invalid JSON in history file: %s", e)
             return []
         except Exception as e:
-            self.logger.error(f"Unexpected error loading history: {e}")
+            self.logger.error("Unexpected error loading history: %s", e)
             return []
 
     def _save_history(self):
@@ -153,9 +157,9 @@ class OptimizationHistoryManager:
         # 自動適用の場合、設定を更新
         if auto_apply:
             self._apply_config(stocks)
-            print(f"✅ 最適化結果を自動適用しました (ID: {record_id})")
+            self.logger.info("最適化結果を自動適用しました (ID: %s)", record_id)
         else:
-            print(f"💾 最適化結果を保存しました (ID: {record_id})")
+            self.logger.info("最適化結果を保存しました (ID: %s)", record_id)
 
         return record_id
 
@@ -165,7 +169,7 @@ class OptimizationHistoryManager:
             backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
             backup_path = self.backup_dir / backup_name
             shutil.copy2(self.current_config_file, backup_path)
-            print(f"📦 現在の設定をバックアップ: {backup_name}")
+            self.logger.info("現在の設定をバックアップ: %s", backup_name)
 
     def _apply_config(self, stocks: List[str]):
         """設定を適用"""
@@ -178,15 +182,17 @@ class OptimizationHistoryManager:
         with open(self.current_config_file, "w", encoding="utf-8") as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
 
+        self.logger.info("設定を適用しました: %d銘柄", len(stocks))
+
     def rollback_to(self, record_id: str) -> bool:
         """指定IDの設定にロールバック"""
         record = self.get_record(record_id)
         if not record:
-            print(f"❌ ID {record_id} の記録が見つかりません")
+            self.logger.error("ID %s の記録が見つかりません", record_id)
             return False
 
         if not record.rollback_available:
-            print(f"❌ この記録はロールバック不可です")
+            self.logger.error("この記録はロールバック不可です (ID: %s)", record_id)
             return False
 
         # バックアップしてから適用
@@ -198,9 +204,9 @@ class OptimizationHistoryManager:
             r.is_active = r.id == record_id
         self._save_history()
 
-        print(f"✅ ID {record_id} にロールバックしました")
-        print(f"   時刻: {record.timestamp}")
-        print(f"   説明: {record.description}")
+        self.logger.info("ID %s にロールバックしました", record_id)
+        self.logger.info("   時刻: %s", record.timestamp)
+        self.logger.info("   説明: %s", record.description)
 
         return True
 
@@ -261,7 +267,9 @@ class OptimizationHistoryManager:
         """古い記録をクリーンアップ"""
         if len(self.history) <= keep_count:
             self.logger.info(
-                f"No cleanup needed. Current records: {len(self.history)}, Keep count: {keep_count}"
+                "No cleanup needed. Current records: %d, Keep count: %d",
+                len(self.history),
+                keep_count,
             )
             return
 
@@ -283,9 +291,10 @@ class OptimizationHistoryManager:
         self._save_history()
 
         self.logger.info(
-            f"Cleaned up {removed_count} old records. Remaining: {len(self.history)}"
+            "Cleaned up %d old records. Remaining: %d",
+            removed_count,
+            len(self.history),
         )
-        print(f"🧹 {removed_count}件の古い記録を削除しました")
 
     def get_statistics(self) -> Dict[str, Any]:
         """統計情報を取得"""
@@ -296,26 +305,51 @@ class OptimizationHistoryManager:
             r.performance_metrics.get("return_rate", 0) for r in self.history
         ]
 
+        sorted_history = sorted(self.history, key=lambda x: x.timestamp, reverse=True)
+        latest_record = sorted_history[0] if sorted_history else None
+        active_record = self.get_active_record()
+
         return {
             "total_records": len(self.history),
-            "active_record": (
-                self.get_active_record().id if self.get_active_record() else None
-            ),
+            "active_record": active_record.id if active_record else None,
             "average_return": (
                 sum(performances) / len(performances) if performances else 0
             ),
             "best_return": max(performances) if performances else 0,
             "worst_return": min(performances) if performances else 0,
-            "latest_optimization": self.history[-1].timestamp if self.history else None,
+            "latest_optimization": latest_record.timestamp if latest_record else None,
         }
+
+    def get_optimal_stocks_from_config(self) -> List[str]:
+        """設定ファイルから最適銘柄リストを取得"""
+
+        try:
+            from config.settings import get_settings
+
+            settings = get_settings()
+            default_optimal_stocks = list(settings.target_stocks.keys())[:10]
+
+            if self.current_config_file.exists():
+                with open(self.current_config_file, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    return config.get("optimal_stocks", default_optimal_stocks)
+
+            return default_optimal_stocks
+
+        except Exception as e:
+            self.logger.error("設定読み込みエラー: %s", e)
+            return []
 
 
 # グローバルインスタンス
-history_manager = OptimizationHistoryManager()
+history_manager: Optional[OptimizationHistoryManager] = None
 
 
 def get_history_manager() -> OptimizationHistoryManager:
     """履歴管理インスタンスを取得"""
+    global history_manager
+    if history_manager is None:
+        history_manager = OptimizationHistoryManager()
     return history_manager
 
 
