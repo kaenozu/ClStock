@@ -303,6 +303,41 @@ def test_get_recommendations_returns_closed_after_15(monkeypatch):
     assert response.json()["market_status"] == "市場営業時間外"
 
 
+def test_get_recommendations_returns_closed_after_weekend(monkeypatch):
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    class DummyDateTime:
+        @classmethod
+        def now(cls, tz=None):
+            assert tz == ZoneInfo("Asia/Tokyo")
+            return datetime(2024, 1, 6, 10, 0, 0, tzinfo=ZoneInfo("Asia/Tokyo"))
+
+    monkeypatch.setattr("api.endpoints.datetime", DummyDateTime)
+
+    class DummyPredictor:
+        def __init__(self) -> None:
+            self.received_top_n = None
+
+        def get_top_recommendations(self, top_n):
+            self.received_top_n = top_n
+            return []
+
+    dummy_predictor = DummyPredictor()
+    monkeypatch.setattr("api.endpoints.MLStockPredictor", lambda: dummy_predictor)
+    monkeypatch.setattr("api.endpoints.verify_token", lambda token: None)
+
+    response = client.get(
+        "/recommendations",
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200
+    assert dummy_predictor.received_top_n == 10
+    assert response.json()["market_status"] == "市場営業時間外"
+
+
 def test_health_endpoint_includes_security_headers():
     from app.main import app as main_app
 
