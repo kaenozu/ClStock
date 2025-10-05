@@ -11,11 +11,11 @@ from typing import List, Optional, Dict, Any
 import pandas as pd
 
 from data.stock_data import StockDataProvider
-from models_new.hybrid.hybrid_predictor import HybridStockPredictor
-from models_new.hybrid.prediction_result import PredictionResult
+from models.hybrid.hybrid_predictor import HybridStockPredictor
+from models.base.interfaces import PredictionResult
 from trading.tse.analysis import StockProfile
 from trading.tse.optimizer import PortfolioOptimizer
-from trading.tse.backtester import PortfolioBacktester
+from trading.tse import PortfolioBacktester
 from analysis.sentiment_analyzer import MarketSentimentAnalyzer
 from models.advanced.trading_strategy_generator import (
     StrategyGenerator,

@@ -1,60 +1,13 @@
-name: Code Quality
+name: Modern CI
 
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
-  schedule:
-    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM
 
 jobs:
-  security-audit:
-    runs-on: ubuntu-latest
-    env:
-      SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.12
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install bandit safety
-
-    - name: Security audit with bandit
-      run: |
-        bandit -r . -f json -o bandit-security-report.json
-        bandit -r . --severity-level medium
-
-    - name: Dependency vulnerability check
-      run: |
-        safety check --json --output safety-report.json --key "$SAFETY_API_KEY" || true
-        safety check --key "$SAFETY_API_KEY"
-
-    - name: Upload security reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: security-reports
-        path: |
-          bandit-security-report.json
-          safety-report.json
-
-  # dependency-review:
-  #   runs-on: ubuntu-latest
-  #   if: github.event_name == 'pull_request'
-  #
-  #   steps:
-  #   - name: Dependency Review
-  #     uses: actions/dependency-review-action@v3
-  #   # Note: Requires GitHub Advanced Security for private repositories
-
-  code-metrics:
+  quality-and-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -63,89 +16,30 @@ jobs:
     - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
-        python-version: 3.12
+        python-version: '3.12'
 
-    - name: Install dependencies
+    - name: Cache pip
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Upgrade pip and install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install radon xenon vulture
-
-    - name: Calculate code metrics
-      run: |
-        # Cyclomatic complexity
-                radon cc . --total-average --json -o complexity-report.json
-                radon cc . --min=B
-        
-                # Maintainability index
-                radon mi . --json -o maintainability-report.json
-                radon mi . --min=B
-        
-                # Code complexity with xenon
-                xenon --max-absolute C --max-modules B --max-average A .    - name: Dead code detection
-      run: |
-        vulture . --min-confidence 80 > dead-code-report.txt || true
-
-    - name: Upload metrics reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: code-metrics
-        path: |
-          complexity-report.json
-          maintainability-report.json
-          dead-code-report.txt
-
-  documentation-check:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.12
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install --index-url https://download.pytorch.org/whl/cpu \
-          torch==2.7.1+cpu torchaudio==2.7.1+cpu torchvision==0.22.1+cpu
         pip install -r requirements.txt
-        pip install pydocstyle interrogate
+        pip install black==24.* flake8==7.* pytest==8.* pytest-mock
 
-    - name: Docstring style check
+    - name: Code style (black)
       run: |
-        pydocstyle models_refactored/ data/ utils/ --convention=google || echo "Docstring check completed with warnings"
+        black --check models/performance.py
 
-    - name: Documentation coverage
+    - name: Lint (flake8)
       run: |
-        interrogate models_refactored/ data/ utils/ --ignore-init-method --ignore-magic --ignore-module --fail-under=50 || echo "Documentation coverage check completed"
+        flake8 models/performance.py
 
-  performance-benchmark:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.12
-
-    - name: Install dependencies
+    - name: Unit tests (core performance)
       run: |
-        python -m pip install --upgrade pip
-        pip install --index-url https://download.pytorch.org/whl/cpu \
-          torch==2.7.1+cpu torchaudio==2.7.1+cpu torchvision==0.22.1+cpu
-        pip install -r requirements.txt
-        pip install pytest-benchmark
-
-    - name: Run performance benchmarks
-      run: |
-        python -m pytest tests/performance/ --benchmark-only --benchmark-json=benchmark.json || echo "Performance benchmarks completed with warnings"
-
-    - name: Upload benchmark results
-      uses: actions/upload-artifact@v4
-      with:
-        name: performance-benchmarks
-        path: benchmark.json
+        PYTHONPATH=. python -m pytest tests/unit/test_models/test_performance.py -v

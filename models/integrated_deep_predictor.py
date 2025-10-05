@@ -4,6 +4,7 @@ import pandas as pd
 from typing import Dict, List, Tuple, Optional, Union
 import logging
 from datetime import datetime
+from .performance_monitor import monitor_resources
 
 from models.custom_deep_predictor import CustomDeepPredictor
 from analysis.multimodal_integration import MultimodalIntegrator
@@ -90,6 +91,7 @@ class IntegratedDeepPredictor:
         """
         return self.adaptive_attention(X)
         
+    @monitor_resources
     def train(self, 
               X_train: np.ndarray, 
               y_train: np.ndarray,
@@ -111,40 +113,45 @@ class IntegratedDeepPredictor:
         Returns:
             history: 訓練履歴
         """
-        logger.info("統合深層学習モデルの訓練開始")
+        try:
+            logger.info("統合深層学習モデルの訓練開始")
+            
+            # 自己教師あり学習による特徴量抽出
+            logger.info("自己教師あり学習による特徴量抽出中...")
+            self_supervised_features = self.extract_self_supervised_features(X_train)
+            
+            # 訓練データの前処理（アテンション適用）
+            logger.info("アテンション機構適用中...")
+            attended_features = self.apply_attention(X_train)
+            
+            # 統合特徴量の作成
+            integrated_features = np.concatenate([
+                X_train.reshape(X_train.shape[0], -1),  # 元の特徴量
+                self_supervised_features,                # 自己教師あり特徴量
+                np.expand_dims(attended_features, axis=1).repeat(X_train.shape[0], axis=0)  # アテンション特徴量
+            ], axis=1)
+            
+            # 独自モデルの訓練
+            logger.info("独自深層学習モデル訓練中...")
+            history = self.custom_model.train(
+                integrated_features, 
+                y_train, 
+                X_val, 
+                y_val, 
+                epochs=epochs, 
+                batch_size=batch_size
+            )
+            
+            self.is_trained = True
+            self.training_history = history.history if hasattr(history, 'history') else {}
+            
+            logger.info("統合深層学習モデルの訓練完了")
+            return self.training_history
+        except Exception as e:
+            logger.error(f"統合深層学習モデルの訓練中にエラーが発生しました: {e}")
+            raise e
         
-        # 自己教師あり学習による特徴量抽出
-        logger.info("自己教師あり学習による特徴量抽出中...")
-        self_supervised_features = self.extract_self_supervised_features(X_train)
-        
-        # 訓練データの前処理（アテンション適用）
-        logger.info("アテンション機構適用中...")
-        attended_features = self.apply_attention(X_train)
-        
-        # 統合特徴量の作成
-        integrated_features = np.concatenate([
-            X_train.reshape(X_train.shape[0], -1),  # 元の特徴量
-            self_supervised_features,                # 自己教師あり特徴量
-            np.expand_dims(attended_features, axis=1).repeat(X_train.shape[0], axis=0)  # アテンション特徴量
-        ], axis=1)
-        
-        # 独自モデルの訓練
-        logger.info("独自深層学習モデル訓練中...")
-        history = self.custom_model.train(
-            integrated_features, 
-            y_train, 
-            X_val, 
-            y_val, 
-            epochs=epochs, 
-            batch_size=batch_size
-        )
-        
-        self.is_trained = True
-        self.training_history = history.history if hasattr(history, 'history') else {}
-        
-        logger.info("統合深層学習モデルの訓練完了")
-        return self.training_history
-        
+    @monitor_resources
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
         予測の実行
@@ -155,26 +162,31 @@ class IntegratedDeepPredictor:
         Returns:
             predictions: 予測結果
         """
-        if not self.is_trained:
-            raise ValueError("モデルが訓練されていません。train()を呼び出してください。")
+        try:
+            if not self.is_trained:
+                raise ValueError("モデルが訓練されていません。train()を呼び出してください。")
+                
+            # 自己教師あり学習による特徴量抽出
+            self_supervised_features = self.extract_self_supervised_features(X)
             
-        # 自己教師あり学習による特徴量抽出
-        self_supervised_features = self.extract_self_supervised_features(X)
+            # アテンション適用
+            attended_features = self.apply_attention(X)
+            
+            # 統合特徴量の作成
+            integrated_features = np.concatenate([
+                X.reshape(X.shape[0], -1),
+                self_supervised_features,
+                np.expand_dims(attended_features, axis=1).repeat(X.shape[0], axis=0)
+            ], axis=1)
+            
+            # 予測
+            predictions = self.custom_model.predict(integrated_features)
+            return predictions
+        except Exception as e:
+            logger.error(f"統合深層学習モデルの予測中にエラーが発生しました: {e}")
+            raise e
         
-        # アテンション適用
-        attended_features = self.apply_attention(X)
-        
-        # 統合特徴量の作成
-        integrated_features = np.concatenate([
-            X.reshape(X.shape[0], -1),
-            self_supervised_features,
-            np.expand_dims(attended_features, axis=1).repeat(X.shape[0], axis=0)
-        ], axis=1)
-        
-        # 予測
-        predictions = self.custom_model.predict(integrated_features)
-        return predictions
-        
+    @monitor_resources
     def evaluate(self, X_test: np.ndarray, y_test: np.ndarray) -> Dict[str, float]:
         """
         モデルの評価
@@ -186,20 +198,24 @@ class IntegratedDeepPredictor:
         Returns:
             metrics: 評価指標
         """
-        predictions = self.predict(X_test)
-        
-        mse = np.mean((y_test - predictions) ** 2)
-        mae = np.mean(np.abs(y_test - predictions))
-        r2 = 1 - (np.sum((y_test - predictions) ** 2) / np.sum((y_test - np.mean(y_test)) ** 2))
-        
-        metrics = {
-            'mse': mse,
-            'mae': mae,
-            'r2': r2
-        }
-        
-        logger.info(f"モデル評価結果: {metrics}")
-        return metrics
+        try:
+            predictions = self.predict(X_test)
+            
+            mse = np.mean((y_test - predictions) ** 2)
+            mae = np.mean(np.abs(y_test - predictions))
+            r2 = 1 - (np.sum((y_test - predictions) ** 2) / np.sum((y_test - np.mean(y_test)) ** 2))
+            
+            metrics = {
+                'mse': mse,
+                'mae': mae,
+                'r2': r2
+            }
+            
+            logger.info(f"モデル評価結果: {metrics}")
+            return metrics
+        except Exception as e:
+            logger.error(f"統合深層学習モデルの評価中にエラーが発生しました: {e}")
+            raise e
         
     def setup_interpretability(self, X_train: np.ndarray, feature_names: Optional[List[str]] = None):
         """
@@ -216,6 +232,7 @@ class IntegratedDeepPredictor:
         )
         self.interpretability.setup_explainer(method='kernel')  # 一般的に使用される方法
         
+    @monitor_resources
     def explain_prediction(self, X_sample: np.ndarray, sample_index: int = 0) -> np.ndarray:
         """
         予測の解釈
@@ -227,11 +244,15 @@ class IntegratedDeepPredictor:
         Returns:
             shap_values: SHAP値
         """
-        if self.interpretability is None:
-            raise ValueError("解釈性分析がセットアップされていません。setup_interpretability()を呼び出してください。")
-            
-        shap_values = self.interpretability.calculate_shap_values(X_sample)
-        return shap_values
+        try:
+            if self.interpretability is None:
+                raise ValueError("解釈性分析がセットアップされていません。setup_interpretability()を呼び出してください。")
+                
+            shap_values = self.interpretability.calculate_shap_values(X_sample)
+            return shap_values
+        except Exception as e:
+            logger.error(f"統合深層学習モデルの解釈中にエラーが発生しました: {e}")
+            raise e
         
     def optimize_trading_strategy(self, symbol: str, period: str = '1y', timesteps: int = 10000):
         """

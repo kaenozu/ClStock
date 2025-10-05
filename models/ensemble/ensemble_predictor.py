@@ -627,3 +627,7 @@ class RefactoredEnsemblePredictor:
             execution_time=execution_time,
             metadata=metadata or {},
         )
+
+
+# Backward compatibility
+EnsembleStockPredictor = EnsemblePredictor

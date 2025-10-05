@@ -13,7 +13,14 @@ import time
 import os
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from sklearn.metrics import accuracy_score
+try:
+    from sklearn.metrics import accuracy_score
+except ImportError:
+    def accuracy_score(y_true, y_pred):
+        if len(y_true) != len(y_pred):
+            raise ValueError("Length mismatch between y_true and y_pred")
+        correct = sum(1 for true, pred in zip(y_true, y_pred) if true == pred)
+        return correct / len(y_true)
 import joblib
 import math
 

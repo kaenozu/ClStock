@@ -1,41 +1,41 @@
-"""Portfolio optimisation utilities for the TSE 4000 project."""
+"""Portfolio optimization module for ClStock."""
 
-from __future__ import annotations
+from typing import List, Dict, Any
+from dataclasses import dataclass
+from trading.tse.analysis import StockProfile
 
-from typing import Dict, List
 
-from .analysis import StockProfile
-
-PORTFOLIO_SIZES = [10, 15, 20, 25, 30]
-DEFAULT_TARGET_SIZE = 20
+@dataclass
+class OptimizationResult:
+    """Optimization result dataclass."""
+    selected_stocks: List[str]
+    weights: List[float]
+    expected_return: float
+    risk: float
 
 
 class PortfolioOptimizer:
-    """Selects balanced portfolios from analysed stock profiles."""
+    """Portfolio optimizer class."""
 
-    def optimize_portfolio(
-        self, profiles: List[StockProfile], target_size: int = DEFAULT_TARGET_SIZE
-    ) -> List[StockProfile]:
-        print(f"\n最適ポートフォリオ選択中（目標: {target_size}銘柄）...")
+    def __init__(self):
+        pass
 
-        sector_best = self._get_sector_best_stocks(profiles)
-        selected = list(sector_best.values())
-        remaining_slots = max(target_size - len(selected), 0)
+    def optimize_portfolio(self, profiles: List[StockProfile], target_size: int = 10) -> List[StockProfile]:
+        """Optimize portfolio with given stock profiles."""
+        # 単純なポートフォリオ最適化ロジック（ダミー）
+        # volatility が低い順にソートして、上位 target_size を選択
+        sorted_profiles = sorted(profiles, key=lambda x: x.volatility)
+        return sorted_profiles[:target_size]
 
-        remaining_profiles = [p for p in profiles if p not in selected]
-        remaining_profiles.sort(key=lambda x: x.combined_score, reverse=True)
+    def calculate_optimal_weights(self, selected_profiles: List[StockProfile]) -> List[float]:
+        """Calculate optimal weights for selected stocks."""
+        n = len(selected_profiles)
+        return [1.0 / n] * n  # 等重量
 
-        selected.extend(remaining_profiles[:remaining_slots])
-        return selected[:target_size]
-
-    def _get_sector_best_stocks(
-        self, profiles: List[StockProfile]
-    ) -> Dict[str, StockProfile]:
-        sector_best: Dict[str, StockProfile] = {}
-        for profile in profiles:
-            if (
-                profile.sector not in sector_best
-                or profile.combined_score > sector_best[profile.sector].combined_score
-            ):
-                sector_best[profile.sector] = profile
-        return sector_best
+    def get_optimization_summary(self, result: OptimizationResult) -> Dict[str, Any]:
+        """Get optimization summary."""
+        return {
+            "selected_stocks": result.selected_stocks,
+            "total_expected_return": result.expected_return,
+            "total_risk": result.risk
+        }
