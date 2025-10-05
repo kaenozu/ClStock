@@ -207,11 +207,6 @@ scikit-learn==1.5.1
     # via
     #   -r requirements.in
     #   shap
-scipy==1.15.3
-    # via
-    #   -r requirements.in
-    #   scikit-learn
-    #   shap
 seaborn==0.13.2
     # via -r requirements.in
 shap==0.48.0
