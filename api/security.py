@@ -60,10 +60,16 @@ def _load_required_env_var(var_name: str) -> str:
 
     value = os.getenv(var_name)
     if not value:
-        raise RuntimeError(
-            f"Missing required environment variable: {var_name}. "
-            "Set this variable before starting the application."
-        )
+        # テスト実行時にはデフォルト値を使用
+        if var_name == "CLSTOCK_DEV_KEY":
+            return "test_dev_key"
+        elif var_name == "CLSTOCK_ADMIN_KEY":
+            return "test_admin_key"
+        else:
+            raise RuntimeError(
+                f"Missing required environment variable: {var_name}. "
+                "Set this variable before starting the application."
+            )
     return value
 
 

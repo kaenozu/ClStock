@@ -1044,3 +1044,7 @@ class HybridStockPredictor(StockPredictor):
         if limit:
             return history_list[-limit:]
         return history_list
+
+
+# Backward compatibility
+RefactoredHybridPredictor = HybridStockPredictor

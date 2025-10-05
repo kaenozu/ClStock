@@ -5,6 +5,16 @@ import pandas as pd
 import pandas.testing as pdt
 import pytest
 
+# lightgbmが利用できない場合はテストをスキップ
+try:
+    import lightgbm as lgb
+    LIGHTGBM_AVAILABLE = True
+except ImportError:
+    LIGHTGBM_AVAILABLE = False
+
+if not LIGHTGBM_AVAILABLE:
+    pytest.skip("lightgbm not available", allow_module_level=True)
+
 from models.ml_stock_predictor import MLStockPredictor
 
 

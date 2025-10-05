@@ -29,6 +29,19 @@ if "data.stock_data" not in sys.modules:
     sys.modules["data.stock_data"] = dummy_stock_data
     setattr(data, "stock_data", dummy_stock_data)
 
+# APIセキュリティ関連の環境変数とモジュールをモック
+os.environ.setdefault("CLSTOCK_DEV_KEY", "test_dev_key")
+os.environ.setdefault("CLSTOCK_ADMIN_KEY", "test_admin_key")
+
+# config.secrets モジュールが存在しない場合のモック
+class MockConfigSecrets:
+    API_KEYS = {
+        "test_dev_key": "developer",
+        "test_admin_key": "administrator"
+    }
+
+sys.modules["config.secrets"] = MockConfigSecrets()
+
 from models.recommendation import StockRecommendation
 
 

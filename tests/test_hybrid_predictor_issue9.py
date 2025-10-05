@@ -9,7 +9,7 @@ import numpy as np
 from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
 
-from models.hybrid.hybrid_predictor import RefactoredHybridPredictor
+from models.hybrid import RefactoredHybridPredictor
 from models.core.interfaces import (
     ModelConfiguration,
     DataProvider,

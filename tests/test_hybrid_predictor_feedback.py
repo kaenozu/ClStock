@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from models.core.interfaces import PredictionResult, PredictionMode
-from models.hybrid.hybrid_predictor import RefactoredHybridPredictor
+from models.hybrid import RefactoredHybridPredictor
 
 
 class _StubLearner:

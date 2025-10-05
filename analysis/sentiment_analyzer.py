@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from config.settings import get_settings
 
@@ -42,6 +43,7 @@ class YahooNewsSource(NewsSource):
         super().__init__("YahooFinance")
         self.base_url = "https://query1.finance.yahoo.com/v1/finance/search"
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     def fetch_news(self, symbol: str, days: int = 7) -> List[Dict[str, Any]]:
         """Yahoo Financeからニュース取得"""
         try:
@@ -95,11 +97,11 @@ class YahooNewsSource(NewsSource):
 
             except Exception as e:
                 logger.error(f"Yahoo Finance API エラー: {e}")
-                return []
+                raise e  # retryのために再スロー
 
         except Exception as e:
             logger.error(f"Yahoo Finance ニュース取得エラー {symbol}: {e}")
-            return []
+            raise e  # retryのために再スロー
 
     def _calculate_relevance(self, title: str, symbol: str) -> float:
         """ニュースの関連度を計算"""
@@ -136,6 +138,7 @@ class JapanNewsSource(NewsSource):
             "https://feeds.finance.yahoo.co.jp/rss/2.0/headline",
         ]
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     def fetch_news(self, symbol: str, days: int = 7) -> List[Dict[str, Any]]:
         """日本語ニュース取得"""
         try:
@@ -176,8 +179,9 @@ class JapanNewsSource(NewsSource):
 
         except Exception as e:
             logger.error(f"日本語ニュース取得エラー {symbol}: {e}")
-            return []
+            raise e  # retryのために再スロー
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     def _fetch_from_google_news(self, query: str, days: int) -> List[Dict[str, Any]]:
         """Google NewsのRSSから取得"""
         try:
@@ -226,11 +230,12 @@ class JapanNewsSource(NewsSource):
             logger.warning(
                 "feedparser not installed. Install with: pip install feedparser"
             )
-            return []
+            raise ImportError("feedparser not installed") # retryのために再スロー
         except Exception as e:
             logger.error(f"Google News取得エラー: {e}")
-            return []
+            raise e # retryのために再スロー
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     def _fetch_from_yahoo_jp(self, query: str, days: int) -> List[Dict[str, Any]]:
         """Yahoo Finance JapanのRSSから取得"""
         try:
@@ -276,10 +281,10 @@ class JapanNewsSource(NewsSource):
 
         except ImportError:
             logger.warning("feedparser not installed for Yahoo JP RSS")
-            return []
+            raise ImportError("feedparser not installed") # retryのために再スロー
         except Exception as e:
             logger.error(f"Yahoo JP取得エラー: {e}")
-            return []
+            raise e # retryのために再スロー
 
     def _is_relevant_to_query(self, title: str, query: str) -> bool:
         """クエリに関連するかチェック"""

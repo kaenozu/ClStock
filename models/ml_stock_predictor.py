@@ -9,7 +9,14 @@ from typing import Any, Dict, List, Optional, Tuple
 import joblib
 import numpy as np
 import pandas as pd
-import lightgbm as lgb
+
+try:
+    import lightgbm as lgb
+    LIGHTGBM_AVAILABLE = True
+except ImportError:
+    lgb = None
+    LIGHTGBM_AVAILABLE = False
+
 import xgboost as xgb
 from sklearn.metrics import accuracy_score, mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import cross_val_score, train_test_split
@@ -427,24 +434,44 @@ class MLStockPredictor:
                     n_jobs=-1,
                 )
         elif self.model_type == "lightgbm":
-            if task_type == "regression":
-                self.model = lgb.LGBMRegressor(
-                    n_estimators=settings.model.lgb_n_estimators,
-                    max_depth=settings.model.lgb_max_depth,
-                    learning_rate=settings.model.lgb_learning_rate,
-                    random_state=settings.model.lgb_random_state,
-                    n_jobs=-1,
-                    verbose=-1,
-                )
+            if LIGHTGBM_AVAILABLE:
+                if task_type == "regression":
+                    self.model = lgb.LGBMRegressor(
+                        n_estimators=settings.model.lgb_n_estimators,
+                        max_depth=settings.model.lgb_max_depth,
+                        learning_rate=settings.model.lgb_learning_rate,
+                        random_state=settings.model.lgb_random_state,
+                        n_jobs=-1,
+                        verbose=-1,
+                    )
+                else:
+                    self.model = lgb.LGBMClassifier(
+                        n_estimators=settings.model.lgb_n_estimators,
+                        max_depth=settings.model.lgb_max_depth,
+                        learning_rate=settings.model.lgb_learning_rate,
+                        random_state=settings.model.lgb_random_state,
+                        n_jobs=-1,
+                        verbose=-1,
+                    )
             else:
-                self.model = lgb.LGBMClassifier(
-                    n_estimators=settings.model.lgb_n_estimators,
-                    max_depth=settings.model.lgb_max_depth,
-                    learning_rate=settings.model.lgb_learning_rate,
-                    random_state=settings.model.lgb_random_state,
-                    n_jobs=-1,
-                    verbose=-1,
-                )
+                # lightgbmが利用できない場合、xgboostを使用
+                logger.warning("LightGBM not available, falling back to XGBoost")
+                if task_type == "regression":
+                    self.model = xgb.XGBRegressor(
+                        n_estimators=settings.model.xgb_n_estimators,
+                        max_depth=settings.model.xgb_max_depth,
+                        learning_rate=settings.model.xgb_learning_rate,
+                        random_state=settings.model.xgb_random_state,
+                        n_jobs=-1,
+                    )
+                else:
+                    self.model = xgb.XGBClassifier(
+                        n_estimators=settings.model.xgb_n_estimators,
+                        max_depth=settings.model.xgb_max_depth,
+                        learning_rate=settings.model.xgb_learning_rate,
+                        random_state=settings.model.xgb_random_state,
+                        n_jobs=-1,
+                    )
         # モデル訓練
         self.model.fit(X_train_scaled, y_train)
         # 予測と評価
@@ -670,7 +697,13 @@ class HyperparameterOptimizer:
         return study.best_params
 
     def optimize_lightgbm(self, X, y, cv_folds=5, n_trials=100):
-        """LightGBMパラメータ最適化"""
+        """
+        LightGBMパラメータ最適化
+        """
+        if not LIGHTGBM_AVAILABLE:
+            logger.warning("LightGBM not available, skipping hyperparameter optimization")
+            return {}
+
         import optuna
 
         def objective(trial):
