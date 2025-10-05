@@ -36,6 +36,10 @@ jobs:
         pip install scipy==1.15.3 --only-binary=all
         pip install black==24.* flake8==7.* pytest==8.* pytest-mock
 
+    - name: Check installed packages
+      run: |
+        pip list | grep scipy
+
     - name: Code style (black)
       run: |
         black --check models/performance.py
