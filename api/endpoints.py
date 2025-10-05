@@ -55,11 +55,10 @@ def stock_recommendation_to_schema(stock_rec: StockRecommendation) -> StockRecom
         except:
             holding_period_days = 30  # エラー時デフォルト
 
-    # target_price (float) -> entry_price (object) の変換 (価格帯をどう設定するか)
-    # 簡易的に、target_priceを中央値として、±5%の範囲をmin/maxとする
-    price_range_pct = 0.05
-    entry_price_min = stock_rec.target_price * (1 - price_range_pct)
-    entry_price_max = stock_rec.target_price * (1 + price_range_pct)
+    # entry_price は current_price を中心に±3%の範囲を設定する
+    price_range_pct = 0.03
+    entry_price_min = stock_rec.current_price * (1 - price_range_pct)
+    entry_price_max = stock_rec.current_price * (1 + price_range_pct)
     entry_price = EntryPriceSchema(min=entry_price_min, max=entry_price_max)
 
     # profit_target_1, profit_target_2 (float) -> targets (List[object]) の変換
