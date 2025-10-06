@@ -124,9 +124,17 @@ class TestPortfolioRiskManager(unittest.TestCase):
     
     def test_portfolio_value_calculation(self):
         """ポートフォリオ価値計算のテスト"""
-        self.risk_manager.update_position("7203", 100, 3000)
+        # 株式購入: 100株 × 3000円 = 300,000円
+        # 現金は300,000円減少し、ポジション価値は300,000円増加
+        # 総ポートフォリオ価値はほぼ変化しないはず
+        initial_capital = self.risk_manager.current_capital
+        purchase_amount = 100 * 3000  # 300,000円
+        
+        self.risk_manager.update_position("7203", 100, 3000, cash_flow=-purchase_amount)
         portfolio_value = self.risk_manager.calculate_portfolio_value()
-        expected_value = 1000000 + 300000  # 初期資本 + 保有資産価値
+        
+        # ポートフォリオ価値は初期資本と同等（現金減少と資産増加で相殺）
+        expected_value = initial_capital  # 1,000,000円
         self.assertEqual(portfolio_value, expected_value)
     
     def test_risk_metrics_calculation(self):
