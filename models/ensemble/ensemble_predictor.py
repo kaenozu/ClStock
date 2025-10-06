@@ -340,22 +340,6 @@ class RefactoredEnsemblePredictor:
             self.feature_names.append("avg_volume")
         return cleaned
 
-    def _create_synthetic_market_snapshot(self) -> pd.DataFrame:
-        index = pd.date_range(end=datetime.utcnow(), periods=5, freq="D")
-        prices = np.linspace(100.0, 104.0, num=5)
-        volume = np.linspace(1000, 1400, num=5)
-        frame = pd.DataFrame(
-            {
-                "Close": prices,
-                "Open": prices - 1,
-                "High": prices + 1,
-                "Low": prices - 2,
-                "Volume": volume,
-            },
-            index=index,
-        )
-        return frame
-
     # ------------------------------------------------------------------
     # Persistence helpers
     # ------------------------------------------------------------------
@@ -409,14 +393,25 @@ class RefactoredEnsemblePredictor:
             lambda: provider.get_stock_data(symbol, fetch_period),
         )
 
-        if data is None:
-            data = pd.DataFrame()
-
         if not isinstance(data, pd.DataFrame):
-            data = self._create_synthetic_market_snapshot()
+            self.logger.error(
+                "%s: Data provider returned invalid payload type %s", self.__class__.__name__, type(data)
+            )
+            raise TypeError("Stock data provider must return a pandas DataFrame")
 
         if data.empty:
-            raise ValueError("No data available")
+            retry_period = "1mo"
+            retry_data: Optional[pd.DataFrame] = None
+            if fetch_period != retry_period:
+                retry_data = self._safe_model_operation(
+                    "retry_get_stock_data",
+                    lambda: provider.get_stock_data(symbol, retry_period),
+                )
+
+            if isinstance(retry_data, pd.DataFrame) and not retry_data.empty:
+                data = retry_data
+            else:
+                raise ValueError("No data available")
 
         features = self._safe_model_operation("calculate_features", lambda: self._calculate_features(data))
         if not features:
