@@ -3,12 +3,11 @@
 1週間のデモ取引を開始するための簡単なスクリプト
 """
 
-import io
-import os
 import sys
-from datetime import datetime, timedelta
-
+import os
 import pandas as pd
+from datetime import datetime, timedelta
+import io
 
 # 標準出力をUTF-8に設定
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
