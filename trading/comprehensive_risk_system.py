@@ -50,10 +50,10 @@ class ComprehensiveRiskManager:
             'volatility': 0.30     # ボラティリティが30%を超えると高いリスク
         }
     
-    def update_position(self, symbol: str, quantity: int, price: float):
-        """保有状況を更新"""
-        self.basic_risk_manager.update_position(symbol, quantity, price)
-        self.advanced_risk_manager.update_position(symbol, quantity, price)
+    def update_position(self, symbol: str, quantity: int, price: float, cash_flow: float = 0.0):
+        """保有状況を更新し、現金残高も更新"""
+        self.basic_risk_manager.update_position(symbol, quantity, price, cash_flow)
+        self.advanced_risk_manager.update_position(symbol, quantity, price, cash_flow)
         self.position_sizer.update_capital(self.basic_risk_manager.calculate_portfolio_value())
     
     def update_portfolio_history(self):
@@ -293,8 +293,10 @@ class RiskManagedPortfolio:
                 position_size.shares = int(max_investment / price)
                 position_size.position_value = position_size.shares * price
             
-            # ポートフォリオに追加
-            self.risk_manager.update_position(symbol, position_size.shares, price)
+            # 購入に必要な金額を計算
+            purchase_amount = position_size.shares * price
+            # 現金を減らしてポジションを更新
+            self.risk_manager.update_position(symbol, position_size.shares, price, cash_flow=-purchase_amount)
             
             trade_result = {
                 'symbol': symbol,
@@ -314,8 +316,10 @@ class RiskManagedPortfolio:
                 current_pos = self.risk_manager.basic_risk_manager.positions[symbol]
                 shares = current_pos['quantity']
                 
-                # ポジションを削除
-                self.risk_manager.update_position(symbol, 0, price)
+                # 売却による収入を計算
+                sale_amount = shares * price
+                # 現金を増やしてポジションを更新
+                self.risk_manager.update_position(symbol, 0, price, cash_flow=sale_amount)
                 
                 trade_result = {
                     'symbol': symbol,

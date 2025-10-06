@@ -143,14 +143,15 @@ class PortfolioRiskManager:
         self.var_calculator = ValueAtRiskCalculator()
         self.es_calculator = ExpectedShortfallCalculator()
         
-    def update_position(self, symbol: str, quantity: int, price: float):
+    def update_position(self, symbol: str, quantity: int, price: float, cash_flow: float = 0.0):
         """
-        保有状況を更新
+        保有状況を更新し、現金残高も更新
         
         Args:
             symbol: 銘柄コード
             quantity: 保有数量
             price: 現在価格
+            cash_flow: 現金の増減額（購入時は負、売却時は正）
         """
         if quantity > 0:
             self.positions[symbol] = {
@@ -160,6 +161,9 @@ class PortfolioRiskManager:
             }
         elif symbol in self.positions:
             del self.positions[symbol]
+        
+        # 現金残高を更新
+        self.current_capital += cash_flow
     
     def calculate_portfolio_value(self) -> float:
         """現在のポートフォリオ価値を計算"""
