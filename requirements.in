@@ -1,7 +1,7 @@
 # Production Dependencies
 numpy>=1.24.0,<2.0.0
 pandas>=1.3.0
-scipy>=1.10.0,<1.15.0
+
 scikit-learn>=1.3.0,<1.4.0
 matplotlib>=3.5.0
 seaborn>=0.11.0
@@ -14,7 +14,7 @@ dash>=2.10.0
 gym>=0.21.0
 stable-baselines3>=2.0.0
 
-shap>=0.40.0,<0.45.0
+
 
 # Development Dependencies
 black==24.10.0
