@@ -203,7 +203,7 @@ retrying==1.4.1
     # via dash
 rich==14.0.0
     # via bandit
-scipy==1.15.3
+scipy==1.15.0
     # via
     #   -r requirements.in
     #   scikit-learn
