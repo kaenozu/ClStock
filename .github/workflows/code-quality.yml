@@ -18,13 +18,18 @@ jobs:
       with:
         python-version: '3.12'
 
-#    - name: Cache pip
-#      uses: actions/cache@v3
-#      with:
-#        path: ~/.cache/pip
-#        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-#        restore-keys: |
-#          ${{ runner.os }}-pip-
+    - name: Cache pip
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install scipy build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libblas-dev liblapack-dev gfortran libatlas-base-dev
 
     - name: Upgrade pip and install dependencies
       run: |
