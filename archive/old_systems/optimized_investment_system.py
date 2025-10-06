@@ -1,21 +1,16 @@
 #!/usr/bin/env python3
-"""
-最適化投資システム - バックテスト結果に基づく高利益銘柄特化
+"""最適化投資システム - バックテスト結果に基づく高利益銘柄特化
 89%精度システム + 高パフォーマンス銘柄選定
 """
 
-import numpy as np
-import pandas as pd
 import warnings
-from datetime import datetime, timedelta
+
+import pandas as pd
 
 warnings.filterwarnings("ignore")
 
 from data.stock_data import StockDataProvider
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
-import logging
 from utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -169,13 +164,13 @@ class OptimizedInvestmentSystem:
                         "price": price,
                         "total": total_cost,
                         "capital_after": self.current_capital,
-                    }
+                    },
                 )
 
                 return True
             return False
 
-        elif action == "SELL":
+        if action == "SELL":
             if symbol in self.positions and self.positions[symbol]["shares"] >= shares:
                 self.current_capital += total_cost
                 self.positions[symbol]["shares"] -= shares
@@ -196,7 +191,7 @@ class OptimizedInvestmentSystem:
                         "total": total_cost,
                         "profit": profit,
                         "capital_after": self.current_capital,
-                    }
+                    },
                 )
 
                 return True
@@ -217,7 +212,7 @@ class OptimizedInvestmentSystem:
 
                 if stock_data.empty:
                     print(
-                        f"  エラー: Data fetch error for {symbol}: No historical data available"
+                        f"  エラー: Data fetch error for {symbol}: No historical data available",
                     )
                     continue
 
@@ -235,16 +230,16 @@ class OptimizedInvestmentSystem:
                     # 買いシグナル
                     if current_signal == 1 and symbol not in self.positions:
                         shares = self.calculate_optimal_position_size(
-                            symbol, current_price
+                            symbol, current_price,
                         )
                         if shares > 0:
                             success = self.execute_trade(
-                                symbol, "BUY", shares, current_price, current_date
+                                symbol, "BUY", shares, current_price, current_date,
                             )
                             if success:
                                 trade_count += 1
                                 print(
-                                    f"    {current_date.strftime('%Y-%m-%d')}: 買い {shares}株 @{current_price:.0f}円"
+                                    f"    {current_date.strftime('%Y-%m-%d')}: 買い {shares}株 @{current_price:.0f}円",
                                 )
 
                     # 売りシグナルまたは損切り・利確
@@ -266,18 +261,18 @@ class OptimizedInvestmentSystem:
                             shares = position["shares"]
                             profit = (current_price - position["avg_price"]) * shares
                             success = self.execute_trade(
-                                symbol, "SELL", shares, current_price, current_date
+                                symbol, "SELL", shares, current_price, current_date,
                             )
                             if success:
                                 trade_count += 1
                                 print(
-                                    f"    {current_date.strftime('%Y-%m-%d')}: 売り {shares}株 @{current_price:.0f}円 (利益: {profit:+.0f}円)"
+                                    f"    {current_date.strftime('%Y-%m-%d')}: 売り {shares}株 @{current_price:.0f}円 (利益: {profit:+.0f}円)",
                                 )
 
                 print(f"  総取引回数: {trade_count}回")
 
             except Exception as e:
-                print(f"  エラー: {str(e)}")
+                print(f"  エラー: {e!s}")
 
         # 最終結果
         total_portfolio_value = self.current_capital
@@ -313,15 +308,15 @@ class OptimizedInvestmentSystem:
             print(f"成功率: {success_rate:.1f}%")
 
         # 最新取引履歴
-        print(f"\n最新取引履歴:")
+        print("\n最新取引履歴:")
         for trade in self.transaction_history[-10:]:
             if trade["action"] == "SELL" and "profit" in trade:
                 print(
-                    f"  {trade['date'].strftime('%Y-%m-%d')}: {trade['action']} {trade['symbol']} {trade['shares']}株 @{trade['price']:.0f}円 (利益: {trade['profit']:+.0f}円)"
+                    f"  {trade['date'].strftime('%Y-%m-%d')}: {trade['action']} {trade['symbol']} {trade['shares']}株 @{trade['price']:.0f}円 (利益: {trade['profit']:+.0f}円)",
                 )
             else:
                 print(
-                    f"  {trade['date'].strftime('%Y-%m-%d')}: {trade['action']} {trade['symbol']} {trade['shares']}株 @{trade['price']:.0f}円"
+                    f"  {trade['date'].strftime('%Y-%m-%d')}: {trade['action']} {trade['symbol']} {trade['shares']}株 @{trade['price']:.0f}円",
                 )
 
         print(f"\n最適化システム最終パフォーマンス: {profit_rate:+.1f}%")

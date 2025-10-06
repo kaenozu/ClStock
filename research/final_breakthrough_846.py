@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
-"""
-最終突破846システム
+"""最終突破846システム
 84.6%成功条件を完全維持して、モデル部分のみ強化した実用的な突破システム
 """
 
-import pandas as pd
+import warnings
+from typing import Dict, List
+
 import numpy as np
-from typing import Dict, List, Tuple
-import logging
-from utils.logger_config import setup_logger
+import pandas as pd
 from sklearn.ensemble import (
-    RandomForestClassifier,
     GradientBoostingClassifier,
+    RandomForestClassifier,
     VotingClassifier,
 )
 from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
-import warnings
+from sklearn.preprocessing import StandardScaler
+from utils.logger_config import setup_logger
 
 warnings.filterwarnings("ignore")
 
@@ -66,9 +65,7 @@ class FinalBreakthrough846:
                 recent_up = strong_uptrend.iloc[i - 10 : i].sum()
                 recent_down = strong_downtrend.iloc[i - 10 : i].sum()
 
-                if recent_up >= 7:
-                    trend_duration.iloc[i] = 1
-                elif recent_down >= 7:
+                if recent_up >= 7 or recent_down >= 7:
                     trend_duration.iloc[i] = 1
 
         return trend_duration.astype(bool)
@@ -118,7 +115,7 @@ class FinalBreakthrough846:
         return 100 - (100 / (1 + rs))
 
     def create_trend_target(
-        self, data: pd.DataFrame, prediction_days: int = 3
+        self, data: pd.DataFrame, prediction_days: int = 3,
     ) -> pd.Series:
         """84.6%成功手法と完全同一のターゲット"""
         close = data["Close"]
@@ -203,7 +200,7 @@ class FinalBreakthrough846:
 
                 if strong_trend_mask.sum() < 30:
                     print(
-                        f"  スキップ: 強いトレンド期間不足 ({strong_trend_mask.sum()})"
+                        f"  スキップ: 強いトレンド期間不足 ({strong_trend_mask.sum()})",
                     )
                     continue
 
@@ -295,17 +292,17 @@ class FinalBreakthrough846:
 
                 if high_conf_accuracy > 0:
                     print(
-                        f"  高信頼度: {high_conf_accuracy:.1%} ({high_confidence_mask.sum()}サンプル)"
+                        f"  高信頼度: {high_conf_accuracy:.1%} ({high_confidence_mask.sum()}サンプル)",
                     )
 
             except Exception as e:
-                print(f"  エラー: {str(e)}")
+                print(f"  エラー: {e!s}")
                 continue
 
         return self._analyze_final_breakthrough(all_results, breakthrough_results)
 
     def _analyze_final_breakthrough(
-        self, all_results: List[Dict], breakthrough_results: List[Dict]
+        self, all_results: List[Dict], breakthrough_results: List[Dict],
     ) -> Dict:
         """最終突破結果の分析"""
         if not all_results:
@@ -315,7 +312,7 @@ class FinalBreakthrough846:
         max_accuracy = np.max(accuracies)
         avg_accuracy = np.mean(accuracies)
 
-        print(f"\n" + "=" * 60)
+        print("\n" + "=" * 60)
         print("最終突破846システム結果")
         print("=" * 60)
         print(f"テスト銘柄数: {len(all_results)}")
@@ -331,7 +328,7 @@ class FinalBreakthrough846:
 
             print("\n84.6%突破達成銘柄:")
             for r in sorted(
-                breakthrough_results, key=lambda x: x["accuracy"], reverse=True
+                breakthrough_results, key=lambda x: x["accuracy"], reverse=True,
             ):
                 hc_info = (
                     f" (高信頼度: {r['high_conf_accuracy']:.1%})"
@@ -344,7 +341,7 @@ class FinalBreakthrough846:
         hc_results = [r for r in all_results if r["high_conf_accuracy"] > 0]
         if hc_results:
             hc_accuracies = [r["high_conf_accuracy"] for r in hc_results]
-            print(f"\n高信頼度予測分析:")
+            print("\n高信頼度予測分析:")
             print(f"  対象銘柄数: {len(hc_results)}")
             print(f"  平均精度: {np.mean(hc_accuracies):.1%}")
             print(f"  最高精度: {np.max(hc_accuracies):.1%}")
@@ -359,7 +356,7 @@ class FinalBreakthrough846:
             (0.75, "75%以上"),
         ]
 
-        print(f"\n詳細精度分布:")
+        print("\n詳細精度分布:")
         for threshold, label in ranges:
             count = sum(1 for acc in accuracies if acc >= threshold)
             percentage = count / len(all_results) * 100
@@ -367,7 +364,7 @@ class FinalBreakthrough846:
 
         # トップ結果（84.6%成功手法と同様の表示）
         top_results = sorted(all_results, key=lambda x: x["accuracy"], reverse=True)[:8]
-        print(f"\nトップ8結果:")
+        print("\nトップ8結果:")
         for i, result in enumerate(top_results, 1):
             hc_info = (
                 f" (高信頼度: {result['high_conf_accuracy']:.1%})"
@@ -383,29 +380,31 @@ class FinalBreakthrough846:
                     else (
                         "○○"
                         if result["accuracy"] >= 0.8
-                        else "○" if result["accuracy"] >= 0.75 else ""
+                        else "○"
+                        if result["accuracy"] >= 0.75
+                        else ""
                     )
                 )
             )
             print(
-                f"  {i}. {result['symbol']}: {result['accuracy']:.1%}{hc_info} {mark}"
+                f"  {i}. {result['symbol']}: {result['accuracy']:.1%}{hc_info} {mark}",
             )
 
         # 最終判定
         if max_accuracy >= 0.90:
             improvement = (max_accuracy - 0.846) * 100
             print(
-                f"\n*** 究極の90%達成！84.6%を {improvement:.1f}%ポイント上回る {max_accuracy:.1%} ***"
+                f"\n*** 究極の90%達成！84.6%を {improvement:.1f}%ポイント上回る {max_accuracy:.1%} ***",
             )
         elif max_accuracy > 0.846:
             improvement = (max_accuracy - 0.846) * 100
             print(
-                f"\n*** 歴史的突破！84.6%を {improvement:.1f}%ポイント上回る {max_accuracy:.1%} 達成！***"
+                f"\n*** 歴史的突破！84.6%を {improvement:.1f}%ポイント上回る {max_accuracy:.1%} 達成！***",
             )
         elif max_accuracy >= 0.84:
             gap = (0.846 - max_accuracy) * 100
             print(
-                f"\n○ 84%台達成：{max_accuracy:.1%} (84.6%まで残り {gap:.1f}%ポイント)"
+                f"\n○ 84%台達成：{max_accuracy:.1%} (84.6%まで残り {gap:.1f}%ポイント)",
             )
         elif max_accuracy >= 0.8:
             print(f"\n○ 80%台達成：{max_accuracy:.1%}")
@@ -433,9 +432,9 @@ def main():
 
     if "error" not in results:
         if results["final_success"]:
-            print(f"\n*** 84.6%の伝説を超えた！新たな歴史の始まり！***")
+            print("\n*** 84.6%の伝説を超えた！新たな歴史の始まり！***")
         else:
-            print(f"\n○ 84.6%への最終挑戦継続中...")
+            print("\n○ 84.6%への最終挑戦継続中...")
 
 
 if __name__ == "__main__":

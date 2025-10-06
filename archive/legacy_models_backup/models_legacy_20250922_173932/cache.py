@@ -2,10 +2,9 @@
 
 import logging
 import pickle
-import json
-from typing import Any, Dict, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +52,8 @@ class RedisCache:
                 cache_item = self.memory_cache[key]
                 if datetime.now() < cache_item["expiry"]:
                     return cache_item["value"]
-                else:
-                    # 期限切れの場合は削除
-                    del self.memory_cache[key]
+                # 期限切れの場合は削除
+                del self.memory_cache[key]
 
             # ディスクキャッシュから確認
             cache_file = self.cache_dir / f"{key}.cache"
@@ -71,9 +69,8 @@ class RedisCache:
                         "expiry": expiry,
                     }
                     return cache_data["value"]
-                else:
-                    # 期限切れファイルを削除
-                    cache_file.unlink()
+                # 期限切れファイルを削除
+                cache_file.unlink()
 
             return None
 
@@ -155,11 +152,10 @@ class RedisCache:
             # パターンマッチング（簡単な実装）
             if pattern == "*":
                 return list(all_keys)
-            else:
-                # 基本的なワイルドカード対応
-                import fnmatch
+            # 基本的なワイルドカード対応
+            import fnmatch
 
-                return [key for key in all_keys if fnmatch.fnmatch(key, pattern)]
+            return [key for key in all_keys if fnmatch.fnmatch(key, pattern)]
 
         except Exception as e:
             logger.error(f"Failed to get keys with pattern {pattern}: {e}")

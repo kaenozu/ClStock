@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
-"""
-実際の投資システム - 84.6%予測精度を活用した実用的な株式投資システム
+"""実際の投資システム - 84.6%予測精度を活用した実用的な株式投資システム
 ポートフォリオ管理・リスク管理・パフォーマンス評価を統合
 """
 
-import numpy as np
-import pandas as pd
 import warnings
+
+import pandas as pd
 
 warnings.filterwarnings("ignore")
 
+from datetime import timedelta
+
 from data.stock_data import StockDataProvider
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
-import logging
-from datetime import datetime, timedelta
 
 # ログ設定は utils.logger_config で管理
 from utils.logger_config import setup_logger
@@ -162,7 +159,7 @@ class InvestmentSystem:
                         "quantity": quantity,
                         "confidence": confidence,
                         "capital_after": self.current_capital,
-                    }
+                    },
                 )
                 return True
 
@@ -187,7 +184,7 @@ class InvestmentSystem:
                         "quantity": quantity,
                         "confidence": confidence,
                         "capital_after": self.current_capital,
-                    }
+                    },
                 )
                 return True
 
@@ -197,7 +194,7 @@ class InvestmentSystem:
         """投資システムのバックテスト"""
         print("=== 実際の投資システム バックテスト ===")
         print(f"初期資金: {self.initial_capital:,}円")
-        print("")
+        print()
 
         total_signals = 0
         successful_trades = 0
@@ -216,7 +213,7 @@ class InvestmentSystem:
                 signal_dates = signals[signals != 0].index
 
                 if len(signal_dates) == 0:
-                    print(f"  投資機会なし")
+                    print("  投資機会なし")
                     continue
 
                 print(f"  投資機会: {len(signal_dates)}回")
@@ -245,7 +242,7 @@ class InvestmentSystem:
 
                     if signal_value == 1:  # 買いシグナル
                         position_value = self.calculate_position_size(
-                            symbol, confidence, volatility
+                            symbol, confidence, volatility,
                         )
                         quantity = int(position_value / current_price)
 
@@ -261,7 +258,7 @@ class InvestmentSystem:
                             if success:
                                 total_signals += 1
                                 print(
-                                    f"    {signal_date.date()}: 買い {quantity}株 @{current_price:.0f}円"
+                                    f"    {signal_date.date()}: 買い {quantity}株 @{current_price:.0f}円",
                                 )
 
                                 # 3日後に売却（予測期間）
@@ -283,7 +280,7 @@ class InvestmentSystem:
                                         if profit > 0:
                                             successful_trades += 1
                                         print(
-                                            f"    {future_date.date()}: 売り {quantity}株 @{future_price:.0f}円 (損益: {profit:,.0f}円)"
+                                            f"    {future_date.date()}: 売り {quantity}株 @{future_price:.0f}円 (損益: {profit:,.0f}円)",
                                         )
 
             except Exception as e:
@@ -310,7 +307,7 @@ class InvestmentSystem:
         total_return = final_capital - self.initial_capital
         return_rate = (final_capital / self.initial_capital - 1) * 100
 
-        print(f"\n=== バックテスト結果 ===")
+        print("\n=== バックテスト結果 ===")
         print(f"初期資金: {self.initial_capital:,}円")
         print(f"最終資金: {final_capital:,.0f}円")
         print(f"総損益: {total_return:,.0f}円")
@@ -324,11 +321,11 @@ class InvestmentSystem:
 
         # 取引履歴
         if len(self.transaction_history) > 0:
-            print(f"\n最新取引履歴:")
+            print("\n最新取引履歴:")
             for trade in self.transaction_history[-5:]:
                 print(
                     f"  {trade['date'].date()}: {trade['action']} {trade['symbol']} "
-                    f"{trade['quantity']}株 @{trade['price']:.0f}円"
+                    f"{trade['quantity']}株 @{trade['price']:.0f}円",
                 )
 
         return {

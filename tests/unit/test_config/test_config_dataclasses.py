@@ -4,16 +4,16 @@ import os
 from unittest.mock import patch
 
 from config.settings import (
-    AppSettings,
-    DatabaseConfig,
-    PredictionConfig,
-    ModelConfig,
-    BacktestConfig,
-    TradingConfig,
     APIConfig,
+    AppSettings,
+    BacktestConfig,
+    DatabaseConfig,
     LoggingConfig,
+    ModelConfig,
+    PredictionConfig,
     ProcessConfig,
     RealTimeConfig,
+    TradingConfig,
     get_settings,
     load_from_env,
 )

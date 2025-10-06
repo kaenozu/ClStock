@@ -6,11 +6,10 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, List
 
-from ClStock.utils.logger_config import get_logger
 from ClStock.systems.resource_monitor import ResourceMonitor
-
+from ClStock.utils.logger_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -40,7 +39,9 @@ def main() -> None:
 
     print("\n=== Selective System ===")
     print(f"起動時刻: {datetime.now():%Y-%m-%d %H:%M:%S}")
-    print(f"CPU使用率: {usage.cpu_percent:.1f}% / メモリ使用率: {usage.memory_percent:.1f}%")
+    print(
+        f"CPU使用率: {usage.cpu_percent:.1f}% / メモリ使用率: {usage.memory_percent:.1f}%",
+    )
 
     watchlist = _load_watchlist()
     print("\n推奨ウォッチリスト (上位3件)")

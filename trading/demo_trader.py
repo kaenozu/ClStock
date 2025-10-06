@@ -1,34 +1,33 @@
-"""
-ClStock デモトレーダー
+"""ClStock デモトレーダー
 
 87%精度システムとリアルタイムデータを使用した
 仮想資金による高精度取引シミュレーションシステム
 """
 
+import json
 import logging
 import os
-from pathlib import Path
 import threading
 import time
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict
 from enum import Enum
-import pandas as pd
-import numpy as np
-import sqlite3
-import json
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-# 内部モジュール
-from .trading_strategy import TradingStrategy, TradingSignal, SignalType
+import numpy as np
+from config.target_universe import get_target_universe
+
+# 既存システム
+from data.stock_data import StockDataProvider
+from models.precision.precision_87_system import Precision87BreakthroughSystem
+
 from .portfolio_manager import DemoPortfolioManager
 from .risk_manager import DemoRiskManager
 from .trade_recorder import TradeRecorder
 
-# 既存システム
-from data.stock_data import StockDataProvider
-from config.target_universe import get_target_universe
-from models.precision.precision_87_system import Precision87BreakthroughSystem
+# 内部モジュール
+from .trading_strategy import SignalType, TradingSignal, TradingStrategy
 
 
 class TradeStatus(Enum):
@@ -84,8 +83,7 @@ class DemoSession:
 
 
 class DemoTrader:
-    """
-    87%精度システム統合デモトレーダー
+    """87%精度システム統合デモトレーダー
 
     リアルタイムデータと仮想資金による
     実際の取引と同等の精度でのシミュレーション
@@ -99,13 +97,13 @@ class DemoTrader:
         confidence_threshold: float = 0.7,
         update_interval: int = 300,
     ):  # 5分間隔
-        """
-        Args:
-            initial_capital: 初期仮想資金
-            target_symbols: 対象銘柄リスト
-            precision_threshold: 取引実行精度閾値
-            confidence_threshold: 取引実行信頼度閾値
-            update_interval: データ更新間隔（秒）
+        """Args:
+        initial_capital: 初期仮想資金
+        target_symbols: 対象銘柄リスト
+        precision_threshold: 取引実行精度閾値
+        confidence_threshold: 取引実行信頼度閾値
+        update_interval: データ更新間隔（秒）
+
         """
         self.initial_capital = initial_capital
         self.current_capital = initial_capital
@@ -144,14 +142,14 @@ class DemoTrader:
         self.logger = logging.getLogger(__name__)
 
     def start_demo_trading(self, session_duration_days: int = 7) -> str:
-        """
-        デモ取引開始
+        """デモ取引開始
 
         Args:
             session_duration_days: セッション期間（日数）
 
         Returns:
             セッションID
+
         """
         if self.is_running:
             raise RuntimeError("デモ取引は既に実行中です")
@@ -192,11 +190,11 @@ class DemoTrader:
         return session_id
 
     def stop_demo_trading(self) -> DemoSession:
-        """
-        デモ取引停止
+        """デモ取引停止
 
         Returns:
             最終セッション情報
+
         """
         if not self.is_running:
             raise RuntimeError("デモ取引は実行されていません")
@@ -275,7 +273,7 @@ class DemoTrader:
 
                 # 87%精度システムでシグナル生成
                 signal = self.trading_strategy.generate_trading_signal(
-                    symbol, self.current_capital
+                    symbol, self.current_capital,
                 )
 
                 if signal is None:
@@ -285,7 +283,7 @@ class DemoTrader:
 
                 # リスク管理チェック
                 if not self.risk_manager.can_open_position(
-                    symbol, signal.position_size
+                    symbol, signal.position_size,
                 ):
                     self.logger.info(f"リスク管理により取引見送り: {symbol}")
                     continue
@@ -301,7 +299,7 @@ class DemoTrader:
 
                     self.logger.info(
                         f"デモ取引実行: {symbol} {signal.signal_type.value} "
-                        f"数量:{trade.quantity} 価格:{trade.entry_price:.2f}"
+                        f"数量:{trade.quantity} 価格:{trade.entry_price:.2f}",
                     )
 
             except Exception as e:
@@ -333,7 +331,7 @@ class DemoTrader:
 
             # 取引コスト計算
             trading_costs = self.trading_strategy.calculate_trading_costs(
-                actual_position_value, signal.signal_type
+                actual_position_value, signal.signal_type,
             )
 
             # 総コスト
@@ -374,7 +372,7 @@ class DemoTrader:
 
             # ポートフォリオ更新
             self.portfolio_manager.add_position(
-                signal.symbol, quantity, execution_price, signal.signal_type
+                signal.symbol, quantity, execution_price, signal.signal_type,
             )
 
             # 取引記録
@@ -388,7 +386,7 @@ class DemoTrader:
                     "timestamp": datetime.now().isoformat(),
                     "signal_data": asdict(signal),
                     "trading_costs": trading_costs,
-                }
+                },
             )
 
             return trade
@@ -405,7 +403,7 @@ class DemoTrader:
             try:
                 # 現在価格取得
                 current_data = self.data_provider.get_stock_data(
-                    trade.symbol, period="1d"
+                    trade.symbol, period="1d",
                 )
                 if current_data is None or len(current_data) == 0:
                     continue
@@ -434,14 +432,14 @@ class DemoTrader:
 
                 # ストップロス
                 if trade.stop_loss_price and self._check_stop_loss(
-                    trade, current_price
+                    trade, current_price,
                 ):
                     should_close = True
                     close_reason = "ストップロス"
 
                 # 利確
                 elif trade.take_profit_price and self._check_take_profit(
-                    trade, current_price
+                    trade, current_price,
                 ):
                     should_close = True
                     close_reason = "利確"
@@ -484,7 +482,7 @@ class DemoTrader:
 
             # クローズ時の追加コスト
             close_costs = self.trading_strategy.calculate_trading_costs(
-                trade.quantity * close_price, trade.signal_type
+                trade.quantity * close_price, trade.signal_type,
             )
             final_profit_loss -= close_costs["total_cost"]
 
@@ -517,12 +515,12 @@ class DemoTrader:
                     "profit_loss": final_profit_loss,
                     "close_reason": reason,
                     "close_costs": close_costs,
-                }
+                },
             )
 
             self.logger.info(
                 f"ポジションクローズ: {trade.symbol} "
-                f"損益:{final_profit_loss:,.0f}円 理由:{reason}"
+                f"損益:{final_profit_loss:,.0f}円 理由:{reason}",
             )
 
         except Exception as e:
@@ -535,8 +533,7 @@ class DemoTrader:
 
         if trade.signal_type == SignalType.BUY:
             return current_price <= trade.stop_loss_price
-        else:
-            return current_price >= trade.stop_loss_price
+        return current_price >= trade.stop_loss_price
 
     def _check_take_profit(self, trade: DemoTrade, current_price: float) -> bool:
         """利確判定"""
@@ -545,8 +542,7 @@ class DemoTrader:
 
         if trade.signal_type == SignalType.BUY:
             return current_price >= trade.take_profit_price
-        else:
-            return current_price <= trade.take_profit_price
+        return current_price <= trade.take_profit_price
 
     def _perform_risk_management(self):
         """リスク管理実行"""
@@ -565,7 +561,7 @@ class DemoTrader:
                 t
                 for t in self.completed_trades
                 if t.entry_time.date() == datetime.now().date()
-            ]
+            ],
         )
         if today_trades >= 10:
             self.logger.info("1日の最大取引回数に到達")

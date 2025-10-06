@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""
-MAPE問題の詳細分析と改善システム
+"""MAPE問題の詳細分析と改善システム
 """
 
-import pandas as pd
+from typing import Dict, List
+
 import numpy as np
-import matplotlib.pyplot as plt
-from typing import Dict, List, Tuple
-import logging
-from utils.logger_config import setup_logger
-
+import pandas as pd
 from data.stock_data import StockDataProvider
+from utils.logger_config import setup_logger
 
 # ログ設定
 logger = setup_logger(__name__)
@@ -76,14 +73,14 @@ class MAPEAnalyzer:
                                     "mape": mape_individual,
                                     "abs_actual": abs(actual_return),
                                     "error": abs(predicted_return - actual_return),
-                                }
+                                },
                             )
                     else:
                         # 小さすぎる動きは除外
                         continue
 
             except Exception as e:
-                logger.warning(f"Error analyzing {symbol}: {str(e)}")
+                logger.warning(f"Error analyzing {symbol}: {e!s}")
                 continue
 
         # 分析結果
@@ -101,36 +98,36 @@ class MAPEAnalyzer:
             print(f"MAPE最小: {np.min(errors):.2f}%")
 
             # パーセンタイル分析
-            print(f"\nMAPE分布:")
+            print("\nMAPE分布:")
             print(f"  90%tile: {np.percentile(errors, 90):.2f}%")
             print(f"  75%tile: {np.percentile(errors, 75):.2f}%")
             print(f"  50%tile: {np.percentile(errors, 50):.2f}%")
             print(f"  25%tile: {np.percentile(errors, 25):.2f}%")
 
         # 問題ケース分析
-        print(f"\n問題ケース分析 (MAPE > 200%):")
+        print("\n問題ケース分析 (MAPE > 200%):")
         print(f"問題ケース数: {len(problem_cases)}")
 
         if problem_cases:
             # 問題ケースの特徴
             problem_df = pd.DataFrame(problem_cases)
             print(
-                f"問題ケースの実績リターン範囲: {problem_df['actual'].min():.4f} ～ {problem_df['actual'].max():.4f}"
+                f"問題ケースの実績リターン範囲: {problem_df['actual'].min():.4f} ～ {problem_df['actual'].max():.4f}",
             )
             print(f"問題ケースの絶対値平均: {problem_df['abs_actual'].mean():.4f}")
 
             # 小さすぎる動きが問題か？
             small_movements = problem_df[problem_df["abs_actual"] < 0.01]  # 1%以下
             print(
-                f"1%以下の小動きでの問題ケース: {len(small_movements)}/{len(problem_cases)}"
+                f"1%以下の小動きでの問題ケース: {len(small_movements)}/{len(problem_cases)}",
             )
 
             # 最悪ケースを表示
             worst_cases = problem_df.nlargest(5, "mape")
-            print(f"\n最悪ケース Top5:")
+            print("\n最悪ケース Top5:")
             for _, case in worst_cases.iterrows():
                 print(
-                    f"  {case['symbol']}: 実績{case['actual']:.4f} vs 予測{case['predicted']:.4f} → MAPE {case['mape']:.1f}%"
+                    f"  {case['symbol']}: 実績{case['actual']:.4f} vs 予測{case['predicted']:.4f} → MAPE {case['mape']:.1f}%",
                 )
 
         return {
@@ -152,10 +149,9 @@ class MAPEAnalyzer:
 
             if current_price > sma_5 > sma_20:
                 return 0.008
-            elif current_price < sma_5 < sma_20:
+            if current_price < sma_5 < sma_20:
                 return -0.006
-            else:
-                return 0.001
+            return 0.001
         except Exception:
             return 0.001
 
@@ -234,11 +230,11 @@ class ImprovedPredictor:
             return predicted_return
 
         except Exception as e:
-            logger.error(f"Error predicting return rate for {symbol}: {str(e)}")
+            logger.error(f"Error predicting return rate for {symbol}: {e!s}")
             return 0.0
 
     def test_improved_prediction(
-        self, symbols: List[str], prediction_days: int = 2
+        self, symbols: List[str], prediction_days: int = 2,
     ) -> Dict:
         """改善された予測システムのテスト"""
         print(f"\n改善された予測システム v2.0 テスト（{prediction_days}日予測）")
@@ -270,7 +266,7 @@ class ImprovedPredictor:
 
                     # 改善された予測
                     predicted_return = self._predict_with_data(
-                        historical_data, prediction_days
+                        historical_data, prediction_days,
                     )
 
                     results["predictions"].append(predicted_return)
@@ -286,7 +282,7 @@ class ImprovedPredictor:
                         results["valid_errors"].append(mape_individual)
 
             except Exception as e:
-                logger.warning(f"Error testing {symbol}: {str(e)}")
+                logger.warning(f"Error testing {symbol}: {e!s}")
                 continue
 
         return results
@@ -305,14 +301,13 @@ class ImprovedPredictor:
             # 平均回帰的予測
             if momentum_1d > 0.015:  # 1.5%以上上昇
                 return -0.002 * prediction_days  # 反動予想
-            elif momentum_1d < -0.015:  # 1.5%以上下落
+            if momentum_1d < -0.015:  # 1.5%以上下落
                 return 0.003 * prediction_days  # 反発予想
-            elif momentum_1d > 0.005:  # 0.5%以上上昇
+            if momentum_1d > 0.005:  # 0.5%以上上昇
                 return 0.001 * prediction_days  # 継続予想
-            elif momentum_1d < -0.005:  # 0.5%以上下落
+            if momentum_1d < -0.005:  # 0.5%以上下落
                 return -0.001 * prediction_days  # 継続予想
-            else:
-                return 0.0  # 中立
+            return 0.0  # 中立
 
         except Exception:
             return 0.0
@@ -372,12 +367,12 @@ def main():
     improved_predictor = analyzer.create_improved_predictor(analysis_results)
 
     # 1日予測テスト
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     results_1d = improved_predictor.test_improved_prediction(symbols, prediction_days=1)
     metrics_1d = calculate_improved_metrics(results_1d)
 
     if "error" not in metrics_1d:
-        print(f"1日予測結果:")
+        print("1日予測結果:")
         print(f"  MAPE: {metrics_1d['mape']:.2f}%")
         print(f"  MAE: {metrics_1d['mae']:.4f}")
         print(f"  方向性精度: {metrics_1d['directional_accuracy']:.1f}%")
@@ -389,7 +384,7 @@ def main():
     metrics_2d = calculate_improved_metrics(results_2d)
 
     if "error" not in metrics_2d:
-        print(f"\n2日予測結果:")
+        print("\n2日予測結果:")
         print(f"  MAPE: {metrics_2d['mape']:.2f}%")
         print(f"  MAE: {metrics_2d['mae']:.4f}")
         print(f"  方向性精度: {metrics_2d['directional_accuracy']:.1f}%")
@@ -408,7 +403,7 @@ def main():
         best_mape = metrics_2d["mape"]
         best_config = "2日予測"
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"最良結果: {best_config} - MAPE {best_mape:.2f}%")
 
     if best_mape < 15:

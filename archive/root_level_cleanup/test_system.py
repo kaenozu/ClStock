@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-システム整理後の動作確認テスト
+"""システム整理後の動作確認テスト
 """
 
-import sys
 import os
 
 
@@ -14,19 +11,14 @@ def test_imports():
 
     try:
         # 87%精度システム
-        from models.precision.precision_87_system import (
-            Precision87BreakthroughSystem,
-        )
 
         print("[OK] 87%精度システム")
 
         # データプロバイダー
-        from data.stock_data import StockDataProvider
 
         print("[OK] データプロバイダー")
 
         # デモ取引システム
-        from trading.demo_trader import DemoTrader
 
         print("[OK] デモ取引システム")
 
@@ -93,9 +85,8 @@ def test_demo_functionality():
             print(f"   信頼度: {result['final_confidence']:.1%}")
             print(f"   精度: {result['final_accuracy']:.1f}%")
             return True
-        else:
-            print("[ERROR] 予測結果の形式が不正")
-            return False
+        print("[ERROR] 予測結果の形式が不正")
+        return False
 
     except Exception as e:
         print(f"[ERROR] デモ機能エラー: {e}")

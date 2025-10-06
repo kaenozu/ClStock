@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 @pytest.fixture(autouse=True)
 def cleanup_security_state():
-    import api.security as security
+    from api import security
 
     security.reset_env_token_cache()
     yield

@@ -1,12 +1,12 @@
-"""
-データベースセキュリティのテスト
+"""データベースセキュリティのテスト
 """
 
-import pytest
+import os
 import sqlite3
 import tempfile
-import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from utils.database_security import SecureDatabase, get_secure_db
 
@@ -47,7 +47,7 @@ class TestSecureDatabase:
         # データ挿入
         query = "INSERT INTO stocks (symbol, name, sector) VALUES (?, ?, ?)"
         result = self.db.execute_safe_update(
-            query, ("TEST", "Test Company", "Technology")
+            query, ("TEST", "Test Company", "Technology"),
         )
         assert result == 1
 

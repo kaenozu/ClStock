@@ -1,5 +1,4 @@
-"""
-リアルタイムデータプロバイダーの実装
+"""リアルタイムデータプロバイダーの実装
 
 このモジュールは、WebSocket接続によるリアルタイムデータ取得、
 データ正規化、品質監視機能を提供します。
@@ -8,26 +7,34 @@
 import asyncio
 import json
 import logging
-import websockets
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple, Callable
-from dataclasses import dataclass, asdict
-import pandas as pd
-import hashlib
-from abc import ABC, abstractmethod
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 
+import websockets
+
+import pandas as pd
+from config.settings import get_settings
+from models.core.interfaces import (
+    CacheProvider as DataQualityMonitor,
+)
 from models.core.interfaces import (
     DataProvider as RealTimeDataProvider,
-    PredictionResult as TickData,
+)
+from models.core.interfaces import (
     ModelConfiguration as OrderBookData,
+)
+from models.core.interfaces import (
     PerformanceMetrics as IndexData,
+)
+from models.core.interfaces import (
     PredictionResult as NewsData,
-    CacheProvider as DataQualityMonitor,
+)
+from models.core.interfaces import (
+    PredictionResult as TickData,
 )
 from models.monitoring.cache_manager import (
     RealTimeCacheManager as AdvancedCacheManager,
 )
-from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +137,7 @@ class DataNormalizer:
                     asks.append((float(ask[0]), int(ask[1])))
 
             return OrderBookData(
-                symbol=symbol, timestamp=timestamp, bids=bids, asks=asks
+                symbol=symbol, timestamp=timestamp, bids=bids, asks=asks,
             )
 
         except (ValueError, KeyError, TypeError) as e:
@@ -145,7 +152,7 @@ class DataNormalizer:
             value = float(raw_data.get("value", raw_data.get("price", 0)))
             change = float(raw_data.get("change", 0))
             change_percent = float(
-                raw_data.get("change_percent", raw_data.get("change_pct", 0))
+                raw_data.get("change_percent", raw_data.get("change_pct", 0)),
             )
 
             timestamp_str = raw_data.get("timestamp", raw_data.get("time", ""))
@@ -229,7 +236,7 @@ class RealTimeDataQualityMonitor(DataQualityMonitor):
             return False
 
         # 価格スパイク検出
-        if tick.symbol in self.price_history and self.price_history[tick.symbol]:
+        if self.price_history.get(tick.symbol):
             last_price = (
                 self.price_history[tick.symbol][-1]
                 if self.price_history[tick.symbol]
@@ -244,12 +251,12 @@ class RealTimeDataQualityMonitor(DataQualityMonitor):
                 if price_change_ratio > 0.1:
                     logger.warning(
                         f"Price spike detected for {tick.symbol}: "
-                        f"{last_price} -> {tick.price} ({price_change_ratio:.2%})"
+                        f"{last_price} -> {tick.price} ({price_change_ratio:.2%})",
                     )
             else:
                 # last_priceが0以下の場合は警告を出力
                 logger.warning(
-                    f"Invalid last_price ({last_price}) for {tick.symbol}, skipping spike detection"
+                    f"Invalid last_price ({last_price}) for {tick.symbol}, skipping spike detection",
                 )
 
         # 価格履歴を更新
@@ -263,7 +270,7 @@ class RealTimeDataQualityMonitor(DataQualityMonitor):
         now = datetime.now()
         if abs((tick.timestamp - now).total_seconds()) > 3600:  # 1時間以上ずれている
             logger.warning(
-                f"Timestamp anomaly detected for {tick.symbol}: {tick.timestamp}"
+                f"Timestamp anomaly detected for {tick.symbol}: {tick.timestamp}",
             )
 
         self.metrics["last_data_timestamp"] = tick.timestamp
@@ -297,7 +304,7 @@ class RealTimeDataQualityMonitor(DataQualityMonitor):
             if best_bid >= best_ask:
                 logger.warning(
                     f"Invalid spread for {order_book.symbol}: "
-                    f"bid={best_bid}, ask={best_ask}"
+                    f"bid={best_bid}, ask={best_ask}",
                 )
                 return False
         else:
@@ -346,20 +353,20 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
         data_normalizer=None,
         reconnection_manager=None,
     ):
-        """
-        WebSocketRealTimeProviderの初期化
+        """WebSocketRealTimeProviderの初期化
 
         Args:
             cache_manager: キャッシュマネージャー（Noneの場合は新規作成）
             quality_monitor: データ品質監視（Noneの場合は新規作成）
             data_normalizer: データ正規化（Noneの場合は新規作成）
             reconnection_manager: 再接続マネージャー（Noneの場合は新規作成）
+
         """
         self.settings = get_settings()
 
         # 依存性注入または新規作成
         self.cache_manager = cache_manager or AdvancedCacheManager(
-            max_cache_size=5000, ttl_hours=1
+            max_cache_size=5000, ttl_hours=1,
         )
         self.quality_monitor = quality_monitor or RealTimeDataQualityMonitor()
         self.data_normalizer = data_normalizer or DataNormalizer()
@@ -393,7 +400,7 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
             logger.info(f"Connecting to WebSocket: {ws_url}")
 
             self.websocket = await websockets.connect(
-                ws_url, timeout=10, ping_interval=30, ping_timeout=10
+                ws_url, timeout=10, ping_interval=30, ping_timeout=10,
             )
 
             self.is_running = True
@@ -636,7 +643,7 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
         self.reconnection_manager.record_attempt()
 
         logger.info(
-            f"Attempting reconnection in {delay} seconds (attempt {self.reconnection_manager.retry_count})"
+            f"Attempting reconnection in {delay} seconds (attempt {self.reconnection_manager.retry_count})",
         )
 
         await asyncio.sleep(delay)
@@ -656,18 +663,17 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
 
         if data_source == "yahoo":
             return "wss://streamer.finance.yahoo.com"
-        elif data_source == "alpha_vantage":
+        if data_source == "alpha_vantage":
             return "wss://ws.finnhub.io"
-        else:
-            # デモ用のWebSocketサーバー
-            return "wss://demo-realtime-data.example.com/ws"
+        # デモ用のWebSocketサーバー
+        return "wss://demo-realtime-data.example.com/ws"
 
     def add_tick_callback(self, callback: Callable[[TickData], None]) -> None:
         """ティックデータコールバックを追加"""
         self.tick_callbacks.append(callback)
 
     def add_order_book_callback(
-        self, callback: Callable[[OrderBookData], None]
+        self, callback: Callable[[OrderBookData], None],
     ) -> None:
         """板情報コールバックを追加"""
         self.order_book_callbacks.append(callback)

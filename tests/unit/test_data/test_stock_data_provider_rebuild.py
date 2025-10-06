@@ -10,11 +10,11 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 from typing import Dict, List
-
-import pandas as pd
-import pytest
 from unittest.mock import patch
 
+import pytest
+
+import pandas as pd
 from data.stock_data import StockDataProvider
 
 
@@ -32,10 +32,9 @@ class _MemoryCache:
         return True
 
 
-@pytest.fixture()
+@pytest.fixture
 def history_frame() -> pd.DataFrame:
     """Return a deterministic OHLCV frame used across the tests."""
-
     idx = pd.date_range("2024-01-01", periods=30, freq="D")
     return pd.DataFrame(
         {
@@ -49,7 +48,7 @@ def history_frame() -> pd.DataFrame:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def ticker_factory(history_frame: pd.DataFrame):
     """Factory returning lightweight ``yfinance.Ticker`` stand-ins."""
 
@@ -89,7 +88,7 @@ def test_get_stock_data_uses_cache(history_frame: pd.DataFrame, ticker_factory) 
         return ticker_factory(symbol)
 
     with patch("data.stock_data.get_cache", return_value=cache), patch(
-        "data.stock_data.yf.Ticker", side_effect=_ticker_side_effect
+        "data.stock_data.yf.Ticker", side_effect=_ticker_side_effect,
     ):
         first = provider.get_stock_data("7203", "1mo")
         second = provider.get_stock_data("7203", "1mo")

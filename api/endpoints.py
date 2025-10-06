@@ -1,36 +1,41 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
-from fastapi.security import HTTPAuthorizationCredentials
-
+import re
 from datetime import datetime, time
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.security import HTTPAuthorizationCredentials
 from zoneinfo import ZoneInfo
+
 import pandas as pd
-
-from utils.logger_config import get_logger
-
-logger = get_logger(__name__)
+from api.schemas import (
+    EntryPriceSchema,
+    RecommendationResponse,
+    StockRecommendationSchema,
+    TargetSchema,
+)
 
 # セキュリティと検証機能
 from api.security import security, verify_token
-from utils.validators import (
-    validate_stock_symbol,
-    validate_period,
-    ValidationError,
-    log_validation_error,
-)
-from utils.exceptions import DataFetchError
-
+from data.stock_data import StockDataProvider
 from models.legacy_core import MLStockPredictor
 from models.recommendation import StockRecommendation
-from api.schemas import RecommendationResponse, StockRecommendationSchema, EntryPriceSchema, TargetSchema
-from data.stock_data import StockDataProvider
+from utils.exceptions import DataFetchError, InvalidSymbolError, PredictionError
+from utils.logger_config import get_logger
+from utils.validators import (
+    ValidationError,
+    log_validation_error,
+    validate_period,
+    validate_stock_symbol,
+)
 
+logger = get_logger(__name__)
 
 router = APIRouter()
 
 
-def stock_recommendation_to_schema(stock_rec: StockRecommendation) -> StockRecommendationSchema:
-    """
-    Convert StockRecommendation dataclass to StockRecommendationSchema pydantic model.
+def stock_recommendation_to_schema(
+    stock_rec: StockRecommendation,
+) -> StockRecommendationSchema:
+    """Convert StockRecommendation dataclass to StockRecommendationSchema pydantic model.
     """
     # holding_period (str) -> holding_period_days (int) の変換 (例: "1～2か月" -> 平均して30+45=75日など)
     # 簡易的な変換ロジック (より正確な変換が必要な場合は修正)
@@ -45,14 +50,13 @@ def stock_recommendation_to_schema(stock_rec: StockRecommendation) -> StockRecom
         # デフォルトまたは不明な場合は、数値以外の文字列から日数を推定 (簡易)
         try:
             # "1か月" から "1" を取り出し、30日として計算
-            import re
-            matches = re.findall(r'(\d+)', period_str)
+            matches = re.findall(r"(\d+)", period_str)
             if matches:
                 months = int(matches[0])  # 最初に見つかった数字を月数とする
                 holding_period_days = months * 30
             else:
                 holding_period_days = 30  # デフォルト
-        except:
+        except Exception:
             holding_period_days = 30  # エラー時デフォルト
 
     # entry_price は current_price を中心に±3%の範囲を設定する
@@ -75,13 +79,13 @@ def stock_recommendation_to_schema(stock_rec: StockRecommendation) -> StockRecom
         action = "buy"
     elif rec_level in ["avoid"]:
         action = "sell"  # "avoid" は sell に近いと見なす
-    else: # "neutral", "watch"
+    else:  # "neutral", "watch"
         action = "hold"
 
     # buy_timing (str) -> entry_condition または action_text
     # buy_timing は "押し目買いを検討" など、action_textに近いが、entry_conditionとして扱う
     entry_condition = stock_rec.buy_timing
-    action_text = None # APIレスポンスには含まれない (CUI用)
+    action_text = None  # APIレスポンスには含まれない (CUI用)
 
     # sector はデータソースから取得 (例: data_provider)
     # StockRecommendation オブジェクトには含まれていないので、関数の外から渡すかデフォルト値
@@ -90,8 +94,8 @@ def stock_recommendation_to_schema(stock_rec: StockRecommendation) -> StockRecom
     return StockRecommendationSchema(
         rank=stock_rec.rank,
         symbol=stock_rec.symbol,
-        name=stock_rec.company_name, # company_name -> name
-        sector=None, # デフォルト
+        name=stock_rec.company_name,  # company_name -> name
+        sector=None,  # デフォルト
         score=stock_rec.score,
         action=action,
         action_text=action_text,
@@ -99,12 +103,12 @@ def stock_recommendation_to_schema(stock_rec: StockRecommendation) -> StockRecom
         entry_price=entry_price,
         stop_loss=stock_rec.stop_loss,
         targets=targets,
-        holding_period_days=holding_period_days, # holding_period (str) -> holding_period_days (int)
-        confidence=None, # デフォルト
-        rationale=stock_rec.recommendation_reason, # recommendation_reason -> rationale
-        notes=None, # デフォルト
-        risk_level=None, # デフォルト
-        chart_refs=None, # デフォルト
+        holding_period_days=holding_period_days,  # holding_period (str) -> holding_period_days (int)
+        confidence=None,  # デフォルト
+        rationale=stock_rec.recommendation_reason,  # recommendation_reason -> rationale
+        notes=None,  # デフォルト
+        risk_level=None,  # デフォルト
+        chart_refs=None,  # デフォルト
         current_price=stock_rec.current_price,
     )
 
@@ -120,25 +124,23 @@ async def get_recommendations(
 
         predictor = MLStockPredictor()
         recommendations_raw = predictor.get_top_recommendations(top_n)
-        recommendations = [stock_recommendation_to_schema(rec) for rec in recommendations_raw]
+        recommendations = [
+            stock_recommendation_to_schema(rec) for rec in recommendations_raw
+        ]
 
         current_time = datetime.now(ZoneInfo("Asia/Tokyo"))
         market_open_time = time(9, 0)
         market_close_time = time(15, 0)
         is_weekend = current_time.weekday() >= 5
-        is_market_hours = (
-            market_open_time <= current_time.time() < market_close_time
-        )
+        is_market_hours = market_open_time <= current_time.time() < market_close_time
 
         return RecommendationResponse(
-            items=recommendations, # recommendations -> items に変更
+            items=recommendations,  # recommendations -> items に変更
             generated_at=current_time,
             market_status=(
-                "市場営業時間外"
-                if is_weekend or not is_market_hours
-                else "市場営業中"
+                "市場営業時間外" if is_weekend or not is_market_hours else "市場営業中"
             ),
-            top_n=top_n, # top_n フィールドも追加
+            top_n=top_n,  # top_n フィールドも追加
         )
     except ValidationError as e:
         log_validation_error(e, {"endpoint": "/recommendations", "top_n": top_n})
@@ -148,17 +150,17 @@ async def get_recommendations(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"推奨銘柄の取得に失敗しました: {str(e)}",
+            detail=f"推奨銘柄の取得に失敗しました: {e!s}",
         )
 
 
-@router.get("/recommendation/{symbol}", response_model=StockRecommendationSchema) # response_model 追加
+@router.get(
+    "/recommendation/{symbol}", response_model=StockRecommendationSchema,
+)  # response_model 追加
 async def get_single_recommendation(
-    symbol: str, credentials: HTTPAuthorizationCredentials = Depends(security)
+    symbol: str, credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     """Get recommendation information for a specific symbol"""
-    from utils.exceptions import InvalidSymbolError, PredictionError
-
     try:
         # Authentication verification
         verify_token(credentials.credentials)
@@ -178,20 +180,20 @@ async def get_single_recommendation(
         recommendation.rank = 1
         recommendation.symbol = validated_symbol
         recommendation.company_name = data_provider.jp_stock_codes.get(
-            base_symbol, recommendation.company_name
+            base_symbol, recommendation.company_name,
         )
 
-        return stock_recommendation_to_schema(recommendation) # 変換して返す
-    except InvalidSymbolError as e:
+        return stock_recommendation_to_schema(recommendation)  # 変換して返す
+    except InvalidSymbolError:
         raise HTTPException(
-            status_code=404, detail=f"銘柄コード {symbol} が見つかりません"
+            status_code=404, detail=f"銘柄コード {symbol} が見つかりません",
         )
     except PredictionError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
-        logger.error(f"推奨情報の取得中にエラーが発生しました: {str(e)}")
+        logger.error(f"推奨情報の取得中にエラーが発生しました: {e!s}")
         raise HTTPException(
-            status_code=500, detail=f"推奨情報の取得に失敗しました: {str(e)}"
+            status_code=500, detail=f"推奨情報の取得に失敗しました: {e!s}",
         )
 
 
@@ -203,11 +205,11 @@ async def get_available_stocks():
             "stocks": [
                 {"symbol": symbol, "name": name}
                 for symbol, name in data_provider.jp_stock_codes.items()
-            ]
+            ],
         }
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"銘柄一覧の取得に失敗しました: {str(e)}"
+            status_code=500, detail=f"銘柄一覧の取得に失敗しました: {e!s}",
         )
 
 
@@ -215,7 +217,7 @@ async def get_available_stocks():
 async def get_stock_data(
     symbol: str,
     period: str = Query(
-        "1y", description="期間 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)"
+        "1y", description="期間 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)",
     ),
 ):
     try:
@@ -237,14 +239,14 @@ async def get_stock_data(
 
         if lookup_symbol is None:
             raise HTTPException(
-                status_code=404, detail=f"銘柄コード {symbol} が見つかりません"
+                status_code=404, detail=f"銘柄コード {symbol} が見つかりません",
             )
 
         data = data_provider.get_stock_data(lookup_symbol, validated_period)
 
         if data.empty:
             raise HTTPException(
-                status_code=404, detail=f"銘柄 {symbol} のデータが見つかりません"
+                status_code=404, detail=f"銘柄 {symbol} のデータが見つかりません",
             )
 
         technical_data = data_provider.calculate_technical_indicators(data)
@@ -253,12 +255,8 @@ async def get_stock_data(
             latest_actual_ticker = technical_data["ActualTicker"].dropna()
             if not latest_actual_ticker.empty:
                 actual_ticker_value = str(latest_actual_ticker.iloc[-1])
-        raw_financial_metrics = (
-            data_provider.get_financial_metrics(lookup_symbol) or {}
-        )
-        company_name = data_provider.jp_stock_codes.get(
-            lookup_symbol, lookup_symbol
-        )
+        raw_financial_metrics = data_provider.get_financial_metrics(lookup_symbol) or {}
+        company_name = data_provider.jp_stock_codes.get(lookup_symbol, lookup_symbol)
         financial_metrics = dict(raw_financial_metrics)
         financial_metrics["symbol"] = validated_symbol
         if "company_name" in financial_metrics or company_name != lookup_symbol:
@@ -325,5 +323,5 @@ async def get_stock_data(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"株価データの取得に失敗しました: {str(e)}"
+            status_code=500, detail=f"株価データの取得に失敗しました: {e!s}",
         )

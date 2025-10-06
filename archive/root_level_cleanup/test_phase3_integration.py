@@ -1,35 +1,33 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Phase 3機能統合テスト
+"""Phase 3機能統合テスト
 センチメント分析 + 可視化ダッシュボード + 戦略生成 + リスク管理の統合テスト
 """
 
 import logging
+from datetime import datetime
 from pathlib import Path
-import pandas as pd
+from typing import Any, Dict
+
 import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, List, Any
+import pandas as pd
 
 # Phase 3システムのインポート
 from models.advanced.market_sentiment_analyzer import (
     MarketSentimentAnalyzer,
-    SentimentData,
 )
 from models.advanced.prediction_dashboard import (
     PredictionDashboard,
     VisualizationData,
 )
+from models.advanced.risk_management_framework import RiskManager
 from models.advanced.trading_strategy_generator import (
     AutoTradingStrategyGenerator,
     StrategyType,
 )
-from models.advanced.risk_management_framework import RiskManager
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -67,7 +65,7 @@ class Phase3IntegrationTester:
 
             except Exception as e:
                 self.test_results[test_name] = {"status": "ERROR", "error": str(e)}
-                self.logger.error(f"[ERROR] {test_name}: {str(e)}")
+                self.logger.error(f"[ERROR] {test_name}: {e!s}")
 
         self._print_test_summary()
 
@@ -162,7 +160,7 @@ class Phase3IntegrationTester:
                         "prediction": 2000 + i * 10 + np.random.uniform(-20, 20),
                         "confidence": np.random.uniform(0.7, 0.9),
                         "mode": "momentum",
-                    }
+                    },
                 )
 
             # センチメントデータ
@@ -252,7 +250,7 @@ class Phase3IntegrationTester:
 
             # 取引シグナル生成
             signals = strategy_generator.generate_trading_signals(
-                symbol=test_symbol, price_data=price_data
+                symbol=test_symbol, price_data=price_data,
             )
 
             # パフォーマンス取得
@@ -310,7 +308,7 @@ class Phase3IntegrationTester:
 
             # ポートフォリオリスク分析
             portfolio_risk = risk_manager.analyze_portfolio_risk(
-                portfolio_data, price_data
+                portfolio_data, price_data,
             )
 
             # リスクサマリー取得
@@ -361,20 +359,20 @@ class Phase3IntegrationTester:
 
             # 3. 戦略生成（センチメント考慮）
             strategies = strategy_generator.generate_comprehensive_strategy(
-                test_symbol, price_data
+                test_symbol, price_data,
             )
             signals = strategy_generator.generate_trading_signals(
                 test_symbol,
                 price_data,
                 sentiment_data={
-                    "current_sentiment": {"score": sentiment_result.sentiment_score}
+                    "current_sentiment": {"score": sentiment_result.sentiment_score},
                 },
             )
 
             # 4. リスク分析
             portfolio_data = {"positions": {test_symbol: 200000}, "total_value": 200000}
             risk_analysis = risk_manager.analyze_portfolio_risk(
-                portfolio_data, {test_symbol: price_data}
+                portfolio_data, {test_symbol: price_data},
             )
 
             # 5. 統合ダッシュボード
@@ -386,14 +384,14 @@ class Phase3IntegrationTester:
                         "prediction": price_data["Close"].iloc[-1] * 1.05,
                         "confidence": 0.8,
                         "mode": "integrated",
-                    }
+                    },
                 ],
                 historical_data=price_data,
                 sentiment_data={
                     "current_sentiment": {
                         "score": sentiment_result.sentiment_score,
                         "confidence": sentiment_result.confidence,
-                    }
+                    },
                 },
                 performance_metrics={"integrated_accuracy": 0.85},
                 timestamp=datetime.now(),
@@ -420,14 +418,14 @@ class Phase3IntegrationTester:
 
         total_tests = len(self.test_results)
         successful_tests = len(
-            [r for r in self.test_results.values() if r["status"] == "SUCCESS"]
+            [r for r in self.test_results.values() if r["status"] == "SUCCESS"],
         )
         failed_tests = total_tests - successful_tests
 
         self.logger.info(f"総テスト数: {total_tests}")
         self.logger.info(f"成功: {successful_tests}")
         self.logger.info(f"失敗: {failed_tests}")
-        self.logger.info(f"成功率: {(successful_tests/total_tests)*100:.1f}%")
+        self.logger.info(f"成功率: {(successful_tests / total_tests) * 100:.1f}%")
 
         self.logger.info("\n--- 詳細結果 ---")
         for test_name, result in self.test_results.items():
@@ -436,7 +434,7 @@ class Phase3IntegrationTester:
 
             if result["status"] == "ERROR" and "error" in result:
                 self.logger.info(f"    エラー: {result['error']}")
-            elif "details" in result and result["details"]:
+            elif result.get("details"):
                 details = result["details"]
                 if isinstance(details, dict) and "success" in details:
                     for key, value in details.items():

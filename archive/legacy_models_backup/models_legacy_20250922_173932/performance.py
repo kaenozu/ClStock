@@ -2,12 +2,13 @@
 
 import logging
 import os
-import pandas as pd
-from typing import Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from typing import Dict, List, Optional
 
-from .base import StockPredictor, PredictionResult, CacheablePredictor
+import pandas as pd
+
+from .base import CacheablePredictor, PredictionResult, StockPredictor
 from .core import EnsembleStockPredictor
 
 logger = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ class ParallelStockPredictor(StockPredictor):
                     results[symbol] = score
                     self.batch_cache[symbol] = score
                 except Exception as e:
-                    logger.error(f"Error predicting {symbol}: {str(e)}")
+                    logger.error(f"Error predicting {symbol}: {e!s}")
                     results[symbol] = 50.0
 
         return results
@@ -64,7 +65,7 @@ class ParallelStockPredictor(StockPredictor):
             result = self.ensemble_predictor.predict(symbol)
             return result.prediction
         except Exception as e:
-            logger.error(f"Error predicting score for {symbol}: {str(e)}")
+            logger.error(f"Error predicting score for {symbol}: {e!s}")
             return 50.0
 
     def batch_data_preparation(self, symbols: List[str]) -> Dict[str, pd.DataFrame]:
@@ -84,7 +85,7 @@ class ParallelStockPredictor(StockPredictor):
                     if not data.empty:
                         data_results[symbol] = data
                 except Exception as e:
-                    logger.error(f"Error getting data for {symbol}: {str(e)}")
+                    logger.error(f"Error getting data for {symbol}: {e!s}")
 
         return data_results
 
@@ -96,7 +97,7 @@ class ParallelStockPredictor(StockPredictor):
             data_provider = StockDataProvider()
             return data_provider.get_stock_data(symbol, "1y")
         except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {str(e)}")
+            logger.error(f"Error fetching data for {symbol}: {e!s}")
             return pd.DataFrame()
 
     def clear_batch_cache(self):
@@ -110,7 +111,7 @@ class ParallelStockPredictor(StockPredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Single prediction using ensemble predictor"""
         if not self.is_trained():
@@ -130,7 +131,7 @@ class ParallelStockPredictor(StockPredictor):
                 },
             )
         except Exception as e:
-            logger.error(f"Parallel prediction error for {symbol}: {str(e)}")
+            logger.error(f"Parallel prediction error for {symbol}: {e!s}")
             return PredictionResult(
                 prediction=50.0,
                 confidence=0.0,
@@ -154,16 +155,15 @@ class AdvancedCacheManager:
         }
 
     def get_cached_features(
-        self, symbol: str, data_hash: str
+        self, symbol: str, data_hash: str,
     ) -> Optional[pd.DataFrame]:
         """特徴量キャッシュから取得"""
         cache_key = f"{symbol}_{data_hash}"
         if cache_key in self.feature_cache:
             self.cache_stats["hits"] += 1
             return self.feature_cache[cache_key]
-        else:
-            self.cache_stats["misses"] += 1
-            return None
+        self.cache_stats["misses"] += 1
+        return None
 
     def cache_features(self, symbol: str, data_hash: str, features: pd.DataFrame):
         """特徴量をキャッシュ"""
@@ -182,9 +182,8 @@ class AdvancedCacheManager:
         if cache_key in self.prediction_cache:
             self.cache_stats["hits"] += 1
             return self.prediction_cache[cache_key]
-        else:
-            self.cache_stats["misses"] += 1
-            return None
+        self.cache_stats["misses"] += 1
+        return None
 
     def cache_prediction(self, symbol: str, features_hash: str, prediction: float):
         """予測結果をキャッシュ"""
@@ -300,7 +299,7 @@ class UltraHighPerformancePredictor(CacheablePredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Ultra-fast prediction with caching"""
         if not self.is_trained():
@@ -318,7 +317,7 @@ class UltraHighPerformancePredictor(CacheablePredictor):
 
             # キャッシュから予測結果を確認
             cached_prediction = self.cache_manager.get_cached_prediction(
-                symbol, data_hash
+                symbol, data_hash,
             )
             if cached_prediction is not None:
                 return PredictionResult(
@@ -341,13 +340,13 @@ class UltraHighPerformancePredictor(CacheablePredictor):
 
             # メタデータを更新
             result.metadata.update(
-                {"cache_hit": False, "data_hash": data_hash, "ultra_performance": True}
+                {"cache_hit": False, "data_hash": data_hash, "ultra_performance": True},
             )
 
             return result
 
         except Exception as e:
-            logger.error(f"Ultra performance prediction error for {symbol}: {str(e)}")
+            logger.error(f"Ultra performance prediction error for {symbol}: {e!s}")
             return PredictionResult(
                 prediction=50.0,
                 confidence=0.0,
@@ -370,7 +369,7 @@ class UltraHighPerformancePredictor(CacheablePredictor):
                 data_hash = self.cache_manager.get_data_hash(data)
 
                 cached_prediction = self.cache_manager.get_cached_prediction(
-                    symbol, data_hash
+                    symbol, data_hash,
                 )
                 if cached_prediction is not None:
                     results[symbol] = PredictionResult(
@@ -387,7 +386,7 @@ class UltraHighPerformancePredictor(CacheablePredictor):
         # キャッシュミスしたシンボルを並列処理
         if uncached_symbols:
             with ThreadPoolExecutor(
-                max_workers=self.parallel_predictor.n_jobs
+                max_workers=self.parallel_predictor.n_jobs,
             ) as executor:
                 future_to_symbol = {
                     executor.submit(self.predict, symbol): symbol

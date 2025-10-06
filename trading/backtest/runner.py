@@ -13,11 +13,11 @@ from ..performance_tracker import PerformanceTracker
 from ..portfolio_manager import DemoPortfolioManager
 from ..risk_manager import DemoRiskManager
 from ..trade_recorder import TradeRecorder
-from ..trading_strategy import TradingSignal, TradingStrategy, SignalType
+from ..trading_strategy import SignalType, TradingSignal, TradingStrategy
 
 if False:  # pragma: no cover - type checking only
-    from trading.backtest_engine import BacktestConfig, BacktestResult
     from data.stock_data import StockDataProvider
+    from trading.backtest_engine import BacktestConfig, BacktestResult
 
 
 class BacktestRunner:
@@ -25,9 +25,9 @@ class BacktestRunner:
 
     def __init__(
         self,
-        config: "BacktestConfig",
+        config: BacktestConfig,
         trading_strategy: TradingStrategy,
-        data_provider: "StockDataProvider",
+        data_provider: StockDataProvider,
         logger: Optional[logging.Logger] = None,
     ) -> None:
         self.config = config
@@ -39,9 +39,8 @@ class BacktestRunner:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-    def run_backtest(self, target_symbols: List[str]) -> "BacktestResult":
+    def run_backtest(self, target_symbols: List[str]) -> BacktestResult:
         """Execute the backtest for the provided symbol universe."""
-
         try:
             self.logger.info("履歴データ読み込み開始")
             self._load_historical_data(target_symbols)
@@ -75,7 +74,7 @@ class BacktestRunner:
                     trades_executed.extend(daily_trades)
 
                     portfolio_value = self._calculate_portfolio_value(
-                        current_date, portfolio_manager
+                        current_date, portfolio_manager,
                     )
                     portfolio_values.append((current_date, portfolio_value))
 
@@ -121,14 +120,14 @@ class BacktestRunner:
             try:
                 extended_start = self.config.start_date - timedelta(days=100)
                 data = self.data_provider.get_stock_data(
-                    symbol, start_date=extended_start, end_date=self.config.end_date
+                    symbol, start_date=extended_start, end_date=self.config.end_date,
                 )
 
                 if data is not None and len(data) > 0:
                     enriched = self.data_provider.calculate_technical_indicators(data)
                     self.historical_data[symbol] = enriched
                     self.logger.info(
-                        f"履歴データ読み込み完了: {symbol} ({len(enriched)}日分)"
+                        f"履歴データ読み込み完了: {symbol} ({len(enriched)}日分)",
                     )
                 else:
                     self.logger.warning(f"履歴データ取得失敗: {symbol}")
@@ -175,7 +174,7 @@ class BacktestRunner:
                     continue
 
                 trade = self._execute_backtest_trade(
-                    signal, date, portfolio_manager, trade_recorder
+                    signal, date, portfolio_manager, trade_recorder,
                 )
 
                 if trade:
@@ -187,15 +186,15 @@ class BacktestRunner:
         return trades_executed
 
     def _generate_backtest_signal(
-        self, symbol: str, historical_data: pd.DataFrame, current_date: datetime
+        self, symbol: str, historical_data: pd.DataFrame, current_date: datetime,
     ) -> Optional[TradingSignal]:
         try:
             current_price = historical_data.loc[
-                historical_data.index <= current_date, "Close"
+                historical_data.index <= current_date, "Close",
             ].iloc[-1]
 
             signal_data = self._calculate_historical_signal(
-                symbol, historical_data, current_date
+                symbol, historical_data, current_date,
             )
 
             if signal_data["confidence"] < self.config.confidence_threshold:
@@ -219,7 +218,7 @@ class BacktestRunner:
             return None
 
     def _calculate_historical_signal(
-        self, symbol: str, data: pd.DataFrame, date: datetime
+        self, symbol: str, data: pd.DataFrame, date: datetime,
     ) -> Dict[str, Any]:
         try:
             current_data = data[data.index <= date]
@@ -322,7 +321,7 @@ class BacktestRunner:
             total_cost = commission + spread_cost
 
             portfolio_manager.add_position(
-                signal.symbol, quantity, execution_price, signal.signal_type
+                signal.symbol, quantity, execution_price, signal.signal_type,
             )
 
             trade_data = {
@@ -353,7 +352,7 @@ class BacktestRunner:
             return None
 
     def _calculate_portfolio_value(
-        self, date: datetime, portfolio_manager: DemoPortfolioManager
+        self, date: datetime, portfolio_manager: DemoPortfolioManager,
     ) -> float:
         try:
             total_value = portfolio_manager.current_cash
@@ -382,7 +381,7 @@ class BacktestRunner:
         daily_returns: List[float],
         trade_recorder: TradeRecorder,
         performance_tracker: PerformanceTracker,
-    ) -> "BacktestResult":
+    ) -> BacktestResult:
         try:
             if not portfolio_values:
                 return self._empty_backtest_result()
@@ -437,7 +436,7 @@ class BacktestRunner:
             )
 
             precision_87_trades = len(
-                [t for t in trades if t.get("precision_87_achieved", False)]
+                [t for t in trades if t.get("precision_87_achieved", False)],
             )
             precision_87_wins = len(
                 [
@@ -445,7 +444,7 @@ class BacktestRunner:
                     for t in completed_trades
                     if t.get("precision_87_achieved", False)
                     and t.get("profit_loss", 0) > 0
-                ]
+                ],
             )
             precision_87_success_rate = (
                 precision_87_wins / precision_87_trades * 100
@@ -505,7 +504,7 @@ class BacktestRunner:
             return self._empty_backtest_result()
 
     def _calculate_max_drawdown(
-        self, portfolio_values: List[Tuple[datetime, float]]
+        self, portfolio_values: List[Tuple[datetime, float]],
     ) -> float:
         if not portfolio_values:
             return 0.0
@@ -515,8 +514,7 @@ class BacktestRunner:
         max_drawdown = 0.0
 
         for value in values:
-            if value > peak:
-                peak = value
+            peak = max(peak, value)
             drawdown = (peak - value) / peak if peak > 0 else 0
             max_drawdown = max(max_drawdown, drawdown)
 
@@ -525,7 +523,7 @@ class BacktestRunner:
     def _is_trading_day(self, date: datetime) -> bool:
         return date.weekday() < 5
 
-    def _empty_backtest_result(self) -> "BacktestResult":
+    def _empty_backtest_result(self) -> BacktestResult:
         from trading.backtest_engine import BacktestResult  # local import
 
         return BacktestResult(

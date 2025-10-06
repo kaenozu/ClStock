@@ -1,12 +1,10 @@
-"""
-Connection pooling utilities for external services
+"""Connection pooling utilities for external services
 """
 
 import logging
 import threading
-from typing import Dict, Any, Optional
-from queue import Queue, Empty
-import time
+from queue import Empty, Queue
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ class ConnectionPool:
     def _initialize_pool(self):
         """Initialize the connection pool"""
         logger.info(
-            f"Initializing connection pool with {self.max_connections} connections"
+            f"Initializing connection pool with {self.max_connections} connections",
         )
 
     def _create_connection(self) -> Any:
@@ -35,7 +33,7 @@ class ConnectionPool:
     def _validate_connection(self, connection: Any) -> bool:
         """Validate if a connection is still alive - to be implemented by subclasses"""
         raise NotImplementedError(
-            "Subclasses must implement _validate_connection method"
+            "Subclasses must implement _validate_connection method",
         )
 
     def _close_connection(self, connection: Any) -> None:
@@ -50,11 +48,10 @@ class ConnectionPool:
             if self._validate_connection(connection):
                 logger.debug("Reusing existing connection from pool")
                 return connection
-            else:
-                # Connection is invalid, create a new one
-                logger.debug("Invalid connection found, creating new one")
-                self._close_connection(connection)
-                return self._create_connection()
+            # Connection is invalid, create a new one
+            logger.debug("Invalid connection found, creating new one")
+            self._close_connection(connection)
+            return self._create_connection()
         except Empty:
             # No available connections, create a new one if under limit
             with self.lock:
@@ -62,15 +59,13 @@ class ConnectionPool:
                     self.active_connections += 1
                     logger.debug("Creating new connection")
                     return self._create_connection()
-                else:
-                    # Wait for a connection to become available
-                    logger.debug("Waiting for connection to become available")
-                    connection = self.pool.get(timeout=self.connection_timeout)
-                    if self._validate_connection(connection):
-                        return connection
-                    else:
-                        self._close_connection(connection)
-                        return self._create_connection()
+                # Wait for a connection to become available
+                logger.debug("Waiting for connection to become available")
+                connection = self.pool.get(timeout=self.connection_timeout)
+                if self._validate_connection(connection):
+                    return connection
+                self._close_connection(connection)
+                return self._create_connection()
 
     def return_connection(self, connection: Any) -> None:
         """Return a connection to the pool"""

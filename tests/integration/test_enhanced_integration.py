@@ -60,12 +60,13 @@ class DummyEnhancedSystem:
 @pytest.fixture
 def deterministic_time(monkeypatch):
     """Provide a predictable ``time.time`` implementation for the module."""
-
     timestamps = iter([0.0, 0.2, 0.2, 0.5, 1.0, 1.4, 1.4, 1.9])
     monkeypatch.setattr(ite.time, "time", lambda: next(timestamps))
 
 
-def _prediction_namespace(value: float, confidence: float, accuracy: float, symbol: str):
+def _prediction_namespace(
+    value: float, confidence: float, accuracy: float, symbol: str,
+):
     return SimpleNamespace(
         prediction=value,
         confidence=confidence,
@@ -89,18 +90,18 @@ def test_compare_prediction_systems_returns_metrics_and_symbols(deterministic_ti
                 "final_confidence": 0.78,
                 "final_accuracy": 88.1,
             },
-        }
+        },
     )
 
     enhanced_system = DummyEnhancedSystem(
         {
             "6758.T": _prediction_namespace(60.0, 0.9, 89.0, "6758.T"),
             "7203.T": _prediction_namespace(59.0, 0.85, 88.5, "7203.T"),
-        }
+        },
     )
 
     comparison = ite.compare_prediction_systems(
-        precision_system, enhanced_system, test_symbols
+        precision_system, enhanced_system, test_symbols,
     )
 
     assert comparison["symbols"] == test_symbols
@@ -121,7 +122,7 @@ def test_compare_system_performance_reports_batch_metrics_and_psutil_flag(monkey
         {
             symbol: _prediction_namespace(55.0, 0.8, 86.0, symbol)
             for symbol in test_symbols
-        }
+        },
     )
 
     class _FakeProcess:

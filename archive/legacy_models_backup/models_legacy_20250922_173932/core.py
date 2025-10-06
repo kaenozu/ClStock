@@ -1,19 +1,17 @@
 """Core ML prediction models."""
 
 import logging
-import numpy as np
-import pandas as pd
-import joblib
-import xgboost as xgb
-import lightgbm as lgb
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error, accuracy_score
-from datetime import datetime
 
-from .base import StockPredictor, PredictionResult, EnsemblePredictor
+import joblib
+import pandas as pd
+import xgboost as xgb
 from data.stock_data import StockDataProvider
+from sklearn.preprocessing import StandardScaler
+
+from .base import EnsemblePredictor, PredictionResult, StockPredictor
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +75,7 @@ class MLStockPredictor(StockPredictor):
         # ゼロ除算を防ぐ安全チェック
         bb_range = bb_upper - bb_lower
         features["bb_position"] = (data["Close"] - bb_lower) / bb_range.where(
-            bb_range != 0, 1
+            bb_range != 0, 1,
         )
         features["bb_squeeze"] = bb_range / bb_middle.where(bb_middle != 0, 1)
         features["bb_breakout_up"] = (data["Close"] > bb_upper).astype(int)
@@ -195,8 +193,8 @@ class MLStockPredictor(StockPredictor):
 
         # === ギャップ検出 ===
         prev_close = data["Close"].shift(1)
-        features["gap_up"] = ((data["Open"] > prev_close * 1.02)).astype(int)
-        features["gap_down"] = ((data["Open"] < prev_close * 0.98)).astype(int)
+        features["gap_up"] = (data["Open"] > prev_close * 1.02).astype(int)
+        features["gap_down"] = (data["Open"] < prev_close * 0.98).astype(int)
         features["gap_size"] = (data["Open"] - prev_close) / prev_close
 
         # 欠損値処理
@@ -204,7 +202,7 @@ class MLStockPredictor(StockPredictor):
         return features
 
     def create_targets(
-        self, data: pd.DataFrame, prediction_days: int = 5
+        self, data: pd.DataFrame, prediction_days: int = 5,
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """予測ターゲットを作成（分類と回帰の両方）"""
         targets_regression = pd.DataFrame(index=data.index)
@@ -219,7 +217,7 @@ class MLStockPredictor(StockPredictor):
         for days in [1, 3, 5, 10]:
             future_return = data["Close"].shift(-days) / data["Close"] - 1
             targets_classification[f"direction_{days}d"] = (future_return > 0).astype(
-                int
+                int,
             )
 
         # 推奨スコアターゲット（0-100）
@@ -262,7 +260,7 @@ class MLStockPredictor(StockPredictor):
         return scores.fillna(50)
 
     def prepare_dataset(
-        self, symbols: List[str], start_date: str = "2020-01-01"
+        self, symbols: List[str], start_date: str = "2020-01-01",
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """複数銘柄のデータセットを準備"""
         all_features = []
@@ -288,7 +286,7 @@ class MLStockPredictor(StockPredictor):
                 all_targets_cls.append(targets_cls)
 
             except Exception as e:
-                logger.error(f"Error processing {symbol}: {str(e)}")
+                logger.error(f"Error processing {symbol}: {e!s}")
                 continue
 
         if not all_features:
@@ -323,12 +321,12 @@ class MLStockPredictor(StockPredictor):
         if target.dtype == "float64":
             # Regression task
             self.model = xgb.XGBRegressor(
-                n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42
+                n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42,
             )
         else:
             # Classification task
             self.model = xgb.XGBClassifier(
-                n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42
+                n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42,
             )
 
         # Scale features
@@ -340,7 +338,7 @@ class MLStockPredictor(StockPredictor):
         self.feature_names = features.columns.tolist()
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Predict stock performance"""
         if not self.is_trained():
@@ -368,7 +366,7 @@ class MLStockPredictor(StockPredictor):
 
             # Reorder features to match training
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0
+                columns=self.feature_names, fill_value=0,
             )
 
             # Scale features
@@ -396,7 +394,7 @@ class MLStockPredictor(StockPredictor):
             )
 
         except Exception as e:
-            logger.error(f"Error predicting for {symbol}: {str(e)}")
+            logger.error(f"Error predicting for {symbol}: {e!s}")
             return PredictionResult(
                 prediction=0.0,
                 confidence=0.0,
@@ -426,7 +424,7 @@ class MLStockPredictor(StockPredictor):
                 importances = self.model.feature_importances_
                 return dict(zip(self.feature_names, importances))
         except Exception as e:
-            logger.error(f"Error getting feature importance: {str(e)}")
+            logger.error(f"Error getting feature importance: {e!s}")
 
         return {}
 
@@ -445,7 +443,7 @@ class MLStockPredictor(StockPredictor):
 
             logger.info(f"Model saved to {model_file}")
         except Exception as e:
-            logger.error(f"Error saving model: {str(e)}")
+            logger.error(f"Error saving model: {e!s}")
 
     def load_model(self) -> bool:
         """モデルを読み込み"""
@@ -457,7 +455,7 @@ class MLStockPredictor(StockPredictor):
             features_file = self.model_path / f"features_{self.model_type}.joblib"
 
             if not all(
-                [model_file.exists(), scaler_file.exists(), features_file.exists()]
+                [model_file.exists(), scaler_file.exists(), features_file.exists()],
             ):
                 return False
 
@@ -469,7 +467,7 @@ class MLStockPredictor(StockPredictor):
             logger.info(f"Model loaded from {model_file}")
             return True
         except Exception as e:
-            logger.error(f"Error loading model: {str(e)}")
+            logger.error(f"Error loading model: {e!s}")
             return False
 
 
@@ -487,7 +485,7 @@ class EnsembleStockPredictor(EnsemblePredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Ensemble prediction"""
         if not self.is_trained():
@@ -505,7 +503,7 @@ class EnsembleStockPredictor(EnsemblePredictor):
                 predictions.append(result.prediction * weight)
                 confidences.append(result.confidence * weight)
             except Exception as e:
-                logger.warning(f"Model {model.model_type} failed: {str(e)}")
+                logger.warning(f"Model {model.model_type} failed: {e!s}")
                 continue
 
         if not predictions:

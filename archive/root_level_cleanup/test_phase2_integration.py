@@ -1,28 +1,26 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Phase 2機能統合テスト
+"""Phase 2機能統合テスト
 超高速ストリーミング + マルチGPU並列処理 + 実時間学習システムの統合テスト
 """
 
 import asyncio
-import time
 import logging
+import time
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any, Dict
 
 # Phase 2システムのインポート
 from models.hybrid.hybrid_predictor import HybridStockPredictor
-from models.hybrid.prediction_modes import PredictionMode
-from models.hybrid.ultra_fast_streaming import UltraFastStreamingPredictor
 from models.hybrid.multi_gpu_processor import (
     MultiGPUParallelPredictor,
     RealTimeLearningSystem,
 )
+from models.hybrid.prediction_modes import PredictionMode
+from models.hybrid.ultra_fast_streaming import UltraFastStreamingPredictor
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -69,7 +67,7 @@ class Phase2IntegrationTester:
                     "execution_time": 0,
                     "error": str(e),
                 }
-                self.logger.error(f"[ERROR] {test_name}: {str(e)}")
+                self.logger.error(f"[ERROR] {test_name}: {e!s}")
 
         self._print_test_summary()
 
@@ -89,25 +87,25 @@ class Phase2IntegrationTester:
             status = predictor.get_comprehensive_system_status()
 
             self.logger.info(
-                f"キャッシュ有効: {status['hybrid_predictor']['cache_enabled']}"
+                f"キャッシュ有効: {status['hybrid_predictor']['cache_enabled']}",
             )
             self.logger.info(
-                f"適応最適化有効: {status['hybrid_predictor']['adaptive_optimization_enabled']}"
+                f"適応最適化有効: {status['hybrid_predictor']['adaptive_optimization_enabled']}",
             )
             self.logger.info(
-                f"ストリーミング有効: {status['hybrid_predictor']['streaming_enabled']}"
+                f"ストリーミング有効: {status['hybrid_predictor']['streaming_enabled']}",
             )
             self.logger.info(
-                f"マルチGPU有効: {status['hybrid_predictor']['multi_gpu_enabled']}"
+                f"マルチGPU有効: {status['hybrid_predictor']['multi_gpu_enabled']}",
             )
             self.logger.info(
-                f"実時間学習有効: {status['hybrid_predictor']['real_time_learning_enabled']}"
+                f"実時間学習有効: {status['hybrid_predictor']['real_time_learning_enabled']}",
             )
 
             return True
 
         except Exception as e:
-            self.logger.error(f"初期化テスト失敗: {str(e)}")
+            self.logger.error(f"初期化テスト失敗: {e!s}")
             return False
 
     async def test_ultra_fast_streaming(self) -> Dict[str, Any]:
@@ -126,8 +124,7 @@ class Phase2IntegrationTester:
                 result = await streaming_predictor.predict_streaming_single("6758.T")
                 if result and result.prediction > 0:
                     continue
-                else:
-                    return {"success": False, "error": "Invalid prediction result"}
+                return {"success": False, "error": "Invalid prediction result"}
 
             # 統計取得
             stats = streaming_predictor.get_streaming_statistics()
@@ -205,7 +202,7 @@ class Phase2IntegrationTester:
                         r
                         for r in learning_results
                         if r.get("status") == "learning_completed"
-                    ]
+                    ],
                 ),
                 "learning_status": learning_status,
             }
@@ -270,7 +267,7 @@ class Phase2IntegrationTester:
                     "timestamp": datetime.now(),
                 }
                 learning_result = await predictor.process_real_time_market_data(
-                    market_data
+                    market_data,
                 )
                 test_results["real_time_learning"] = learning_result
 
@@ -327,14 +324,14 @@ class Phase2IntegrationTester:
 
         total_tests = len(self.test_results)
         successful_tests = len(
-            [r for r in self.test_results.values() if r["status"] == "SUCCESS"]
+            [r for r in self.test_results.values() if r["status"] == "SUCCESS"],
         )
         failed_tests = total_tests - successful_tests
 
         self.logger.info(f"総テスト数: {total_tests}")
         self.logger.info(f"成功: {successful_tests}")
         self.logger.info(f"失敗: {failed_tests}")
-        self.logger.info(f"成功率: {(successful_tests/total_tests)*100:.1f}%")
+        self.logger.info(f"成功率: {(successful_tests / total_tests) * 100:.1f}%")
 
         self.logger.info("\n--- 詳細結果 ---")
         for test_name, result in self.test_results.items():

@@ -1,11 +1,11 @@
 import sys
 import types
-from datetime import datetime, date
+from datetime import date, datetime
+
+import pytest
 
 import numpy as np
 import pandas as pd
-import pytest
-
 
 # Provide lightweight sklearn stubs to avoid optional dependency imports during testing.
 sklearn_stub = types.ModuleType("sklearn")
@@ -63,13 +63,16 @@ def reset_datetime(monkeypatch):
 
 def make_history(size: int = 60, close: float = 500.0) -> pd.DataFrame:
     index = pd.date_range(end=datetime(2024, 1, 1), periods=size, freq="D")
-    data = pd.DataFrame({
-        "Open": np.linspace(close - 5, close + 5, size),
-        "High": np.linspace(close - 2, close + 8, size),
-        "Low": np.linspace(close - 8, close + 2, size),
-        "Close": np.linspace(close - 4, close + 4, size),
-        "Volume": np.random.randint(1000, 5000, size),
-    }, index=index)
+    data = pd.DataFrame(
+        {
+            "Open": np.linspace(close - 5, close + 5, size),
+            "High": np.linspace(close - 2, close + 8, size),
+            "Low": np.linspace(close - 8, close + 2, size),
+            "Close": np.linspace(close - 4, close + 4, size),
+            "Volume": np.random.randint(1000, 5000, size),
+        },
+        index=index,
+    )
     return data
 
 
@@ -86,7 +89,9 @@ class DummyDataProvider:
 
     def get_realtime_data(self, symbol: str):
         self.realtime_calls.append(symbol)
-        return pd.DataFrame({"Close": [self.realtime_close]}, index=[datetime(2024, 1, 1, 10, 0)])
+        return pd.DataFrame(
+            {"Close": [self.realtime_close]}, index=[datetime(2024, 1, 1, 10, 0)],
+        )
 
 
 class DummyPatternDetector:
@@ -134,7 +139,7 @@ class TestRiskManager:
         manager.current_capital = 400_000
 
         result = manager.calculate_position_size(
-            symbol="BBB", signal=1, confidence=0.846, current_price=500.0
+            symbol="BBB", signal=1, confidence=0.846, current_price=500.0,
         )
 
         assert result["size"] > 0, "Expected additional position below exposure limit"
@@ -144,7 +149,7 @@ class TestRiskManager:
         manager.current_capital = 20_000
 
         result = manager.calculate_position_size(
-            symbol="CCC", signal=1, confidence=0.423, current_price=2_000.0
+            symbol="CCC", signal=1, confidence=0.423, current_price=2_000.0,
         )
 
         assert result == {"size": 0, "reason": "最小単位未満"}
@@ -167,7 +172,9 @@ class TestRealTimeTradingSystemProcessSymbol:
 
         history = make_history()
         data_provider = DummyDataProvider(history, realtime_close=550.0)
-        pattern = DummyPatternDetector(signal=1, confidence=0.9, reason="dummy", price=550.0)
+        pattern = DummyPatternDetector(
+            signal=1, confidence=0.9, reason="dummy", price=550.0,
+        )
         executor = DummyOrderExecutor(status=order_status)
 
         system.data_provider = data_provider
@@ -198,7 +205,7 @@ class TestRealTimeTradingSystemProcessSymbol:
                 "price": 550.0,
                 "confidence": 0.9,
                 "status": "executed",
-            }
+            },
         ]
         assert "7203" in system.risk_manager.positions
         assert system.risk_manager.positions["7203"]["size"] == 100

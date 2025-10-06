@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
-"""
-深層学習予測器モジュール
+"""深層学習予測器モジュール
 LSTM/Transformer技術による高精度時系列予測
 """
 
 import logging
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
+import joblib
 import numpy as np
 import pandas as pd
-from typing import List, Tuple, Dict, Any
-from pathlib import Path
-import joblib
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error
-
-from ..base.interfaces import StockPredictor, PredictionResult
 from data.stock_data import StockDataProvider
-from datetime import datetime
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +32,7 @@ class DeepLearningPredictor:
         self.model_path.mkdir(exist_ok=True)
 
     def prepare_sequences(
-        self, data: pd.DataFrame, target_col: str = "Close"
+        self, data: pd.DataFrame, target_col: str = "Close",
     ) -> Tuple[np.ndarray, np.ndarray]:
         """時系列データをシーケンスに変換"""
         # 特徴量とターゲット分離
@@ -56,8 +53,8 @@ class DeepLearningPredictor:
         """LSTM モデル構築"""
         try:
             import tensorflow as tf
+            from tensorflow.keras.layers import LSTM, BatchNormalization, Dense, Dropout
             from tensorflow.keras.models import Sequential
-            from tensorflow.keras.layers import LSTM, Dense, Dropout, BatchNormalization
             from tensorflow.keras.optimizers import Adam
 
             model = Sequential(
@@ -74,11 +71,11 @@ class DeepLearningPredictor:
                     Dense(32, activation="relu"),
                     Dropout(0.2),
                     Dense(1, activation="linear"),
-                ]
+                ],
             )
 
             model.compile(
-                optimizer=Adam(learning_rate=0.001), loss="mse", metrics=["mae"]
+                optimizer=Adam(learning_rate=0.001), loss="mse", metrics=["mae"],
             )
             return model
 
@@ -95,7 +92,7 @@ class DeepLearningPredictor:
             def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0):
                 # Multi-head self-attention
                 x = layers.MultiHeadAttention(
-                    key_dim=head_size, num_heads=num_heads, dropout=dropout
+                    key_dim=head_size, num_heads=num_heads, dropout=dropout,
                 )(inputs, inputs)
                 x = layers.Dropout(dropout)(x)
                 x = layers.LayerNormalization(epsilon=1e-6)(x)
@@ -114,7 +111,7 @@ class DeepLearningPredictor:
             # Multi-layer transformer
             for _ in range(3):
                 x = transformer_encoder(
-                    x, head_size=64, num_heads=4, ff_dim=128, dropout=0.3
+                    x, head_size=64, num_heads=4, ff_dim=128, dropout=0.3,
                 )
 
             x = layers.GlobalAveragePooling1D(data_format="channels_first")(x)
@@ -137,7 +134,7 @@ class DeepLearningPredictor:
 
         # シーケンス次元を平坦化するためのシンプルモデル
         return RandomForestRegressor(
-            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1
+            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1,
         )
 
     def train_deep_model(self, symbols: List[str]):
@@ -274,7 +271,7 @@ class DeepLearningPredictor:
             return max(0, min(100, score))
 
         except Exception as e:
-            logger.error(f"Deep learning prediction error for {symbol}: {str(e)}")
+            logger.error(f"Deep learning prediction error for {symbol}: {e!s}")
             return 50.0
 
     def save_deep_model(self):
@@ -296,7 +293,7 @@ class DeepLearningPredictor:
             logger.info(f"Deep {self.model_type} model saved")
 
         except Exception as e:
-            logger.error(f"Error saving deep model: {str(e)}")
+            logger.error(f"Error saving deep model: {e!s}")
 
     def load_deep_model(self) -> bool:
         """深層学習モデル読み込み"""
@@ -332,7 +329,7 @@ class DeepLearningPredictor:
             return False
 
         except Exception as e:
-            logger.error(f"Error loading deep model: {str(e)}")
+            logger.error(f"Error loading deep model: {e!s}")
             return False
 
     def get_model_info(self) -> Dict[str, Any]:

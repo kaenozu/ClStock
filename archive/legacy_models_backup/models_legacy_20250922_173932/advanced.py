@@ -1,12 +1,13 @@
 """Advanced prediction models and systems."""
 
 import logging
+from datetime import datetime
+from typing import Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional
-from datetime import datetime
 
-from .base import StockPredictor, PredictionResult, EnsemblePredictor
+from .base import EnsemblePredictor, PredictionResult, StockPredictor
 from .core import MLStockPredictor
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ class AdvancedEnsemblePredictor(EnsemblePredictor):
         self.dynamic_weighting = True
 
     def calculate_dynamic_weights(
-        self, performance_history: Dict[str, List[float]]
+        self, performance_history: Dict[str, List[float]],
     ) -> Dict[str, float]:
         """パフォーマンス履歴に基づく動的重み計算"""
         weights = {}
@@ -56,12 +57,12 @@ class AdvancedEnsemblePredictor(EnsemblePredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Advanced ensemble prediction with dynamic weighting"""
         if not self.is_trained():
             raise ValueError(
-                "Advanced ensemble must be trained before making predictions"
+                "Advanced ensemble must be trained before making predictions",
             )
 
         predictions = []
@@ -127,12 +128,12 @@ class AdvancedPrecisionBreakthrough87System(StockPredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """87%精度を目指す予測"""
         if not self.is_trained():
             raise ValueError(
-                "87% precision system must be trained before making predictions"
+                "87% precision system must be trained before making predictions",
             )
 
         try:
@@ -185,12 +186,12 @@ class Precision87BreakthroughSystem(StockPredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """87%精度を目指すシンプル予測"""
         if not self.is_trained():
             raise ValueError(
-                "Precision system must be trained before making predictions"
+                "Precision system must be trained before making predictions",
             )
 
         try:

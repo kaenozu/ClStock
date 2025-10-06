@@ -7,7 +7,6 @@ It automatically appends the .T suffix to numeric stock codes to indicate the To
 from pathlib import Path
 from textwrap import dedent
 from typing import Iterable, List
-import requests  # 追加
 
 
 def _format_symbol(symbol: str) -> str:
@@ -16,13 +15,13 @@ def _format_symbol(symbol: str) -> str:
     This function is specifically designed for Japanese stock codes.
     For Japanese stock codes, which are typically numeric, the '.T' suffix is appended
     to indicate the Tokyo Stock Exchange.
-    
+
     Args:
         symbol: A Japanese stock symbol (e.g., "7203" or "7203.T")
-        
+
     Returns:
         A normalized Japanese stock symbol with .T suffix (e.g., "7203.T")
-        
+
     Examples:
         >>> _format_symbol("7203")
         '7203.T'
@@ -30,9 +29,10 @@ def _format_symbol(symbol: str) -> str:
         '7203.T'
         >>> _format_symbol(" 7203 ")
         '7203.T'
+
     """
     clean = symbol.strip().upper()
-    
+
     # 日本株式コードの検証（数字のみ、または数字+.T）
     if clean.isdigit():
         # 数字のみの場合、.Tを追加
@@ -42,8 +42,10 @@ def _format_symbol(symbol: str) -> str:
         pass
     else:
         # その他の形式（.T以外の接尾辞や、数字以外を含むなど）は警告
-        print(f"Warning: Symbol '{symbol}' may not be a valid Japanese stock code. Expected numeric code with optional .T suffix.")
-    
+        print(
+            f"Warning: Symbol '{symbol}' may not be a valid Japanese stock code. Expected numeric code with optional .T suffix.",
+        )
+
     return clean
 
 
@@ -58,20 +60,20 @@ def generate_colab_data_retrieval_script(
     The script relies on :mod:`yfinance` and saves CSV files into ``output_dir``.
     For Japanese stock codes (numeric only), the '.T' suffix is automatically appended
     to indicate the Tokyo Stock Exchange.
-    
+
     Args:
         missing_symbols: An iterable of Japanese stock symbols (e.g., ["7203", "6758.T"])
         period: The period for which to retrieve data (default: "1y")
         output_dir: The directory to save the CSV files (default: "data")
-        
+
     Returns:
         A Python script as a string for downloading historical data in Google Colab
-        
+
     Examples:
         >>> script = generate_colab_data_retrieval_script(["7203", "6758.T"])
         >>> print(script)  # 生成されたスクリプトを表示
-    """
 
+    """
     symbols: List[str] = [
         _format_symbol(symbol) for symbol in missing_symbols if symbol
     ]

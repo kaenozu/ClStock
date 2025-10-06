@@ -4,8 +4,6 @@ These tests ensure the modern ensemble predictor is importable and exposes
 basic introspection helpers required by higher level integration tests.
 """
 
-import pytest
-
 from models.core.interfaces import ModelConfiguration, ModelType
 from models.ensemble.ensemble_predictor import RefactoredEnsemblePredictor
 
@@ -24,4 +22,3 @@ def test_predictor_respects_explicit_configuration():
 
     assert predictor.config is config
     assert predictor.config.cache_enabled is False
-

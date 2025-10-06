@@ -1,4 +1,5 @@
 """Top-level package for the ClStock project."""
+
 from __future__ import annotations
 
 from pathlib import Path

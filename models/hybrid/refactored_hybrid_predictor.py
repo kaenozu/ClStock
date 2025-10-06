@@ -1,29 +1,28 @@
-"""
-ハイブリッド予測器 - 統合リファクタリング版
+"""ハイブリッド予測器 - 統合リファクタリング版
 Issue #9の修正を含む実装
 """
 
-import pandas as pd
-import numpy as np
-import logging
 import asyncio
+import logging
 import time
-from dataclasses import replace
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime
 from collections import deque
+from dataclasses import replace
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
+import pandas as pd
+
+from ..core.base_predictor import BaseStockPredictor
 from ..core.interfaces import (
+    BatchPredictionResult,
+    CacheProvider,
+    DataProvider,
     ModelConfiguration,
     ModelType,
     PredictionMode,
-    DataProvider,
-    CacheProvider,
     PredictionResult,
-    BatchPredictionResult,
-    PredictionMode,
 )
-from ..core.base_predictor import BaseStockPredictor
 from ..ensemble.ensemble_predictor import RefactoredEnsemblePredictor
 
 
@@ -63,7 +62,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
                 "adaptive_optimization_enabled": enable_adaptive_optimization,
                 "streaming_enabled": enable_streaming,
                 "multi_gpu_enabled": enable_multi_gpu,
-            }
+            },
         )
 
         super().__init__(base_config, data_provider, cache_provider)
@@ -71,7 +70,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
 
         ensemble_custom_params = dict(base_config.custom_params)
         ensemble_custom_params.setdefault(
-            "parent_model_type", base_config.model_type.value
+            "parent_model_type", base_config.model_type.value,
         )
 
         ensemble_config = replace(
@@ -88,7 +87,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
 
         # エンサンブル予測器を内部で使用
         self.ensemble_predictor = RefactoredEnsemblePredictor(
-            config=ensemble_config, data_provider=data_provider
+            config=ensemble_config, data_provider=data_provider,
         )
 
         # リアルタイム学習設定
@@ -128,21 +127,20 @@ class RefactoredHybridPredictor(BaseStockPredictor):
         learning_rate: float,
     ) -> None:
         """メタデータや市場データを用いて予測結果を記録"""
-
         # 予測モードの更新（失敗しても致命的ではないため例外は握りつぶす）
         try:
             if prediction_mode is not None:
                 self.set_prediction_mode(prediction_mode)
         except Exception as exc:  # pragma: no cover - 予防的ロギング
             self.logger.debug(
-                "Failed to update prediction mode for %s: %s", symbol, exc
+                "Failed to update prediction mode for %s: %s", symbol, exc,
             )
 
         # 学習率を記録しておくと後続の分析で利用可能
         self.config.custom_params["last_learning_rate"] = learning_rate
 
         learning_enabled = getattr(
-            self, "real_time_learning_enabled", self.enable_real_time_learning
+            self, "real_time_learning_enabled", self.enable_real_time_learning,
         )
         if not learning_enabled:
             return
@@ -152,7 +150,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
             actual_price = prediction_result.metadata.get("current_price")
 
         self._record_prediction_with_actual_price(
-            symbol, prediction_result, actual_price
+            symbol, prediction_result, actual_price,
         )
 
     def _predict_implementation(self, symbol: str) -> float:
@@ -168,7 +166,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
             return result.prediction
 
         except Exception as e:
-            self.logger.error(f"Prediction failed for {symbol}: {str(e)}")
+            self.logger.error(f"Prediction failed for {symbol}: {e!s}")
             return self.NEUTRAL_PREDICTION_VALUE
 
     def predict_batch(self, symbols: List[str]) -> BatchPredictionResult:
@@ -209,7 +207,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
         )
 
     def _process_large_batch(
-        self, symbols: List[str]
+        self, symbols: List[str],
     ) -> Tuple[Dict[str, float], Dict[str, str]]:
         """大規模バッチの処理（修正版: 実際のデータを使用）"""
         results = {}
@@ -255,7 +253,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
         # 同期的な予測を非同期で実行
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
-            None, self._predict_with_deterministic_logic, symbol
+            None, self._predict_with_deterministic_logic, symbol,
         )
 
     def _predict_with_deterministic_logic(self, symbol: str) -> float:
@@ -284,7 +282,6 @@ class RefactoredHybridPredictor(BaseStockPredictor):
         prediction_time: Optional[float] = None,
     ) -> None:
         """予測履歴とフィードバックを記録"""
-
         # 予測履歴（Phase2互換）
         if hasattr(self, "prediction_history") and self.prediction_history is not None:
             history_entry = {
@@ -297,7 +294,11 @@ class RefactoredHybridPredictor(BaseStockPredictor):
                 "timestamp": datetime.now(),
             }
             # 実際の価格を保存できる場合は追加
-            actual_from_metadata = prediction_result.metadata.get("current_price") if prediction_result.metadata else None
+            actual_from_metadata = (
+                prediction_result.metadata.get("current_price")
+                if prediction_result.metadata
+                else None
+            )
             if actual_from_metadata is not None:
                 history_entry["actual"] = actual_from_metadata
             self.prediction_history.append(history_entry)
@@ -324,7 +325,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
 
         # 既存の学習履歴更新ロジックを呼び出し
         self._record_prediction_with_actual_price(
-            symbol, prediction_result, actual_price=actual_price
+            symbol, prediction_result, actual_price=actual_price,
         )
 
     def _record_prediction_with_actual_price(
@@ -343,8 +344,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
                 # 予測誤差を計算
                 if actual_price != 0:
                     error = (
-                        abs(prediction_result.prediction - actual_price)
-                        / actual_price
+                        abs(prediction_result.prediction - actual_price) / actual_price
                     )
                 else:  # 実際の価格が0の場合は誤差0として扱う
                     error = 0.0
@@ -358,7 +358,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
                         "error": error,
                         "timestamp": datetime.now(),
                         "confidence": prediction_result.confidence,
-                    }
+                    },
                 )
 
                 # 誤差統計を更新
@@ -369,7 +369,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
                 if learner and hasattr(learner, "add_prediction_feedback"):
                     try:
                         learner.add_prediction_feedback(
-                            prediction_result.prediction, actual_price, symbol
+                            prediction_result.prediction, actual_price, symbol,
                         )
                     except Exception as feedback_error:  # pragma: no cover - ログ用途
                         self.logger.warning(
@@ -402,7 +402,7 @@ class RefactoredHybridPredictor(BaseStockPredictor):
         # 簡単な適応的学習ロジック
         if error > 0.1:  # 10%以上の誤差
             self.logger.info(
-                f"High prediction error detected: {error:.2%}. Adjusting weights..."
+                f"High prediction error detected: {error:.2%}. Adjusting weights...",
             )
             # ここで実際の重み調整ロジックを実装
 

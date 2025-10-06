@@ -6,13 +6,13 @@ import os  # re-exported for backward compatibility in tests
 import queue
 import re
 import shlex
+import subprocess  # re-exported for test patches
 import threading
 import time
 from datetime import datetime
 from typing import Dict, Iterable, List, Optional, Sequence
 
-import psutil  # noqa: F401  # re-exported for test patches
-import subprocess  # noqa: F401  # re-exported for test patches
+import psutil  # re-exported for test patches
 
 from config.settings import get_settings
 
@@ -22,7 +22,6 @@ from .service_registry import (
     ProcessStatus,
     ServiceRegistry,
     logger,
-    settings,
 )
 from .shutdown_coordinator import ShutdownCoordinator
 
@@ -45,7 +44,7 @@ class OutputReader(threading.Thread):
         self.log_prefix = log_prefix
         self.log_file = log_file
         self.pipe_name = pipe_name
-        self.lines: "queue.Queue[str]" = queue.Queue()
+        self.lines: queue.Queue[str] = queue.Queue()
         self._stop_event = threading.Event()
 
     def run(self) -> None:  # pragma: no cover - exercised in integration tests
@@ -62,14 +61,12 @@ class OutputReader(threading.Thread):
                     try:
                         self.log_callback(formatted)
                     except Exception:  # pragma: no cover - defensive logging
-                        logger.debug(
-                            "ログコールバック処理中にエラー", exc_info=True
-                        )
+                        logger.debug("ログコールバック処理中にエラー", exc_info=True)
                 if self.log_file:
                     try:
                         with open(self.log_file, "a", encoding="utf-8") as handle:
                             handle.write(
-                                f"[{self.log_prefix or 'process'}][{self.pipe_name}] {formatted}\n"
+                                f"[{self.log_prefix or 'process'}][{self.pipe_name}] {formatted}\n",
                             )
                     except Exception:  # pragma: no cover - defensive logging
                         logger.debug("ログファイル書き込みに失敗", exc_info=True)
@@ -111,10 +108,14 @@ class ProcessManager:
         self.service_registry = service_registry or ServiceRegistry()
         self.monitoring_loop = monitoring_loop or MonitoringLoop(self.service_registry)
         self.shutdown_coordinator = shutdown_coordinator or ShutdownCoordinator(
-            self, self.service_registry, self.monitoring_loop
+            self, self.service_registry, self.monitoring_loop,
         )
 
-        if install_signal_handlers and service_registry is None and monitoring_loop is None:
+        if (
+            install_signal_handlers
+            and service_registry is None
+            and monitoring_loop is None
+        ):
             self.shutdown_coordinator.install_signal_handlers()
 
     # ------------------------------------------------------------------
@@ -151,7 +152,7 @@ class ProcessManager:
             argv = list(base_command)
         else:
             raise TypeError(
-                f"Unsupported command type for service {process_info.name}: {type(base_command)!r}"
+                f"Unsupported command type for service {process_info.name}: {type(base_command)!r}",
             )
 
         if extra_args:
@@ -224,7 +225,7 @@ class ProcessManager:
     @_shutdown_event.setter
     def _shutdown_event(self, value) -> None:  # type: ignore[override]
         if hasattr(self, "monitoring_loop") and hasattr(
-            self.monitoring_loop, "shutdown_event"
+            self.monitoring_loop, "shutdown_event",
         ):
             self.monitoring_loop._shutdown_event = value  # type: ignore[attr-defined]
         else:
@@ -234,7 +235,7 @@ class ProcessManager:
     @property
     def _shutdown_lock(self):  # type: ignore[override]
         if hasattr(self, "shutdown_coordinator"):
-            return getattr(self.shutdown_coordinator, "_shutdown_lock")
+            return self.shutdown_coordinator._shutdown_lock
         return getattr(self, "__shutdown_lock")
 
     @_shutdown_lock.setter
@@ -262,13 +263,13 @@ class ProcessManager:
     @property
     def _executor(self):  # type: ignore[override]
         if hasattr(self, "service_registry"):
-            return getattr(self.service_registry, "_executor")
+            return self.service_registry._executor
         return getattr(self, "__executor")
 
     @_executor.setter
     def _executor(self, value) -> None:  # type: ignore[override]
         if hasattr(self, "service_registry"):
-            setattr(self.service_registry, "_executor", value)
+            self.service_registry._executor = value
         else:
             self.__executor = value
             self._legacy_executor = value
@@ -313,7 +314,7 @@ class ProcessManager:
 
             process_settings = get_settings().process
             capture_output = bool(
-                getattr(process_settings, "log_process_output", False)
+                getattr(process_settings, "log_process_output", False),
             )
 
             popen_kwargs = {
@@ -375,7 +376,6 @@ class ProcessManager:
 
     def _start_output_logging(self, process_info: ProcessInfo) -> None:
         """プロセス標準出力/標準エラーの非同期読み取りを開始"""
-
         process = process_info.process
         if not process:
             return
@@ -386,7 +386,7 @@ class ProcessManager:
             reader = OutputReader(
                 stream,
                 log_callback=lambda line: log_func(
-                    "[%s][%s] %s", process_info.name, stream_name, line
+                    "[%s][%s] %s", process_info.name, stream_name, line,
                 ),
                 log_prefix=process_info.name,
                 pipe_name=stream_name,
@@ -395,10 +395,10 @@ class ProcessManager:
             return reader
 
         process_info.stdout_thread = _create_reader(
-            process.stdout, logger.info, "stdout"
+            process.stdout, logger.info, "stdout",
         )
         process_info.stderr_thread = _create_reader(
-            process.stderr, logger.warning, "stderr"
+            process.stderr, logger.warning, "stderr",
         )
 
     def stop_service(self, name: str, force: bool = False) -> bool:
@@ -425,7 +425,7 @@ class ProcessManager:
         self._shutdown_event.clear()
         self.monitoring_active = True
         self.monitor_thread = threading.Thread(
-            target=self._monitor_processes, daemon=True
+            target=self._monitor_processes, daemon=True,
         )
         self.monitor_thread.start()
         logger.info("プロセス監視開始")
@@ -463,33 +463,47 @@ class ProcessManager:
 
             # 高負荷の場合、低優先度プロセスの制限を検討
             if system_cpu_percent > 80 or system_memory_percent > 80:
-                logger.info(f"高負荷検出: CPU {system_cpu_percent:.1f}%, メモリ {system_memory_percent:.1f}%")
-                
+                logger.info(
+                    f"高負荷検出: CPU {system_cpu_percent:.1f}%, メモリ {system_memory_percent:.1f}%",
+                )
+
                 # 優先度の低いプロセスを一時停止またはリソース制限を強化
                 low_priority_processes = [
-                    p for p in self.processes.values() 
+                    p
+                    for p in self.processes.values()
                     if p.status == ProcessStatus.RUNNING and p.priority < 5
                 ]
-                
+
                 for proc_info in low_priority_processes:
-                    logger.info(f"低優先度プロセス {proc_info.name} にリソース制限を強化: CPU {proc_info.max_cpu_percent*0.7:.1f}%, メモリ {proc_info.max_memory_mb*0.7:.0f}MB")
+                    logger.info(
+                        f"低優先度プロセス {proc_info.name} にリソース制限を強化: CPU {proc_info.max_cpu_percent * 0.7:.1f}%, メモリ {proc_info.max_memory_mb * 0.7:.0f}MB",
+                    )
                     # 実際にはプロセスの制限を変更するにはより高度な制御が必要ですが、ここではログのみ
                     proc_info.max_cpu_percent *= 0.7  # CPU制限を70%に縮小
-                    proc_info.max_memory_mb *= 0.7    # メモリ制限を70%に縮小
+                    proc_info.max_memory_mb *= 0.7  # メモリ制限を70%に縮小
 
             elif system_cpu_percent < 30 and system_memory_percent < 50:
                 # 負荷が低い場合は制限を元に戻す
                 normal_priority_processes = [
-                    p for p in self.processes.values() 
+                    p
+                    for p in self.processes.values()
                     if p.status == ProcessStatus.RUNNING and p.priority < 5
                 ]
-                
+
                 for proc_info in normal_priority_processes:
                     # 制限を元の設定に戻す
                     original_settings = get_settings().process  # 設定から元の値を取得
-                    proc_info.max_cpu_percent = original_settings.max_cpu_percent_per_process if hasattr(original_settings, 'max_cpu_percent_per_process') else 50
-                    proc_info.max_memory_mb = original_settings.max_memory_per_process_mb if hasattr(original_settings, 'max_memory_per_process_mb') else 1000
-                    
+                    proc_info.max_cpu_percent = (
+                        original_settings.max_cpu_percent_per_process
+                        if hasattr(original_settings, "max_cpu_percent_per_process")
+                        else 50
+                    )
+                    proc_info.max_memory_mb = (
+                        original_settings.max_memory_per_process_mb
+                        if hasattr(original_settings, "max_memory_per_process_mb")
+                        else 1000
+                    )
+
         except Exception as e:
             logger.error(f"プロセス優先度調整エラー: {e}")
 
@@ -524,7 +538,7 @@ class ProcessManager:
                     and process_info.restart_count < process_info.max_restart_attempts
                 ):
                     logger.info(
-                        f"自動再起動実行: {process_info.name} (試行 {process_info.restart_count + 1})"
+                        f"自動再起動実行: {process_info.name} (試行 {process_info.restart_count + 1})",
                     )
                     process_info.restart_count += 1
 
@@ -547,19 +561,19 @@ class ProcessManager:
                     # メモリ使用量チェック
                     if memory_mb > process_info.max_memory_mb:
                         logger.warning(
-                            f"メモリ使用量超過: {process_info.name} ({memory_mb:.1f}MB > {process_info.max_memory_mb}MB)"
+                            f"メモリ使用量超過: {process_info.name} ({memory_mb:.1f}MB > {process_info.max_memory_mb}MB)",
                         )
                         # 設定されたメモリ制限の120%を超えた場合は警告
                         if memory_mb > process_info.max_memory_mb * 1.2:
                             logger.error(
-                                f"危険なメモリ使用量: {process_info.name} ({memory_mb:.1f}MB), サービスを停止します"
+                                f"危険なメモリ使用量: {process_info.name} ({memory_mb:.1f}MB), サービスを停止します",
                             )
                             self.stop_service(process_info.name, force=True)
 
                     # CPU使用率チェック
                     if cpu_percent > process_info.max_cpu_percent:
                         logger.warning(
-                            f"CPU使用率超過: {process_info.name} ({cpu_percent:.1f}% > {process_info.max_cpu_percent}%)"
+                            f"CPU使用率超過: {process_info.name} ({cpu_percent:.1f}% > {process_info.max_cpu_percent}%)",
                         )
 
                 except psutil.NoSuchProcess:
@@ -573,7 +587,7 @@ class ProcessManager:
             logger.error(f"ヘルスチェックエラー {process_info.name}: {e}")
 
     def start_multiple_services(
-        self, names: Iterable[str], max_parallel: int = 3
+        self, names: Iterable[str], max_parallel: int = 3,
     ) -> Dict[str, bool]:
         return self.service_registry.start_multiple_services(names, max_parallel)
 
@@ -626,7 +640,7 @@ class ProcessManager:
 
     def shutdown(self, force: bool = False) -> None:
         self.shutdown_coordinator.shutdown(
-            self.service_registry, self.monitoring_loop, force=force
+            self.service_registry, self.monitoring_loop, force=force,
         )
 
     # ------------------------------------------------------------------
@@ -648,7 +662,7 @@ class ProcessManager:
         }
 
     def execute_safe_command(
-        self, command: Sequence[str], timeout: int = 30
+        self, command: Sequence[str], timeout: int = 30,
     ) -> tuple[bool, str, str]:
         argv = list(command)
         if not self._validate_command(argv):
@@ -657,7 +671,7 @@ class ProcessManager:
         try:
             result = subprocess.run(
                 argv,
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=timeout,
                 shell=False,

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-ClStock 新メニューシステム v2.0
+"""ClStock 新メニューシステム v2.0
 ハイブリッド予測システム対応・現状最適化版
 """
 
@@ -86,10 +85,10 @@ def run_hybrid_prediction():
     """ハイブリッド予測システム（メイン機能）"""
     clear_screen()
     print(
-        f"{Colors.MAGENTA}{Colors.BOLD}【ハイブリッド予測システム v2.0】{Colors.ENDC}"
+        f"{Colors.MAGENTA}{Colors.BOLD}【ハイブリッド予測システム v2.0】{Colors.ENDC}",
     )
     print(
-        f"{Colors.CYAN}速度と精度の革新的両立 - 144倍高速化 × 91.4%精度{Colors.ENDC}\n"
+        f"{Colors.CYAN}速度と精度の革新的両立 - 144倍高速化 × 91.4%精度{Colors.ENDC}\n",
     )
 
     print(f"{Colors.YELLOW}予測モードを選択:{Colors.ENDC}")
@@ -111,11 +110,11 @@ def run_hybrid_prediction():
     print(f"\n{Colors.CYAN}ハイブリッド予測実行中...{Colors.ENDC}")
 
     try:
+        from data.stock_data import StockDataProvider
         from models.hybrid.hybrid_predictor import (
             HybridStockPredictor,
             PredictionMode,
         )
-        from data.stock_data import StockDataProvider
 
         # モードマッピング
         mode_map = {
@@ -152,7 +151,7 @@ def run_hybrid_prediction():
         elif target_choice == "2":
             # バッチ予測
             symbols_input = input(
-                "銘柄コード（カンマ区切り、例: 7203,6758,8306）: "
+                "銘柄コード（カンマ区切り、例: 7203,6758,8306）: ",
             ).strip()
             symbols = [s.strip() for s in symbols_input.split(",") if s.strip()]
 
@@ -172,7 +171,7 @@ def run_hybrid_prediction():
         display_system_stats(hybrid_system)
 
     except Exception as e:
-        print(f"\n{Colors.RED}エラーが発生しました: {str(e)}{Colors.ENDC}")
+        print(f"\n{Colors.RED}エラーが発生しました: {e!s}{Colors.ENDC}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
@@ -197,7 +196,7 @@ def display_single_result(result, mode_name):
 def display_batch_results(results, mode_name):
     """バッチ予測結果表示"""
     print(
-        f"\n{Colors.GREEN}{Colors.BOLD}【バッチ予測結果 - {mode_name}モード】{Colors.ENDC}"
+        f"\n{Colors.GREEN}{Colors.BOLD}【バッチ予測結果 - {mode_name}モード】{Colors.ENDC}",
     )
     print("=" * 60)
     print(f"処理銘柄数: {len(results)}")
@@ -208,14 +207,14 @@ def display_batch_results(results, mode_name):
     for i, result in enumerate(results, 1):
         system_short = result.metadata.get("system_used", "unknown")[:8]
         print(
-            f"{i:2d}.  {result.symbol:8s} {result.prediction:7.1f}  {result.confidence:6.2f}  {result.accuracy:5.1f}%  {system_short}"
+            f"{i:2d}.  {result.symbol:8s} {result.prediction:7.1f}  {result.confidence:6.2f}  {result.accuracy:5.1f}%  {system_short}",
         )
 
 
 def display_recommended_results(results, mode_name):
     """Display recommended stock results"""
     print(
-        f"\n{Colors.GREEN}{Colors.BOLD}【おすすめ3銘柄予測 - {mode_name}モード】{Colors.ENDC}"
+        f"\n{Colors.GREEN}{Colors.BOLD}【おすすめ3銘柄予測 - {mode_name}モード】{Colors.ENDC}",
     )
     print("=" * 60)
 
@@ -275,7 +274,7 @@ def run_precision_87():
             print(f"87%達成: {Colors.YELLOW}調整中{Colors.ENDC}")
 
     except Exception as e:
-        print(f"\n{Colors.RED}エラー: {str(e)}{Colors.ENDC}")
+        print(f"\n{Colors.RED}エラー: {e!s}{Colors.ENDC}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
@@ -289,8 +288,8 @@ def run_enhanced_ensemble():
     print(f"\n{Colors.YELLOW}高速予測実行中...{Colors.ENDC}")
 
     try:
-        from models.ensemble.ensemble_predictor import EnsembleStockPredictor
         from data.stock_data import StockDataProvider
+        from models.ensemble.ensemble_predictor import EnsembleStockPredictor
 
         data_provider = StockDataProvider()
         system = EnsembleStockPredictor(data_provider=data_provider)
@@ -304,7 +303,7 @@ def run_enhanced_ensemble():
         print("予測時間: 超高速 (0.01秒未満)")
 
     except Exception as e:
-        print(f"\n{Colors.RED}エラー: {str(e)}{Colors.ENDC}")
+        print(f"\n{Colors.RED}エラー: {e!s}{Colors.ENDC}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
@@ -319,13 +318,15 @@ def run_demo_trading():
         import subprocess
 
         result = subprocess.run(
-            ["python", "demo_start.py"], capture_output=True, text=True  # nosec B603, B607
+            ["python", "demo_start.py"],
+            check=False, capture_output=True,
+            text=True,  # nosec B603, B607
         )
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
     except Exception as e:
-        print(f"エラー: {str(e)}")
+        print(f"エラー: {e!s}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
@@ -340,13 +341,15 @@ def run_tse_optimization():
         import subprocess
 
         result = subprocess.run(
-            ["python", "tse_4000_optimizer.py"], capture_output=True, text=True  # nosec B603, B607
+            ["python", "tse_4000_optimizer.py"],
+            check=False, capture_output=True,
+            text=True,  # nosec B603, B607
         )
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
     except Exception as e:
-        print(f"エラー: {str(e)}")
+        print(f"エラー: {e!s}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
@@ -361,13 +364,15 @@ def run_investment_advisor():
         import subprocess
 
         result = subprocess.run(
-            ["python", "investment_advisor_cui.py"], capture_output=True, text=True  # nosec B603, B607
+            ["python", "investment_advisor_cui.py"],
+            check=False, capture_output=True,
+            text=True,  # nosec B603, B607
         )
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
     except Exception as e:
-        print(f"エラー: {str(e)}")
+        print(f"エラー: {e!s}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
@@ -392,13 +397,15 @@ def performance_monitor():
         import subprocess
 
         result = subprocess.run(
-            ["python", "selective_system.py"], capture_output=True, text=True  # nosec B603, B607
+            ["python", "selective_system.py"],
+            check=False, capture_output=True,
+            text=True,  # nosec B603, B607
         )
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
     except Exception as e:
-        print(f"エラー: {str(e)}")
+        print(f"エラー: {e!s}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
@@ -421,7 +428,7 @@ def fetch_data():
         else:
             print("✗ データ取得失敗")
     except Exception as e:
-        print(f"エラー: {str(e)}")
+        print(f"エラー: {e!s}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
@@ -438,13 +445,15 @@ def run_system_test():
         import subprocess
 
         result = subprocess.run(
-            ["python", "-m", "pytest", "tests/", "-v"], capture_output=True, text=True  # nosec B603, B607
+            ["python", "-m", "pytest", "tests/", "-v"],
+            check=False, capture_output=True,
+            text=True,  # nosec B603, B607
         )
         print(result.stdout)
         if result.stderr:
             print(result.stderr)
     except Exception as e:
-        print(f"エラー: {str(e)}")
+        print(f"エラー: {e!s}")
 
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
@@ -510,9 +519,6 @@ def show_optimization_history():
     input(f"\n{Colors.YELLOW}Enterキーで続行...{Colors.ENDC}")
 
 
-
-
-
 def optimization_history_menu():
     """最適化履歴管理メニュー"""
     clear_screen()
@@ -560,7 +566,7 @@ def show_history_list():
         for record in records:
             print(
                 f"{record['record_id']:15s} {record['timestamp']:20s} "
-                f"{record.get('accuracy', 0):.1f}%   {len(record.get('stocks', []))} 銘柄"
+                f"{record.get('accuracy', 0):.1f}%   {len(record.get('stocks', []))} 銘柄",
             )
 
     except Exception as e:
@@ -577,7 +583,9 @@ def rollback_to_record(record_id: str):
         manager = OptimizationHistoryManager()
 
         if manager.rollback_to_configuration(record_id):
-            print(f"{Colors.GREEN}レコード {record_id} への復元が完了しました。{Colors.ENDC}")
+            print(
+                f"{Colors.GREEN}レコード {record_id} への復元が完了しました。{Colors.ENDC}",
+            )
         else:
             print(f"{Colors.RED}レコード {record_id} が見つかりません。{Colors.ENDC}")
 
@@ -613,12 +621,13 @@ def run_full_auto():
     try:
         print(f"\n{Colors.GREEN}フルオート投資推奨システムを開始します...{Colors.ENDC}")
         print(
-            f"{Colors.YELLOW}すべて自動で実行されます。しばらくお待ちください...{Colors.ENDC}\n"
+            f"{Colors.YELLOW}すべて自動で実行されます。しばらくお待ちください...{Colors.ENDC}\n",
         )
 
         # フルオートシステムのインポートと実行
-        from full_auto_system import FullAutoInvestmentSystem
         import asyncio
+
+        from full_auto_system import FullAutoInvestmentSystem
 
         async def run_auto():
             auto_system = FullAutoInvestmentSystem()
@@ -626,7 +635,7 @@ def run_full_auto():
 
             if recommendations:
                 print(
-                    f"\n{Colors.GREEN}{Colors.BOLD}【フルオート投資推奨結果】{Colors.ENDC}"
+                    f"\n{Colors.GREEN}{Colors.BOLD}【フルオート投資推奨結果】{Colors.ENDC}",
                 )
                 print("=" * 80)
 
@@ -650,10 +659,10 @@ def run_full_auto():
 
     except ImportError as e:
         print(
-            f"{Colors.RED}フルオートシステムの読み込みに失敗しました: {e}{Colors.ENDC}"
+            f"{Colors.RED}フルオートシステムの読み込みに失敗しました: {e}{Colors.ENDC}",
         )
         print(
-            f"{Colors.YELLOW}システムが完全にインストールされていない可能性があります。{Colors.ENDC}"
+            f"{Colors.YELLOW}システムが完全にインストールされていない可能性があります。{Colors.ENDC}",
         )
     except Exception as e:
         print(f"{Colors.RED}フルオート実行中にエラーが発生しました: {e}{Colors.ENDC}")
@@ -672,10 +681,10 @@ def main():
 
         if choice == "0":
             print(
-                f"\n{Colors.GREEN}ClStock フルオートシステムを終了します。ありがとうございました！{Colors.ENDC}"
+                f"\n{Colors.GREEN}ClStock フルオートシステムを終了します。ありがとうございました！{Colors.ENDC}",
             )
             break
-        elif choice == "1":
+        if choice == "1":
             run_full_auto()  # フルオート（メイン機能）
         elif choice == "2":
             run_tse_optimization()  # TSE4000最適化

@@ -1,15 +1,12 @@
 """Asynchronous stock data provider"""
 
 import asyncio
-import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import aiohttp
-import pandas as pd
 
+import pandas as pd
 from data.stock_data import StockDataProvider
-from utils.connection_pool import get_http_pool
 from utils.exceptions import DataFetchError, InvalidSymbolError, NetworkError
 from utils.logger_config import setup_logger
 
@@ -31,8 +28,6 @@ class AsyncStockDataProvider:
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp client session"""
         if self._session is None or self._session.closed:
-            # Create connection pool
-            pool = get_http_pool(max_connections=20, connection_timeout=30)
             # For now, we'll create a simple session - in a full implementation,
             # we would integrate with the connection pool
             connector = aiohttp.TCPConnector(limit=20, limit_per_host=5)
@@ -74,18 +69,16 @@ class AsyncStockDataProvider:
 
             try:
                 trusted_data, actual_ticker = await self._fetch_trusted_source_async(
-                    sync_provider, symbol, ticker_candidates, period
+                    sync_provider, symbol, ticker_candidates, period,
                 )
             except DataFetchError:
                 raise
             except Exception as exc:
-                logger.debug(
-                    "Trusted source fetch failed for %s: %s", symbol, exc
-                )
+                logger.debug("Trusted source fetch failed for %s: %s", symbol, exc)
 
             if trusted_data is not None and not trusted_data.empty:
                 prepared = sync_provider._prepare_history_frame(
-                    trusted_data, symbol, actual_ticker
+                    trusted_data, symbol, actual_ticker,
                 )
                 cache.set(cache_key, prepared, ttl=1800)
                 return prepared
@@ -106,40 +99,40 @@ class AsyncStockDataProvider:
             return prepared
 
         except InvalidSymbolError as e:
-            logger.error(f"Invalid symbol error for {symbol}: {str(e)}")
+            logger.error(f"Invalid symbol error for {symbol}: {e!s}")
             raise
         except NetworkError as e:
-            logger.error(f"Network error for {symbol}: {str(e)}")
+            logger.error(f"Network error for {symbol}: {e!s}")
             raise
         except DataFetchError as e:
-            logger.error(f"Data fetch error for {symbol}: {str(e)}")
+            logger.error(f"Data fetch error for {symbol}: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error fetching data for {symbol}: {str(e)}")
+            logger.error(f"Unexpected error fetching data for {symbol}: {e!s}")
             raise DataFetchError(symbol, "Unexpected error during data fetch", str(e))
 
     async def _fetch_with_yfinance_async(
-        self, ticker: str, period: str
+        self, ticker: str, period: str,
     ) -> pd.DataFrame:
         """Fetch data using yfinance with async wrapper"""
         # yfinance is not async by nature, so we'll run it in a thread pool
         loop = asyncio.get_event_loop()
-        
+
         # リトライ回数の設定
         max_retries = 3
         retry_count = 0
         self._last_yfinance_error = None
         last_exception: Optional[Exception] = None
-        
+
         def fetch_data_with_retry(ticker: str, period: str):
             import yfinance as yf
 
             # yfinanceのインスタンスを取得
             stock = yf.Ticker(ticker)
-            
+
             # ヒストリカルデータを取得
             data = stock.history(period=period)
-            
+
             return data
 
         while retry_count < max_retries:
@@ -148,44 +141,60 @@ class AsyncStockDataProvider:
                 await asyncio.sleep(0.1)
 
                 # スレッドプールで実行
-                data = await loop.run_in_executor(None, fetch_data_with_retry, ticker, period)
-                
+                data = await loop.run_in_executor(
+                    None, fetch_data_with_retry, ticker, period,
+                )
+
                 # データ構造を確認
                 if not data.empty:
-                    logger.info(f"Successfully fetched {len(data)} data points for {ticker}")
+                    logger.info(
+                        f"Successfully fetched {len(data)} data points for {ticker}",
+                    )
                     # 最初と最後の日付をログに出力
                     if len(data) > 0:
                         logger.info(f"Date range: {data.index[0]} to {data.index[-1]}")
                     return data
-                else:
-                    logger.warning(f"No data found for ticker: {ticker} (async, attempt {retry_count + 1}/{max_retries})")
-                    # 次のリトライのために少し待機
-                    await asyncio.sleep(0.5)
-                    retry_count += 1
-                    continue
+                logger.warning(
+                    f"No data found for ticker: {ticker} (async, attempt {retry_count + 1}/{max_retries})",
+                )
+                # 次のリトライのために少し待機
+                await asyncio.sleep(0.5)
+                retry_count += 1
+                continue
             except Exception as e:
                 last_exception = e
                 self._last_yfinance_error = str(e) or repr(e)
                 # より詳細なエラー情報をログに出力
-                logger.error(f"Failed to fetch data for {ticker} (async): {str(e)} (type: {type(e).__name__}), attempt {retry_count + 1}/{max_retries}")
+                logger.error(
+                    f"Failed to fetch data for {ticker} (async): {e!s} (type: {type(e).__name__}), attempt {retry_count + 1}/{max_retries}",
+                )
                 # 例外の詳細をログに出力
                 import traceback
-                logger.error(f"Full traceback for {ticker} (async): {traceback.format_exc()}")
-                
+
+                logger.error(
+                    f"Full traceback for {ticker} (async): {traceback.format_exc()}",
+                )
+
                 # HTTPエラーか確認（一時的なエラーの可能性）
                 if "429" in str(e) or "404" in str(e) or "50" in str(e):
-                    logger.warning(f"HTTP error detected, will retry for {ticker} (async)")
+                    logger.warning(
+                        f"HTTP error detected, will retry for {ticker} (async)",
+                    )
                 elif "ConnectionError" in str(type(e)) or "Timeout" in str(e):
-                    logger.warning(f"Connection error detected, will retry for {ticker} (async)")
+                    logger.warning(
+                        f"Connection error detected, will retry for {ticker} (async)",
+                    )
                 else:
                     # その他のエラーの場合はリトライしない
-                    logger.error(f"Non-retryable error for {ticker} (async), stopping retries")
+                    logger.error(
+                        f"Non-retryable error for {ticker} (async), stopping retries",
+                    )
                     raise
-                
+
                 # 次のリトライのために少し待機
                 await asyncio.sleep(1.0 * (retry_count + 1))  # 非同期対応のスリープ
                 retry_count += 1
-        
+
         # 全てのリトライが失敗した場合
         logger.error(f"All retry attempts failed for {ticker} (async)")
         if last_exception is not None and not self._last_yfinance_error:
@@ -213,7 +222,7 @@ class AsyncStockDataProvider:
         if config is None:
             if sync_provider._should_use_local_first(symbol):
                 return await self._fetch_from_local_async(
-                    sync_provider, symbol, period, start_ts, end_ts
+                    sync_provider, symbol, period, start_ts, end_ts,
                 )
             return pd.DataFrame(), None
 
@@ -221,7 +230,7 @@ class AsyncStockDataProvider:
 
         if provider_name == "local_csv":
             return await self._fetch_from_local_async(
-                sync_provider, symbol, period, start_ts, end_ts
+                sync_provider, symbol, period, start_ts, end_ts,
             )
 
         if provider_name == "http_api":
@@ -238,7 +247,7 @@ class AsyncStockDataProvider:
 
         if provider_name == "hybrid":
             local_data, actual = await self._fetch_from_local_async(
-                sync_provider, symbol, period, start_ts, end_ts
+                sync_provider, symbol, period, start_ts, end_ts,
             )
             if not local_data.empty:
                 return local_data, actual
@@ -255,7 +264,7 @@ class AsyncStockDataProvider:
 
         if sync_provider._should_use_local_first(symbol):
             return await self._fetch_from_local_async(
-                sync_provider, symbol, period, start_ts, end_ts
+                sync_provider, symbol, period, start_ts, end_ts,
             )
         return pd.DataFrame(), None
 
@@ -302,11 +311,9 @@ class AsyncStockDataProvider:
         )
 
     async def get_multiple_stocks(
-        self, symbols: List[str], period: str = "1y"
+        self, symbols: List[str], period: str = "1y",
     ) -> Dict[str, pd.DataFrame]:
         """Asynchronously fetch data for multiple stocks"""
-        from utils.exceptions import DataFetchError, InvalidSymbolError
-
         result: Dict[str, pd.DataFrame] = {}
         failed_symbols: List[str] = []
 
@@ -330,7 +337,7 @@ class AsyncStockDataProvider:
         return result
 
     async def _fetch_single_stock_async(
-        self, symbol: str, period: str
+        self, symbol: str, period: str,
     ) -> Optional[pd.DataFrame]:
         """Fetch data for a single stock asynchronously"""
         try:
@@ -343,7 +350,7 @@ class AsyncStockDataProvider:
             return None
 
     async def calculate_technical_indicators_async(
-        self, data: pd.DataFrame
+        self, data: pd.DataFrame,
     ) -> pd.DataFrame:
         """Asynchronously calculate technical indicators"""
         from utils.cache import get_cache

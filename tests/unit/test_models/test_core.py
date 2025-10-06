@@ -1,15 +1,16 @@
-﻿"""Test core ML models."""
+"""Test core ML models."""
+
+from datetime import datetime
+from unittest.mock import Mock, patch
 
 import pytest
-import pandas as pd
+
 import numpy as np
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
+import pandas as pd
 
 # 蜿､縺・odels繝・ぅ繝ｬ繧ｯ繝医Μ縺ｯ蟒・ｭ｢縺輔ｌ縺ｾ縺励◆縲Ｎodels_refactored縺ｫ遘ｻ陦梧ｸ医∩
 # from models.legacy_core import MLStockPredictor, EnsembleStockPredictor
 # from models.base import PredictionResult
-
 # 譁ｰ縺励＞import繝代せ
 from models.legacy_core import (
     EnsembleStockPredictor,
@@ -186,7 +187,7 @@ class TestMLStockPredictor:
     @patch("models.core.MLStockPredictor.load_model")
     @patch("models.core.MLStockPredictor.data_provider")
     def test_predict_with_training_data(
-        self, mock_data_provider, mock_load_model, sample_stock_data
+        self, mock_data_provider, mock_load_model, sample_stock_data,
     ):
         """Test predict with valid training and data."""
         predictor = MLStockPredictor()
@@ -203,7 +204,7 @@ class TestMLStockPredictor:
 
         with patch.object(predictor, "prepare_features") as mock_prepare_features:
             mock_features = pd.DataFrame(
-                {"feature1": [1], "feature2": [2], "feature3": [3]}
+                {"feature1": [1], "feature2": [2], "feature3": [3]},
             )
             mock_prepare_features.return_value = mock_features
 
@@ -219,7 +220,7 @@ class TestMLStockPredictor:
 
         with patch.object(predictor, "predict") as mock_predict:
             mock_predict.return_value = PredictionResult(
-                prediction=80.0, confidence=0.9, timestamp=datetime.now(), metadata={}
+                prediction=80.0, confidence=0.9, timestamp=datetime.now(), metadata={},
             )
 
             score = predictor.predict_score("AAPL")
@@ -231,7 +232,7 @@ class TestMLStockPredictor:
 
         with patch.object(predictor, "predict") as mock_predict:
             mock_predict.return_value = PredictionResult(
-                prediction=0.05, confidence=0.9, timestamp=datetime.now(), metadata={}
+                prediction=0.05, confidence=0.9, timestamp=datetime.now(), metadata={},
             )
 
             return_rate = predictor.predict_return_rate("AAPL", days=5)
@@ -310,12 +311,12 @@ class TestEnsembleStockPredictor:
 
         model1 = Mock()
         model1.predict.return_value = PredictionResult(
-            prediction=70.0, confidence=0.8, timestamp=datetime.now(), metadata={}
+            prediction=70.0, confidence=0.8, timestamp=datetime.now(), metadata={},
         )
 
         model2 = Mock()
         model2.predict.return_value = PredictionResult(
-            prediction=80.0, confidence=0.9, timestamp=datetime.now(), metadata={}
+            prediction=80.0, confidence=0.9, timestamp=datetime.now(), metadata={},
         )
 
         ensemble.add_model(model1, 0.6)
@@ -341,7 +342,7 @@ class TestEnsembleStockPredictor:
 
         model2 = Mock()
         model2.predict.return_value = PredictionResult(
-            prediction=80.0, confidence=0.9, timestamp=datetime.now(), metadata={}
+            prediction=80.0, confidence=0.9, timestamp=datetime.now(), metadata={},
         )
 
         ensemble.add_model(model1, 0.6)

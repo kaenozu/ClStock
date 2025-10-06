@@ -1,11 +1,11 @@
 """Model performance monitoring and tracking."""
 
 import logging
-import numpy as np
-import pandas as pd
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class ModelPerformanceMonitor:
             self._calculate_and_record_accuracy(model_name, prediction, actual)
 
     def _calculate_and_record_accuracy(
-        self, model_name: str, prediction: float, actual: float
+        self, model_name: str, prediction: float, actual: float,
     ):
         """精度を計算して記録"""
         # 方向精度（上昇/下降の予測精度）
@@ -215,13 +215,12 @@ class ModelPerformanceMonitor:
 
         if slope > 0.01:
             return "improving"
-        elif slope < -0.01:
+        if slope < -0.01:
             return "declining"
-        else:
-            return "stable"
+        return "stable"
 
     def detect_performance_anomalies(
-        self, model_name: str, window_size: int = 20
+        self, model_name: str, window_size: int = 20,
     ) -> List[Dict[str, Any]]:
         """パフォーマンス異常を検出"""
         anomalies = []
@@ -255,7 +254,7 @@ class ModelPerformanceMonitor:
         return anomalies
 
     def get_model_comparison(
-        self, models: List[str], metric_type: str = "direction_accuracy"
+        self, models: List[str], metric_type: str = "direction_accuracy",
     ) -> Dict[str, Any]:
         """モデル間のパフォーマンス比較"""
         comparison = {"metric_type": metric_type, "models": {}}
@@ -276,7 +275,7 @@ class ModelPerformanceMonitor:
         # ランキング作成
         if comparison["models"]:
             ranking = sorted(
-                comparison["models"].items(), key=lambda x: x[1]["mean"], reverse=True
+                comparison["models"].items(), key=lambda x: x[1]["mean"], reverse=True,
             )
             comparison["ranking"] = [model for model, _ in ranking]
 
@@ -295,7 +294,7 @@ class ModelPerformanceMonitor:
                             "timestamp": metric.timestamp.isoformat(),
                             "value": metric.value,
                             "metadata": metric.metadata,
-                        }
+                        },
                     )
                 model_data[metric_name] = metric_data
 
@@ -347,11 +346,11 @@ class ModelPerformanceMonitor:
                     set(
                         metric_name.split("_")[0]
                         for metric_name in self.performance_history.keys()
-                    )
+                    ),
                 ),
             },
             "recent_alerts": sorted(
-                self.alerts[-10:], key=lambda x: x["timestamp"], reverse=True
+                self.alerts[-10:], key=lambda x: x["timestamp"], reverse=True,
             ),
             "model_status": {},
         }

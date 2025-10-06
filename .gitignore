@@ -92,7 +92,11 @@ tmp/
 # Flake8 analysis reports
 flake8_analysis.txt
 flake8_analysis_after_e722_fix.txt
+flake8_errors_latest.txt
+
+# Backup files
+*.bak
 
 # Temporary commit message file
 commit_message.txt
-.qwen/ 
+.qwen/

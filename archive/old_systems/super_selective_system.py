@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-"""
-超厳選投資システム - 最高利益銘柄のみに特化
+"""超厳選投資システム - 最高利益銘柄のみに特化
 バックテスト結果から最も利益が出た銘柄のみに投資
 """
 
+import warnings
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-import warnings
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Any
 
 warnings.filterwarnings("ignore")
 
-from data.stock_data import StockDataProvider
 import logging
+
+from data.stock_data import StockDataProvider
 from utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -55,7 +56,7 @@ class BaseInvestmentSystem:
         try:
             return self.data_provider.get_stock_data(symbol, period)
         except Exception as e:
-            logging.warning(f"データ取得エラー {symbol}: {str(e)}")
+            logging.warning(f"データ取得エラー {symbol}: {e!s}")
             return pd.DataFrame()
 
     def _calculate_position_size(self, capital: float, confidence: float) -> float:
@@ -65,7 +66,7 @@ class BaseInvestmentSystem:
         return base_size * confidence_multiplier
 
     def _execute_trade_order(
-        self, symbol: str, action: str, shares: int, price: float, date
+        self, symbol: str, action: str, shares: int, price: float, date,
     ):
         """取引実行の共通メソッド"""
         if action == "BUY":
@@ -166,7 +167,7 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
         super().__init__()
         self.super_elite_symbols = self._initialize_elite_symbols()
 
-        print(f"超厳選投資システム初期化完了")
+        print("超厳選投資システム初期化完了")
         print(f"厳選銘柄数: {len(self.super_elite_symbols)}銘柄")
         print(f"最小利益閾値: {self.min_profit_threshold}%")
         print(f"最大損失閾値: {self.max_loss_threshold}%")
@@ -207,11 +208,11 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
             return None
 
         except Exception as e:
-            logging.error(f"機会分析エラー {symbol}: {str(e)}")
+            logging.exception(f"機会分析エラー {symbol}: {e!s}")
             return None
 
     def _analyze_opportunity(
-        self, symbol: str, stock_data: pd.DataFrame
+        self, symbol: str, stock_data: pd.DataFrame,
     ) -> Dict[str, Any]:
         """機会分析"""
         close = stock_data["Close"]
@@ -273,11 +274,10 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
                 (sma_20.iloc[-1] - sma_50.iloc[-1]) / sma_50.iloc[-1]
             ) * 100
             return min(100, 60 + trend_strength * 10)
-        else:
-            return 40
+        return 40
 
     def _calculate_momentum_score(
-        self, momentum_5d: float, momentum_20d: float
+        self, momentum_5d: float, momentum_20d: float,
     ) -> float:
         """モメンタムスコア計算"""
         combined_momentum = (momentum_5d + momentum_20d) / 2
@@ -294,8 +294,7 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
         if recent_avg > historical_avg:
             volume_ratio = recent_avg / historical_avg
             return min(100, 50 + (volume_ratio - 1) * 25)
-        else:
-            return 40
+        return 40
 
     def _meets_super_criteria(self, opportunity: Dict[str, Any]) -> bool:
         """超基準の判定"""
@@ -315,7 +314,7 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
     def calculate_super_position_size(self, opportunity: Dict[str, Any]) -> int:
         """超ポジションサイズ計算"""
         base_amount = self._calculate_position_size(
-            self.current_capital, opportunity["confidence"]
+            self.current_capital, opportunity["confidence"],
         )
         shares = int(base_amount / opportunity["current_price"])
 
@@ -343,15 +342,14 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
                     print(f"  残資金: {self.current_capital:,.0f}円")
 
                     return True
-                else:
-                    print(f"[エラー] 資金不足: {symbol}")
+                print(f"[エラー] 資金不足: {symbol}")
             else:
                 print(f"[警告] 取引条件未達成: {symbol}")
 
             return False
 
         except Exception as e:
-            logging.error(f"取引実行エラー {symbol}: {str(e)}")
+            logging.exception(f"取引実行エラー {symbol}: {e!s}")
             return False
 
     def run_super_backtest(self) -> Dict[str, Any]:
@@ -389,7 +387,7 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
 
     def _simulate_position_management(self):
         """ポジション管理シミュレーション"""
-        print(f"\n[上昇] ポジション管理シミュレーション")
+        print("\n[上昇] ポジション管理シミュレーション")
 
         for symbol in list(self.positions.keys()):
             try:
@@ -416,23 +414,23 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
                         ) * 100
 
                         print(
-                            f"  [売却] {symbol} 売却: {profit_rate:+.2f}% ({profit:+,.0f}円)"
+                            f"  [売却] {symbol} 売却: {profit_rate:+.2f}% ({profit:+,.0f}円)",
                         )
 
             except Exception as e:
-                logging.warning(f"ポジション管理エラー {symbol}: {str(e)}")
+                logging.warning(f"ポジション管理エラー {symbol}: {e!s}")
 
     def _display_backtest_results(
-        self, results: Dict[str, Any], opportunities: int, successful_trades: int
+        self, results: Dict[str, Any], opportunities: int, successful_trades: int,
     ):
         """バックテスト結果表示"""
-        print(f"\n" + "=" * 60)
+        print("\n" + "=" * 60)
         print("バックテスト結果")
         print("=" * 60)
 
         print(f"発見機会数: {opportunities}")
         print(f"成功取引数: {successful_trades}")
-        print(f"成功率: {(successful_trades/max(opportunities,1)*100):.1f}%")
+        print(f"成功率: {(successful_trades / max(opportunities, 1) * 100):.1f}%")
         print()
 
         print(f"初期資金: {results['initial_capital']:,}円")

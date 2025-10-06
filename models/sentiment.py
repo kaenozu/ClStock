@@ -6,6 +6,7 @@ from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
+
 class SentimentAnalyzer:
     """センチメント分析器"""
 
@@ -57,9 +58,9 @@ class SentimentAnalyzer:
             "nikkei_momentum": random.uniform(-0.05, 0.05),  # nosec B311
         }
 
+
 class MacroEconomicDataProvider:
-    """
-    マクロ経済指標データプロバイダー
+    """マクロ経済指標データプロバイダー
     日銀政策・金利・為替等の経済指標を統合管理
     """
 
@@ -104,7 +105,7 @@ class MacroEconomicDataProvider:
                     data = yf.download(symbol, period="5d", progress=False)
                     if not data.empty:
                         rates_data[name] = data["Close"].iloc[-1]
-                except:
+                except Exception:
                     rates_data[name] = 0.0
             return rates_data
         except Exception as e:
@@ -146,7 +147,7 @@ class MacroEconomicDataProvider:
                             data["Close"].iloc[-1] / data["Close"].iloc[0] - 1
                         ) * 100
                         strength_data[pair] = change
-                except:
+                except Exception:
                     strength_data[pair] = 0.0
             return strength_data
         except Exception as e:
@@ -179,7 +180,7 @@ class MacroEconomicDataProvider:
                         sentiment_data[name] = 0.0
                 except Exception as symbol_error:
                     self.logger.warning(
-                        f"センチメント指標取得エラー {name}: {symbol_error}"
+                        f"センチメント指標取得エラー {name}: {symbol_error}",
                     )
                     sentiment_data[name] = 0.0
             return sentiment_data

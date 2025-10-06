@@ -1,10 +1,10 @@
-from fastapi import FastAPI
-from typing import List, Optional
 import uvicorn
+from fastapi import FastAPI
 
 from api.endpoints import router
 from api.secure_endpoints import router as secure_router
 from api.security import add_security_middleware
+
 # from models.recommendation import StockRecommendation # 削除
 
 app = FastAPI(

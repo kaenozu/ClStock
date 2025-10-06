@@ -4,9 +4,9 @@ import pytest
 
 pytest.importorskip("scipy.sparse")
 
-from config.target_universe import get_target_universe
-import sys
 from unittest.mock import Mock
+
+from config.target_universe import get_target_universe
 
 # trading.backtest_engine が存在しない場合のフォールバック
 try:

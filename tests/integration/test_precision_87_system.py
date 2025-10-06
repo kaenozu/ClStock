@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-ClStock 87%精度突破システムテスト
+"""ClStock 87%精度突破システムテスト
 メタ学習 + DQN強化学習による高精度予測検証
 
 実装技術:
@@ -10,21 +9,19 @@ ClStock 87%精度突破システムテスト
 - 87%精度チューニング
 """
 
-import sys
-import os
 import logging
-from utils.logger_config import setup_logger
-import numpy as np
-import pandas as pd
-from datetime import datetime
-from typing import Dict, List, Any, Tuple
+import sys
 import warnings
+from datetime import datetime
+from typing import Any, Dict, List
+
+from utils.logger_config import setup_logger
 
 warnings.filterwarnings("ignore")
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -73,7 +70,7 @@ class Precision87TestSystem:
             try:
                 # 87%精度予測実行
                 prediction_result = self.precision_system.predict_with_87_precision(
-                    symbol
+                    symbol,
                 )
 
                 # 結果分析
@@ -87,7 +84,7 @@ class Precision87TestSystem:
                     "accuracy": final_accuracy,
                     "precision_87_achieved": achieved_87,
                     "component_breakdown": prediction_result.get(
-                        "component_breakdown", {}
+                        "component_breakdown", {},
                     ),
                     "tuning_details": prediction_result.get("tuning_applied", {}),
                     "status": "success",
@@ -110,7 +107,7 @@ class Precision87TestSystem:
                 breakdown = prediction_result.get("component_breakdown", {})
                 if "component_scores" in breakdown:
                     scores = breakdown["component_scores"]
-                    logger.info(f"  コンポーネント分析:")
+                    logger.info("  コンポーネント分析:")
                     logger.info(f"    ベースモデル: {scores.get('base', 0):.1f}")
                     logger.info(f"    メタ学習: {scores.get('meta', 0):.1f}")
                     logger.info(f"    DQN強化: {scores.get('dqn', 0):.1f}")
@@ -143,7 +140,7 @@ class Precision87TestSystem:
             "accuracy_improvement": average_accuracy - 84.6,
             "individual_results": test_results,
             "system_performance": self._evaluate_system_performance(
-                average_accuracy, precision_87_rate, successful_predictions
+                average_accuracy, precision_87_rate, successful_predictions,
             ),
         }
 
@@ -153,13 +150,13 @@ class Precision87TestSystem:
         return summary
 
     def _evaluate_system_performance(
-        self, avg_accuracy: float, precision_rate: float, success_count: int
+        self, avg_accuracy: float, precision_rate: float, success_count: int,
     ) -> Dict[str, Any]:
         """システム性能評価"""
         try:
             # 性能スコア計算
             accuracy_score = min(
-                (avg_accuracy - 84.6) / 2.4 * 100, 100
+                (avg_accuracy - 84.6) / 2.4 * 100, 100,
             )  # 84.6→87.0で100点
             precision_score = precision_rate * 100
             reliability_score = (success_count / len(self.test_symbols)) * 100
@@ -194,7 +191,7 @@ class Precision87TestSystem:
                 "achievement": achievement,
                 "target_87_achieved": precision_rate >= 0.6,  # 60%以上で目標達成
                 "recommendation": self._generate_recommendations(
-                    avg_accuracy, precision_rate, overall_score
+                    avg_accuracy, precision_rate, overall_score,
                 ),
             }
 
@@ -208,7 +205,7 @@ class Precision87TestSystem:
             }
 
     def _generate_recommendations(
-        self, accuracy: float, precision_rate: float, score: float
+        self, accuracy: float, precision_rate: float, score: float,
     ) -> List[str]:
         """改善推奨事項生成"""
         recommendations = []
@@ -237,18 +234,18 @@ class Precision87TestSystem:
 
         performance = summary["system_performance"]
 
-        logger.info(f"📊 テスト概要:")
+        logger.info("📊 テスト概要:")
         logger.info(f"  対象銘柄数: {summary['total_symbols_tested']}")
         logger.info(f"  成功予測数: {summary['successful_predictions']}")
         logger.info(f"  87%達成数: {summary['precision_87_achieved_count']}")
         logger.info(f"  87%達成率: {summary['precision_87_rate']:.1%}")
 
-        logger.info(f"\n🎯 精度評価:")
+        logger.info("\n🎯 精度評価:")
         logger.info(f"  平均精度: {summary['average_accuracy']:.2f}%")
         logger.info(f"  ベースライン: {summary['baseline_accuracy']}%")
         logger.info(f"  精度向上: {summary['accuracy_improvement']:+.2f}%")
 
-        logger.info(f"\n⭐ 総合評価:")
+        logger.info("\n⭐ 総合評価:")
         logger.info(f"  総合スコア: {performance['overall_score']:.1f}/100")
         logger.info(f"  精度スコア: {performance['accuracy_score']:.1f}")
         logger.info(f"  達成スコア: {performance['precision_score']:.1f}")
@@ -256,15 +253,15 @@ class Precision87TestSystem:
         logger.info(f"  グレード: {performance['grade']}")
         logger.info(f"  達成状況: {performance['achievement']}")
         logger.info(
-            f"  目標達成: {'✅ YES' if performance['target_87_achieved'] else '❌ NO'}"
+            f"  目標達成: {'✅ YES' if performance['target_87_achieved'] else '❌ NO'}",
         )
 
-        logger.info(f"\n💡 推奨事項:")
+        logger.info("\n💡 推奨事項:")
         for i, rec in enumerate(performance["recommendation"], 1):
             logger.info(f"  {i}. {rec}")
 
         # 銘柄別詳細
-        logger.info(f"\n📈 銘柄別結果:")
+        logger.info("\n📈 銘柄別結果:")
         for symbol, result in summary["individual_results"].items():
             if result.get("status") == "success":
                 achieved = "✅" if result["precision_87_achieved"] else "❌"
@@ -317,7 +314,7 @@ def main():
         achieved = performance.get("target_87_achieved", False)
         score = performance.get("overall_score", 0)
 
-        print(f"\n🎯 最終判定")
+        print("\n🎯 最終判定")
         print(f"87%精度目標: {'✅ 達成' if achieved else '❌ 未達成'}")
         print(f"総合スコア: {score:.1f}/100")
 

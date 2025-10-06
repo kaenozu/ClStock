@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""
-動的リスク管理システム - 84.6%予測精度を活用した高度なリスク制御
+"""動的リスク管理システム - 84.6%予測精度を活用した高度なリスク制御
 ボラティリティ連動型損切り、ポートフォリオVaR、相関監視を統合
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
 
 warnings.filterwarnings("ignore")
 
-from data.stock_data import StockDataProvider
-from config.settings import get_settings
-from scipy import stats
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
+
+from config.settings import get_settings
+from data.stock_data import StockDataProvider
 from utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -30,10 +30,9 @@ class AdvancedRiskManager:
         self.risk_metrics = {}
 
     def calculate_dynamic_stop_loss(
-        self, symbol: str, entry_price: float, confidence: float, volatility: float
+        self, symbol: str, entry_price: float, confidence: float, volatility: float,
     ) -> dict:
         """動的ストップロス計算"""
-
         # 基本損切り率（設定から）
         base_stop_loss = self.settings.realtime.default_stop_loss_pct
 
@@ -66,11 +65,8 @@ class AdvancedRiskManager:
             "reasoning": f"信頼度{confidence:.1%}, ボラ{volatility:.1%}, 損切り{dynamic_stop_loss:.1%}",
         }
 
-    def calculate_portfolio_var(
-        self, confidence_level: float = 0.05
-    ) -> dict:
+    def calculate_portfolio_var(self, confidence_level: float = 0.05) -> dict:
         """ポートフォリオVaR（Value at Risk）計算"""
-
         if len(self.positions) == 0:
             return {
                 "var": 0,
@@ -121,7 +117,7 @@ class AdvancedRiskManager:
                 [
                     position_values.get(symbol, 0) / total_value
                     for symbol in returns_df.columns
-                ]
+                ],
             )
 
             # ポートフォリオリターン
@@ -152,7 +148,7 @@ class AdvancedRiskManager:
             }
 
         except Exception as e:
-            logging.error(f"VaR計算エラー: {e}")
+            logging.exception(f"VaR計算エラー: {e}")
             return {
                 "var": 0,
                 "cvar": 0,
@@ -165,7 +161,6 @@ class AdvancedRiskManager:
 
     def monitor_correlation_changes(self, lookback_days: int = 60) -> dict:
         """銘柄間相関の変化監視"""
-
         if len(self.positions) < 2:
             return {
                 "correlation_risk": "低",
@@ -242,7 +237,7 @@ class AdvancedRiskManager:
             }
 
         except Exception as e:
-            logging.error(f"相関監視エラー: {e}")
+            logging.exception(f"相関監視エラー: {e}")
             return {
                 "correlation_risk": "不明",
                 "max_correlation": 0,
@@ -258,7 +253,6 @@ class AdvancedRiskManager:
         current_capital: float,
     ) -> dict:
         """Kelly基準によるポジションサイズ計算"""
-
         # Kelly基準: f = (bp - q) / b
         # b = avg_win / avg_loss (勝率比)
         # p = win_probability (勝率)
@@ -293,7 +287,6 @@ class AdvancedRiskManager:
 
     def assess_maximum_drawdown_risk(self) -> dict:
         """最大ドローダウンリスク評価"""
-
         try:
             if len(self.positions) == 0:
                 return {"current_drawdown": 0, "risk_level": "なし"}
@@ -323,7 +316,7 @@ class AdvancedRiskManager:
                             "pnl_pct": position_pnl_pct,
                             "current_price": current_price,
                             "entry_price": entry_price,
-                        }
+                        },
                     )
 
                 except Exception as e:
@@ -349,12 +342,12 @@ class AdvancedRiskManager:
                 "risk_level": risk_level,
                 "position_details": position_details,
                 "recommendation": self._get_drawdown_recommendation(
-                    current_drawdown_pct
+                    current_drawdown_pct,
                 ),
             }
 
         except Exception as e:
-            logging.error(f"ドローダウン評価エラー: {e}")
+            logging.exception(f"ドローダウン評価エラー: {e}")
             return {
                 "current_drawdown": 0,
                 "risk_level": "不明",
@@ -366,16 +359,14 @@ class AdvancedRiskManager:
         """ドローダウンに基づく推奨アクション"""
         if drawdown_pct <= -0.15:
             return "緊急: 全ポジション見直し推奨"
-        elif drawdown_pct <= -0.10:
+        if drawdown_pct <= -0.10:
             return "警告: 損切り基準の再検討"
-        elif drawdown_pct <= -0.05:
+        if drawdown_pct <= -0.05:
             return "注意: リスク管理強化"
-        else:
-            return "正常: 現状維持"
+        return "正常: 現状維持"
 
     def generate_comprehensive_risk_report(self) -> dict:
         """総合リスクレポート生成"""
-
         # 各種リスク指標計算
         var_result = self.calculate_portfolio_var()
         correlation_result = self.monitor_correlation_changes()
@@ -420,7 +411,7 @@ class AdvancedRiskManager:
             "correlation_analysis": correlation_result,
             "drawdown_analysis": drawdown_result,
             "recommendations": self._generate_risk_recommendations(
-                overall_risk_score, var_result, correlation_result, drawdown_result
+                overall_risk_score, var_result, correlation_result, drawdown_result,
             ),
         }
 
@@ -469,53 +460,52 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         # テストモード
         return test_main()
-    else:
-        # デモモード
-        print("動的リスク管理システム - 84.6%予測精度活用")
-        print("=" * 60)
+    # デモモード
+    print("動的リスク管理システム - 84.6%予測精度活用")
+    print("=" * 60)
 
-        # システム初期化
-        risk_manager = AdvancedRiskManager(initial_capital=1000000)
+    # システム初期化
+    risk_manager = AdvancedRiskManager(initial_capital=1000000)
 
-        # サンプルポジション設定（テスト用）
-        risk_manager.positions = {
-            "7203": {"size": 100, "avg_price": 2500, "entry_date": datetime.now()},
-            "6758": {"size": 50, "avg_price": 12000, "entry_date": datetime.now()},
-            "9434": {"size": 500, "avg_price": 230, "entry_date": datetime.now()},
-        }
+    # サンプルポジション設定（テスト用）
+    risk_manager.positions = {
+        "7203": {"size": 100, "avg_price": 2500, "entry_date": datetime.now()},
+        "6758": {"size": 50, "avg_price": 12000, "entry_date": datetime.now()},
+        "9434": {"size": 500, "avg_price": 230, "entry_date": datetime.now()},
+    }
 
-        # 総合リスクレポート生成
-        risk_report = risk_manager.generate_comprehensive_risk_report()
+    # 総合リスクレポート生成
+    risk_report = risk_manager.generate_comprehensive_risk_report()
 
-        print(
-            f"リスク評価時刻: {risk_report['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}"
-        )
-        print(f"総合リスクスコア: {risk_report['overall_risk_score']:.1f}")
-        print(f"総合リスクレベル: {risk_report['overall_risk_level']}")
+    print(
+        f"リスク評価時刻: {risk_report['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}",
+    )
+    print(f"総合リスクスコア: {risk_report['overall_risk_score']:.1f}")
+    print(f"総合リスクレベル: {risk_report['overall_risk_level']}")
 
-        print(f"\n=== VaR分析 ===")
-        var_data = risk_report["var_analysis"]
-        print(f"1日VaR: {var_data.get('var', 0):,.0f}円")
-        print(f"CVaR: {var_data.get('cvar', 0):,.0f}円")
-        print(
-            f"ポートフォリオボラティリティ: {var_data.get('portfolio_volatility', 0):.1%}"
-        )
+    print("\n=== VaR分析 ===")
+    var_data = risk_report["var_analysis"]
+    print(f"1日VaR: {var_data.get('var', 0):,.0f}円")
+    print(f"CVaR: {var_data.get('cvar', 0):,.0f}円")
+    print(
+        f"ポートフォリオボラティリティ: {var_data.get('portfolio_volatility', 0):.1%}",
+    )
 
-        print(f"\n=== 相関分析 ===")
-        corr_data = risk_report["correlation_analysis"]
-        print(f"相関リスクレベル: {corr_data.get('correlation_risk', 'N/A')}")
-        print(f"最大相関係数: {corr_data.get('max_correlation', 0):.1%}")
+    print("\n=== 相関分析 ===")
+    corr_data = risk_report["correlation_analysis"]
+    print(f"相関リスクレベル: {corr_data.get('correlation_risk', 'N/A')}")
+    print(f"最大相関係数: {corr_data.get('max_correlation', 0):.1%}")
 
-        print(f"\n=== ドローダウン分析 ===")
-        dd_data = risk_report["drawdown_analysis"]
-        print(f"現在ドローダウン: {dd_data.get('current_drawdown', 0):.1%}")
-        print(f"リスクレベル: {dd_data.get('risk_level', 'N/A')}")
+    print("\n=== ドローダウン分析 ===")
+    dd_data = risk_report["drawdown_analysis"]
+    print(f"現在ドローダウン: {dd_data.get('current_drawdown', 0):.1%}")
+    print(f"リスクレベル: {dd_data.get('risk_level', 'N/A')}")
 
-        print(f"\n=== 推奨アクション ===")
-        for i, rec in enumerate(risk_report["recommendations"], 1):
-            print(f"{i}. {rec}")
+    print("\n=== 推奨アクション ===")
+    for i, rec in enumerate(risk_report["recommendations"], 1):
+        print(f"{i}. {rec}")
 
-        print(f"\nテスト実行は: python dynamic_risk_manager.py test")
+    print("\nテスト実行は: python dynamic_risk_manager.py test")
 
 
 class TestAdvancedRiskManager:
@@ -657,10 +647,10 @@ class TestAdvancedRiskManager:
         ]
 
         for i, (win_prob, avg_win, avg_loss, should_be_positive) in enumerate(
-            test_cases, 1
+            test_cases, 1,
         ):
             result = manager.calculate_position_sizing_kelly(
-                win_prob, avg_win, avg_loss, 1000000
+                win_prob, avg_win, avg_loss, 1000000,
             )
 
             kelly_fraction = result["kelly_fraction"]
@@ -690,7 +680,7 @@ class TestAdvancedRiskManager:
             has_recommendation = "recommendation" in dd_result
 
             print(
-                f"ドローダウン評価: {'OK' if has_drawdown and has_risk_level else 'NG'}"
+                f"ドローダウン評価: {'OK' if has_drawdown and has_risk_level else 'NG'}",
             )
             print(f"  現在DD: {dd_result.get('current_drawdown', 0):.1%}")
             print(f"  リスクレベル: {dd_result.get('risk_level', 'N/A')}")
@@ -730,7 +720,7 @@ class TestAdvancedRiskManager:
             has_recommendations = len(risk_report.get("recommendations", [])) > 0
 
             print(
-                f"総合レポート: {'OK' if has_all_keys and has_recommendations else 'NG'}"
+                f"総合レポート: {'OK' if has_all_keys and has_recommendations else 'NG'}",
             )
             print(f"  リスクスコア: {risk_report.get('overall_risk_score', 0):.1f}")
             print(f"  リスクレベル: {risk_report.get('overall_risk_level', 'N/A')}")
@@ -765,7 +755,10 @@ class TestAdvancedRiskManager:
 
             # 極端な値でのKelly計算
             kelly_result = empty_manager.calculate_position_sizing_kelly(
-                0.99, 0.01, 0.50, 1000000  # 極端な値
+                0.99,
+                0.01,
+                0.50,
+                1000000,  # 極端な値
             )
             extreme_kelly_ok = 0 <= kelly_result["kelly_fraction"] <= 0.25
 

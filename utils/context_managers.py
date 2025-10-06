@@ -1,15 +1,14 @@
-"""
-Context managers for proper resource cleanup
+"""Context managers for proper resource cleanup
 """
 
-import signal
 import atexit
-import threading
 import logging
 import os
+import signal
 import sys
-from typing import Optional, Callable, Any
 from contextlib import contextmanager
+from typing import Callable
+
 from utils.logger_config import get_logger
 
 logger = get_logger(__name__)
@@ -17,7 +16,6 @@ logger = get_logger(__name__)
 
 def _handler_is_active(handler: logging.Handler) -> bool:
     """Return True if the handler still has an open stream to write to."""
-
     stream = getattr(handler, "stream", None)
     if stream is None:
         return True
@@ -26,7 +24,6 @@ def _handler_is_active(handler: logging.Handler) -> bool:
 
 def _safe_log(level: str, message: str) -> None:
     """Log a message while tolerating already-shutdown logging handlers."""
-
     if not getattr(logger, "handlers", None) or not any(
         _handler_is_active(handler) for handler in logger.handlers
     ):
@@ -138,12 +135,12 @@ shutdown_manager = GracefulShutdownManager()
 
 @contextmanager
 def managed_resource(resource_factory: Callable, cleanup_func: Callable):
-    """
-    Context manager for resources that need explicit cleanup
+    """Context manager for resources that need explicit cleanup
 
     Args:
         resource_factory: Function that creates the resource
         cleanup_func: Function that cleans up the resource
+
     """
     resource = None
     try:
@@ -159,11 +156,11 @@ def managed_resource(resource_factory: Callable, cleanup_func: Callable):
 
 @contextmanager
 def network_connection(connection_factory: Callable):
-    """
-    Context manager for network connections
+    """Context manager for network connections
 
     Args:
         connection_factory: Function that creates the network connection
+
     """
     connection = None
     try:
@@ -185,12 +182,12 @@ def network_connection(connection_factory: Callable):
 
 @contextmanager
 def file_lock(lock_file_path: str, timeout: int = 30):
-    """
-    Context manager for file-based locking
+    """Context manager for file-based locking
 
     Args:
         lock_file_path: Path to the lock file
         timeout: Timeout in seconds
+
     """
     import time
 

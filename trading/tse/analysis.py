@@ -1,12 +1,13 @@
 """Stock analysis module for ClStock."""
 
 from dataclasses import dataclass
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 @dataclass
 class StockProfile:
     """Stock profile dataclass."""
+
     symbol: str
     sector: str
     market_cap: float
@@ -24,5 +25,5 @@ class StockProfile:
             "volatility": self.volatility,
             "profit_potential": self.profit_potential,
             "diversity_score": self.diversity_score,
-            "combined_score": self.combined_score
+            "combined_score": self.combined_score,
         }

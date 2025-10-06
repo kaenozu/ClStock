@@ -1,27 +1,30 @@
 #!/usr/bin/env python3
-"""
-リアルタイム取引システム - 84.6%予測精度を活用した自動売買
+"""リアルタイム取引システム - 84.6%予測精度を活用した自動売買
 リアルタイムデータ取得、シグナル検出、自動注文執行を統合
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
 
 warnings.filterwarnings("ignore")
 
-import yfinance as yf
-import time
-import threading
-from datetime import datetime, timedelta
 import logging
+import threading
+import time
+from datetime import datetime
+
+import yfinance as yf
+
 from utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 
-from data.stock_data import StockDataProvider
 from config.settings import get_settings
+from data.stock_data import StockDataProvider
+
 try:
     from sklearn.preprocessing import StandardScaler
 except ImportError:
@@ -47,9 +50,11 @@ except ImportError:
         def fit_transform(self, X):
             return self.fit(X).transform(X)
 
+
 try:
     from sklearn.linear_model import LogisticRegression
 except ImportError:
+
     class LogisticRegression:
         def __init__(self, **kwargs):
             pass
@@ -63,17 +68,16 @@ except ImportError:
 
         def predict(self, X):
             # 簡易実装：Xの平均値に基づいてラベルを決定
-            if not hasattr(self, 'classes_'):
+            if not hasattr(self, "classes_"):
                 raise ValueError("Model has not been fitted yet.")
             return [self.classes_[0 if x.mean() < 0.5 else 1] for x in X]
 
         def predict_proba(self, X):
             # 簡易実装：クラス0が0.5の確率、クラス1が0.5の確率（均等）
-            if not hasattr(self, 'classes_'):
+            if not hasattr(self, "classes_"):
                 raise ValueError("Model has not been fitted yet.")
             prob = [[0.5, 0.5] for _ in X]
             return prob
-import json
 
 
 class RealTimeDataProvider:
@@ -84,7 +88,7 @@ class RealTimeDataProvider:
         self.last_update = {}
 
     def get_realtime_data(
-        self, symbol: str, period: str = "1d"
+        self, symbol: str, period: str = "1d",
     ) -> Optional[pd.DataFrame]:
         """リアルタイムデータ取得"""
         try:
@@ -106,7 +110,7 @@ class RealTimeDataProvider:
             return data
 
         except Exception as e:
-            logging.error(f"リアルタイムデータ取得エラー {symbol}: {e}")
+            logging.exception(f"リアルタイムデータ取得エラー {symbol}: {e}")
             return None
 
     def get_historical_context(self, symbol: str) -> Optional[pd.DataFrame]:
@@ -116,7 +120,7 @@ class RealTimeDataProvider:
             historical = data_provider.get_stock_data(symbol, "3mo")
             return historical
         except Exception as e:
-            logging.error(f"履歴データ取得エラー {symbol}: {e}")
+            logging.exception(f"履歴データ取得エラー {symbol}: {e}")
             return None
 
 
@@ -127,14 +131,14 @@ class Pattern846Detector:
         self.settings = get_settings()
 
     def detect_846_pattern(self, data: pd.DataFrame) -> Dict:
-        """
-        84.6%パターン検出
+        """84.6%パターン検出
 
         Args:
             data: 株価データ（OHLCV形式）
 
         Returns:
             検出結果辞書
+
         """
         try:
             if len(data) < 50:
@@ -188,7 +192,7 @@ class Pattern846Detector:
             }
 
         except Exception as e:
-            logging.error(f"パターン検出エラー: {e}")
+            logging.exception(f"パターン検出エラー: {e}")
             return self._no_signal_result(f"エラー: {e}")
 
     def _no_signal_result(self, reason: str) -> Dict:
@@ -212,10 +216,9 @@ class RiskManager:
         self.last_reset_date = datetime.now().date()
 
     def calculate_position_size(
-        self, symbol: str, signal: int, confidence: float, current_price: float
+        self, symbol: str, signal: int, confidence: float, current_price: float,
     ) -> Dict[str, Union[int, float, str]]:
         """ポジションサイズ計算（Kelly基準 + リスク管理）"""
-
         # 日次取引制限確認
         if self.daily_trades >= self.settings.realtime.max_daily_trades:
             return {"size": 0, "reason": "日次取引上限"}
@@ -238,7 +241,7 @@ class RiskManager:
         # 最終ポジションサイズ
         position_ratio = base_allocation * confidence_multiplier
         position_ratio = min(
-            position_ratio, self.settings.realtime.max_position_size_pct
+            position_ratio, self.settings.realtime.max_position_size_pct,
         )
 
         position_value = self.current_capital * position_ratio
@@ -261,7 +264,7 @@ class RiskManager:
         }
 
     def update_positions(
-        self, symbol: str, action: str, size: int, price: float
+        self, symbol: str, action: str, size: int, price: float,
     ) -> None:
         """ポジション更新"""
         if action == "BUY":
@@ -277,7 +280,7 @@ class RiskManager:
                         "size": new_size,
                         "avg_price": new_avg_price,
                         "value": new_size * price,
-                    }
+                    },
                 )
             else:
                 # 新規ポジション
@@ -324,10 +327,9 @@ class OrderExecutor:
         self.order_history: List[Dict[str, Union[str, int, float, datetime]]] = []
 
     def execute_order(
-        self, symbol: str, action: str, size: int, price: float, confidence: float
+        self, symbol: str, action: str, size: int, price: float, confidence: float,
     ) -> Dict[str, Union[str, int, float, datetime]]:
         """注文執行"""
-
         order: Dict[str, Union[str, int, float, datetime]] = {
             "timestamp": datetime.now(),
             "symbol": symbol,
@@ -341,7 +343,7 @@ class OrderExecutor:
         if self.mode == "simulation":
             # シミュレーションモード
             logging.info(
-                f"シミュレーション注文: {action} {symbol} {size}株 @{price:.0f}円 (信頼度: {confidence:.1%})"
+                f"シミュレーション注文: {action} {symbol} {size}株 @{price:.0f}円 (信頼度: {confidence:.1%})",
             )
             order["order_id"] = f"SIM_{len(self.order_history)}"
 
@@ -406,7 +408,7 @@ class RealTimeTradingSystem:
                     try:
                         self._process_symbol(symbol)
                     except Exception as e:
-                        logging.error(f"{symbol} 処理エラー: {e}")
+                        logging.exception(f"{symbol} 処理エラー: {e}")
                         continue
 
                 # 待機
@@ -415,7 +417,7 @@ class RealTimeTradingSystem:
             except KeyboardInterrupt:
                 break
             except Exception as e:
-                logging.error(f"監視ループエラー: {e}")
+                logging.exception(f"監視ループエラー: {e}")
                 time.sleep(60)  # エラー時は1分待機
 
     def _process_symbol(self, symbol: str):
@@ -440,7 +442,6 @@ class RealTimeTradingSystem:
             and pattern_result["confidence"]
             >= self.settings.realtime.pattern_confidence_threshold
         ):
-
             # ポジションサイズ計算
             position_info = self.risk_manager.calculate_position_size(
                 symbol,
@@ -471,7 +472,7 @@ class RealTimeTradingSystem:
                     )
 
                     logging.info(
-                        f"注文執行完了: {symbol} {action} {position_info['size']}株"
+                        f"注文執行完了: {symbol} {action} {position_info['size']}株",
                     )
                     logging.info(f"理由: {pattern_result['reason']}")
 
@@ -553,11 +554,11 @@ def main():
 
         # 最終レポート
         final_status = system.get_status_report()
-        print(f"\n=== 最終結果 ===")
+        print("\n=== 最終結果 ===")
         print(f"初期資金: {final_status['initial_capital']:,.0f}円")
         print(f"最終資産: {final_status['total_value']:,.0f}円")
         print(
-            f"総収益: {final_status['total_value'] - final_status['initial_capital']:,.0f}円"
+            f"総収益: {final_status['total_value'] - final_status['initial_capital']:,.0f}円",
         )
         print(f"収益率: {final_status['total_return_pct']:+.1f}%")
 

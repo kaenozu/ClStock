@@ -1,10 +1,14 @@
-﻿"""Test base model classes."""
+"""Test base model classes."""
 
-import pytest
-import pandas as pd
-import numpy as np
 from datetime import datetime
 from unittest.mock import Mock, patch
+
+import pytest
+
+import pandas as pd
+from models.ensemble.ensemble_predictor import (
+    RefactoredEnsemblePredictor as EnsemblePredictor,
+)
 
 # 蜿､縺・odels繝・ぅ繝ｬ繧ｯ繝医Μ縺ｯ蟒・ｭ｢縺輔ｌ縺ｾ縺励◆
 # from models.base import (
@@ -14,17 +18,12 @@ from unittest.mock import Mock, patch
 #     CacheablePredictor,
 #     PredictionResult
 # )
-
 # 譁ｰ縺励＞繧､繝ｳ繝昴・繝医ヱ繧ｹ
 from models.legacy_core import (
     CacheablePredictor,
-    EnsembleStockPredictor,
     PredictionResult,
     PredictorInterface,
     StockPredictor,
-)
-from models.ensemble.ensemble_predictor import (
-    RefactoredEnsemblePredictor as EnsemblePredictor,
 )
 
 
@@ -68,7 +67,7 @@ class TestStockPredictor:
                 "low": [99, 100],
                 "close": [101, 102],
                 "volume": [1000, 1100],
-            }
+            },
         )
 
         assert predictor.validate_input(data) is True
@@ -102,7 +101,7 @@ class TestStockPredictor:
                 "low": [99],
                 "close": [101],
                 "volume": [1000],
-            }
+            },
         )
 
         with pytest.raises(ValueError, match="Model must be trained"):
@@ -130,7 +129,7 @@ class TestStockPredictor:
                 "low": [99],
                 "close": [101],
                 "volume": [1000],
-            }
+            },
         )
 
         result = predictor.predict("TEST", data)
@@ -242,7 +241,7 @@ class TestCacheablePredictor:
         data = pd.DataFrame({"close": [100]})
 
         result = PredictionResult(
-            prediction=75.0, confidence=0.8, timestamp=datetime.now(), metadata={}
+            prediction=75.0, confidence=0.8, timestamp=datetime.now(), metadata={},
         )
 
         predictor.cache_prediction("AAPL", data, result)
@@ -265,7 +264,7 @@ class TestCacheablePredictor:
         data = pd.DataFrame({"close": [100]})
 
         result = PredictionResult(
-            prediction=75.0, confidence=0.8, timestamp=datetime.now(), metadata={}
+            prediction=75.0, confidence=0.8, timestamp=datetime.now(), metadata={},
         )
 
         # No cache hit
@@ -289,7 +288,7 @@ def sample_stock_data():
             "low": [99, 100, 101, 102, 103],
             "close": [101, 102, 103, 104, 105],
             "volume": [1000, 1100, 1200, 1300, 1400],
-        }
+        },
     )
 
 

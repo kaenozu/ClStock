@@ -1,27 +1,25 @@
-"""
-ClStock パフォーマンストラッカー
+"""ClStock パフォーマンストラッカー
 
 日次・週次・月次のP&L計算、リスク調整リターン、
 ベンチマーク比較、アルファ・ベータ分析を提供
 """
 
-import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, field
-from collections import defaultdict
-import pandas as pd
-import numpy as np
-from scipy import stats
-import matplotlib.pyplot as plt
-import seaborn as sns
-from io import BytesIO
 import base64
+import logging
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from io import BytesIO
+from typing import Any, Dict, List, Optional, Tuple
+
+import matplotlib.pyplot as plt
+from scipy import stats
+
+import numpy as np
+import pandas as pd
 
 # 既存システム
 from data.stock_data import StockDataProvider
-from .trade_recorder import TradeRecorder
-from .models import PerformanceMetrics
 
 
 @dataclass
@@ -101,19 +99,18 @@ class RiskMetrics:
 
 
 class PerformanceTracker:
-    """
-    パフォーマンス追跡・分析システム
+    """パフォーマンス追跡・分析システム
 
     87%精度システムと統合されたパフォーマンス分析
     """
 
     def __init__(
-        self, initial_capital: float = 1000000, benchmark_symbol: str = "^N225"
+        self, initial_capital: float = 1000000, benchmark_symbol: str = "^N225",
     ):
-        """
-        Args:
-            initial_capital: 初期資本
-            benchmark_symbol: ベンチマーク銘柄（日経平均）
+        """Args:
+        initial_capital: 初期資本
+        benchmark_symbol: ベンチマーク銘柄（日経平均）
+
         """
         self.initial_capital = initial_capital
         self.benchmark_symbol = benchmark_symbol
@@ -142,8 +139,7 @@ class PerformanceTracker:
         active_positions: int,
         trades_count: int = 0,
     ) -> bool:
-        """
-        パフォーマンス更新
+        """パフォーマンス更新
 
         Args:
             current_portfolio_value: 現在のポートフォリオ価値
@@ -152,6 +148,7 @@ class PerformanceTracker:
 
         Returns:
             更新成功フラグ
+
         """
         try:
             today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -229,10 +226,9 @@ class PerformanceTracker:
             return False
 
     def get_period_performance(
-        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
+        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
     ) -> PeriodPerformance:
-        """
-        期間パフォーマンス取得
+        """期間パフォーマンス取得
 
         Args:
             start_date: 開始日（Noneの場合は全期間）
@@ -240,11 +236,12 @@ class PerformanceTracker:
 
         Returns:
             期間パフォーマンス
+
         """
         try:
             # 期間フィルタリング
             filtered_performance = self._filter_performance_by_date(
-                start_date, end_date
+                start_date, end_date,
             )
 
             if not filtered_performance:
@@ -300,7 +297,7 @@ class PerformanceTracker:
 
             # ベンチマーク関連
             beta, alpha, correlation, r_squared = self._calculate_beta_alpha(
-                returns, benchmark_returns
+                returns, benchmark_returns,
             )
 
             # 情報レシオ
@@ -316,7 +313,7 @@ class PerformanceTracker:
 
             # アップ・ダウンキャプチャー
             up_capture, down_capture = self._calculate_capture_ratios(
-                returns, benchmark_returns
+                returns, benchmark_returns,
             )
 
             return PeriodPerformance(
@@ -346,10 +343,9 @@ class PerformanceTracker:
             return self._empty_period_performance()
 
     def get_benchmark_comparison(
-        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
+        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
     ) -> BenchmarkComparison:
-        """
-        ベンチマーク比較分析
+        """ベンチマーク比較分析
 
         Args:
             start_date: 開始日
@@ -357,10 +353,11 @@ class PerformanceTracker:
 
         Returns:
             ベンチマーク比較結果
+
         """
         try:
             filtered_performance = self._filter_performance_by_date(
-                start_date, end_date
+                start_date, end_date,
             )
 
             if not filtered_performance:
@@ -382,7 +379,7 @@ class PerformanceTracker:
                 else 0.0
             )
             beta, alpha, _, r_squared = self._calculate_beta_alpha(
-                portfolio_returns, benchmark_returns
+                portfolio_returns, benchmark_returns,
             )
 
             # トラッキングエラー
@@ -436,7 +433,7 @@ class PerformanceTracker:
                     "sharpe_ratio": 0.0,
                     "benchmark_return": 0.0,
                     "excess_return": 0.0,
-                }
+                },
             )
 
             # 月別データ集計
@@ -464,17 +461,17 @@ class PerformanceTracker:
                     )
 
                     monthly_data[month_key]["total_return"] = monthly_return
-                    monthly_data[month_key][
-                        "benchmark_return"
-                    ] = benchmark_monthly_return
+                    monthly_data[month_key]["benchmark_return"] = (
+                        benchmark_monthly_return
+                    )
                     monthly_data[month_key]["excess_return"] = (
                         monthly_return - benchmark_monthly_return
                     )
                     monthly_data[month_key]["volatility"] = np.std(returns) * np.sqrt(
-                        252
+                        252,
                     )
                     monthly_data[month_key]["max_drawdown"] = max(
-                        [p.drawdown for p in month_performance]
+                        [p.drawdown for p in month_performance],
                     )
 
                     # 勝率計算（正のリターンの日数比率）
@@ -525,7 +522,7 @@ class PerformanceTracker:
 
             # 最大ドローダウンと期間
             max_drawdown = max(
-                [p.drawdown for p in self.daily_performance], default=0.0
+                [p.drawdown for p in self.daily_performance], default=0.0,
             )
             max_drawdown_duration = self._calculate_max_drawdown_duration()
 
@@ -659,7 +656,7 @@ class PerformanceTracker:
         try:
             if self.benchmark_data is None or len(self.benchmark_data) == 0:
                 self.benchmark_data = self.data_provider.get_stock_data(
-                    self.benchmark_symbol, period="1y"
+                    self.benchmark_symbol, period="1y",
                 )
         except Exception as e:
             self.logger.error(f"ベンチマークデータ更新エラー: {e}")
@@ -702,7 +699,7 @@ class PerformanceTracker:
         return np.std(recent_returns) * np.sqrt(252)
 
     def _calculate_beta_alpha(
-        self, portfolio_returns: List[float], benchmark_returns: List[float]
+        self, portfolio_returns: List[float], benchmark_returns: List[float],
     ) -> Tuple[float, float, float, float]:
         """ベータ・アルファ計算"""
         try:
@@ -714,7 +711,7 @@ class PerformanceTracker:
 
             # 線形回帰
             slope, intercept, r_value, p_value, std_err = stats.linregress(
-                benchmark_returns, portfolio_returns
+                benchmark_returns, portfolio_returns,
             )
 
             beta = slope
@@ -729,7 +726,7 @@ class PerformanceTracker:
             return 0.0, 0.0, 0.0, 0.0
 
     def _calculate_capture_ratios(
-        self, portfolio_returns: List[float], benchmark_returns: List[float]
+        self, portfolio_returns: List[float], benchmark_returns: List[float],
     ) -> Tuple[float, float]:
         """アップ・ダウンキャプチャー計算"""
         try:
@@ -774,7 +771,7 @@ class PerformanceTracker:
             return 0.0, 0.0
 
     def _calculate_market_performance(
-        self, portfolio_returns: List[float], benchmark_returns: List[float]
+        self, portfolio_returns: List[float], benchmark_returns: List[float],
     ) -> Tuple[float, float]:
         """上昇・下落市場でのパフォーマンス"""
         try:
@@ -818,7 +815,7 @@ class PerformanceTracker:
         return max_duration
 
     def _filter_performance_by_date(
-        self, start_date: Optional[datetime], end_date: Optional[datetime]
+        self, start_date: Optional[datetime], end_date: Optional[datetime],
     ) -> List[DailyPerformance]:
         """日付でパフォーマンスフィルタリング"""
         filtered = self.daily_performance

@@ -1,25 +1,24 @@
-"""
-リアルタイムデータプロバイダーファクトリーと統合管理
+"""リアルタイムデータプロバイダーファクトリーと統合管理
 
 このモジュールは、依存関係注入パターンを使用して、
 テスト可能で拡張可能なリアルタイムデータシステムを提供します。
 """
 
-import logging
 import asyncio
-from datetime import datetime
-from typing import Dict, Optional, Protocol, Type, Any
+import logging
 from abc import ABC, abstractmethod
+from datetime import datetime
+from typing import Any, Dict, Optional
 
-from config.settings import get_settings, RealTimeConfig
+from config.settings import RealTimeConfig, get_settings
+from data.real_time_provider import (
+    RealTimeDataQualityMonitor,
+    WebSocketRealTimeProvider,
+)
+from models.core.interfaces import DataProvider as RealTimeDataProvider
 from models.monitoring.cache_manager import RealTimeCacheManager
 from models.monitoring.performance_monitor import (
     ModelPerformanceMonitor as PerformanceMonitor,
-)
-from models.core.interfaces import DataProvider as RealTimeDataProvider
-from data.real_time_provider import (
-    WebSocketRealTimeProvider,
-    RealTimeDataQualityMonitor,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,19 +30,16 @@ class RealTimeProviderFactory(ABC):
     @abstractmethod
     def create_provider(self, config: RealTimeConfig) -> RealTimeDataProvider:
         """データプロバイダーを作成"""
-        pass
 
     @abstractmethod
     def create_cache_manager(self, config: RealTimeConfig) -> RealTimeCacheManager:
         """キャッシュマネージャーを作成"""
-        pass
 
     @abstractmethod
     def create_quality_monitor(
-        self, config: RealTimeConfig
+        self, config: RealTimeConfig,
     ) -> RealTimeDataQualityMonitor:
         """データ品質監視を作成"""
-        pass
 
 
 class DefaultRealTimeFactory(RealTimeProviderFactory):
@@ -61,7 +57,7 @@ class DefaultRealTimeFactory(RealTimeProviderFactory):
         )
 
     def create_quality_monitor(
-        self, config: RealTimeConfig
+        self, config: RealTimeConfig,
     ) -> RealTimeDataQualityMonitor:
         """データ品質監視を作成"""
         return RealTimeDataQualityMonitor()
@@ -81,7 +77,7 @@ class MockRealTimeFactory(RealTimeProviderFactory):
         return RealTimeCacheManager(max_cache_size=100, ttl_hours=1)
 
     def create_quality_monitor(
-        self, config: RealTimeConfig
+        self, config: RealTimeConfig,
     ) -> RealTimeDataQualityMonitor:
         """テスト用品質監視を作成"""
         return RealTimeDataQualityMonitor()
@@ -154,9 +150,8 @@ class RealTimeSystemManager:
 
                 logger.info("Real-time data system started successfully")
                 return True
-            else:
-                logger.error("Failed to start real-time data system")
-                return False
+            logger.error("Failed to start real-time data system")
+            return False
 
         except Exception as e:
             logger.error(f"Error starting real-time data system: {e}")
@@ -188,13 +183,13 @@ class RealTimeSystemManager:
         # 板情報サブスクリプション
         if self.config.default_order_book_subscription:
             await self.provider.subscribe_order_book(
-                self.config.default_order_book_subscription
+                self.config.default_order_book_subscription,
             )
 
         # 指数データサブスクリプション
         if self.config.default_index_subscription:
             await self.provider.subscribe_indices(
-                self.config.default_index_subscription
+                self.config.default_index_subscription,
             )
 
         # ニュースサブスクリプション
@@ -214,7 +209,7 @@ class RealTimeSystemManager:
             # キャッシュに保存
             if self.config.enable_real_time_caching:
                 self.cache_manager.cache_tick_data(
-                    tick_data, max_history=self.config.max_tick_history_per_symbol
+                    tick_data, max_history=self.config.max_tick_history_per_symbol,
                 )
 
             # 統計更新
@@ -226,7 +221,7 @@ class RealTimeSystemManager:
 
             if self.config.enable_detailed_logging:
                 logger.debug(
-                    f"Processed tick data for {tick_data.symbol}: {tick_data.price}"
+                    f"Processed tick data for {tick_data.symbol}: {tick_data.price}",
                 )
 
         except Exception as e:
@@ -264,7 +259,7 @@ class RealTimeSystemManager:
             # キャッシュに保存
             cache_key = f"latest_index_{index_data.symbol}"
             self.cache_manager.set(
-                cache_key, index_data, ttl=self.config.tick_cache_ttl_seconds
+                cache_key, index_data, ttl=self.config.tick_cache_ttl_seconds,
             )
 
             # 統計更新
@@ -272,7 +267,7 @@ class RealTimeSystemManager:
 
             if self.config.enable_detailed_logging:
                 logger.debug(
-                    f"Processed index data for {index_data.symbol}: {index_data.value}"
+                    f"Processed index data for {index_data.symbol}: {index_data.value}",
                 )
 
         except Exception as e:
@@ -333,7 +328,7 @@ class RealTimeSystemManager:
                 logger.error(f"Error in performance monitoring: {e}")
 
     async def _check_data_quality_alerts(
-        self, quality_metrics: Dict[str, float]
+        self, quality_metrics: Dict[str, float],
     ) -> None:
         """データ品質アラートをチェック"""
         tick_quality = quality_metrics.get("tick_quality_rate", 1.0)
@@ -343,12 +338,11 @@ class RealTimeSystemManager:
             tick_quality < self.config.data_quality_alert_threshold
             or order_book_quality < self.config.data_quality_alert_threshold
         ):
-
             self.system_stats["data_quality_alerts"] += 1
             logger.warning(
                 f"Data quality degradation detected: "
                 f"tick_quality={tick_quality:.3f}, "
-                f"order_book_quality={order_book_quality:.3f}"
+                f"order_book_quality={order_book_quality:.3f}",
             )
 
     async def get_system_health(self) -> Dict[str, Any]:
@@ -371,7 +365,7 @@ class RealTimeSystemManager:
         return self.cache_manager.calculate_market_metrics(symbol)
 
     async def subscribe_to_symbol(
-        self, symbol: str, include_ticks: bool = True, include_order_book: bool = True
+        self, symbol: str, include_ticks: bool = True, include_order_book: bool = True,
     ) -> bool:
         """新しい銘柄をサブスクリプション"""
         try:

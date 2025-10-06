@@ -1,7 +1,6 @@
 """Configuration for systems tests."""
 
 import pytest
-from unittest.mock import Mock
 
 
 @pytest.fixture

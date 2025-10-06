@@ -4,7 +4,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import joblib
 import numpy as np
@@ -12,17 +12,22 @@ import pandas as pd
 
 try:
     import lightgbm as lgb
+
     LIGHTGBM_AVAILABLE = True
 except ImportError:
     lgb = None
     LIGHTGBM_AVAILABLE = False
 
 import xgboost as xgb
-from sklearn.metrics import accuracy_score, mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import cross_val_score, train_test_split
-from sklearn.preprocessing import StandardScaler
-
 from data.stock_data import StockDataProvider
+from sklearn.metrics import (
+    accuracy_score,
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score,
+)
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler
 
 try:  # pragma: no cover - optional dependency for enhanced parallelism
     from models.ensemble.parallel_feature_calculator import (
@@ -32,6 +37,7 @@ except Exception:  # pragma: no cover - calculator not available in all environm
     ParallelFeatureCalculator = None
 
 logger = logging.getLogger(__name__)
+
 
 class MLStockPredictor:
     """機械学習を使用した株価予測モデル"""
@@ -87,7 +93,7 @@ class MLStockPredictor:
         # ゼロ除算を防ぐ安全チェック
         bb_range = bb_upper - bb_lower
         features["bb_position"] = (data["Close"] - bb_lower) / bb_range.where(
-            bb_range != 0, 1
+            bb_range != 0, 1,
         )
         features["bb_squeeze"] = bb_range / bb_middle.where(bb_middle != 0, 1)
         features["bb_breakout_up"] = (data["Close"] > bb_upper).astype(int)
@@ -188,15 +194,15 @@ class MLStockPredictor:
         features["market_relative_strength"] = 0  # 後で実装
         # === ギャップ検出 ===
         prev_close = data["Close"].shift(1)
-        features["gap_up"] = ((data["Open"] > prev_close * 1.02)).astype(int)
-        features["gap_down"] = ((data["Open"] < prev_close * 0.98)).astype(int)
+        features["gap_up"] = (data["Open"] > prev_close * 1.02).astype(int)
+        features["gap_down"] = (data["Open"] < prev_close * 0.98).astype(int)
         features["gap_size"] = (data["Open"] - prev_close) / prev_close
         # 欠損値処理
         features = features.ffill().fillna(0)
         return features
 
     def create_targets(
-        self, data: pd.DataFrame, prediction_days: int = 5
+        self, data: pd.DataFrame, prediction_days: int = 5,
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """予測ターゲットを作成（分類と回帰の両方）"""
         targets_regression = pd.DataFrame(index=data.index)
@@ -209,7 +215,7 @@ class MLStockPredictor:
         for days in [1, 3, 5, 10]:
             future_return = data["Close"].shift(-days) / data["Close"] - 1
             targets_classification[f"direction_{days}d"] = (future_return > 0).astype(
-                int
+                int,
             )
         # 推奨スコアターゲット（0-100）
         targets_regression["recommendation_score"] = (
@@ -243,8 +249,10 @@ class MLStockPredictor:
         return scores.fillna(50)
 
     def _process_symbol(
-        self, symbol: str
-    ) -> Tuple[str, Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
+        self, symbol: str,
+    ) -> Tuple[
+        str, Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame],
+    ]:
         """Retrieve data, build features and targets for a single symbol."""
         try:
             logger.info(f"Processing {symbol}...")
@@ -257,13 +265,18 @@ class MLStockPredictor:
             features[f"symbol_{symbol}"] = 1
             return symbol, features, targets_reg, targets_cls
         except Exception as exc:  # pragma: no cover - safety net for unexpected errors
-            logger.error(f"Error processing {symbol}: {str(exc)}")
+            logger.error(f"Error processing {symbol}: {exc!s}")
             return symbol, None, None, None
 
     def _aggregate_results(
         self,
         symbols: List[str],
-        results: Dict[str, Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]]],
+        results: Dict[
+            str,
+            Tuple[
+                Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame],
+            ],
+        ],
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         all_features: List[pd.DataFrame] = []
         all_targets_reg: List[pd.DataFrame] = []
@@ -292,11 +305,13 @@ class MLStockPredictor:
         return combined_features, combined_targets_reg, combined_targets_cls
 
     def _prepare_dataset_sequential(
-        self, symbols: List[str]
+        self, symbols: List[str],
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         results: Dict[
             str,
-            Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]],
+            Tuple[
+                Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame],
+            ],
         ] = {}
         for symbol in symbols:
             _, features, targets_reg, targets_cls = self._process_symbol(symbol)
@@ -305,11 +320,13 @@ class MLStockPredictor:
         return self._aggregate_results(symbols, results)
 
     def _prepare_dataset_parallel(
-        self, symbols: List[str]
+        self, symbols: List[str],
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         results: Dict[
             str,
-            Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]],
+            Tuple[
+                Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame],
+            ],
         ] = {}
 
         if ParallelFeatureCalculator is not None:
@@ -327,7 +344,9 @@ class MLStockPredictor:
                             _, features, targets_reg, targets_cls = future.result()
                             results[symbol] = (features, targets_reg, targets_cls)
                         except Exception as exc:  # pragma: no cover - executor safety
-                            logger.error(f"Parallel processing error for {symbol}: {str(exc)}")
+                            logger.error(
+                                f"Parallel processing error for {symbol}: {exc!s}",
+                            )
                             results[symbol] = (None, None, None)
             except Exception as exc:  # pragma: no cover - creation failure
                 logger.warning(
@@ -348,7 +367,9 @@ class MLStockPredictor:
                         _, features, targets_reg, targets_cls = future.result()
                         results[symbol] = (features, targets_reg, targets_cls)
                     except Exception as exc:  # pragma: no cover - executor safety
-                        logger.error(f"Parallel processing error for {symbol}: {str(exc)}")
+                        logger.error(
+                            f"Parallel processing error for {symbol}: {exc!s}",
+                        )
                         results[symbol] = (None, None, None)
 
         return self._aggregate_results(symbols, results)
@@ -373,7 +394,7 @@ class MLStockPredictor:
             return self._prepare_dataset_sequential(symbols)
 
     def train_model(
-        self, symbols: List[str], target_column: str = "recommendation_score"
+        self, symbols: List[str], target_column: str = "recommendation_score",
     ):
         """モデルを訓練する"""
         from config.settings import get_settings
@@ -400,7 +421,7 @@ class MLStockPredictor:
         targets_clean = targets[valid_indices]
         if len(features_clean) < settings.model.min_training_data:
             raise ValueError(
-                f"Insufficient training data: {len(features_clean)} < {settings.model.min_training_data}"
+                f"Insufficient training data: {len(features_clean)} < {settings.model.min_training_data}",
             )
         # 特徴量名を保存
         self.feature_names = features_clean.columns.tolist()
@@ -520,7 +541,7 @@ class MLStockPredictor:
                     latest_features[feature_name] = 0
             # 特徴量順序を合わせる
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0
+                columns=self.feature_names, fill_value=0,
             )
             # スケーリング
             features_scaled = self.scaler.transform(latest_features)
@@ -530,7 +551,7 @@ class MLStockPredictor:
             score = max(0, min(100, float(score)))
             return score
         except Exception as e:
-            logger.error(f"Error predicting score for {symbol}: {str(e)}")
+            logger.error(f"Error predicting score for {symbol}: {e!s}")
             return 50.0
 
     def predict_return_rate(self, symbol: str, days: int = 5) -> float:
@@ -559,7 +580,7 @@ class MLStockPredictor:
                     latest_features[feature_name] = 0
             # 特徴量順序を合わせる
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0
+                columns=self.feature_names, fill_value=0,
             )
             # スケーリング
             features_scaled = self.scaler.transform(latest_features)
@@ -568,15 +589,15 @@ class MLStockPredictor:
             # 現実的な範囲に制限（日数に応じて調整）
             max_return = 0.006 * days  # 1日あたり最大0.6%
             predicted_return = max(
-                -max_return, min(max_return, float(predicted_return))
+                -max_return, min(max_return, float(predicted_return)),
             )
             return predicted_return
         except Exception as e:
-            logger.error(f"Error predicting return rate for {symbol}: {str(e)}")
+            logger.error(f"Error predicting return rate for {symbol}: {e!s}")
             return 0.0
 
     def prepare_features_for_return_prediction(
-        self, data: pd.DataFrame
+        self, data: pd.DataFrame,
     ) -> pd.DataFrame:
         """リターン率予測用の特徴量準備"""
         features = self.prepare_features(data)
@@ -599,13 +620,13 @@ class MLStockPredictor:
             returns_sign = np.sign(returns)
             features["consecutive_up"] = (
                 returns_sign.groupby(
-                    (returns_sign != returns_sign.shift()).cumsum()
+                    (returns_sign != returns_sign.shift()).cumsum(),
                 ).cumcount()
                 + 1
             ) * (returns_sign > 0)
             features["consecutive_down"] = (
                 returns_sign.groupby(
-                    (returns_sign != returns_sign.shift()).cumsum()
+                    (returns_sign != returns_sign.shift()).cumsum(),
                 ).cumcount()
                 + 1
             ) * (returns_sign < 0)
@@ -620,7 +641,7 @@ class MLStockPredictor:
                 importances = self.model.feature_importances_
                 return dict(zip(self.feature_names, importances))
         except Exception as e:
-            logger.error(f"Error getting feature importance: {str(e)}")
+            logger.error(f"Error getting feature importance: {e!s}")
         return {}
 
     def save_model(self):
@@ -636,7 +657,7 @@ class MLStockPredictor:
             joblib.dump(self.feature_names, features_file)
             logger.info(f"Model saved to {model_file}")
         except Exception as e:
-            logger.error(f"Error saving model: {str(e)}")
+            logger.error(f"Error saving model: {e!s}")
 
     def load_model(self) -> bool:
         """モデルを読み込み"""
@@ -647,7 +668,7 @@ class MLStockPredictor:
             scaler_file = self.model_path / f"scaler_{self.model_type}.joblib"
             features_file = self.model_path / f"features_{self.model_type}.joblib"
             if not all(
-                [model_file.exists(), scaler_file.exists(), features_file.exists()]
+                [model_file.exists(), scaler_file.exists(), features_file.exists()],
             ):
                 return False
             self.model = joblib.load(model_file)
@@ -657,8 +678,9 @@ class MLStockPredictor:
             logger.info(f"Model loaded from {model_file}")
             return True
         except Exception as e:
-            logger.error(f"Error loading model: {str(e)}")
+            logger.error(f"Error loading model: {e!s}")
             return False
+
 
 class HyperparameterOptimizer:
     """ハイパーパラメータ自動調整"""
@@ -685,7 +707,7 @@ class HyperparameterOptimizer:
             }
             model = xgb.XGBRegressor(**params)
             scores = cross_val_score(
-                model, X, y, cv=cv_folds, scoring="neg_mean_squared_error"
+                model, X, y, cv=cv_folds, scoring="neg_mean_squared_error",
             )
             return -scores.mean()
 
@@ -697,11 +719,12 @@ class HyperparameterOptimizer:
         return study.best_params
 
     def optimize_lightgbm(self, X, y, cv_folds=5, n_trials=100):
-        """
-        LightGBMパラメータ最適化
+        """LightGBMパラメータ最適化
         """
         if not LIGHTGBM_AVAILABLE:
-            logger.warning("LightGBM not available, skipping hyperparameter optimization")
+            logger.warning(
+                "LightGBM not available, skipping hyperparameter optimization",
+            )
             return {}
 
         import optuna
@@ -722,7 +745,7 @@ class HyperparameterOptimizer:
             }
             model = lgb.LGBMRegressor(**params)
             scores = cross_val_score(
-                model, X, y, cv=cv_folds, scoring="neg_mean_squared_error"
+                model, X, y, cv=cv_folds, scoring="neg_mean_squared_error",
             )
             return -scores.mean()
 
@@ -743,14 +766,14 @@ class HyperparameterOptimizer:
                 json.dump(self.best_params, f, indent=2)
             logger.info(f"Best parameters saved to {params_file}")
         except Exception as e:
-            logger.error(f"Error saving hyperparameters: {str(e)}")
+            logger.error(f"Error saving hyperparameters: {e!s}")
 
     def load_best_params(self):
         """最適パラメータを読み込み"""
         try:
             params_file = Path("models/saved_models/best_hyperparams.json")
             if params_file.exists():
-                with open(params_file, "r") as f:
+                with open(params_file) as f:
                     import json
 
                     self.best_params = json.load(f)
@@ -758,8 +781,9 @@ class HyperparameterOptimizer:
                 return True
             return False
         except Exception as e:
-            logger.error(f"Error loading hyperparameters: {str(e)}")
+            logger.error(f"Error loading hyperparameters: {e!s}")
             return False
+
 
 class ModelPerformanceMonitor:
     """モデル性能監視・評価システム"""
@@ -791,7 +815,7 @@ class ModelPerformanceMonitor:
             )
             if mask.sum() > 0:
                 quantile_mse = mean_squared_error(y_test[mask], predictions[mask])
-                quantile_performance[f"Q{i+1}"] = quantile_mse
+                quantile_performance[f"Q{i + 1}"] = quantile_mse
         # 性能記録
         performance_record = {
             "timestamp": datetime.now().isoformat(),
@@ -822,15 +846,15 @@ class ModelPerformanceMonitor:
         alerts = []
         if performance_record["rmse"] > rmse_threshold:
             alerts.append(
-                f"High RMSE: {performance_record['rmse']:.4f} > {rmse_threshold}"
+                f"High RMSE: {performance_record['rmse']:.4f} > {rmse_threshold}",
             )
         if performance_record["r2_score"] < r2_threshold:
             alerts.append(
-                f"Low R²: {performance_record['r2_score']:.4f} < {r2_threshold}"
+                f"Low R²: {performance_record['r2_score']:.4f} < {r2_threshold}",
             )
         if performance_record["direction_accuracy"] < direction_threshold:
             alerts.append(
-                f"Low Direction Accuracy: {performance_record['direction_accuracy']:.4f} < {direction_threshold}"
+                f"Low Direction Accuracy: {performance_record['direction_accuracy']:.4f} < {direction_threshold}",
             )
         if alerts:
             alert_record = {
@@ -840,7 +864,7 @@ class ModelPerformanceMonitor:
             }
             self.alerts.append(alert_record)
             logger.warning(
-                f"Performance alerts for {performance_record['model_name']}: {alerts}"
+                f"Performance alerts for {performance_record['model_name']}: {alerts}",
             )
 
     def get_performance_summary(self, last_n_records=10):
@@ -874,14 +898,14 @@ Performance Summary (Last {len(recent_records)} records):
                 json.dump(data, f, indent=2)
             logger.info(f"Performance data saved to {perf_file}")
         except Exception as e:
-            logger.error(f"Error saving performance data: {str(e)}")
+            logger.error(f"Error saving performance data: {e!s}")
 
     def load_performance_data(self):
         """性能データを読み込み"""
         try:
             perf_file = Path("models/saved_models/performance_history.json")
             if perf_file.exists():
-                with open(perf_file, "r") as f:
+                with open(perf_file) as f:
                     import json
 
                     data = json.load(f)
@@ -891,5 +915,5 @@ Performance Summary (Last {len(recent_records)} records):
                 return True
             return False
         except Exception as e:
-            logger.error(f"Error loading performance data: {str(e)}")
+            logger.error(f"Error loading performance data: {e!s}")
             return False

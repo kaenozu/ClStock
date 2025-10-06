@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""
-ClStock 最適予測期間分析システム
+"""ClStock 最適予測期間分析システム
 各期間での予測信頼度を比較分析
 """
 
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import yfinance as yf
 from typing import Dict, Tuple
+
+import yfinance as yf
+
+import numpy as np
+import pandas as pd
 
 
 class OptimalPeriodAnalyzer:
@@ -41,7 +41,7 @@ class OptimalPeriodAnalyzer:
 
             for period_name, days in self.periods.items():
                 accuracy, volatility, confidence = self.calculate_period_metrics(
-                    hist, days
+                    hist, days,
                 )
                 symbol_results[period_name] = {
                     "accuracy": accuracy,
@@ -54,7 +54,7 @@ class OptimalPeriodAnalyzer:
         return results
 
     def calculate_period_metrics(
-        self, data: pd.DataFrame, days: int
+        self, data: pd.DataFrame, days: int,
     ) -> Tuple[float, float, float]:
         """期間別メトリクス計算"""
         close = data["Close"]
@@ -198,13 +198,12 @@ class OptimalPeriodAnalyzer:
                         prediction = 1
                     else:
                         continue
+                elif rsi.iloc[i] > 70:  # 売りシグナル
+                    prediction = -1
+                elif rsi.iloc[i] < 30:  # 買いシグナル
+                    prediction = 1
                 else:
-                    if rsi.iloc[i] > 70:  # 売りシグナル
-                        prediction = -1
-                    elif rsi.iloc[i] < 30:  # 買いシグナル
-                        prediction = 1
-                    else:
-                        continue
+                    continue
 
                 # 実際の動き
                 if i + forecast_days < len(prices):
@@ -305,10 +304,10 @@ class OptimalPeriodAnalyzer:
                     results[s][period]["confidence"]
                     for s in results
                     if period in results[s]
-                ]
+                ],
             )
             print(
-                f"{rank}位: {period:8} - 精度: {score:.1f}% | 信頼度: {confidence_avg:.2%}"
+                f"{rank}位: {period:8} - 精度: {score:.1f}% | 信頼度: {confidence_avg:.2%}",
             )
 
         # 詳細分析
@@ -327,7 +326,7 @@ class OptimalPeriodAnalyzer:
                 vol = symbol_results[best_period]["volatility"]
                 conf = symbol_results[best_period]["confidence"]
                 print(
-                    f"  {symbol}: {acc:.1f}% (ボラティリティ: {vol:.3f}, 信頼度: {conf:.2%})"
+                    f"  {symbol}: {acc:.1f}% (ボラティリティ: {vol:.3f}, 信頼度: {conf:.2%})",
                 )
 
         # 推奨事項

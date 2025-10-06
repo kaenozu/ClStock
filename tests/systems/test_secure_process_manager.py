@@ -70,7 +70,7 @@ def manager(monkeypatch, tmp_path):
     )
 
     fake_settings = types.SimpleNamespace(
-        process=types.SimpleNamespace(log_process_output=True)
+        process=types.SimpleNamespace(log_process_output=True),
     )
     monkeypatch.setattr("systems.process_manager.get_settings", lambda: fake_settings)
 
@@ -97,10 +97,7 @@ def test_start_service_with_safe_command(manager, monkeypatch):
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
 
     process_info = manager.service_registry.processes["dashboard"]
-    assert (
-        manager.start_service("dashboard", extra_args=["7203"])
-        is True
-    )
+    assert manager.start_service("dashboard", extra_args=["7203"]) is True
     assert popen_calls["command"][-1] == "7203"
     assert isinstance(process_info.stdout_thread, OutputReader)
     assert isinstance(process_info.stderr_thread, OutputReader)
@@ -115,7 +112,9 @@ def test_start_service_rejects_invalid_argument(manager, monkeypatch):
     )
 
     assert manager.start_service("dashboard", extra_args=["7203;rm"]) is False
-    assert manager.service_registry.processes["dashboard"].status == ProcessStatus.FAILED
+    assert (
+        manager.service_registry.processes["dashboard"].status == ProcessStatus.FAILED
+    )
 
 
 def test_start_service_rejects_invalid_command(manager, monkeypatch):
@@ -127,7 +126,9 @@ def test_start_service_rejects_invalid_command(manager, monkeypatch):
     monkeypatch.setattr(manager, "_validate_command", lambda cmd: False)
 
     assert manager.start_service("dashboard") is False
-    assert manager.service_registry.processes["dashboard"].status == ProcessStatus.FAILED
+    assert (
+        manager.service_registry.processes["dashboard"].status == ProcessStatus.FAILED
+    )
 
 
 def test_stop_service_with_timeout(manager, monkeypatch):
@@ -135,8 +136,12 @@ def test_stop_service_with_timeout(manager, monkeypatch):
     process_info = manager.service_registry.processes["dashboard"]
     process_info.process = popen
     process_info.status = ProcessStatus.RUNNING
-    process_info.stdout_thread = types.SimpleNamespace(stop=lambda: None, join=lambda timeout=None: None)
-    process_info.stderr_thread = types.SimpleNamespace(stop=lambda: None, join=lambda timeout=None: None)
+    process_info.stdout_thread = types.SimpleNamespace(
+        stop=lambda: None, join=lambda timeout=None: None,
+    )
+    process_info.stderr_thread = types.SimpleNamespace(
+        stop=lambda: None, join=lambda timeout=None: None,
+    )
 
     assert manager.stop_service("dashboard") is True
     assert popen.killed is True
@@ -165,11 +170,11 @@ def test_execute_safe_command(monkeypatch):
         subprocess,
         "run",
         lambda *args, **kwargs: (_ for _ in ()).throw(
-            subprocess.TimeoutExpired(cmd=[], timeout=1)
+            subprocess.TimeoutExpired(cmd=[], timeout=1),
         ),
     )
     success, stdout, stderr = manager.execute_safe_command(
-        ["python", "script.py"], timeout=1
+        ["python", "script.py"], timeout=1,
     )
     assert success is False
     assert stderr == "コマンドタイムアウト"
@@ -191,7 +196,7 @@ def test_predict_stock_safe(monkeypatch):
         [
             types.SimpleNamespace(returncode=0, stdout="done", stderr=""),
             types.SimpleNamespace(returncode=1, stdout="", stderr="fail"),
-        ]
+        ],
     )
 
     def fake_run(command, capture_output, text, timeout, shell):
@@ -209,7 +214,7 @@ def test_predict_stock_safe(monkeypatch):
         subprocess,
         "run",
         lambda *args, **kwargs: (_ for _ in ()).throw(
-            subprocess.TimeoutExpired(cmd=[], timeout=1)
+            subprocess.TimeoutExpired(cmd=[], timeout=1),
         ),
     )
     result = manager.predict_stock_safe("7203")
@@ -230,4 +235,3 @@ def test_output_reader_queue_handling(tmp_path):
     lines = reader.get_recent_lines()
     assert "line1" in lines[0]
     assert reader.is_alive() is False
-

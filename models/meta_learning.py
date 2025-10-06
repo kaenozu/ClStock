@@ -21,28 +21,27 @@ class MetaLearningOptimizer:
         self.meta_features: Dict[str, Dict[str, float]] = {}
         self.best_model_for_symbol: Dict[str, str] = {}
 
-    def extract_meta_features(self, symbol: str, data: pd.DataFrame) -> Dict[str, float]:
+    def extract_meta_features(
+        self, symbol: str, data: pd.DataFrame,
+    ) -> Dict[str, float]:
         """Extract meta features that describe symbol specific characteristics."""
         if data.empty:
             return {}
         meta_features = {
             "data_length": float(len(data)),
             "missing_ratio": float(
-                data.isnull().sum().sum() / max(data.shape[0] * data.shape[1], 1)
+                data.isnull().sum().sum() / max(data.shape[0] * data.shape[1], 1),
             ),
             "price_volatility": float(data["Close"].std() / data["Close"].mean()),
             "price_trend": float(
-                (data["Close"].iloc[-1] - data["Close"].iloc[0]) / data["Close"].iloc[0]
+                (data["Close"].iloc[-1] - data["Close"].iloc[0]) / data["Close"].iloc[0],
             ),
             "price_skewness": float(data["Close"].skew()),
             "price_kurtosis": float(data["Close"].kurtosis()),
             "volume_volatility": float(data["Volume"].std() / data["Volume"].mean()),
             "volume_trend": float(
-                (
-                    data["Volume"].iloc[-20:].mean()
-                    - data["Volume"].iloc[:20].mean()
-                )
-                / max(data["Volume"].iloc[:20].mean(), 1)
+                (data["Volume"].iloc[-20:].mean() - data["Volume"].iloc[:20].mean())
+                / max(data["Volume"].iloc[:20].mean(), 1),
             ),
             "rsi_avg": float(data.get("RSI", pd.Series([50])).mean()),
             "macd_trend": float(data.get("MACD", pd.Series([0])).tail(10).mean()),
@@ -63,11 +62,13 @@ class MetaLearningOptimizer:
             return "deep_learning"
         return "xgboost"
 
-    def update_model_performance(self, symbol: str, model_name: str, performance: float) -> None:
+    def update_model_performance(
+        self, symbol: str, model_name: str, performance: float,
+    ) -> None:
         """Record model performance statistics and update preferred model."""
         history = self.model_performance_history.setdefault(symbol, {})
         history.setdefault(model_name, []).append(
-            {"timestamp": datetime.now(), "performance": performance}
+            {"timestamp": datetime.now(), "performance": performance},
         )
         recent_performances = {
             model: float(np.mean([h["performance"] for h in records[-10:]]))
@@ -76,7 +77,7 @@ class MetaLearningOptimizer:
         }
         if recent_performances:
             self.best_model_for_symbol[symbol] = max(
-                recent_performances, key=recent_performances.get
+                recent_performances, key=recent_performances.get,
             )
 
     def create_symbol_profile(self, symbol: str, data: pd.DataFrame) -> Dict[str, Any]:
@@ -90,7 +91,9 @@ class MetaLearningOptimizer:
                     "price_momentum": 0.0,
                     "seasonal_factor": 1.0,
                     "sector_strength": 0.5,
-                    "current_price": float(data["Close"].iloc[-1]) if not data.empty else 100.0,
+                    "current_price": float(data["Close"].iloc[-1])
+                    if not data.empty
+                    else 100.0,
                 }
             else:
                 close = data["Close"].astype(float)
@@ -123,7 +126,11 @@ class MetaLearningOptimizer:
                 trend_persistence = float(np.clip(trend_persistence, 0.0, 1.0))
                 volume_sma = volume.rolling(20).mean()
                 recent_volume_mean = volume.iloc[-10:].mean()
-                volume_sma_last = volume_sma.iloc[-1] if not pd.isna(volume_sma.iloc[-1]) else recent_volume_mean
+                volume_sma_last = (
+                    volume_sma.iloc[-1]
+                    if not pd.isna(volume_sma.iloc[-1])
+                    else recent_volume_mean
+                )
                 volume_ratio = (
                     recent_volume_mean / volume_sma_last if volume_sma_last > 0 else 1.0
                 )
@@ -133,13 +140,13 @@ class MetaLearningOptimizer:
                     volume_pattern = "decreasing"
                 else:
                     volume_pattern = "stable"
-                price_momentum = float(
-                    (close.iloc[-1] - close.iloc[-20]) / close.iloc[-20]
-                ) if len(close) >= 20 else 0.0
+                price_momentum = (
+                    float((close.iloc[-1] - close.iloc[-20]) / close.iloc[-20])
+                    if len(close) >= 20
+                    else 0.0
+                )
                 seasonal_factor = float(
-                    1.0
-                    + 0.1
-                    * np.sin(2 * np.pi * (datetime.now().month - 1) / 12)
+                    1.0 + 0.1 * np.sin(2 * np.pi * (datetime.now().month - 1) / 12),
                 )
                 first_digit = int(symbol[0]) if symbol and symbol[0].isdigit() else 5
                 sector_strength = 0.3 + (first_digit % 5) * 0.1
@@ -162,7 +169,7 @@ class MetaLearningOptimizer:
                     "sector_correlation": self._analyze_sector_correlation(symbol),
                     "liquidity_score": self._calculate_liquidity_score(data),
                     "momentum_sensitivity": self._analyze_momentum_sensitivity(data),
-                }
+                },
             )
             self.symbol_profiles[symbol] = profile
             return profile
@@ -182,7 +189,7 @@ class MetaLearningOptimizer:
             return fallback
 
     def adapt_model_parameters(
-        self, symbol: str, symbol_profile: Dict[str, Any], base_params: Dict[str, Any]
+        self, symbol: str, symbol_profile: Dict[str, Any], base_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Adapt base model parameters based on the symbol profile."""
         try:
@@ -193,11 +200,15 @@ class MetaLearningOptimizer:
             volatility_boost = 0.0
             if volatility_regime == "high":
                 adapted["learning_rate"] = base_params.get("learning_rate", 0.01) * 0.7
-                adapted["regularization"] = base_params.get("regularization", 0.01) * 1.3
+                adapted["regularization"] = (
+                    base_params.get("regularization", 0.01) * 1.3
+                )
                 volatility_boost = -3.0
             elif volatility_regime == "low":
                 adapted["learning_rate"] = base_params.get("learning_rate", 0.01) * 1.2
-                adapted["regularization"] = base_params.get("regularization", 0.01) * 0.8
+                adapted["regularization"] = (
+                    base_params.get("regularization", 0.01) * 0.8
+                )
                 volatility_boost = 2.0
             else:
                 volatility_boost = 1.0
@@ -230,7 +241,11 @@ class MetaLearningOptimizer:
             seasonal_factor = symbol_profile.get("seasonal_factor", 1.0)
             seasonal_boost = (seasonal_factor - 1.0) * 3
             total_boost = (
-                volatility_boost + trend_boost + volume_boost + sector_boost + seasonal_boost
+                volatility_boost
+                + trend_boost
+                + volume_boost
+                + sector_boost
+                + seasonal_boost
             )
             adapted_prediction = base_prediction + total_boost
             adaptation_strength = abs(total_boost) / 10.0
@@ -252,7 +267,7 @@ class MetaLearningOptimizer:
             fallback = base_params.copy()
             fallback["adapted_prediction"] = base_params.get("prediction", 50.0) + 1.0
             fallback["adapted_confidence"] = min(
-                base_params.get("confidence", 0.5) + 0.05, 0.9
+                base_params.get("confidence", 0.5) + 0.05, 0.9,
             )
             return fallback
 
@@ -261,7 +276,6 @@ class MetaLearningOptimizer:
             return 0.5
         returns = data["Close"].pct_change().dropna()
         volatility = returns.rolling(20).std()
-        vol_changes = volatility.diff().abs()
         high_vol_periods = (volatility > volatility.quantile(0.8)).astype(int)
         persistence = high_vol_periods.rolling(10).sum().mean() / 10
         return float(np.nan_to_num(persistence, nan=0.5))

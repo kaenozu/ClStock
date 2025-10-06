@@ -1,21 +1,19 @@
-"""
-キャッシュ機能のテスト
+"""キャッシュ機能のテスト
 """
 
-import pytest
-import time
-import tempfile
 import shutil
-from pathlib import Path
-from unittest.mock import patch
+import tempfile
+import time
+
+import pytest
 
 from utils.cache import (
     DataCache,
-    cached,
     cache_dataframe,
-    get_cache,
-    clear_cache,
+    cached,
     cleanup_cache,
+    clear_cache,
+    get_cache,
 )
 
 

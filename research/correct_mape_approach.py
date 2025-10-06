@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""
-正しいアプローチでMAPE 10-20%を達成する予測システム
+"""正しいアプローチでMAPE 10-20%を達成する予測システム
 """
 
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.linear_model import LinearRegression, Ridge
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import mean_absolute_percentage_error
-import logging
-from utils.logger_config import setup_logger
-from typing import Dict, List, Tuple
 import warnings
+from typing import Dict, List, Tuple
+
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.metrics import mean_absolute_percentage_error
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.preprocessing import StandardScaler
+from utils.logger_config import setup_logger
 
 warnings.filterwarnings("ignore")
 
@@ -140,7 +139,7 @@ class CorrectMAPEPredictor:
         return features
 
     def create_target_variable(
-        self, data: pd.DataFrame, prediction_days: int = 7
+        self, data: pd.DataFrame, prediction_days: int = 7,
     ) -> pd.Series:
         """目標変数作成（中期リターン予測）"""
         # 7日後の累積リターン率
@@ -211,7 +210,7 @@ class CorrectMAPEPredictor:
         y_combined = np.hstack(all_y)
 
         print(
-            f"総訓練データ: {X_combined.shape[0]}サンプル, {X_combined.shape[1]}特徴量"
+            f"総訓練データ: {X_combined.shape[0]}サンプル, {X_combined.shape[1]}特徴量",
         )
 
         # 外れ値除去（重要！）
@@ -229,10 +228,10 @@ class CorrectMAPEPredictor:
         # モデル定義
         models = {
             "random_forest": RandomForestRegressor(
-                n_estimators=200, max_depth=10, random_state=42, n_jobs=-1
+                n_estimators=200, max_depth=10, random_state=42, n_jobs=-1,
             ),
             "gradient_boosting": GradientBoostingRegressor(
-                n_estimators=200, learning_rate=0.1, max_depth=6, random_state=42
+                n_estimators=200, learning_rate=0.1, max_depth=6, random_state=42,
             ),
             "ridge": Ridge(alpha=1.0),
             "linear": LinearRegression(),
@@ -331,7 +330,7 @@ class CorrectMAPEPredictor:
             return max(-0.2, min(0.2, prediction))
 
         except Exception as e:
-            logger.error(f"Error predicting for {symbol}: {str(e)}")
+            logger.error(f"Error predicting for {symbol}: {e!s}")
             return 0.0
 
     def test_final_system(self, symbols: List[str]) -> Dict:
@@ -378,7 +377,7 @@ class CorrectMAPEPredictor:
                         valid_mapes.append(mape_individual)
 
             except Exception as e:
-                logger.warning(f"Error testing {symbol}: {str(e)}")
+                logger.warning(f"Error testing {symbol}: {e!s}")
                 continue
 
         if valid_mapes:
@@ -438,7 +437,7 @@ def main():
     train_results = predictor.train_models(symbols)
 
     if "error" not in train_results:
-        print(f"\n訓練結果:")
+        print("\n訓練結果:")
         print(f"  最良モデル: {train_results['best_model']}")
         print(f"  MAPE: {train_results['mape']:.2f}%")
         print(f"  訓練サンプル: {train_results['training_samples']}")
@@ -447,7 +446,7 @@ def main():
         test_results = predictor.test_final_system(symbols)
 
         if "error" not in test_results:
-            print(f"\nテスト結果:")
+            print("\nテスト結果:")
             print(f"  MAPE: {test_results['mape']:.2f}%")
             print(f"  MAE: {test_results['mae']:.4f}")
             print(f"  総テスト: {test_results['total_tests']}")
@@ -462,13 +461,13 @@ def main():
                 print("継続改善が必要")
 
         # 現在の予測例
-        print(f"\n現在の予測例:")
+        print("\n現在の予測例:")
         print("-" * 30)
 
         for symbol in symbols[:5]:
             pred_return = predictor.predict_return(symbol)
             print(
-                f"{symbol}: 7日後リターン予測 {pred_return:.3f} ({pred_return*100:.1f}%)"
+                f"{symbol}: 7日後リターン予測 {pred_return:.3f} ({pred_return * 100:.1f}%)",
             )
 
     else:

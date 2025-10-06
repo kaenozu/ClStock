@@ -8,7 +8,6 @@ from datetime import datetime
 from typing import List, Optional
 
 import pandas as pd
-
 from trading.models import PerformanceMetrics, TradeRecord
 
 
@@ -47,7 +46,7 @@ class ExportService:
                     "commission": trade.trading_costs.get("commission", 0),
                     "spread": trade.trading_costs.get("spread", 0),
                     "total_cost": trade.trading_costs.get("total_cost", 0),
-                }
+                },
             )
 
         df = pd.DataFrame(csv_data)

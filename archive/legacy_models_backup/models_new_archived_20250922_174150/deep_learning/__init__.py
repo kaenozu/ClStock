@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-深層学習予測モジュール
+"""深層学習予測モジュール
 LSTM/Transformer技術による時系列予測システム
 """
 

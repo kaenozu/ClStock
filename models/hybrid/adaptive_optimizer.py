@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-学習型パフォーマンス最適化システム
+"""学習型パフォーマンス最適化システム
 システムの使用パターンを学習して自動最適化するAIエンジン
 """
 
-import time
 import logging
-import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, List
+
+import numpy as np
 
 # PredictionModeは文字列として処理（循環インポート回避）
 
@@ -51,7 +48,7 @@ class UsagePatternAnalyzer:
 
         # 銘柄とモードの相関
         symbol_mode_correlation = self._analyze_symbol_mode_correlation(
-            prediction_history
+            prediction_history,
         )
 
         # ピーク使用時間
@@ -70,7 +67,7 @@ class UsagePatternAnalyzer:
         )
 
     def _analyze_frequent_symbols(
-        self, history: List[Dict], top_n: int = 10
+        self, history: List[Dict], top_n: int = 10,
     ) -> List[str]:
         """頻繁使用銘柄分析"""
         symbol_counts = Counter([h["symbol"] for h in history])
@@ -105,17 +102,16 @@ class UsagePatternAnalyzer:
         """時間帯分類"""
         if 9 <= hour <= 11:
             return "morning_session"
-        elif 12 <= hour <= 14:
+        if 12 <= hour <= 14:
             return "afternoon_session"
-        elif 15 <= hour <= 17:
+        if 15 <= hour <= 17:
             return "closing_session"
-        elif 18 <= hour <= 22:
+        if 18 <= hour <= 22:
             return "evening_analysis"
-        else:
-            return "off_hours"
+        return "off_hours"
 
     def _analyze_mode_performance(
-        self, history: List[Dict]
+        self, history: List[Dict],
     ) -> Dict[str, Dict[str, float]]:
         """モード別パフォーマンス分析"""
         mode_stats = defaultdict(list)
@@ -127,7 +123,7 @@ class UsagePatternAnalyzer:
                     "prediction_time": h["prediction_time"],
                     "confidence": h["confidence"],
                     "accuracy": h["accuracy"],
-                }
+                },
             )
 
         performance = {}
@@ -135,7 +131,7 @@ class UsagePatternAnalyzer:
             if stats:
                 performance[mode] = {
                     "avg_prediction_time": np.mean(
-                        [s["prediction_time"] for s in stats]
+                        [s["prediction_time"] for s in stats],
                     ),
                     "avg_confidence": np.mean([s["confidence"] for s in stats]),
                     "avg_accuracy": np.mean([s["accuracy"] for s in stats]),
@@ -296,7 +292,7 @@ class OptimizationEngine:
         self.optimization_history = []
 
     def generate_optimizations(
-        self, usage_pattern: UsagePattern, performance_trends: Dict[str, Any]
+        self, usage_pattern: UsagePattern, performance_trends: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
         """最適化提案生成"""
         optimizations = []
@@ -310,7 +306,7 @@ class OptimizationEngine:
                     "symbols": usage_pattern.frequent_symbols[:5],
                     "description": "Preload models for frequently used symbols",
                     "expected_improvement": 0.3,  # 30%高速化期待
-                }
+                },
             )
 
         # 時間帯別デフォルトモード設定提案
@@ -322,7 +318,7 @@ class OptimizationEngine:
                     "preferences": usage_pattern.time_based_preferences,
                     "description": "Set time-based default prediction modes",
                     "expected_improvement": 0.15,  # 15%効率化期待
-                }
+                },
             )
 
         # パフォーマンス低下検出と対策提案
@@ -335,7 +331,7 @@ class OptimizationEngine:
                         "action": "cache_optimization",
                         "description": "Optimize cache settings due to performance degradation",
                         "expected_improvement": 0.25,
-                    }
+                    },
                 )
 
         # キャッシュヒット率改善提案
@@ -348,15 +344,14 @@ class OptimizationEngine:
                         "action": "extend_ttl",
                         "description": "Extend cache TTL to improve hit rate",
                         "expected_improvement": 0.2,
-                    }
+                    },
                 )
 
         return optimizations
 
 
 class AdaptivePerformanceOptimizer:
-    """
-    学習型パフォーマンス最適化システム
+    """学習型パフォーマンス最適化システム
 
     特徴:
     - 使用パターンの自動学習
@@ -387,7 +382,7 @@ class AdaptivePerformanceOptimizer:
 
         # 最適化提案生成
         optimizations = self.optimization_engine.generate_optimizations(
-            usage_pattern, performance_trends
+            usage_pattern, performance_trends,
         )
 
         # 最適化適用
@@ -403,18 +398,18 @@ class AdaptivePerformanceOptimizer:
             "performance_trends": performance_trends,
             "optimizations_applied": applied_optimizations,
             "expected_improvements": sum(
-                [opt.get("expected_improvement", 0) for opt in applied_optimizations]
+                [opt.get("expected_improvement", 0) for opt in applied_optimizations],
             ),
             "timestamp": datetime.now(),
         }
 
         self.logger.info(
-            f"Optimization cycle completed: {len(applied_optimizations)} optimizations applied"
+            f"Optimization cycle completed: {len(applied_optimizations)} optimizations applied",
         )
         return optimization_report
 
     def _apply_optimizations(
-        self, optimizations: List[Dict[str, Any]]
+        self, optimizations: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """最適化適用"""
         applied = []
@@ -429,7 +424,7 @@ class AdaptivePerformanceOptimizer:
                         self.logger.info(f"Applied optimization: {opt['type']}")
             except Exception as e:
                 self.logger.error(
-                    f"Failed to apply optimization {opt['type']}: {str(e)}"
+                    f"Failed to apply optimization {opt['type']}: {e!s}",
                 )
 
         return applied
@@ -457,18 +452,17 @@ class AdaptivePerformanceOptimizer:
         try:
             if opt_type == "preload_models":
                 return self._preload_models(optimization["symbols"])
-            elif opt_type == "time_based_defaults":
+            if opt_type == "time_based_defaults":
                 return self._configure_time_defaults(optimization["preferences"])
-            elif opt_type == "performance_tuning":
+            if opt_type == "performance_tuning":
                 return self._tune_performance(optimization["action"])
-            elif opt_type == "cache_tuning":
+            if opt_type == "cache_tuning":
                 return self._tune_cache(optimization["action"])
-            else:
-                self.logger.warning(f"Unknown optimization type: {opt_type}")
-                return False
+            self.logger.warning(f"Unknown optimization type: {opt_type}")
+            return False
 
         except Exception as e:
-            self.logger.error(f"Optimization execution failed: {str(e)}")
+            self.logger.error(f"Optimization execution failed: {e!s}")
             return False
 
     def _preload_models(self, symbols: List[str]) -> bool:
@@ -496,7 +490,7 @@ class AdaptivePerformanceOptimizer:
         return True
 
     def record_performance_metrics(
-        self, prediction_time: float, confidence: float, cache_hit: bool = False
+        self, prediction_time: float, confidence: float, cache_hit: bool = False,
     ):
         """パフォーマンスメトリクス記録"""
         metrics = {

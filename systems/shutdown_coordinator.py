@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import signal
 import threading
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from ClStock.utils.logger_config import get_logger
 
@@ -24,7 +24,7 @@ class ShutdownCoordinator:
 
     def __init__(
         self,
-        manager: "ProcessManager",
+        manager: ProcessManager,
         service_registry: ServiceRegistry,
         monitoring_loop: MonitoringLoop,
     ) -> None:

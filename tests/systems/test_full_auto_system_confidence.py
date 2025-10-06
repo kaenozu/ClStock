@@ -5,8 +5,9 @@ from datetime import datetime
 from enum import Enum
 from types import SimpleNamespace
 
-import pandas as pd
 import pytest
+
+import pandas as pd
 
 
 def _ensure_module(path: str) -> types.ModuleType:
@@ -166,7 +167,7 @@ async def test_analyze_single_stock_uses_risk_assessment_score():
         predict=lambda symbol, data: {
             "predicted_price": float(data["Close"].iloc[-1]) + 5.0,
             "confidence": 0.31,
-        }
+        },
     )
 
     distinctive_risk_score = 0.23
@@ -177,10 +178,12 @@ async def test_analyze_single_stock_uses_risk_assessment_score():
         recommendations=["Hold"],
         raw=SimpleNamespace(total_risk_score=0.81),
     )
-    system.risk_manager = SimpleNamespace(analyze_risk=lambda *args, **kwargs: risk_assessment)
+    system.risk_manager = SimpleNamespace(
+        analyze_risk=lambda *args, **kwargs: risk_assessment,
+    )
 
     system.sentiment_analyzer = SimpleNamespace(
-        analyze_sentiment=lambda symbol: {"sentiment_score": 0.12}
+        analyze_sentiment=lambda symbol: {"sentiment_score": 0.12},
     )
 
     system.strategy_generator = SimpleNamespace(
@@ -190,7 +193,7 @@ async def test_analyze_single_stock_uses_risk_assessment_score():
             "expected_return": 0.15,
             "stop_loss_pct": 0.05,
             "take_profit_pct": 0.15,
-        }
+        },
     )
 
     data = pd.DataFrame(

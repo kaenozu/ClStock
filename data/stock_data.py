@@ -13,24 +13,20 @@ from __future__ import annotations
 import logging
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from types import SimpleNamespace
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Any
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pandas as pd
-
 from config.settings import get_settings
 from utils.cache import get_cache
 from utils.exceptions import BatchDataFetchError, DataFetchError
-
 
 logger = logging.getLogger(__name__)
 
 
 def _period_to_days(period: str) -> int:
     """Convert a Yahoo-finance period string to an approximate number of days."""
-
     mapping = {
         "1d": 1,
         "5d": 5,
@@ -60,6 +56,7 @@ def _normalize_timestamp(value: Optional[str]) -> Optional[pd.Timestamp]:
 
 try:  # pragma: no cover - exercised indirectly through tests
     import yfinance as yf  # type: ignore
+
     YFINANCE_AVAILABLE = True
 except ModuleNotFoundError:  # pragma: no cover - hit in constrained envs
     yf = None  # type: ignore
@@ -77,10 +74,12 @@ class StockDataProvider:
     def __init__(self) -> None:
         settings = get_settings()
         # Always keep codes sorted for deterministic behaviour
-        self.jp_stock_codes: Dict[str, str] = dict(sorted(settings.target_stocks.items()))
+        self.jp_stock_codes: Dict[str, str] = dict(
+            sorted(settings.target_stocks.items()),
+        )
         self.cache_ttl = int(os.getenv("CLSTOCK_STOCK_CACHE_TTL", "1800"))
         default_data_dir = Path(
-            os.getenv("CLSTOCK_DATA_DIR", Path(__file__).resolve().parent)
+            os.getenv("CLSTOCK_DATA_DIR", Path(__file__).resolve().parent),
         )
         default_history = default_data_dir / "historical"
 
@@ -106,7 +105,6 @@ class StockDataProvider:
     # ------------------------------------------------------------------
     def get_all_stock_symbols(self) -> List[str]:
         """Return all supported stock symbols."""
-
         return list(self.jp_stock_codes.keys())
 
     def get_stock_data(
@@ -117,7 +115,6 @@ class StockDataProvider:
         end: Optional[str] = None,
     ) -> pd.DataFrame:
         """Fetch historical OHLCV data for *symbol*."""
-
         if start is not None or end is not None:
             cache_key = f"stock::{symbol}::start_{start}::end_{end}"
         else:
@@ -133,7 +130,7 @@ class StockDataProvider:
 
         try:
             data, actual_ticker = self._fetch_trusted_source(
-                symbol, ticker_candidates, period, start, end
+                symbol, ticker_candidates, period, start, end,
             )
         except DataFetchError:
             raise
@@ -143,7 +140,7 @@ class StockDataProvider:
         if (data is None or data.empty) and YFINANCE_AVAILABLE:
             if start is not None or end is not None:
                 data, actual_ticker = self._download_via_yfinance(
-                    symbol, period=None, start=start, end=end
+                    symbol, period=None, start=start, end=end,
                 )
             else:
                 data, actual_ticker = self._download_via_yfinance(symbol, period)
@@ -168,10 +165,9 @@ class StockDataProvider:
         return prepared
 
     def get_multiple_stocks(
-        self, symbols: Iterable[str], period: str = "1y"
+        self, symbols: Iterable[str], period: str = "1y",
     ) -> Dict[str, pd.DataFrame]:
         """Fetch data for multiple symbols, raising on missing data."""
-
         results: Dict[str, pd.DataFrame] = {}
         failures: Dict[str, DataFetchError] = {}
 
@@ -191,10 +187,8 @@ class StockDataProvider:
 
         return results
 
-    def calculate_technical_indicators(
-self, data: pd.DataFrame) -> pd.DataFrame:
+    def calculate_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate a selection of technical indicators."""
-
         if data is None or data.empty:
             return data.copy()
 
@@ -235,7 +229,6 @@ self, data: pd.DataFrame) -> pd.DataFrame:
 
     def get_financial_metrics(self, symbol: str) -> Dict[str, Optional[float]]:
         """Return a dictionary with lightweight financial metrics."""
-
         cache_key = f"financial::{symbol}"
         cache = get_cache()
         cached = cache.get(cache_key)
@@ -264,21 +257,25 @@ self, data: pd.DataFrame) -> pd.DataFrame:
                 if self._fetch_financial_metrics_via_yfinance(ticker, metrics):
                     break
             except Exception as exc:  # pragma: no cover - defensive
-                logger.debug("Failed to retrieve financial metrics for %s via %s: %s", symbol, ticker, exc)
+                logger.debug(
+                    "Failed to retrieve financial metrics for %s via %s: %s",
+                    symbol,
+                    ticker,
+                    exc,
+                )
                 continue
 
         cache.set(cache_key, metrics, ttl=self.cache_ttl)
         return metrics
 
     def _fetch_financial_metrics_via_yfinance(
-        self, ticker: str, metrics: Dict[str, Optional[float]]
+        self, ticker: str, metrics: Dict[str, Optional[float]],
     ) -> bool:
         """Populate *metrics* using ``yfinance`` for the given *ticker*.
 
         The helper guards against missing dependencies or partial responses and
         returns ``True`` only when some data was successfully retrieved.
         """
-
         if not YFINANCE_AVAILABLE or yf is None:
             return False
 
@@ -361,17 +358,17 @@ self, data: pd.DataFrame) -> pd.DataFrame:
 
         if provider == "http_api":
             return self._fetch_from_http_api(
-                symbol, ticker_candidates, period, start, end, start_ts, end_ts
+                symbol, ticker_candidates, period, start, end, start_ts, end_ts,
             )
 
         if provider == "hybrid":
             local_data, actual = self._fetch_from_local_csv(
-                symbol, period, start_ts, end_ts
+                symbol, period, start_ts, end_ts,
             )
             if not local_data.empty:
                 return local_data, actual
             return self._fetch_from_http_api(
-                symbol, ticker_candidates, period, start, end, start_ts, end_ts
+                symbol, ticker_candidates, period, start, end, start_ts, end_ts,
             )
 
         if self._should_use_local_first(symbol):
@@ -551,7 +548,9 @@ self, data: pd.DataFrame) -> pd.DataFrame:
                 existing.append(path)
         return existing
 
-    def _should_use_local_first(self, symbol: str) -> bool:  # pragma: no cover - logic is trivial
+    def _should_use_local_first(
+        self, symbol: str,
+    ) -> bool:  # pragma: no cover - logic is trivial
         prefer_local = os.getenv("CLSTOCK_PREFER_LOCAL_DATA", "auto").lower()
         if prefer_local in {"1", "true", "yes"}:
             return True
@@ -566,7 +565,9 @@ self, data: pd.DataFrame) -> pd.DataFrame:
             return True
         return False
 
-    def _load_first_available_csv(self, symbol: str) -> Optional[Tuple[pd.DataFrame, str]]:
+    def _load_first_available_csv(
+        self, symbol: str,
+    ) -> Optional[Tuple[pd.DataFrame, str]]:
         for ticker in self._ticker_formats(symbol):
             filename = f"{ticker}.csv"
             for directory in self._history_dirs:
@@ -638,7 +639,11 @@ self, data: pd.DataFrame) -> pd.DataFrame:
                     )
                     time.sleep(backoff)
 
-            logger.debug("Moving to next ticker candidate for %s after %s attempts", symbol, ticker)
+            logger.debug(
+                "Moving to next ticker candidate for %s after %s attempts",
+                symbol,
+                ticker,
+            )
 
         if last_error is not None:
             aggregated = "; ".join(attempt_messages) or str(last_error)
@@ -660,7 +665,7 @@ self, data: pd.DataFrame) -> pd.DataFrame:
         )
 
     def _prepare_history_frame(
-        self, data: pd.DataFrame, symbol: str, actual_ticker: Optional[str]
+        self, data: pd.DataFrame, symbol: str, actual_ticker: Optional[str],
     ) -> pd.DataFrame:
         df = data.copy()
         if not isinstance(df.index, pd.DatetimeIndex):
@@ -721,9 +726,18 @@ self, data: pd.DataFrame) -> pd.DataFrame:
                 # 例: revenue, grossProfits, operatingCashflow, ebitda, totalDebt, totalCash, debtToEquity
                 # 他にも、ROE, ROA, ROICなどの計算に必要な生データも取得
                 keys_to_fetch = [
-                    "revenue", "grossProfits", "operatingCashflow", "ebitda", "totalDebt", "totalCash",
-                    "debtToEquity", "returnOnAssets", "returnOnEquity", "earningsQuarterlyGrowth",
-                    "quarterlyEarningsGrowth", "quarterlyRevenueGrowth"
+                    "revenue",
+                    "grossProfits",
+                    "operatingCashflow",
+                    "ebitda",
+                    "totalDebt",
+                    "totalCash",
+                    "debtToEquity",
+                    "returnOnAssets",
+                    "returnOnEquity",
+                    "earningsQuarterlyGrowth",
+                    "quarterlyEarningsGrowth",
+                    "quarterlyRevenueGrowth",
                     # 必要に応じて他のキーも追加
                 ]
 
@@ -747,16 +761,23 @@ self, data: pd.DataFrame) -> pd.DataFrame:
                         extended_metrics[key] = None
 
                 # データが取得できたtickerを記録
-                if extended_metrics.get("revenue") is not None or extended_metrics.get("totalCash") is not None:
+                if (
+                    extended_metrics.get("revenue") is not None
+                    or extended_metrics.get("totalCash") is not None
+                ):
                     extended_metrics["actual_ticker"] = ticker
                     break
             except Exception as exc:  # pragma: no cover - defensive
-                logger.debug("Failed to retrieve extended financial metrics for %s via %s: %s", symbol, ticker, exc)
+                logger.debug(
+                    "Failed to retrieve extended financial metrics for %s via %s: %s",
+                    symbol,
+                    ticker,
+                    exc,
+                )
                 continue
 
         cache.set(cache_key, extended_metrics, ttl=self.cache_ttl)
         return extended_metrics
-
 
     def get_dividend_data(self, symbol: str) -> Dict[str, Optional[float]]:
         """Return a dictionary with dividend-related data."""
@@ -768,9 +789,9 @@ self, data: pd.DataFrame) -> pd.DataFrame:
 
         dividend_data: Dict[str, Optional[float]] = {
             "symbol": symbol,
-            "dividend_rate": None, # dividendRate
-            "dividend_yield": None, # dividendYield (already in get_financial_metrics but included here for completeness)
-            "ex_dividend_date": None, # exDividendDate (date string)
+            "dividend_rate": None,  # dividendRate
+            "dividend_yield": None,  # dividendYield (already in get_financial_metrics but included here for completeness)
+            "ex_dividend_date": None,  # exDividendDate (date string)
             "actual_ticker": None,
         }
 
@@ -792,13 +813,15 @@ self, data: pd.DataFrame) -> pd.DataFrame:
                     try:
                         # exDividendDate が数値 (timestamp) か文字列 (YYYY-MM-DD) か確認
                         if isinstance(ex_date_raw, (int, float)):
-                            dividend_data["ex_dividend_date"] = pd.to_datetime(ex_date_raw, unit='s').date().isoformat()
+                            dividend_data["ex_dividend_date"] = (
+                                pd.to_datetime(ex_date_raw, unit="s").date().isoformat()
+                            )
                         elif isinstance(ex_date_raw, str):
                             # strの場合は、既に YYYY-MM-DD 形式であると仮定
                             dividend_data["ex_dividend_date"] = ex_date_raw
                         else:
                             dividend_data["ex_dividend_date"] = None
-                    except:
+                    except Exception:
                         dividend_data["ex_dividend_date"] = None
                 else:
                     dividend_data["ex_dividend_date"] = None
@@ -806,12 +829,16 @@ self, data: pd.DataFrame) -> pd.DataFrame:
                 dividend_data["actual_ticker"] = ticker
                 break
             except Exception as exc:  # pragma: no cover - defensive
-                logger.debug("Failed to retrieve dividend data for %s via %s: %s", symbol, ticker, exc)
+                logger.debug(
+                    "Failed to retrieve dividend data for %s via %s: %s",
+                    symbol,
+                    ticker,
+                    exc,
+                )
                 continue
 
         cache.set(cache_key, dividend_data, ttl=self.cache_ttl)
         return dividend_data
-
 
     def get_news_data(self, symbol: str) -> List[Dict[str, Any]]:
         """Return a list of news articles for a symbol."""
@@ -831,8 +858,8 @@ self, data: pd.DataFrame) -> pd.DataFrame:
             try:
                 ticker_obj = yf.Ticker(ticker)
                 # news プロパティが存在するか確認
-                if hasattr(ticker_obj, 'news'):
-                    news = getattr(ticker_obj, 'news', [])
+                if hasattr(ticker_obj, "news"):
+                    news = getattr(ticker_obj, "news", [])
                     if news:
                         # news は list of dict
                         # 必要に応じてフィルタリングや整形を行う
@@ -852,8 +879,10 @@ self, data: pd.DataFrame) -> pd.DataFrame:
                                 try:
                                     # timestamp が秒単位かミリ秒単位か確認
                                     # Yahoo Finance は秒単位で返す模様
-                                    processed_item["publish_time"] = pd.to_datetime(processed_item["publish_time"], unit='s')
-                                except:
+                                    processed_item["publish_time"] = pd.to_datetime(
+                                        processed_item["publish_time"], unit="s",
+                                    )
+                                except Exception:
                                     # 変換失敗時は元の値を保持
                                     pass
                             processed_news.append(processed_item)
@@ -861,7 +890,9 @@ self, data: pd.DataFrame) -> pd.DataFrame:
                         news_data = processed_news
                         break  # 一番最初に取得できたニュースを使用
                 else:
-                    logger.debug(f"'news' attribute not found for ticker {ticker}. This might be due to yfinance version or API limitations.")
+                    logger.debug(
+                        f"'news' attribute not found for ticker {ticker}. This might be due to yfinance version or API limitations.",
+                    )
                     news_data = []
                     break
 
@@ -871,7 +902,12 @@ self, data: pd.DataFrame) -> pd.DataFrame:
                 news_data = []
                 break
             except Exception as exc:  # pragma: no cover - depends on yfinance
-                logger.debug("Failed to retrieve news data for %s via %s: %s", symbol, ticker, exc)
+                logger.debug(
+                    "Failed to retrieve news data for %s via %s: %s",
+                    symbol,
+                    ticker,
+                    exc,
+                )
                 continue
 
         cache.set(cache_key, news_data, ttl=self.cache_ttl)
@@ -885,20 +921,16 @@ _stock_data_provider: Optional[StockDataProvider] = None
 
 def get_stock_data_provider() -> StockDataProvider:
     """Singleton-style access used by legacy modules."""
-
     global _stock_data_provider
     if _stock_data_provider is None:
         _stock_data_provider = StockDataProvider()
     return _stock_data_provider
 
-
     def _generate_demo_data(self, symbol: str, period: str = "1y") -> pd.DataFrame:
+        """デモデータを生成する
         """
-        デモデータを生成する
-        """
-        import pandas as pd
-        from datetime import datetime, timedelta
         import numpy as np
+        import pandas as pd
 
         # period に応じた日数を計算
         period_map = {
@@ -928,13 +960,20 @@ def get_stock_data_provider() -> StockDataProvider:
             volumes.append(np.random.randint(1000, 100000))  # ランダムな取引量
 
         # DataFrame に変換
-        df = pd.DataFrame({
-            "Open": prices,
-            "High": [p * np.random.uniform(1, 1.02) for p in prices],  # HighはOpenより少し高い
-            "Low": [p * np.random.uniform(0.98, 1) for p in prices],   # LowはOpenより少し低い
-            "Close": prices,
-            "Volume": volumes,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Open": prices,
+                "High": [
+                    p * np.random.uniform(1, 1.02) for p in prices
+                ],  # HighはOpenより少し高い
+                "Low": [
+                    p * np.random.uniform(0.98, 1) for p in prices
+                ],  # LowはOpenより少し低い
+                "Close": prices,
+                "Volume": volumes,
+            },
+            index=dates,
+        )
 
         # 一部の値をNaNに置き換えて、検証用に使う
         if np.random.random() > 0.9:  # 10%の確率で

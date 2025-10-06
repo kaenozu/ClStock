@@ -17,6 +17,7 @@ if _spec and _spec.loader and getattr(_spec, "origin", None) != __file__:
     _spec.loader.exec_module(_module)
     globals().update(_module.__dict__)
 else:
+
     def dump(*args, **kwargs):  # pragma: no cover - stub
         raise NotImplementedError("joblib is not available in this test environment")
 

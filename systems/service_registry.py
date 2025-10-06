@@ -15,11 +15,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Union
 
-
 from ClStock.config.settings import get_settings
-from ClStock.utils.logger_config import get_logger
 from ClStock.systems.resource_monitor import ResourceMonitor
-
+from ClStock.utils.logger_config import get_logger
 
 PROJECT_ROOT = Path(__file__).parent.parent
 
@@ -148,16 +146,28 @@ class ServiceRegistry:
             system_memory_percent = system_usage.memory_percent
 
             # 新しいプロセスのリソース要件が制限を超えるかチェック
-            if system_cpu_percent + process_info.max_cpu_percent > self._max_system_cpu_percent:
-                logger.warning(f"CPUリソース不足のため {process_info.name} の起動を延期: "
-                              f"現在 {system_cpu_percent:.1f}% + 要求 {process_info.max_cpu_percent}% > 制限 {self._max_system_cpu_percent}%")
+            if (
+                system_cpu_percent + process_info.max_cpu_percent
+                > self._max_system_cpu_percent
+            ):
+                logger.warning(
+                    f"CPUリソース不足のため {process_info.name} の起動を延期: "
+                    f"現在 {system_cpu_percent:.1f}% + 要求 {process_info.max_cpu_percent}% > 制限 {self._max_system_cpu_percent}%",
+                )
                 return False
 
             total_memory = system_usage.memory_total or 1
-            requested_memory_percent = (process_info.max_memory_mb * 1024 * 1024) / total_memory * 100
-            if system_memory_percent + requested_memory_percent > self._max_system_memory_percent:
-                logger.warning(f"メモリリソース不足のため {process_info.name} の起動を延期: "
-                              f"現在 {system_memory_percent:.1f}% + 要求 {process_info.max_memory_mb}MB > 制限 {self._max_system_memory_percent}%")
+            requested_memory_percent = (
+                (process_info.max_memory_mb * 1024 * 1024) / total_memory * 100
+            )
+            if (
+                system_memory_percent + requested_memory_percent
+                > self._max_system_memory_percent
+            ):
+                logger.warning(
+                    f"メモリリソース不足のため {process_info.name} の起動を延期: "
+                    f"現在 {system_memory_percent:.1f}% + 要求 {process_info.max_memory_mb}MB > 制限 {self._max_system_memory_percent}%",
+                )
                 return False
 
         return True
@@ -204,10 +214,10 @@ class ServiceRegistry:
             return thread
 
         process_info.stdout_thread = _consume_stream(
-            process.stdout, logger.info, "stdout"
+            process.stdout, logger.info, "stdout",
         )
         process_info.stderr_thread = _consume_stream(
-            process.stderr, logger.warning, "stderr"
+            process.stderr, logger.warning, "stderr",
         )
 
     def start_service(self, name: str) -> bool:
@@ -232,7 +242,7 @@ class ServiceRegistry:
             env.update(process_info.env_vars)
 
             capture_output = bool(
-                getattr(settings.process, "log_process_output", False)
+                getattr(settings.process, "log_process_output", False),
             )
 
             popen_kwargs = {"cwd": process_info.working_dir, "env": env}
@@ -250,7 +260,7 @@ class ServiceRegistry:
                 argv = list(command)
             else:
                 raise TypeError(
-                    f"Unsupported command type for service {name}: {type(command)!r}"
+                    f"Unsupported command type for service {name}: {type(command)!r}",
                 )
 
             process_info.process = subprocess.Popen(argv, **popen_kwargs)
@@ -390,7 +400,7 @@ class ServiceRegistry:
         return list(self.processes.values())
 
     def start_multiple_services(
-        self, names: Iterable[str], max_parallel: int = 3
+        self, names: Iterable[str], max_parallel: int = 3,
     ) -> Dict[str, bool]:
         results: Dict[str, bool] = {}
         sorted_services = sorted(

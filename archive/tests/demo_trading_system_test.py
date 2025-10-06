@@ -1,16 +1,15 @@
-"""
-ClStock デモ運用システム統合テスト
+"""ClStock デモ運用システム統合テスト
 
 87%精度システムと統合されたデモ運用システムの動作確認と
 使用方法のサンプルコード
 """
 
-import sys
-import os
 import logging
-from utils.logger_config import setup_logger
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+
+from utils.logger_config import setup_logger
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent
@@ -18,19 +17,19 @@ sys.path.insert(0, str(project_root))
 
 # デモ運用システムインポート
 from trading import (
-    DemoTrader,
-    TradingStrategy,
+    BacktestConfig,
+    BacktestEngine,
     DemoPortfolioManager,
     DemoRiskManager,
-    TradeRecorder,
+    DemoTrader,
     PerformanceTracker,
-    BacktestEngine,
-    BacktestConfig,
+    TradeRecorder,
+    TradingStrategy,
 )
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -42,7 +41,7 @@ def test_trading_strategy():
     try:
         # 戦略初期化
         strategy = TradingStrategy(
-            initial_capital=1000000, precision_threshold=85.0, confidence_threshold=0.7
+            initial_capital=1000000, precision_threshold=85.0, confidence_threshold=0.7,
         )
 
         # テスト銘柄でシグナル生成
@@ -53,9 +52,9 @@ def test_trading_strategy():
                 signal = strategy.generate_trading_signal(symbol, 1000000)
 
                 # アサーション追加
-                assert (
-                    signal is not None or signal is None
-                ), f"シグナル生成結果が異常: {signal}"
+                assert signal is not None or signal is None, (
+                    f"シグナル生成結果が異常: {signal}"
+                )
 
                 if signal:
                     logger.info(f"取引シグナル生成成功: {symbol}")
@@ -65,21 +64,21 @@ def test_trading_strategy():
                     logger.info(f"  87%精度達成: {signal.precision_87_achieved}")
 
                     # シグナルの妥当性を検証
-                    assert hasattr(
-                        signal, "signal_type"
-                    ), "シグナルにsignal_typeが存在しません"
-                    assert hasattr(
-                        signal, "confidence"
-                    ), "シグナルにconfidenceが存在しません"
-                    assert (
-                        0 <= signal.confidence <= 1
-                    ), f"信頼度が範囲外: {signal.confidence}"
-                    assert hasattr(
-                        signal, "expected_return"
-                    ), "シグナルにexpected_returnが存在しません"
-                    assert isinstance(
-                        signal.precision_87_achieved, bool
-                    ), "precision_87_achievedがboolではありません"
+                    assert hasattr(signal, "signal_type"), (
+                        "シグナルにsignal_typeが存在しません"
+                    )
+                    assert hasattr(signal, "confidence"), (
+                        "シグナルにconfidenceが存在しません"
+                    )
+                    assert 0 <= signal.confidence <= 1, (
+                        f"信頼度が範囲外: {signal.confidence}"
+                    )
+                    assert hasattr(signal, "expected_return"), (
+                        "シグナルにexpected_returnが存在しません"
+                    )
+                    assert isinstance(signal.precision_87_achieved, bool), (
+                        "precision_87_achievedがboolではありません"
+                    )
                 else:
                     logger.info(f"シグナル生成なし: {symbol}")
                     # シグナルがNoneの場合も正常な状態
@@ -156,14 +155,14 @@ def test_risk_manager():
 
         # ポジション開設可能性テスト
         can_open = risk_manager.can_open_position(
-            symbol="6758.T", position_size=100000, confidence=0.8, precision=87.0
+            symbol="6758.T", position_size=100000, confidence=0.8, precision=87.0,
         )
 
         logger.info(f"ポジション開設可能: {can_open}")
 
         # 最適ポジションサイズ計算
         optimal_size = risk_manager.calculate_optimal_position_size(
-            symbol="6758.T", expected_return=0.05, confidence=0.8, precision=87.0
+            symbol="6758.T", expected_return=0.05, confidence=0.8, precision=87.0,
         )
 
         logger.info(f"最適ポジションサイズ: {optimal_size:,.0f}円")
@@ -232,14 +231,14 @@ def test_trade_recorder():
                 "action": "CLOSE",
                 "actual_return": 0.04,
                 "profit_loss": 9625,  # 4%リターン - 取引コスト
-            }
+            },
         )
 
         recorder.record_trade(close_trade_data)
 
         # パフォーマンスレポート生成
         performance = recorder.generate_performance_report()
-        logger.info(f"パフォーマンスレポート:")
+        logger.info("パフォーマンスレポート:")
         logger.info(f"  総取引数: {performance.total_trades}")
         logger.info(f"  勝率: {performance.win_rate:.1f}%")
         logger.info(f"  87%精度取引: {performance.precision_87_trades}")
@@ -288,11 +287,11 @@ def test_performance_tracker():
             )
 
             if success:
-                logger.info(f"Day {day+1}: ポートフォリオ価値 {current_value:,.0f}円")
+                logger.info(f"Day {day + 1}: ポートフォリオ価値 {current_value:,.0f}円")
 
         # 期間パフォーマンス取得
         period_perf = tracker.get_period_performance()
-        logger.info(f"期間パフォーマンス:")
+        logger.info("期間パフォーマンス:")
         logger.info(f"  総リターン: {period_perf.total_return:.2%}")
         logger.info(f"  年率リターン: {period_perf.annualized_return:.2%}")
         logger.info(f"  ボラティリティ: {period_perf.volatility:.2%}")
@@ -301,14 +300,14 @@ def test_performance_tracker():
 
         # ベンチマーク比較
         benchmark_comp = tracker.get_benchmark_comparison()
-        logger.info(f"ベンチマーク比較:")
+        logger.info("ベンチマーク比較:")
         logger.info(f"  ポートフォリオリターン: {benchmark_comp.portfolio_return:.2%}")
         logger.info(f"  ベンチマークリターン: {benchmark_comp.benchmark_return:.2%}")
         logger.info(f"  超過リターン: {benchmark_comp.excess_return:.2%}")
 
         # リスクメトリクス
         risk_metrics = tracker.get_risk_metrics()
-        logger.info(f"リスクメトリクス:")
+        logger.info("リスクメトリクス:")
         logger.info(f"  VaR (95%): {risk_metrics.var_95:.2%}")
         logger.info(f"  期待ショートフォール: {risk_metrics.expected_shortfall:.2%}")
 
@@ -343,7 +342,7 @@ def test_backtest_engine():
         result = backtest_engine.run_backtest()
 
         # 結果表示
-        logger.info(f"バックテスト結果:")
+        logger.info("バックテスト結果:")
         logger.info(f"  期間: {result.start_date.date()} - {result.end_date.date()}")
         logger.info(f"  総リターン: {result.total_return:.2%}")
         logger.info(f"  年率リターン: {result.annualized_return:.2%}")
@@ -392,7 +391,7 @@ def test_demo_trader_integration():
 
         # 現在状況確認
         status = demo_trader.get_current_status()
-        logger.info(f"現在の状況:")
+        logger.info("現在の状況:")
         logger.info(f"  実行中: {status['is_running']}")
         logger.info(f"  現在資本: {status['current_capital']:,.0f}円")
         logger.info(f"  総資産: {status['total_equity']:,.0f}円")
@@ -401,18 +400,18 @@ def test_demo_trader_integration():
 
         # デモ取引停止
         final_session = demo_trader.stop_demo_trading()
-        logger.info(f"デモ取引停止")
+        logger.info("デモ取引停止")
         logger.info(f"  最終リターン: {final_session.total_return:.2f}%")
         logger.info(f"  総取引数: {final_session.total_trades}")
 
         # 取引統計
         statistics = demo_trader.get_trading_statistics()
         if statistics:
-            logger.info(f"取引統計:")
+            logger.info("取引統計:")
             logger.info(f"  勝率: {statistics.get('win_rate', 0):.1f}%")
             logger.info(f"  平均リターン: {statistics.get('average_return', 0):.3f}")
             logger.info(
-                f"  87%精度取引率: {statistics.get('precision_87_rate', 0):.1f}%"
+                f"  87%精度取引率: {statistics.get('precision_87_rate', 0):.1f}%",
             )
 
         logger.info("デモトレーダー統合テスト完了")

@@ -1,9 +1,11 @@
 import sys
-import numpy as np
-import pandas as pd
-import pytest
 from types import ModuleType, SimpleNamespace
 from unittest.mock import Mock, patch
+
+import pytest
+
+import numpy as np
+import pandas as pd
 
 # data.stock_data は構文エラーを含むためテストでは軽量スタブを使用する
 if "data.stock_data" not in sys.modules:
@@ -17,7 +19,7 @@ if "data.stock_data" not in sys.modules:
 
     dummy_stock_data.StockDataProvider = _DummyStockDataProvider
     sys.modules["data.stock_data"] = dummy_stock_data
-    setattr(data, "stock_data", dummy_stock_data)
+    data.stock_data = dummy_stock_data
 
 from models.ensemble.ensemble_predictor import EnsembleStockPredictor
 
@@ -69,14 +71,14 @@ def test_train_ensemble_uses_time_series_split_scores_for_weights():
             4: [[0.0, 0.0, 0.0, 0.0]],
             2: [[2.0, 2.0]],
             1: [[4.0]],
-        }
+        },
     )
     model_b = DeterministicModel(
         {
             4: [[1.0, 1.0, 1.0, 1.0]],
             2: [[3.0, 3.0]],
             1: [[2.0]],
-        }
+        },
     )
 
     predictor.models = {"model_a": model_a, "model_b": model_b}
@@ -86,7 +88,7 @@ def test_train_ensemble_uses_time_series_split_scores_for_weights():
         {
             "f1": [0, 1, 2, 3, 4, 5],
             "f2": [5, 4, 3, 2, 1, 0],
-        }
+        },
     )
     targets = pd.DataFrame({"recommendation_score": [0, 0, 1, 2, 2, 2]})
 
@@ -96,19 +98,19 @@ def test_train_ensemble_uses_time_series_split_scores_for_weights():
     ]
 
     mock_settings = SimpleNamespace(
-        model=SimpleNamespace(min_training_data=1, train_test_split=0.8)
+        model=SimpleNamespace(min_training_data=1, train_test_split=0.8),
     )
 
-    original_ensemble_predict = EnsembleStockPredictor._ensemble_predict_from_predictions
+    original_ensemble_predict = (
+        EnsembleStockPredictor._ensemble_predict_from_predictions
+    )
 
     with patch.object(predictor, "prepare_ensemble_models"), patch.object(
-        predictor, "save_ensemble"
-    ), patch(
-        "config.settings.get_settings", return_value=mock_settings
-    ), patch(
-        "models.ml_stock_predictor.MLStockPredictor"
+        predictor, "save_ensemble",
+    ), patch("config.settings.get_settings", return_value=mock_settings), patch(
+        "models.ml_stock_predictor.MLStockPredictor",
     ) as mock_ml_predictor_cls, patch(
-        "models.ensemble.ensemble_predictor.StandardScaler"
+        "models.ensemble.ensemble_predictor.StandardScaler",
     ) as mock_scaler_cls, patch(
         "models.ensemble.ensemble_predictor.TimeSeriesSplit",
         return_value=DummyTimeSeriesSplit(splits),
@@ -119,7 +121,11 @@ def test_train_ensemble_uses_time_series_split_scores_for_weights():
         autospec=True,
     ) as mock_ensemble_predict:
         mock_ml_predictor = mock_ml_predictor_cls.return_value
-        mock_ml_predictor.prepare_dataset.return_value = (features, targets, pd.DataFrame())
+        mock_ml_predictor.prepare_dataset.return_value = (
+            features,
+            targets,
+            pd.DataFrame(),
+        )
         mock_scaler_cls.side_effect = lambda: IdentityScaler()
         mock_ensemble_predict.side_effect = (
             lambda self, preds: original_ensemble_predict(self, preds)

@@ -12,19 +12,18 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tupl
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import StandardScaler
-
 from data.stock_data import StockDataProvider
-from models.legacy_core import StockPredictor
 from models.core.interfaces import (
     ModelConfiguration,
     ModelType,
     PredictionMode,
     PredictionResult,
 )
+from models.legacy_core import StockPredictor
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
 from utils.logger import setup_logging
 
 setup_logging()
@@ -155,7 +154,9 @@ class EnsemblePredictor(StockPredictor):
     def load(self, file_path: str) -> None:
         path = Path(file_path)
         if not path.exists():
-            self.logger.error("%s: Model file not found at %s", self.model_name, file_path)
+            self.logger.error(
+                "%s: Model file not found at %s", self.model_name, file_path,
+            )
             raise FileNotFoundError(f"Model file not found at {file_path}")
 
         data = joblib.load(file_path)
@@ -198,8 +199,12 @@ class EnsemblePredictor(StockPredictor):
         df_copy["Signal_Line"] = df_copy["MACD"].ewm(span=9, adjust=False).mean()
 
         df_copy["BB_Middle"] = df_copy["Close"].rolling(window=20).mean()
-        df_copy["BB_Upper"] = df_copy["BB_Middle"] + (df_copy["Close"].rolling(window=20).std() * 2)
-        df_copy["BB_Lower"] = df_copy["BB_Middle"] - (df_copy["Close"].rolling(window=20).std() * 2)
+        df_copy["BB_Upper"] = df_copy["BB_Middle"] + (
+            df_copy["Close"].rolling(window=20).std() * 2
+        )
+        df_copy["BB_Lower"] = df_copy["BB_Middle"] - (
+            df_copy["Close"].rolling(window=20).std() * 2
+        )
 
         latest_features = df_copy.iloc[[-1]].drop(columns=["Target"], errors="ignore")
         return latest_features
@@ -272,7 +277,7 @@ class RefactoredEnsemblePredictor:
         if self._data_provider is None:
             from data import stock_data as stock_data_module
 
-            provider_cls = getattr(stock_data_module, "StockDataProvider")
+            provider_cls = stock_data_module.StockDataProvider
             self._data_provider = provider_cls()
         return self._data_provider
 
@@ -280,7 +285,13 @@ class RefactoredEnsemblePredictor:
     # Diagnostics
     # ------------------------------------------------------------------
     def _check_dependencies(self) -> Dict[str, bool]:
-        dependencies = {"sklearn": False, "numpy": False, "pandas": False, "xgboost": False, "lightgbm": False}
+        dependencies = {
+            "sklearn": False,
+            "numpy": False,
+            "pandas": False,
+            "xgboost": False,
+            "lightgbm": False,
+        }
         for name in dependencies:
             try:
                 __import__(name)
@@ -332,29 +343,15 @@ class RefactoredEnsemblePredictor:
         ]
 
         if volume is not None and not volume.empty:
-            features.append(volume.astype(float).rolling(window=5, min_periods=1).mean().iloc[-1])
+            features.append(
+                volume.astype(float).rolling(window=5, min_periods=1).mean().iloc[-1],
+            )
 
         cleaned = np.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0).tolist()
         self.feature_names = ["close", "sma_5", "sma_20", "mean_return", "volatility"]
         if len(cleaned) > 5:
             self.feature_names.append("avg_volume")
         return cleaned
-
-    def _create_synthetic_market_snapshot(self) -> pd.DataFrame:
-        index = pd.date_range(end=datetime.utcnow(), periods=5, freq="D")
-        prices = np.linspace(100.0, 104.0, num=5)
-        volume = np.linspace(1000, 1400, num=5)
-        frame = pd.DataFrame(
-            {
-                "Close": prices,
-                "Open": prices - 1,
-                "High": prices + 1,
-                "Low": prices - 2,
-                "Volume": volume,
-            },
-            index=index,
-        )
-        return frame
 
     # ------------------------------------------------------------------
     # Persistence helpers
@@ -409,16 +406,29 @@ class RefactoredEnsemblePredictor:
             lambda: provider.get_stock_data(symbol, fetch_period),
         )
 
-        if data is None:
-            data = pd.DataFrame()
-
         if not isinstance(data, pd.DataFrame):
-            data = self._create_synthetic_market_snapshot()
+            self.logger.error(
+                "%s: Data provider returned invalid payload type %s", self.__class__.__name__, type(data)
+            )
+            raise TypeError("Stock data provider must return a pandas DataFrame")
 
         if data.empty:
-            raise ValueError("No data available")
+            retry_period = "1mo"
+            retry_data: Optional[pd.DataFrame] = None
+            if fetch_period != retry_period:
+                retry_data = self._safe_model_operation(
+                    "retry_get_stock_data",
+                    lambda: provider.get_stock_data(symbol, retry_period),
+                )
 
-        features = self._safe_model_operation("calculate_features", lambda: self._calculate_features(data))
+            if isinstance(retry_data, pd.DataFrame) and not retry_data.empty:
+                data = retry_data
+            else:
+                raise ValueError("No data available")
+
+        features = self._safe_model_operation(
+            "calculate_features", lambda: self._calculate_features(data),
+        )
         if not features:
             return self._fallback_prediction(symbol, data, start)
 
@@ -498,7 +508,7 @@ class RefactoredEnsemblePredictor:
             momentum = features[3] if len(features) > 3 else 0.0
             return float(np.clip(50.0 + momentum * 100.0, 0.0, 100.0))
 
-        weights = self.weights or {name: 1.0 for name in self.models}
+        weights = self.weights or dict.fromkeys(self.models, 1.0)
         total_weight = sum(weights.values())
         if total_weight <= 0:
             return float(np.clip(np.mean(features), 0.0, 100.0))
@@ -516,7 +526,9 @@ class RefactoredEnsemblePredictor:
                     result = model(features)
                 if isinstance(result, np.ndarray):
                     return float(result.flatten()[0])
-                if isinstance(result, Sequence) and not isinstance(result, (str, bytes)):
+                if isinstance(result, Sequence) and not isinstance(
+                    result, (str, bytes),
+                ):
                     return float(result[0])
                 return float(result)
 
@@ -565,7 +577,7 @@ class RefactoredEnsemblePredictor:
         if not self.is_trained or not self.models:
             return 0.0
 
-        weights = self.weights or {name: 1.0 for name in self.models}
+        weights = self.weights or dict.fromkeys(self.models, 1.0)
         total_weight = sum(weights.values())
         if total_weight <= 0:
             return 0.0
@@ -578,7 +590,9 @@ class RefactoredEnsemblePredictor:
                 value = float(raw_value)
             except (TypeError, ValueError):
                 value = 0.5
-            confidences.append((float(max(0.0, min(1.0, value))), weights.get(name, 1.0)))
+            confidences.append(
+                (float(max(0.0, min(1.0, value))), weights.get(name, 1.0)),
+            )
 
         base = sum(value * weight for value, weight in confidences) / total_weight
 

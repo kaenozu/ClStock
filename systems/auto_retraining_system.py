@@ -1,34 +1,33 @@
-"""
-自動再学習システム
+"""自動再学習システム
 84.6%精度維持のための継続的モデル更新
 """
 
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Optional, Tuple, Any, Union
 import logging
-from datetime import datetime, timedelta
+import os
 import threading
 import time
-import os
-import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+import pandas as pd
+
 try:
     from sklearn.metrics import accuracy_score
 except ImportError:
+
     def accuracy_score(y_true, y_pred):
         if len(y_true) != len(y_pred):
             raise ValueError("Length mismatch between y_true and y_pred")
         correct = sum(1 for true, pred in zip(y_true, y_pred) if true == pred)
         return correct / len(y_true)
-import joblib
+
+
 import math
 
+from config.settings import get_settings
 from data.stock_data import StockDataProvider
 from models.stock_specific_predictor import StockSpecificPredictor
-from models.predictor import StockPredictor
-from config.settings import get_settings
-from utils.exceptions import ModelTrainingError, DataFetchError
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +128,7 @@ class ModelPerformanceMonitor:
                     for r in self.performance_history.get(symbol, [])
                     if r["verified"]
                     and r["timestamp"] > datetime.now() - timedelta(days=30)
-                ]
+                ],
             ),
         }
 
@@ -158,10 +157,10 @@ class ModelPerformanceMonitor:
                     {
                         "symbol": symbol,
                         "priority": self._calculate_retraining_priority(
-                            symbol, decline_info
+                            symbol, decline_info,
                         ),
                         **decline_info,
-                    }
+                    },
                 )
 
         # 優先度順にソート
@@ -169,7 +168,7 @@ class ModelPerformanceMonitor:
         return candidates
 
     def _calculate_retraining_priority(
-        self, symbol: str, decline_info: Dict[str, Any]
+        self, symbol: str, decline_info: Dict[str, Any],
     ) -> float:
         """再学習優先度を計算"""
         accuracy_factor = max(0, 1.0 - decline_info.get("recent_accuracy", 0.5))
@@ -203,7 +202,7 @@ class DataDriftDetector:
                 "avg_volume": self._to_float(data["Volume"].mean(skipna=True)),
                 "price_trend": self._calculate_price_trend(data["Close"]),
                 "volume_trend": self._calculate_ratio_change(
-                    baseline_volume, latest_volume
+                    baseline_volume, latest_volume,
                 ),
             }
 
@@ -225,7 +224,7 @@ class DataDriftDetector:
 
             current_stats = {
                 "volatility": self._to_float(
-                    current_data["Close"].pct_change(fill_method=None).std(skipna=True)
+                    current_data["Close"].pct_change(fill_method=None).std(skipna=True),
                 ),
                 "avg_volume": self._to_float(current_data["Volume"].mean(skipna=True)),
                 "price_trend": self._calculate_price_trend(current_data["Close"]),
@@ -235,10 +234,10 @@ class DataDriftDetector:
 
             # ドリフト率を計算
             volatility_drift = self._safe_relative_change(
-                baseline.get("volatility", 0.0), current_stats["volatility"]
+                baseline.get("volatility", 0.0), current_stats["volatility"],
             )
             volume_drift = self._safe_relative_change(
-                baseline.get("avg_volume", 0.0), current_stats["avg_volume"]
+                baseline.get("avg_volume", 0.0), current_stats["avg_volume"],
             )
 
             # ドリフト判定（30%以上の変化）
@@ -261,11 +260,14 @@ class DataDriftDetector:
     @staticmethod
     def _safe_relative_change(baseline_value: float, current_value: float) -> float:
         """相対変化量を安全に計算（0除算を防止）"""
-
-        if baseline_value is None or (isinstance(baseline_value, float) and math.isnan(baseline_value)):
+        if baseline_value is None or (
+            isinstance(baseline_value, float) and math.isnan(baseline_value)
+        ):
             baseline_value = 0.0
 
-        if current_value is None or (isinstance(current_value, float) and math.isnan(current_value)):
+        if current_value is None or (
+            isinstance(current_value, float) and math.isnan(current_value)
+        ):
             current_value = 0.0
 
         if baseline_value == 0:
@@ -276,7 +278,6 @@ class DataDriftDetector:
     @staticmethod
     def _calculate_price_trend(close_series: pd.Series) -> float:
         """価格トレンドを安全に計算"""
-
         if close_series.empty:
             return 0.0
 
@@ -291,11 +292,14 @@ class DataDriftDetector:
     @staticmethod
     def _calculate_ratio_change(baseline_value: float, current_value: float) -> float:
         """比率変化を安全に計算"""
-
-        if baseline_value is None or (isinstance(baseline_value, float) and math.isnan(baseline_value)):
+        if baseline_value is None or (
+            isinstance(baseline_value, float) and math.isnan(baseline_value)
+        ):
             return 0.0
 
-        if current_value is None or (isinstance(current_value, float) and math.isnan(current_value)):
+        if current_value is None or (
+            isinstance(current_value, float) and math.isnan(current_value)
+        ):
             return 0.0
 
         if baseline_value == 0:
@@ -306,7 +310,6 @@ class DataDriftDetector:
     @staticmethod
     def _to_float(value: Optional[float]) -> float:
         """NaN安全なfloat変換"""
-
         if value is None:
             return 0.0
 
@@ -343,7 +346,7 @@ class AutoRetrainingScheduler:
 
         self.is_running = True
         self.scheduler_thread = threading.Thread(
-            target=self._scheduler_loop, daemon=True
+            target=self._scheduler_loop, daemon=True,
         )
         self.scheduler_thread.start()
         logger.info("自動再学習スケジューラー開始")
@@ -398,13 +401,13 @@ class AutoRetrainingScheduler:
                         "reason": "data_drift",
                         "priority": 0.8,  # ドリフトは高優先度
                         "drift_info": drift_result,
-                    }
+                    },
                 )
 
         return drift_candidates
 
     def _merge_candidates(
-        self, performance_candidates: List[Dict], drift_candidates: List[Dict]
+        self, performance_candidates: List[Dict], drift_candidates: List[Dict],
     ) -> List[Dict]:
         """候補リストを統合"""
         all_candidates = {}
@@ -425,7 +428,7 @@ class AutoRetrainingScheduler:
 
         # 優先度順にソート
         sorted_candidates = sorted(
-            all_candidates.values(), key=lambda x: x["priority"], reverse=True
+            all_candidates.values(), key=lambda x: x["priority"], reverse=True,
         )
 
         # 最大同時再学習数に制限
@@ -438,7 +441,7 @@ class AutoRetrainingScheduler:
 
         # 並列実行
         max_workers = min(
-            len(candidates), self.retraining_config["max_concurrent_retraining"]
+            len(candidates), self.retraining_config["max_concurrent_retraining"],
         )
 
         if max_workers <= 0:
@@ -458,7 +461,7 @@ class AutoRetrainingScheduler:
                     result = future.result(timeout=3600)  # 1時間タイムアウト
                     if result["success"]:
                         logger.info(
-                            f"✅ {symbol} 再学習成功: 精度 {result['new_accuracy']:.3f}"
+                            f"✅ {symbol} 再学習成功: 精度 {result['new_accuracy']:.3f}",
                         )
                     else:
                         logger.error(f"❌ {symbol} 再学習失敗: {result['error']}")
@@ -478,7 +481,7 @@ class AutoRetrainingScheduler:
 
             # 新しいモデルを訓練
             training_result = self.stock_predictor.train_symbol_model(
-                symbol, self.retraining_config["retraining_data_period"]
+                symbol, self.retraining_config["retraining_data_period"],
             )
 
             new_accuracy = training_result["accuracy"]
@@ -522,7 +525,7 @@ class AutoRetrainingScheduler:
             logger.warning(f"バックアップエラー {symbol}: {e}")
 
     def manual_retrain(
-        self, symbols: List[str], reason: str = "manual"
+        self, symbols: List[str], reason: str = "manual",
     ) -> Dict[str, Any]:
         """手動再学習"""
         logger.info(f"手動再学習開始: {symbols}")

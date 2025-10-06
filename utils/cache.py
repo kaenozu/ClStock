@@ -1,17 +1,16 @@
-"""
-キャッシュ機能
+"""キャッシュ機能
 データの重複取得を防ぎパフォーマンスを向上
 """
 
-import joblib
 import hashlib
-import time
-import threading
-from pathlib import Path
-from typing import Any, Optional, Callable, Dict, Union
-from functools import wraps
-import pandas as pd
 import logging
+import threading
+import time
+from functools import wraps
+from pathlib import Path
+from typing import Any, Callable, Dict, Optional, Union
+
+import joblib
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +26,13 @@ class DataCache:
         auto_cleanup: bool = True,
         cleanup_interval: int = 3600,
     ):
-        """
-        Args:
-            cache_dir: キャッシュディレクトリ
-            default_ttl: デフォルトTTL（秒）
-            max_size: 最大キャッシュサイズ（エントリ数）
-            auto_cleanup: 自動クリーンアップを有効化
-            cleanup_interval: 自動クリーンアップ間隔（秒）
+        """Args:
+        cache_dir: キャッシュディレクトリ
+        default_ttl: デフォルトTTL（秒）
+        max_size: 最大キャッシュサイズ（エントリ数）
+        auto_cleanup: 自動クリーンアップを有効化
+        cleanup_interval: 自動クリーンアップ間隔（秒）
+
         """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
@@ -50,18 +49,15 @@ class DataCache:
 
     def _start_cleanup_thread(self):
         """自動クリーンアップスレッドを開始"""
-
         self._shutdown_event = threading.Event()
         self.cleanup_thread = threading.Thread(target=self._cleanup_worker, daemon=True)
         self.cleanup_thread.start()
         logger.info(
-            f"Automatic cache cleanup thread started with interval {self.cleanup_interval}s"
+            f"Automatic cache cleanup thread started with interval {self.cleanup_interval}s",
         )
 
     def _cleanup_worker(self):
         """クリーンアップワーカースレッド"""
-        import time
-
         while self._shutdown_event and not self._shutdown_event.is_set():
             try:
                 # クリーンアップ間隔待機
@@ -98,19 +94,21 @@ class DataCache:
     def _get_cache_path(self, cache_key: str) -> Path:
         """キャッシュファイルパスを取得"""
         return self.cache_dir / f"{cache_key}.cache"
-    
+
     def _validate_cache_entry(self, cache_data: Dict[str, Any], cache_key: str) -> bool:
         """キャッシュエントリーの検証"""
         required_keys = ["value", "expires_at", "created_at"]
         for key in required_keys:
             if key not in cache_data:
-                logger.warning(f"Cache entry missing required key '{key}' for key {cache_key}")
+                logger.warning(
+                    f"Cache entry missing required key '{key}' for key {cache_key}",
+                )
                 return False
-        
+
         if not isinstance(cache_data["expires_at"], (int, float)):
             logger.warning(f"Invalid expires_at type for key {cache_key}")
             return False
-        
+
         return True
 
     def get(self, cache_key: str) -> Optional[Any]:
@@ -143,7 +141,7 @@ class DataCache:
                         joblib.dump(cache_data, f)
                 except Exception as write_error:
                     logger.warning(
-                        f"Cache metadata update error for {cache_key}: {write_error}"
+                        f"Cache metadata update error for {cache_key}: {write_error}",
                     )
 
                 logger.debug(f"Cache hit: {cache_key}")
@@ -177,7 +175,9 @@ class DataCache:
                     current_files = list(self.cache_dir.glob("*.cache"))
                     if len(current_files) >= self.max_size:
                         # LRU (Least Recently Used) で削除
-                        oldest_file = min(current_files, key=lambda f: f.stat().st_mtime)
+                        oldest_file = min(
+                            current_files, key=lambda f: f.stat().st_mtime,
+                        )
                         oldest_file.unlink()
                         logger.debug(f"Removed oldest cache entry: {oldest_file.name}")
 
@@ -239,13 +239,13 @@ class DataCache:
             logger.info(f"Cleaned up {deleted_count} expired/invalid cache files")
 
         return deleted_count
-    
+
     def get_stats(self) -> Dict[str, Union[int, float, bool]]:
         """キャッシュ統計情報を取得"""
         with self._lock:  # スレッドセーフにアクセス
             files = list(self.cache_dir.glob("*.cache"))
             total_size = sum(f.stat().st_size for f in files)
-            
+
             # 有効期限切れのファイル数をカウント
             expired_count = 0
             current_time = time.time()
@@ -255,10 +255,10 @@ class DataCache:
                         cache_data = joblib.load(file)
                     if current_time > cache_data.get("expires_at", 0):
                         expired_count += 1
-                except:
+                except Exception:
                     # 読み取りエラーも無効なファイルとしてカウント
                     expired_count += 1
-            
+
             return {
                 "total_files": len(files),
                 "valid_files": len(files) - expired_count,
@@ -274,12 +274,12 @@ _cache = DataCache(auto_cleanup=True, cleanup_interval=1800, max_size=1000)
 
 
 def cached(ttl: Optional[int] = None, cache_instance: Optional[DataCache] = None):
-    """
-    関数結果をキャッシュするデコレータ
+    """関数結果をキャッシュするデコレータ
 
     Args:
         ttl: TTL（秒）
         cache_instance: 使用するキャッシュインスタンス
+
     """
 
     def decorator(func: Callable) -> Callable:
@@ -308,8 +308,7 @@ def cached(ttl: Optional[int] = None, cache_instance: Optional[DataCache] = None
 
 
 def cache_dataframe(ttl: int = 1800):  # 30分
-    """
-    DataFrameのキャッシュ用デコレータ
+    """DataFrameのキャッシュ用デコレータ
     """
     return cached(ttl=ttl)
 

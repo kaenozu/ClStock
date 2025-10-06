@@ -1,21 +1,20 @@
-"""
-87%精度システムと統合された取引戦略定義
+"""87%精度システムと統合された取引戦略定義
 
 Precision87BreakthroughSystemとの完全連携により、
 高精度な取引シグナルを生成し、実際の利益・損失を計算する
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
-import pandas as pd
+from typing import Any, Dict, Optional, Tuple
+
 import numpy as np
+from data.stock_data import StockDataProvider
 
 # 既存システムインポート
 from models.precision.precision_87_system import Precision87BreakthroughSystem
-from data.stock_data import StockDataProvider
 
 
 class SignalType(Enum):
@@ -58,8 +57,7 @@ class MarketConditions:
 
 
 class TradingStrategy:
-    """
-    87%精度システムと統合された取引戦略
+    """87%精度システムと統合された取引戦略
 
     実際の株価予測に基づく高精度取引システム
     """
@@ -71,12 +69,12 @@ class TradingStrategy:
         precision_threshold: float = 85.0,
         confidence_threshold: float = 0.7,
     ):
-        """
-        Args:
-            initial_capital: 初期資本
-            max_position_size: 最大ポジションサイズ（資本に対する割合）
-            precision_threshold: 精度閾値（この値以上で取引実行）
-            confidence_threshold: 信頼度閾値
+        """Args:
+        initial_capital: 初期資本
+        max_position_size: 最大ポジションサイズ（資本に対する割合）
+        precision_threshold: 精度閾値（この値以上で取引実行）
+        confidence_threshold: 信頼度閾値
+
         """
         self.initial_capital = initial_capital
         self.max_position_size = max_position_size
@@ -100,10 +98,9 @@ class TradingStrategy:
         self.logger = logging.getLogger(__name__)
 
     def generate_trading_signal(
-        self, symbol: str, current_capital: float
+        self, symbol: str, current_capital: float,
     ) -> Optional[TradingSignal]:
-        """
-        87%精度システムによる取引シグナル生成
+        """87%精度システムによる取引シグナル生成
 
         Args:
             symbol: 銘柄コード
@@ -111,6 +108,7 @@ class TradingStrategy:
 
         Returns:
             取引シグナル or None
+
         """
         try:
             # 87%精度システムで予測実行
@@ -118,7 +116,7 @@ class TradingStrategy:
 
             if "error" in prediction_result:
                 self.logger.warning(
-                    f"予測エラー {symbol}: {prediction_result['error']}"
+                    f"予測エラー {symbol}: {prediction_result['error']}",
                 )
                 return None
 
@@ -132,13 +130,13 @@ class TradingStrategy:
             # 精度・信頼度チェック
             if accuracy < self.precision_threshold:
                 self.logger.info(
-                    f"精度不足 {symbol}: {accuracy:.1f}% < {self.precision_threshold}%"
+                    f"精度不足 {symbol}: {accuracy:.1f}% < {self.precision_threshold}%",
                 )
                 return None
 
             if confidence < self.confidence_threshold:
                 self.logger.info(
-                    f"信頼度不足 {symbol}: {confidence:.2f} < {self.confidence_threshold}"
+                    f"信頼度不足 {symbol}: {confidence:.2f} < {self.confidence_threshold}",
                 )
                 return None
 
@@ -153,7 +151,7 @@ class TradingStrategy:
 
             # シグナルタイプ決定
             signal_type = self._determine_signal_type(
-                expected_return, confidence, accuracy, market_conditions
+                expected_return, confidence, accuracy, market_conditions,
             )
 
             if signal_type == SignalType.HOLD:
@@ -173,12 +171,12 @@ class TradingStrategy:
 
             # ストップロス・利確価格計算
             stop_loss_price, take_profit_price = self._calculate_exit_prices(
-                current_price, predicted_price, signal_type, confidence
+                current_price, predicted_price, signal_type, confidence,
             )
 
             # 推論理由生成
             reasoning = self._generate_reasoning(
-                symbol, accuracy, confidence, expected_return, market_conditions
+                symbol, accuracy, confidence, expected_return, market_conditions,
             )
 
             signal = TradingSignal(
@@ -194,14 +192,14 @@ class TradingStrategy:
                 stop_loss_price=stop_loss_price,
                 take_profit_price=take_profit_price,
                 precision_87_achieved=prediction_result.get(
-                    "precision_87_achieved", False
+                    "precision_87_achieved", False,
                 ),
             )
 
             self.logger.info(
                 f"取引シグナル生成: {symbol} {signal_type.value} "
                 f"精度:{accuracy:.1f}% 信頼度:{confidence:.2f} "
-                f"期待リターン:{expected_return:.3f}"
+                f"期待リターン:{expected_return:.3f}",
             )
 
             return signal
@@ -284,19 +282,18 @@ class TradingStrategy:
         market_conditions: MarketConditions,
     ) -> SignalType:
         """シグナルタイプ決定"""
-
         # 87%達成時は積極的
         if accuracy >= 87.0:
             if expected_return > 0.02:  # 2%以上の期待リターン
                 return SignalType.BUY
-            elif expected_return < -0.02:
+            if expected_return < -0.02:
                 return SignalType.SELL
 
         # 高精度・高信頼度時
         elif accuracy >= 85.0 and confidence >= 0.8:
             if expected_return > 0.03:  # 3%以上の期待リターン
                 return SignalType.BUY
-            elif expected_return < -0.03:
+            if expected_return < -0.03:
                 return SignalType.SELL
 
         # 中精度時は慎重に
@@ -304,7 +301,7 @@ class TradingStrategy:
             if market_conditions.risk_level != "HIGH":
                 if expected_return > 0.05:  # 5%以上の期待リターン
                     return SignalType.BUY
-                elif expected_return < -0.05:
+                if expected_return < -0.05:
                     return SignalType.SELL
 
         return SignalType.HOLD
@@ -318,7 +315,6 @@ class TradingStrategy:
         market_conditions: MarketConditions,
     ) -> float:
         """ポジションサイズ計算（Kelly基準＋リスク調整）"""
-
         # 基本ポジションサイズ（資本の割合）
         base_size = self.max_position_size
 
@@ -366,15 +362,13 @@ class TradingStrategy:
         confidence: float,
     ) -> Tuple[Optional[float], Optional[float]]:
         """ストップロス・利確価格計算"""
-
         if signal_type == SignalType.BUY:
             # 買いポジションの場合
             stop_loss_price = current_price * (1 - self.stop_loss_pct)
             take_profit_price = current_price * (1 + self.take_profit_pct)
 
             # 予測価格が利確価格より高い場合は予測価格を利確目標に
-            if predicted_price > take_profit_price:
-                take_profit_price = predicted_price
+            take_profit_price = max(take_profit_price, predicted_price)
 
         elif signal_type == SignalType.SELL:
             # 売りポジションの場合
@@ -382,8 +376,7 @@ class TradingStrategy:
             take_profit_price = current_price * (1 - self.take_profit_pct)
 
             # 予測価格が利確価格より低い場合は予測価格を利確目標に
-            if predicted_price < take_profit_price:
-                take_profit_price = predicted_price
+            take_profit_price = min(take_profit_price, predicted_price)
         else:
             return None, None
 
@@ -398,7 +391,6 @@ class TradingStrategy:
         market_conditions: MarketConditions,
     ) -> str:
         """取引理由生成"""
-
         reasons = []
 
         # 精度による理由
@@ -426,10 +418,9 @@ class TradingStrategy:
         return " | ".join(reasons)
 
     def calculate_trading_costs(
-        self, position_value: float, signal_type: SignalType
+        self, position_value: float, signal_type: SignalType,
     ) -> Dict[str, float]:
         """取引コスト計算"""
-
         commission = position_value * self.commission_rate
         spread = position_value * self.spread_rate
         slippage = position_value * self.slippage_rate
@@ -445,10 +436,9 @@ class TradingStrategy:
         }
 
     def evaluate_signal_performance(
-        self, signal: TradingSignal, actual_price: float, days_elapsed: int
+        self, signal: TradingSignal, actual_price: float, days_elapsed: int,
     ) -> Dict[str, Any]:
         """シグナル性能評価"""
-
         if signal.signal_type == SignalType.BUY:
             actual_return = (actual_price - signal.current_price) / signal.current_price
         elif signal.signal_type == SignalType.SELL:
