@@ -203,14 +203,14 @@ retrying==1.4.1
     # via dash
 rich==14.0.0
     # via bandit
-scikit-learn==1.5.1
-    # via
-    #   -r requirements.in
-    #   shap
 scipy==1.15.3
     # via
     #   -r requirements.in
     #   scikit-learn
+    #   shap
+scikit-learn==1.5.1
+    # via
+    #   -r requirements.in
     #   shap
 seaborn==0.13.2
     # via -r requirements.in
