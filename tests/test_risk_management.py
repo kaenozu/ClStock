@@ -15,7 +15,7 @@ from trading.risk_management import (
     ValueAtRiskCalculator, 
     ExpectedShortfallCalculator, 
     PortfolioRiskManager, 
-    KellyCriterionPositionSizer,
+    AdaptivePositionSizer,
     DynamicRiskManager
 )
 from trading.advanced_risk_management import (

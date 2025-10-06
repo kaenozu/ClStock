@@ -248,84 +248,14 @@ class PortfolioRiskManager:
         return metrics.max_drawdown >= max_drawdown_limit
 
 
-class KellyCriterionPositionSizer:
-    """ケリー基準によるポジショニング"""
-    
-    def __init__(self):
-        pass
-    
-    def calculate_kelly_fraction(self, win_rate: float, avg_win_rate: float, avg_loss_rate: float) -> float:
-        """
-        ケリー基準に基づく資金比率を計算
-        
-        Args:
-            win_rate: 勝率
-            avg_win_rate: 平均利益率
-            avg_loss_rate: 平均損失率
-            
-        Returns:
-            資金比率
-        """
-        # ケリー基準の式: f = (bp - q) / b
-        # b = 勝ち時の配当率 (利益率)
-        # p = 勝率
-        # q = 1 - 勝率
-        if avg_loss_rate == 0:
-            return 0.0
-            
-        b = avg_win_rate / abs(avg_loss_rate) if avg_loss_rate != 0 else 0
-        p = win_rate
-        q = 1 - p
-        
-        kelly_fraction = (b * p - q) / b if b != 0 else 0.0
-        
-        # 実際にはケリー基準の一部(例: 50%)だけ使用して過剰なリスクを避ける
-        return max(0.0, min(kelly_fraction * 0.5, 0.2))  # 最大20%までに制限
-    
-    def calculate_position_size(self, 
-                              current_capital: float, 
-                              win_rate: float, 
-                              avg_win_rate: float, 
-                              avg_loss_rate: float,
-                              price: float,
-                              risk_percentage: float = 0.02) -> int:
-        """
-        ポジションサイズを計算
-        
-        Args:
-            current_capital: 現在の資本
-            win_rate: 勝率
-            avg_win_rate: 平均利益率
-            avg_loss_rate: 平均損失率
-            price: 現在価格
-            risk_percentage: 許容リスク率 (例: 0.02 で2%)
-            
-        Returns:
-            株数
-        """
-        # ケリー基準による資金比率
-        kelly_fraction = self.calculate_kelly_fraction(win_rate, avg_win_rate, avg_loss_rate)
-        
-        # またはリスクベースでの計算
-        risk_amount = current_capital * risk_percentage
-        position_size = risk_amount / abs(avg_loss_rate) / price if avg_loss_rate != 0 else 0
-        
-        # ケリー基準でも計算
-        kelly_position_value = current_capital * kelly_fraction
-        kelly_position_size = kelly_position_value / price if price > 0 else 0
-        
-        # 両方の計算結果を考慮して保守的な方を採用
-        final_position_size = min(position_size, kelly_position_size)
-        
-        return int(final_position_size)
-
-
 class DynamicRiskManager:
     """動的风险管理システム"""
     
     def __init__(self, initial_capital: float = 1000000):
         self.risk_manager = PortfolioRiskManager(initial_capital)
-        self.position_sizer = KellyCriterionPositionSizer()
+        # AdaptivePositionSizerを使用するように変更
+        from trading.position_sizing import AdaptivePositionSizer
+        self.position_sizer = AdaptivePositionSizer(initial_capital)
         self.max_position_size = 0.1  # 最大10%まで
         self.risk_thresholds = {
             'var_95': -0.05,  # 95%VaRが-5%を超えるとリスク警告
@@ -375,16 +305,20 @@ class DynamicRiskManager:
         """
         current_capital = self.risk_manager.current_capital
         
-        # ケリー基準とリスクベースで計算
-        position_size = self.position_sizer.calculate_position_size(
-            current_capital, win_rate, avg_win_rate, avg_loss_rate, current_price
+        # AdaptivePositionSizerを使用して計算
+        position_result = self.position_sizer.calculate_optimal_position_size(
+            symbol=symbol,
+            price=current_price,
+            win_rate=win_rate,
+            avg_win_rate=avg_win_rate,
+            avg_loss_rate=avg_loss_rate
         )
         
         # 最大ポジション制限をかける
         max_position_value = current_capital * self.max_position_size
         max_position_size = max_position_value / current_price if current_price > 0 else 0
         
-        return min(position_size, int(max_position_size))
+        return min(position_result.shares, int(max_position_size))
     
     def can_open_position(self, 
                          symbol: str, 
