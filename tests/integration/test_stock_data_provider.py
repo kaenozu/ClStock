@@ -81,7 +81,13 @@ def test_get_multiple_stocks_skips_failures(monkeypatch):
     def fallback(symbol: str, period: str = "1y"):
         return (
             pd.DataFrame(
-                {"Open": [1.0], "High": [1.5], "Low": [0.5], "Close": [1.2], "Volume": [10]},
+                {
+                    "Open": [1.0],
+                    "High": [1.5],
+                    "Low": [0.5],
+                    "Close": [1.2],
+                    "Volume": [10],
+                },
                 index=pd.date_range("2024-01-01", periods=1, freq="D"),
             ),
             f"{symbol}.T",

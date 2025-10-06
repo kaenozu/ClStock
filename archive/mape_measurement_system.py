@@ -1,27 +1,25 @@
 #!/usr/bin/env python3
-"""
-ClStock MAPE計測システム
+"""ClStock MAPE計測システム
 84.6%精度ベースシステムの正確なMAPE値を計測
 
 MAPE = Mean Absolute Percentage Error
 価格予測精度の標準的な評価指標
 """
 
-import sys
-import os
-import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Any
 import logging
-from utils.logger_config import setup_logger
+import sys
 import warnings
+from datetime import datetime
+from typing import Any, Dict, List
+
+import numpy as np
+from utils.logger_config import setup_logger
 
 warnings.filterwarnings("ignore")
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -88,7 +86,7 @@ class MAPEMeasurementSystem:
                 try:
                     # trend_following_predictorを古いデータで実行
                     prediction_result = predictor.predict_stock(
-                        symbol, data=historical_data
+                        symbol, data=historical_data,
                     )
 
                     # 価格予測（簡易版：現在価格からの変化率予測）
@@ -168,7 +166,7 @@ class MAPEMeasurementSystem:
             predictions_count = result["predictions_count"]
 
             logger.info(
-                f"{symbol}: MAPE={mape:.2f}%, MAE={mae:.2f}, RMSE={rmse:.2f}, 予測数={predictions_count}"
+                f"{symbol}: MAPE={mape:.2f}%, MAE={mae:.2f}, RMSE={rmse:.2f}, 予測数={predictions_count}",
             )
 
             all_results[symbol] = result
@@ -206,8 +204,8 @@ class MAPEMeasurementSystem:
         logger.info(f"測定銘柄数: {len(self.test_symbols)}")
         logger.info(f"成功測定数: {successful_measurements}")
         logger.info(f"成功率: {summary['success_rate']:.1f}%")
-        logger.info(f"")
-        logger.info(f"MAPE統計:")
+        logger.info("")
+        logger.info("MAPE統計:")
         logger.info(f"  平均MAPE: {average_mape:.2f}%")
         logger.info(f"  中央値MAPE: {median_mape:.2f}%")
         logger.info(f"  最小MAPE: {min_mape:.2f}%")
@@ -216,7 +214,7 @@ class MAPEMeasurementSystem:
 
         # MAPE評価
         mape_grade = self._evaluate_mape_performance(average_mape)
-        logger.info(f"")
+        logger.info("")
         logger.info(f"MAPE評価: {mape_grade}")
 
         return summary
@@ -246,14 +244,13 @@ class MAPEMeasurementSystem:
         """MAPE性能評価"""
         if average_mape <= 5.0:
             return "優秀 (5%以下) - 極めて高精度"
-        elif average_mape <= 10.0:
+        if average_mape <= 10.0:
             return "良好 (5-10%) - 高精度"
-        elif average_mape <= 15.0:
+        if average_mape <= 15.0:
             return "標準 (10-15%) - 実用的精度"
-        elif average_mape <= 20.0:
+        if average_mape <= 20.0:
             return "許容 (15-20%) - 一般的精度"
-        else:
-            return "要改善 (20%超) - 精度向上が必要"
+        return "要改善 (20%超) - 精度向上が必要"
 
 
 def main():
@@ -299,7 +296,7 @@ def main():
 
         # 最終評価
         avg_mape = results.get("average_mape", 0)
-        print(f"\n🎯 最終MAPE評価")
+        print("\n🎯 最終MAPE評価")
         print(f"平均MAPE: {avg_mape:.2f}%")
 
         if avg_mape <= 10.0:

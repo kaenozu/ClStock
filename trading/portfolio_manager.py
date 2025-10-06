@@ -1,21 +1,20 @@
-"""
-ClStock ポートフォリオマネージャー
+"""ClStock ポートフォリオマネージャー
 
 デモ取引におけるポートフォリオ管理と資産追跡システム
 リアルタイム資産価値計算、リスク分析、分散投資管理
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, field
 from collections import defaultdict
-import pandas as pd
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
-import json
 
 # 既存システム
 from data.stock_data import StockDataProvider
+
 from .trading_strategy import SignalType
 
 
@@ -73,16 +72,15 @@ class RiskMetrics:
 
 
 class DemoPortfolioManager:
-    """
-    デモ取引ポートフォリオマネージャー
+    """デモ取引ポートフォリオマネージャー
 
     仮想ポートフォリオの管理と分析を行う
     """
 
     def __init__(self, initial_capital: float = 1000000):
-        """
-        Args:
-            initial_capital: 初期資本
+        """Args:
+        initial_capital: 初期資本
+
         """
         self.initial_capital = initial_capital
         self.current_cash = initial_capital
@@ -105,10 +103,9 @@ class DemoPortfolioManager:
         self.logger = logging.getLogger(__name__)
 
     def add_position(
-        self, symbol: str, quantity: int, price: float, position_type: SignalType
+        self, symbol: str, quantity: int, price: float, position_type: SignalType,
     ) -> bool:
-        """
-        ポジション追加
+        """ポジション追加
 
         Args:
             symbol: 銘柄コード
@@ -118,6 +115,7 @@ class DemoPortfolioManager:
 
         Returns:
             成功フラグ
+
         """
         try:
             position_value = quantity * price
@@ -157,8 +155,7 @@ class DemoPortfolioManager:
             return False
 
     def remove_position(self, symbol: str, quantity: Optional[int] = None) -> bool:
-        """
-        ポジション削除
+        """ポジション削除
 
         Args:
             symbol: 銘柄コード
@@ -166,6 +163,7 @@ class DemoPortfolioManager:
 
         Returns:
             成功フラグ
+
         """
         try:
             if symbol not in self.positions:
@@ -193,11 +191,11 @@ class DemoPortfolioManager:
             return False
 
     def update_positions(self) -> bool:
-        """
-        全ポジションの価格更新
+        """全ポジションの価格更新
 
         Returns:
             成功フラグ
+
         """
         try:
             for symbol, position in self.positions.items():
@@ -268,7 +266,7 @@ class DemoPortfolioManager:
 
             # 集中リスク（最大ポジション比率）
             max_position_weight = max(
-                [pos.weight for pos in self.positions.values()], default=0.0
+                [pos.weight for pos in self.positions.values()], default=0.0,
             )
 
             # セクター集中度
@@ -412,7 +410,7 @@ class DemoPortfolioManager:
                         "priority": "HIGH",
                         "message": f"{max_position[0]}の比率が{max_position[1].weight:.1%}と高すぎます",
                         "action": f"{max_position[0]}のポジションを縮小し、分散を図ってください",
-                    }
+                    },
                 )
 
             # 2. セクター集中度チェック
@@ -424,7 +422,7 @@ class DemoPortfolioManager:
                             "priority": "MEDIUM",
                             "message": f"{sector}セクターの比率が{weight:.1%}と高すぎます",
                             "action": f"{sector}以外のセクターへの投資を検討してください",
-                        }
+                        },
                     )
 
             # 3. ドローダウンチェック
@@ -435,7 +433,7 @@ class DemoPortfolioManager:
                         "priority": "HIGH",
                         "message": f"最大ドローダウンが{metrics.max_drawdown:.1%}と大きいです",
                         "action": "損切りルールの見直しやポジションサイズの縮小を検討してください",
-                    }
+                    },
                 )
 
             # 4. キャッシュ比率チェック
@@ -447,7 +445,7 @@ class DemoPortfolioManager:
                         "priority": "LOW",
                         "message": f"キャッシュ比率が{cash_ratio:.1%}と高いです",
                         "action": "投資機会を探して資金効率を向上させてください",
-                    }
+                    },
                 )
 
             # 5. 低パフォーマンス銘柄
@@ -459,7 +457,7 @@ class DemoPortfolioManager:
                             "priority": "MEDIUM",
                             "message": f"{symbol}が{position.unrealized_pnl_pct:.1f}%の含み損",
                             "action": f"{symbol}の投資判断を見直し、損切りを検討してください",
-                        }
+                        },
                     )
 
         except Exception as e:
@@ -516,8 +514,7 @@ class DemoPortfolioManager:
         max_drawdown = 0.0
 
         for value in values:
-            if value > peak:
-                peak = value
+            peak = max(peak, value)
             drawdown = (peak - value) / peak
             max_drawdown = max(max_drawdown, drawdown)
 
@@ -532,7 +529,7 @@ class DemoPortfolioManager:
             # ベンチマークデータ取得
             if self.benchmark_data is None:
                 self.benchmark_data = self.data_provider.get_stock_data(
-                    self.benchmark_symbol, period="1y"
+                    self.benchmark_symbol, period="1y",
                 )
 
             if self.benchmark_data is None:
@@ -653,10 +650,8 @@ class DemoPortfolioManager:
             "8031.T": "商社",
             "8035.T": "商社",
             "8058.T": "商社",
-            "8306.T": "銀行",
             "8802.T": "不動産",
             "9101.T": "運輸",
-            "9022.T": "運輸",
         }
 
     def export_portfolio_data(self) -> Dict[str, Any]:
@@ -673,7 +668,7 @@ class DemoPortfolioManager:
 
 
 def asdict(obj) -> Dict[str, Any]:
-    """dataclass を辞書に変換（datetime対応）"""
+    """Dataclass を辞書に変換（datetime対応）"""
     if hasattr(obj, "__dataclass_fields__"):
         result = {}
         for field_name, field_value in obj.__dict__.items():

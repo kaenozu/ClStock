@@ -57,7 +57,7 @@ def no_wait_input(monkeypatch):
 
 
 def test_optimization_history_menu_shows_history_list(
-    history_manager_stub, no_wait_input, capsys
+    history_manager_stub, no_wait_input, capsys,
 ):
     history_manager_stub.records = [
         {
@@ -65,7 +65,7 @@ def test_optimization_history_menu_shows_history_list(
             "timestamp": "2024-05-01 12:00",
             "accuracy": 91.2,
             "stocks": ["AAA", "BBB"],
-        }
+        },
     ]
     no_wait_input(["1", ""])  # menu choice, enter to continue
 
@@ -78,7 +78,7 @@ def test_optimization_history_menu_shows_history_list(
 
 
 def test_optimization_history_menu_rolls_back_successfully(
-    history_manager_stub, no_wait_input, capsys
+    history_manager_stub, no_wait_input, capsys,
 ):
     history_manager_stub.rollback_result = True
     no_wait_input(["2", "target-record", ""])  # menu choice, record id, enter
@@ -91,7 +91,7 @@ def test_optimization_history_menu_rolls_back_successfully(
 
 
 def test_optimization_history_menu_shows_statistics(
-    history_manager_stub, no_wait_input, capsys
+    history_manager_stub, no_wait_input, capsys,
 ):
     history_manager_stub.stats = {
         "total_runs": 5,
@@ -111,7 +111,7 @@ def test_optimization_history_menu_shows_statistics(
 
 
 def test_optimization_history_menu_handles_invalid_choice(
-    history_manager_stub, no_wait_input, capsys
+    history_manager_stub, no_wait_input, capsys,
 ):
     no_wait_input(["9"])  # invalid menu choice
 
@@ -128,7 +128,7 @@ def test_show_history_list_with_records(history_manager_stub, no_wait_input, cap
             "timestamp": "2024-05-01 12:00",
             "accuracy": 91.2,
             "stocks": ["AAA", "BBB"],
-        }
+        },
     ]
     no_wait_input([""])
 

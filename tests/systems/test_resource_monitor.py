@@ -31,11 +31,9 @@ def test_resource_monitor_caches_system_metrics(monkeypatch):
         mem_calls.append(True)
         return SimpleNamespace(percent=34.2, total=8 * 1024 * 1024 * 1024)
 
+    monkeypatch.setattr("systems.resource_monitor.psutil.cpu_percent", fake_cpu_percent)
     monkeypatch.setattr(
-        "systems.resource_monitor.psutil.cpu_percent", fake_cpu_percent
-    )
-    monkeypatch.setattr(
-        "systems.resource_monitor.psutil.virtual_memory", fake_virtual_memory
+        "systems.resource_monitor.psutil.virtual_memory", fake_virtual_memory,
     )
 
     monitor = ResourceMonitor(cache_ttl=0.5)

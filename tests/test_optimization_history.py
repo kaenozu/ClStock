@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""
-最適化履歴管理システムのテスト
+"""最適化履歴管理システムのテスト
 TDD: Red-Green-Refactorサイクル
 """
 
-import pytest
 import json
-import shutil
-from pathlib import Path
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
-import tempfile
-import sys
-import os
 import logging
+import os
+import sys
+import tempfile
+from datetime import datetime, timedelta
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,7 +38,7 @@ class TestOptimizationHistoryManager:
     def manager(self, temp_dir, mock_logger):
         """テスト用マネージャーのフィクスチャ"""
         return OptimizationHistoryManager(
-            history_dir=temp_dir, logger_instance=mock_logger
+            history_dir=temp_dir, logger_instance=mock_logger,
         )
 
     @pytest.fixture
@@ -84,7 +83,9 @@ class TestOptimizationHistoryManager:
         assert record.description == sample_data["description"]
         assert record.is_active is False
 
-    def test_自動適用で設定が更新されること(self, manager, sample_data, temp_dir, mock_logger):
+    def test_自動適用で設定が更新されること(
+        self, manager, sample_data, temp_dir, mock_logger,
+    ):
         """auto_apply=Trueで設定ファイルが作成されることを確認"""
         # Arrange
         config_file = Path(temp_dir) / "config" / "optimal_stocks.json"
@@ -100,7 +101,7 @@ class TestOptimizationHistoryManager:
         # Assert
         assert config_file.exists()
 
-        with open(config_file, "r", encoding="utf-8") as f:
+        with open(config_file, encoding="utf-8") as f:
             config = json.load(f)
 
         assert config["optimal_stocks"] == sample_data["stocks"]
@@ -180,11 +181,13 @@ class TestOptimizationHistoryManager:
             if call.args
         )
 
-    def test_履歴の永続化と読み込みができること(self, temp_dir, sample_data, mock_logger):
+    def test_履歴の永続化と読み込みができること(
+        self, temp_dir, sample_data, mock_logger,
+    ):
         """履歴が永続化され、再読み込みできることを確認"""
         # Arrange
         manager1 = OptimizationHistoryManager(
-            history_dir=temp_dir, logger_instance=mock_logger
+            history_dir=temp_dir, logger_instance=mock_logger,
         )
 
         # Act - 保存
@@ -197,7 +200,7 @@ class TestOptimizationHistoryManager:
 
         # Act - 新しいインスタンスで読み込み
         manager2 = OptimizationHistoryManager(
-            history_dir=temp_dir, logger_instance=mock_logger
+            history_dir=temp_dir, logger_instance=mock_logger,
         )
 
         # Assert
@@ -234,13 +237,13 @@ class TestOptimizationHistoryManager:
         """統計情報が正しく計算されることを確認"""
         # Arrange
         manager.save_optimization_result(
-            stocks=["7203"], performance_metrics={"return_rate": 10.0}
+            stocks=["7203"], performance_metrics={"return_rate": 10.0},
         )
         manager.save_optimization_result(
-            stocks=["6758"], performance_metrics={"return_rate": 20.0}
+            stocks=["6758"], performance_metrics={"return_rate": 20.0},
         )
         manager.save_optimization_result(
-            stocks=["9432"], performance_metrics={"return_rate": 15.0}, auto_apply=True
+            stocks=["9432"], performance_metrics={"return_rate": 15.0}, auto_apply=True,
         )
 
         # Act
@@ -258,7 +261,7 @@ class TestOptimizationHistoryManager:
         # Arrange - 10件の記録を作成
         for i in range(10):
             manager.save_optimization_result(
-                stocks=[f"stock_{i}"], performance_metrics={"return_rate": float(i)}
+                stocks=[f"stock_{i}"], performance_metrics={"return_rate": float(i)},
             )
 
         # Act
@@ -280,7 +283,7 @@ class TestOptimizationHistoryManager:
         )
 
         manager.save_optimization_result(
-            stocks=["9984"], performance_metrics={"return_rate": 10.0}, auto_apply=True
+            stocks=["9984"], performance_metrics={"return_rate": 10.0}, auto_apply=True,
         )
 
         # Assert
@@ -312,7 +315,7 @@ class TestOptimizationHistoryManager:
         """rollback_available=Falseの記録にロールバックできないことを確認"""
         # Arrange
         record_id = manager.save_optimization_result(
-            stocks=sample_data["stocks"], performance_metrics=sample_data["metrics"]
+            stocks=sample_data["stocks"], performance_metrics=sample_data["metrics"],
         )
 
         # ロールバック不可に変更
@@ -340,7 +343,7 @@ class TestOptimizationHistoryManager:
             for i in range(3):
                 mock_datetime.now.return_value = base_time + timedelta(hours=i)
                 manager.save_optimization_result(
-                    stocks=[f"stock_{i}"], performance_metrics={"return_rate": float(i)}
+                    stocks=[f"stock_{i}"], performance_metrics={"return_rate": float(i)},
                 )
 
         # Act
@@ -357,7 +360,7 @@ class TestOptimizationHistoryManager:
         assert manager.logger is mock_logger
 
     def test_get_optimal_stocks_from_config_returns_file_values(
-        self, manager, mock_logger, monkeypatch
+        self, manager, mock_logger, monkeypatch,
     ):
         """設定ファイルから最適銘柄を読み込めることを確認"""
 
@@ -365,7 +368,7 @@ class TestOptimizationHistoryManager:
             target_stocks = {str(i): f"Stock {i}" for i in range(100, 110)}
 
         monkeypatch.setattr(
-            "config.settings.get_settings", lambda: DummySettings(), raising=False
+            "config.settings.get_settings", lambda: DummySettings(), raising=False,
         )
 
         manager.current_config_file.parent.mkdir(parents=True, exist_ok=True)
@@ -377,7 +380,7 @@ class TestOptimizationHistoryManager:
         assert manager.get_optimal_stocks_from_config() == ["AAA", "BBB", "CCC"]
 
     def test_get_optimal_stocks_from_config_defaults_to_settings(
-        self, manager, monkeypatch
+        self, manager, monkeypatch,
     ):
         """設定ファイルが無い場合に設定のデフォルト値を使用することを確認"""
 
@@ -385,7 +388,7 @@ class TestOptimizationHistoryManager:
             target_stocks = {str(i): f"Stock {i}" for i in range(200, 215)}
 
         monkeypatch.setattr(
-            "config.settings.get_settings", lambda: DummySettings(), raising=False
+            "config.settings.get_settings", lambda: DummySettings(), raising=False,
         )
 
         expected = list(DummySettings.target_stocks.keys())[:10]
@@ -393,7 +396,6 @@ class TestOptimizationHistoryManager:
 
     def test_get_statistics_reports_latest_timestamp(self, manager):
         """最新のタイムスタンプが統計情報に反映されることを確認"""
-
         base_time = datetime(2024, 1, 1, 10, 0, 0)
 
         record_new = OptimizationRecord(

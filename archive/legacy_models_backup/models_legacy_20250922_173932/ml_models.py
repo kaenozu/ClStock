@@ -1,26 +1,25 @@
-import pandas as pd
-import numpy as np
-import os
-from typing import Dict, List, Tuple, Optional, Union, Any
-from datetime import datetime, timedelta
 import logging
-import joblib
+import os
+from datetime import datetime
 from pathlib import Path
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import xgboost as xgb
+from typing import Any, Dict, List, Optional, Tuple
+
+import joblib
 import lightgbm as lgb
-from sklearn.model_selection import train_test_split, TimeSeriesSplit, cross_val_score
-from sklearn.preprocessing import StandardScaler
+import numpy as np
+import pandas as pd
+import torch
+import xgboost as xgb
+from data.stock_data import StockDataProvider
 from sklearn.metrics import (
-    mean_squared_error,
     accuracy_score,
-    classification_report,
     mean_absolute_error,
+    mean_squared_error,
     r2_score,
 )
-from data.stock_data import StockDataProvider
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler
+from torch import nn, optim
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +78,7 @@ class MLStockPredictor:
         # ゼロ除算を防ぐ安全チェック
         bb_range = bb_upper - bb_lower
         features["bb_position"] = (data["Close"] - bb_lower) / bb_range.where(
-            bb_range != 0, 1
+            bb_range != 0, 1,
         )
         features["bb_squeeze"] = bb_range / bb_middle.where(bb_middle != 0, 1)
         features["bb_breakout_up"] = (data["Close"] > bb_upper).astype(int)
@@ -180,15 +179,15 @@ class MLStockPredictor:
         features["market_relative_strength"] = 0  # 後で実装
         # === ギャップ検出 ===
         prev_close = data["Close"].shift(1)
-        features["gap_up"] = ((data["Open"] > prev_close * 1.02)).astype(int)
-        features["gap_down"] = ((data["Open"] < prev_close * 0.98)).astype(int)
+        features["gap_up"] = (data["Open"] > prev_close * 1.02).astype(int)
+        features["gap_down"] = (data["Open"] < prev_close * 0.98).astype(int)
         features["gap_size"] = (data["Open"] - prev_close) / prev_close
         # 欠損値処理
         features = features.ffill().fillna(0)
         return features
 
     def create_targets(
-        self, data: pd.DataFrame, prediction_days: int = 5
+        self, data: pd.DataFrame, prediction_days: int = 5,
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """予測ターゲットを作成（分類と回帰の両方）"""
         targets_regression = pd.DataFrame(index=data.index)
@@ -201,7 +200,7 @@ class MLStockPredictor:
         for days in [1, 3, 5, 10]:
             future_return = data["Close"].shift(-days) / data["Close"] - 1
             targets_classification[f"direction_{days}d"] = (future_return > 0).astype(
-                int
+                int,
             )
         # 推奨スコアターゲット（0-100）
         targets_regression["recommendation_score"] = (
@@ -235,7 +234,7 @@ class MLStockPredictor:
         return scores.fillna(50)
 
     def prepare_dataset(
-        self, symbols: List[str], start_date: str = "2020-01-01"
+        self, symbols: List[str], start_date: str = "2020-01-01",
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """複数銘柄のデータセットを準備"""
         all_features = []
@@ -256,7 +255,7 @@ class MLStockPredictor:
                 all_targets_reg.append(targets_reg)
                 all_targets_cls.append(targets_cls)
             except Exception as e:
-                logger.error(f"Error processing {symbol}: {str(e)}")
+                logger.error(f"Error processing {symbol}: {e!s}")
                 continue
         if not all_features:
             raise ValueError("No valid data available")
@@ -276,7 +275,7 @@ class MLStockPredictor:
         return combined_features, combined_targets_reg, combined_targets_cls
 
     def train_model(
-        self, symbols: List[str], target_column: str = "recommendation_score"
+        self, symbols: List[str], target_column: str = "recommendation_score",
     ):
         """モデルを訓練する"""
         from config.settings import get_settings
@@ -303,7 +302,7 @@ class MLStockPredictor:
         targets_clean = targets[valid_indices]
         if len(features_clean) < settings.model.min_training_data:
             raise ValueError(
-                f"Insufficient training data: {len(features_clean)} < {settings.model.min_training_data}"
+                f"Insufficient training data: {len(features_clean)} < {settings.model.min_training_data}",
             )
         # 特徴量名を保存
         self.feature_names = features_clean.columns.tolist()
@@ -403,7 +402,7 @@ class MLStockPredictor:
                     latest_features[feature_name] = 0
             # 特徴量順序を合わせる
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0
+                columns=self.feature_names, fill_value=0,
             )
             # スケーリング
             features_scaled = self.scaler.transform(latest_features)
@@ -413,7 +412,7 @@ class MLStockPredictor:
             score = max(0, min(100, float(score)))
             return score
         except Exception as e:
-            logger.error(f"Error predicting score for {symbol}: {str(e)}")
+            logger.error(f"Error predicting score for {symbol}: {e!s}")
             return 50.0
 
     def predict_return_rate(self, symbol: str, days: int = 5) -> float:
@@ -442,7 +441,7 @@ class MLStockPredictor:
                     latest_features[feature_name] = 0
             # 特徴量順序を合わせる
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0
+                columns=self.feature_names, fill_value=0,
             )
             # スケーリング
             features_scaled = self.scaler.transform(latest_features)
@@ -451,15 +450,15 @@ class MLStockPredictor:
             # 現実的な範囲に制限（日数に応じて調整）
             max_return = 0.006 * days  # 1日あたり最大0.6%
             predicted_return = max(
-                -max_return, min(max_return, float(predicted_return))
+                -max_return, min(max_return, float(predicted_return)),
             )
             return predicted_return
         except Exception as e:
-            logger.error(f"Error predicting return rate for {symbol}: {str(e)}")
+            logger.error(f"Error predicting return rate for {symbol}: {e!s}")
             return 0.0
 
     def prepare_features_for_return_prediction(
-        self, data: pd.DataFrame
+        self, data: pd.DataFrame,
     ) -> pd.DataFrame:
         """リターン率予測用の特徴量準備"""
         features = self.prepare_features(data)
@@ -482,13 +481,13 @@ class MLStockPredictor:
             returns_sign = np.sign(returns)
             features["consecutive_up"] = (
                 returns_sign.groupby(
-                    (returns_sign != returns_sign.shift()).cumsum()
+                    (returns_sign != returns_sign.shift()).cumsum(),
                 ).cumcount()
                 + 1
             ) * (returns_sign > 0)
             features["consecutive_down"] = (
                 returns_sign.groupby(
-                    (returns_sign != returns_sign.shift()).cumsum()
+                    (returns_sign != returns_sign.shift()).cumsum(),
                 ).cumcount()
                 + 1
             ) * (returns_sign < 0)
@@ -503,7 +502,7 @@ class MLStockPredictor:
                 importances = self.model.feature_importances_
                 return dict(zip(self.feature_names, importances))
         except Exception as e:
-            logger.error(f"Error getting feature importance: {str(e)}")
+            logger.error(f"Error getting feature importance: {e!s}")
         return {}
 
     def save_model(self):
@@ -519,7 +518,7 @@ class MLStockPredictor:
             joblib.dump(self.feature_names, features_file)
             logger.info(f"Model saved to {model_file}")
         except Exception as e:
-            logger.error(f"Error saving model: {str(e)}")
+            logger.error(f"Error saving model: {e!s}")
 
     def load_model(self) -> bool:
         """モデルを読み込み"""
@@ -530,7 +529,7 @@ class MLStockPredictor:
             scaler_file = self.model_path / f"scaler_{self.model_type}.joblib"
             features_file = self.model_path / f"features_{self.model_type}.joblib"
             if not all(
-                [model_file.exists(), scaler_file.exists(), features_file.exists()]
+                [model_file.exists(), scaler_file.exists(), features_file.exists()],
             ):
                 return False
             self.model = joblib.load(model_file)
@@ -540,7 +539,7 @@ class MLStockPredictor:
             logger.info(f"Model loaded from {model_file}")
             return True
         except Exception as e:
-            logger.error(f"Error loading model: {str(e)}")
+            logger.error(f"Error loading model: {e!s}")
             return False
 
 
@@ -563,9 +562,8 @@ class EnsembleStockPredictor:
 
     def prepare_ensemble_models(self):
         """複数のモデルタイプを準備"""
-        from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+        from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
         from sklearn.neural_network import MLPRegressor
-        from sklearn.svm import SVR
 
         # XGBoost
         xgb_model = xgb.XGBRegressor(
@@ -590,15 +588,15 @@ class EnsembleStockPredictor:
         )
         # Random Forest
         rf_model = RandomForestRegressor(
-            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1
+            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1,
         )
         # Gradient Boosting
         gb_model = GradientBoostingRegressor(
-            n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42
+            n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42,
         )
         # Neural Network
         nn_model = MLPRegressor(
-            hidden_layer_sizes=(100, 50), max_iter=500, random_state=42
+            hidden_layer_sizes=(100, 50), max_iter=500, random_state=42,
         )
         # アンサンブルに追加（重み付け）
         self.add_model("xgboost", xgb_model, weight=0.3)
@@ -608,7 +606,7 @@ class EnsembleStockPredictor:
         self.add_model("neural_network", nn_model, weight=0.05)
 
     def train_ensemble(
-        self, symbols: List[str], target_column: str = "recommendation_score"
+        self, symbols: List[str], target_column: str = "recommendation_score",
     ):
         """アンサンブルモデルを訓練"""
         from config.settings import get_settings
@@ -655,10 +653,10 @@ class EnsembleStockPredictor:
                 model_predictions[name] = test_pred
                 model_scores[name] = test_mse
                 logger.info(
-                    f"{name} - Train MSE: {train_mse:.4f}, Test MSE: {test_mse:.4f}"
+                    f"{name} - Train MSE: {train_mse:.4f}, Test MSE: {test_mse:.4f}",
                 )
             except Exception as e:
-                logger.error(f"Error training {name}: {str(e)}")
+                logger.error(f"Error training {name}: {e!s}")
                 # 失敗したモデルは除外
                 del self.models[name]
                 del self.weights[name]
@@ -687,7 +685,7 @@ class EnsembleStockPredictor:
                 self.weights[name] = inverse_scores[name] / total_inverse
 
     def _ensemble_predict_from_predictions(
-        self, model_predictions: Dict[str, np.ndarray]
+        self, model_predictions: Dict[str, np.ndarray],
     ) -> np.ndarray:
         """複数モデルの予測を重み付き平均"""
         weighted_sum = np.zeros_like(list(model_predictions.values())[0])
@@ -717,7 +715,7 @@ class EnsembleStockPredictor:
             latest_features = features.iloc[-1:].copy()
             # 特徴量を訓練時と同じ順序に調整
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0
+                columns=self.feature_names, fill_value=0,
             )
             # スケーリング
             features_scaled = self.scaler.transform(latest_features)
@@ -728,17 +726,16 @@ class EnsembleStockPredictor:
                     pred = model.predict(features_scaled)[0]
                     predictions[name] = pred
                 except Exception as e:
-                    logger.warning(f"Error with {name} prediction: {str(e)}")
+                    logger.warning(f"Error with {name} prediction: {e!s}")
             # アンサンブル予測
             if predictions:
                 ensemble_score = self._ensemble_predict_from_predictions(
-                    {name: np.array([pred]) for name, pred in predictions.items()}
+                    {name: np.array([pred]) for name, pred in predictions.items()},
                 )[0]
                 return max(0, min(100, float(ensemble_score)))
-            else:
-                return 50.0
+            return 50.0
         except Exception as e:
-            logger.error(f"Error in ensemble prediction for {symbol}: {str(e)}")
+            logger.error(f"Error in ensemble prediction for {symbol}: {e!s}")
             return 50.0
 
     def save_ensemble(self):
@@ -755,7 +752,7 @@ class EnsembleStockPredictor:
             joblib.dump(ensemble_data, ensemble_file)
             logger.info(f"Ensemble saved to {ensemble_file}")
         except Exception as e:
-            logger.error(f"Error saving ensemble: {str(e)}")
+            logger.error(f"Error saving ensemble: {e!s}")
 
     def load_ensemble(self) -> bool:
         """アンサンブルモデルを読み込み"""
@@ -772,7 +769,7 @@ class EnsembleStockPredictor:
             logger.info(f"Ensemble loaded from {ensemble_file}")
             return True
         except Exception as e:
-            logger.error(f"Error loading ensemble: {str(e)}")
+            logger.error(f"Error loading ensemble: {e!s}")
             return False
 
 
@@ -801,7 +798,7 @@ class HyperparameterOptimizer:
             }
             model = xgb.XGBRegressor(**params)
             scores = cross_val_score(
-                model, X, y, cv=cv_folds, scoring="neg_mean_squared_error"
+                model, X, y, cv=cv_folds, scoring="neg_mean_squared_error",
             )
             return -scores.mean()
 
@@ -832,7 +829,7 @@ class HyperparameterOptimizer:
             }
             model = lgb.LGBMRegressor(**params)
             scores = cross_val_score(
-                model, X, y, cv=cv_folds, scoring="neg_mean_squared_error"
+                model, X, y, cv=cv_folds, scoring="neg_mean_squared_error",
             )
             return -scores.mean()
 
@@ -853,14 +850,14 @@ class HyperparameterOptimizer:
                 json.dump(self.best_params, f, indent=2)
             logger.info(f"Best parameters saved to {params_file}")
         except Exception as e:
-            logger.error(f"Error saving hyperparameters: {str(e)}")
+            logger.error(f"Error saving hyperparameters: {e!s}")
 
     def load_best_params(self):
         """最適パラメータを読み込み"""
         try:
             params_file = Path("models/saved_models/best_hyperparams.json")
             if params_file.exists():
-                with open(params_file, "r") as f:
+                with open(params_file) as f:
                     import json
 
                     self.best_params = json.load(f)
@@ -868,7 +865,7 @@ class HyperparameterOptimizer:
                 return True
             return False
         except Exception as e:
-            logger.error(f"Error loading hyperparameters: {str(e)}")
+            logger.error(f"Error loading hyperparameters: {e!s}")
             return False
 
 
@@ -902,7 +899,7 @@ class ModelPerformanceMonitor:
             )
             if mask.sum() > 0:
                 quantile_mse = mean_squared_error(y_test[mask], predictions[mask])
-                quantile_performance[f"Q{i+1}"] = quantile_mse
+                quantile_performance[f"Q{i + 1}"] = quantile_mse
         # 性能記録
         performance_record = {
             "timestamp": datetime.now().isoformat(),
@@ -933,15 +930,15 @@ class ModelPerformanceMonitor:
         alerts = []
         if performance_record["rmse"] > rmse_threshold:
             alerts.append(
-                f"High RMSE: {performance_record['rmse']:.4f} > {rmse_threshold}"
+                f"High RMSE: {performance_record['rmse']:.4f} > {rmse_threshold}",
             )
         if performance_record["r2_score"] < r2_threshold:
             alerts.append(
-                f"Low R²: {performance_record['r2_score']:.4f} < {r2_threshold}"
+                f"Low R²: {performance_record['r2_score']:.4f} < {r2_threshold}",
             )
         if performance_record["direction_accuracy"] < direction_threshold:
             alerts.append(
-                f"Low Direction Accuracy: {performance_record['direction_accuracy']:.4f} < {direction_threshold}"
+                f"Low Direction Accuracy: {performance_record['direction_accuracy']:.4f} < {direction_threshold}",
             )
         if alerts:
             alert_record = {
@@ -951,7 +948,7 @@ class ModelPerformanceMonitor:
             }
             self.alerts.append(alert_record)
             logger.warning(
-                f"Performance alerts for {performance_record['model_name']}: {alerts}"
+                f"Performance alerts for {performance_record['model_name']}: {alerts}",
             )
 
     def get_performance_summary(self, last_n_records=10):
@@ -985,14 +982,14 @@ Performance Summary (Last {len(recent_records)} records):
                 json.dump(data, f, indent=2)
             logger.info(f"Performance data saved to {perf_file}")
         except Exception as e:
-            logger.error(f"Error saving performance data: {str(e)}")
+            logger.error(f"Error saving performance data: {e!s}")
 
     def load_performance_data(self):
         """性能データを読み込み"""
         try:
             perf_file = Path("models/saved_models/performance_history.json")
             if perf_file.exists():
-                with open(perf_file, "r") as f:
+                with open(perf_file) as f:
                     import json
 
                     data = json.load(f)
@@ -1002,7 +999,7 @@ Performance Summary (Last {len(recent_records)} records):
                 return True
             return False
         except Exception as e:
-            logger.error(f"Error loading performance data: {str(e)}")
+            logger.error(f"Error loading performance data: {e!s}")
             return False
 
 
@@ -1042,7 +1039,7 @@ class ParallelStockPredictor:
                     results[symbol] = score
                     self.batch_cache[symbol] = score
                 except Exception as e:
-                    logger.error(f"Error predicting {symbol}: {str(e)}")
+                    logger.error(f"Error predicting {symbol}: {e!s}")
                     results[symbol] = 50.0
         return results
 
@@ -1063,7 +1060,7 @@ class ParallelStockPredictor:
                     if not data.empty:
                         data_results[symbol] = data
                 except Exception as e:
-                    logger.error(f"Error getting data for {symbol}: {str(e)}")
+                    logger.error(f"Error getting data for {symbol}: {e!s}")
         return data_results
 
     def _get_stock_data_safe(self, symbol: str) -> pd.DataFrame:
@@ -1071,7 +1068,7 @@ class ParallelStockPredictor:
         try:
             return self.ensemble_predictor.data_provider.get_stock_data(symbol, "1y")
         except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {str(e)}")
+            logger.error(f"Error fetching data for {symbol}: {e!s}")
             return pd.DataFrame()
 
     def clear_batch_cache(self):
@@ -1094,16 +1091,15 @@ class AdvancedCacheManager:
         }
 
     def get_cached_features(
-        self, symbol: str, data_hash: str
+        self, symbol: str, data_hash: str,
     ) -> Optional[pd.DataFrame]:
         """特徴量キャッシュから取得"""
         cache_key = f"{symbol}_{data_hash}"
         if cache_key in self.feature_cache:
             self.cache_stats["hits"] += 1
             return self.feature_cache[cache_key]
-        else:
-            self.cache_stats["misses"] += 1
-            return None
+        self.cache_stats["misses"] += 1
+        return None
 
     def cache_features(self, symbol: str, data_hash: str, features: pd.DataFrame):
         """特徴量をキャッシュ"""
@@ -1117,9 +1113,8 @@ class AdvancedCacheManager:
         if cache_key in self.prediction_cache:
             self.cache_stats["hits"] += 1
             return self.prediction_cache[cache_key]
-        else:
-            self.cache_stats["misses"] += 1
-            return None
+        self.cache_stats["misses"] += 1
+        return None
 
     def cache_prediction(self, symbol: str, features_hash: str, prediction: float):
         """予測結果をキャッシュ"""
@@ -1166,7 +1161,7 @@ class DeepLearningPredictor:
         self.feature_columns = []
 
     def prepare_sequences(
-        self, data: pd.DataFrame, target_col: str = "Close"
+        self, data: pd.DataFrame, target_col: str = "Close",
     ) -> Tuple[np.ndarray, np.ndarray]:
         """時系列データをシーケンスに変換"""
         # 特徴量とターゲット分離
@@ -1182,9 +1177,8 @@ class DeepLearningPredictor:
 
     def build_lstm_model(self, input_shape):
         """LSTM モデル構築"""
-        import tensorflow as tf
+        from tensorflow.keras.layers import LSTM, BatchNormalization, Dense, Dropout
         from tensorflow.keras.models import Sequential
-        from tensorflow.keras.layers import LSTM, Dense, Dropout, BatchNormalization
         from tensorflow.keras.optimizers import Adam
 
         model = Sequential(
@@ -1201,7 +1195,7 @@ class DeepLearningPredictor:
                 Dense(32, activation="relu"),
                 Dropout(0.2),
                 Dense(1, activation="linear"),
-            ]
+            ],
         )
         model.compile(optimizer=Adam(learning_rate=0.001), loss="mse", metrics=["mae"])
         return model
@@ -1214,7 +1208,7 @@ class DeepLearningPredictor:
         def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0):
             # Multi-head self-attention
             x = layers.MultiHeadAttention(
-                key_dim=head_size, num_heads=num_heads, dropout=dropout
+                key_dim=head_size, num_heads=num_heads, dropout=dropout,
             )(inputs, inputs)
             x = layers.Dropout(dropout)(x)
             x = layers.LayerNormalization(epsilon=1e-6)(x)
@@ -1231,7 +1225,7 @@ class DeepLearningPredictor:
         # Multi-layer transformer
         for _ in range(3):
             x = transformer_encoder(
-                x, head_size=64, num_heads=4, ff_dim=128, dropout=0.3
+                x, head_size=64, num_heads=4, ff_dim=128, dropout=0.3,
             )
         x = layers.GlobalAveragePooling1D(data_format="channels_first")(x)
         x = layers.Dropout(0.3)(x)
@@ -1319,7 +1313,7 @@ class DeepLearningPredictor:
             score = 50 + (pred - current_price) / current_price * 100
             return max(0, min(100, score))
         except Exception as e:
-            logger.error(f"Deep learning prediction error for {symbol}: {str(e)}")
+            logger.error(f"Deep learning prediction error for {symbol}: {e!s}")
             return 50.0
 
     def save_deep_model(self):
@@ -1328,16 +1322,15 @@ class DeepLearningPredictor:
             model_path = Path("models/saved_models")
             self.model.save(model_path / f"deep_{self.model_type}_model.h5")
             joblib.dump(
-                self.scaler, model_path / f"deep_{self.model_type}_scaler.joblib"
+                self.scaler, model_path / f"deep_{self.model_type}_scaler.joblib",
             )
             logger.info(f"Deep {self.model_type} model saved")
         except Exception as e:
-            logger.error(f"Error saving deep model: {str(e)}")
+            logger.error(f"Error saving deep model: {e!s}")
 
 
 class AdvancedEnsemblePredictor:
-    """
-    84.6%精度突破を目指す高度アンサンブル学習システム
+    """84.6%精度突破を目指す高度アンサンブル学習システム
     特徴:
     - BERT活用ニュースセンチメント分析
     - マクロ経済指標統合
@@ -1383,18 +1376,24 @@ class AdvancedEnsemblePredictor:
         """BERT活用センチメント分析器初期化"""
         try:
             # transformersライブラリが利用可能な場合のみ
-            from transformers import BertTokenizer, BertForSequenceClassification
+            from transformers import BertForSequenceClassification, BertTokenizer
 
             # 日本語BERT事前学習モデル
             model_name = "cl-tohoku/bert-base-japanese-whole-word-masking"
             # セキュリティ向上: 特定のリビジョンを指定
-            revision = "f012345678901234567890123456789012345678"  # 特定のコミットハッシュ
-            self.tokenizer = BertTokenizer.from_pretrained(model_name, revision=revision)
-            self.bert_model = BertForSequenceClassification.from_pretrained(model_name, revision=revision)
+            revision = (
+                "f012345678901234567890123456789012345678"  # 特定のコミットハッシュ
+            )
+            self.tokenizer = BertTokenizer.from_pretrained(
+                model_name, revision=revision,
+            )
+            self.bert_model = BertForSequenceClassification.from_pretrained(
+                model_name, revision=revision,
+            )
             self.logger.info("BERT センチメント分析器初期化完了")
         except ImportError:
             self.logger.warning(
-                "transformersライブラリが利用不可 - 簡易センチメント分析を使用"
+                "transformersライブラリが利用不可 - 簡易センチメント分析を使用",
             )
             self.sentiment_analyzer = self._create_simple_sentiment_analyzer()
         except Exception as e:
@@ -1592,7 +1591,7 @@ class AdvancedEnsemblePredictor:
             for model_name, pred in predictions.items():
                 if pred is not None and model_name in adjusted_weights:
                     weight = adjusted_weights[model_name] * confidences.get(
-                        model_name, 0.5
+                        model_name, 0.5,
                     )
                     ensemble_score += pred * weight
                     total_weight += weight
@@ -1602,7 +1601,7 @@ class AdvancedEnsemblePredictor:
                 ensemble_score = 50.0  # デフォルト
             # 信頼度算出
             ensemble_confidence = min(
-                total_weight / sum(adjusted_weights.values()), 1.0
+                total_weight / sum(adjusted_weights.values()), 1.0,
             )
             return {
                 "ensemble_prediction": ensemble_score,
@@ -1637,7 +1636,7 @@ class AdvancedEnsemblePredictor:
             return {"prediction": 50.0, "confidence": 0.0}
 
     def _adjust_weights_dynamically(
-        self, confidences: Dict[str, float]
+        self, confidences: Dict[str, float],
     ) -> Dict[str, float]:
         """信頼度ベース動的重み調整"""
         adjusted_weights = {}
@@ -1723,8 +1722,7 @@ class AdvancedEnsemblePredictor:
 
 
 class MacroEconomicDataProvider:
-    """
-    マクロ経済指標データプロバイダー
+    """マクロ経済指標データプロバイダー
     日銀政策・金利・為替等の経済指標を統合管理
     """
 
@@ -1844,7 +1842,7 @@ class MacroEconomicDataProvider:
                         sentiment_data[name] = 0.0
                 except Exception as symbol_error:
                     self.logger.warning(
-                        f"センチメント指標取得エラー {name}: {symbol_error}"
+                        f"センチメント指標取得エラー {name}: {symbol_error}",
                     )
                     sentiment_data[name] = 0.0
             return sentiment_data
@@ -1854,8 +1852,7 @@ class MacroEconomicDataProvider:
 
 
 class AdvancedPrecisionBreakthrough87System:
-    """
-    87%精度突破システム
+    """87%精度突破システム
     5つのブレークスルー技術:
     1. 強化学習 (Deep Q-Network)
     2. マルチモーダル分析 (CNN + LSTM)
@@ -1927,7 +1924,7 @@ class AdvancedPrecisionBreakthrough87System:
                     self.q_network = DQNNetwork()
                     self.target_network = DQNNetwork()
                     self.optimizer = optim.Adam(
-                        self.q_network.parameters(), lr=self.learning_rate
+                        self.q_network.parameters(), lr=self.learning_rate,
                     )
 
                 def remember(self, state, action, reward, next_state, done):
@@ -1953,7 +1950,7 @@ class AdvancedPrecisionBreakthrough87System:
                     next_states = torch.FloatTensor([e[3] for e in batch])
                     dones = torch.BoolTensor([e[4] for e in batch])
                     current_q_values = self.q_network(states).gather(
-                        1, actions.unsqueeze(1)
+                        1, actions.unsqueeze(1),
                     )
                     next_q_values = self.target_network(next_states).max(1)[0].detach()
                     target_q_values = rewards + (0.95 * next_q_values * ~dones)
@@ -2009,10 +2006,11 @@ class AdvancedPrecisionBreakthrough87System:
     def _create_multimodal_analyzer(self):
         """マルチモーダル分析器作成"""
         try:
-            import cv2
-            from PIL import Image, ImageDraw
-            import matplotlib.pyplot as plt
             import io
+
+            import cv2
+            import matplotlib.pyplot as plt
+            from PIL import Image, ImageDraw
 
             class MultiModalAnalyzer:
                 def __init__(self):
@@ -2029,7 +2027,7 @@ class AdvancedPrecisionBreakthrough87System:
                         # 画像をバイトデータに変換
                         img_buffer = io.BytesIO()
                         plt.savefig(
-                            img_buffer, format="png", dpi=100, bbox_inches="tight"
+                            img_buffer, format="png", dpi=100, bbox_inches="tight",
                         )
                         img_buffer.seek(0)
                         # PILで読み込み
@@ -2037,7 +2035,7 @@ class AdvancedPrecisionBreakthrough87System:
                         img_array = np.array(img)
                         plt.close()
                         return img_array
-                    except Exception as e:
+                    except Exception:
                         # エラー時は簡易パターン作成
                         return np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8)
 
@@ -2059,10 +2057,10 @@ class AdvancedPrecisionBreakthrough87System:
                         ]
                         # 128次元に拡張（ゼロパディング）
                         features.extend(
-                            [0.0] * (self.cnn_features_size - len(features))
+                            [0.0] * (self.cnn_features_size - len(features)),
                         )
                         return np.array(features[: self.cnn_features_size])
-                    except Exception as e:
+                    except Exception:
                         return np.zeros(self.cnn_features_size)
 
                 def extract_numerical_features(self, time_series_data):
@@ -2088,10 +2086,10 @@ class AdvancedPrecisionBreakthrough87System:
                                 features.append(time_series_data[-1] - ma)  # 乖離
                         # 64次元に調整
                         features.extend(
-                            [0.0] * (self.lstm_features_size - len(features))
+                            [0.0] * (self.lstm_features_size - len(features)),
                         )
                         return np.array(features[: self.lstm_features_size])
-                    except Exception as e:
+                    except Exception:
                         return np.zeros(self.lstm_features_size)
 
                 def fuse_features(self, chart_features, numerical_features):
@@ -2112,12 +2110,12 @@ class AdvancedPrecisionBreakthrough87System:
                             [
                                 chart_norm * chart_weight,
                                 numerical_norm * numerical_weight,
-                            ]
+                            ],
                         )
                         return fused
-                    except Exception as e:
+                    except Exception:
                         return np.zeros(
-                            self.cnn_features_size + self.lstm_features_size
+                            self.cnn_features_size + self.lstm_features_size,
                         )
 
                 def predict_multimodal(self, price_data, volume_data=None):
@@ -2130,7 +2128,7 @@ class AdvancedPrecisionBreakthrough87System:
                         numerical_features = self.extract_numerical_features(price_data)
                         # 特徴量融合
                         fused_features = self.fuse_features(
-                            chart_features, numerical_features
+                            chart_features, numerical_features,
                         )
                         # 簡易予測（融合特徴量の線形結合）
                         prediction_score = np.mean(fused_features) * 100
@@ -2200,7 +2198,7 @@ class AdvancedPrecisionBreakthrough87System:
                             "volatility_factor": volatility,
                             "trend_factor": trend,
                             "adaptation_strength": min(
-                                len(historical_performance) / 50, 1.0
+                                len(historical_performance) / 50, 1.0,
                             ),
                         }
                         self.symbol_adaptations[symbol] = adaptation
@@ -2246,7 +2244,7 @@ class AdvancedPrecisionBreakthrough87System:
                         },
                     }
                     return sector_adjustments.get(sector, sector_adjustments["others"])
-                except Exception as e:
+                except Exception:
                     return {"volatility_multiplier": 1.0, "trend_sensitivity": 1.0}
 
             def meta_predict(self, symbol, base_prediction):
@@ -2254,13 +2252,13 @@ class AdvancedPrecisionBreakthrough87System:
                 try:
                     # 銘柄適応
                     symbol_adaptation = self.symbol_adaptations.get(
-                        symbol, {"adaptation_strength": 0.0}
+                        symbol, {"adaptation_strength": 0.0},
                     )
                     # セクター適応
                     sector_adaptation = self.get_sector_adaptation(symbol)
                     # 適応強度に応じた調整
                     adaptation_strength = symbol_adaptation.get(
-                        "adaptation_strength", 0.0
+                        "adaptation_strength", 0.0,
                     )
                     if adaptation_strength > 0.1:
                         # 適応調整適用
@@ -2272,7 +2270,7 @@ class AdvancedPrecisionBreakthrough87System:
                         adjusted_prediction += trend_factor * 10 * adaptation_strength
                         # セクター調整
                         volatility_mult = sector_adaptation.get(
-                            "volatility_multiplier", 1.0
+                            "volatility_multiplier", 1.0,
                         )
                         adjusted_prediction = (
                             50 + (adjusted_prediction - 50) * volatility_mult
@@ -2280,7 +2278,7 @@ class AdvancedPrecisionBreakthrough87System:
                         confidence_boost = adaptation_strength * 0.1
                         return {
                             "adjusted_prediction": max(
-                                0, min(100, adjusted_prediction)
+                                0, min(100, adjusted_prediction),
                             ),
                             "confidence_boost": confidence_boost,
                             "adaptation_applied": True,
@@ -2329,7 +2327,7 @@ class AdvancedPrecisionBreakthrough87System:
                                 1 + (performance - 0.5) * 0.3
                             )
                             adjusted_weights[model] = max(
-                                0.05, min(0.6, adjusted_weight)
+                                0.05, min(0.6, adjusted_weight),
                             )
                         # 正規化
                         total_weight = sum(adjusted_weights.values())
@@ -2339,7 +2337,7 @@ class AdvancedPrecisionBreakthrough87System:
                             }
                             return adjusted_weights
                     return self.base_weights
-                except Exception as e:
+                except Exception:
                     return self.base_weights
 
             def ensemble_predict(self, predictions, confidences):
@@ -2361,7 +2359,7 @@ class AdvancedPrecisionBreakthrough87System:
                     if total_weight > 0:
                         ensemble_prediction = weighted_sum / total_weight
                         ensemble_confidence = min(
-                            total_weight / sum(weights.values()), 1.0
+                            total_weight / sum(weights.values()), 1.0,
                         )
                     else:
                         ensemble_prediction = 50.0
@@ -2414,7 +2412,7 @@ class AdvancedPrecisionBreakthrough87System:
                         ]
                         # 10次元に調整
                         feature_vector.extend(
-                            [0.0] * (self.feature_dim - len(feature_vector))
+                            [0.0] * (self.feature_dim - len(feature_vector)),
                         )
                         features.append(feature_vector[: self.feature_dim])
                     return (
@@ -2422,7 +2420,7 @@ class AdvancedPrecisionBreakthrough87System:
                         if features
                         else np.zeros((1, self.feature_dim))
                     )
-                except Exception as e:
+                except Exception:
                     return np.zeros((1, self.feature_dim))
 
             def transformer_attention(self, features):
@@ -2435,10 +2433,10 @@ class AdvancedPrecisionBreakthrough87System:
                     attention_weights = attention_weights / np.sum(attention_weights)
                     # 重み付き平均
                     attended_features = np.average(
-                        features, axis=0, weights=attention_weights
+                        features, axis=0, weights=attention_weights,
                     )
                     return attended_features
-                except Exception as e:
+                except Exception:
                     return (
                         np.mean(features, axis=0)
                         if len(features.shape) == 2
@@ -2495,14 +2493,14 @@ class AdvancedPrecisionBreakthrough87System:
             # 3. マルチモーダル予測
             if self.multimodal_analyzer:
                 multimodal_result = self.multimodal_analyzer.predict_multimodal(
-                    price_data, volume_data
+                    price_data, volume_data,
                 )
                 predictions["multimodal"] = multimodal_result["prediction_score"]
                 confidences["multimodal"] = multimodal_result["confidence"]
             # 4. メタ学習予測
             if self.meta_optimizer and "trend_following" in predictions:
                 meta_result = self.meta_optimizer.meta_predict(
-                    symbol, predictions["trend_following"]
+                    symbol, predictions["trend_following"],
                 )
                 predictions["meta"] = meta_result["adjusted_prediction"]
                 confidences["meta"] = (
@@ -2511,13 +2509,13 @@ class AdvancedPrecisionBreakthrough87System:
             # 5. Transformer予測
             if self.market_transformer:
                 transformer_result = self.market_transformer.transformer_predict(
-                    price_data, volume_data
+                    price_data, volume_data,
                 )
                 predictions["transformer"] = transformer_result["prediction_score"]
                 confidences["transformer"] = transformer_result["confidence"]
             # 高度アンサンブル実行
             ensemble_result = self.advanced_ensemble.ensemble_predict(
-                predictions, confidences
+                predictions, confidences,
             )
             # 87%精度補正
             final_prediction = self._apply_87_percent_correction(
@@ -2536,11 +2534,11 @@ class AdvancedPrecisionBreakthrough87System:
                 "accuracy_improvement": final_prediction["prediction"]
                 - self.current_accuracy,
                 "model_contributions": self._analyze_model_contributions(
-                    predictions, confidences
+                    predictions, confidences,
                 ),
             }
             self.logger.info(
-                f"87%精度予測完了: {symbol}, 予測={final_prediction['prediction']:.1f}"
+                f"87%精度予測完了: {symbol}, 予測={final_prediction['prediction']:.1f}",
             )
             return result
         except Exception as e:
@@ -2564,7 +2562,7 @@ class AdvancedPrecisionBreakthrough87System:
             return None, None
 
     def _get_base_prediction(
-        self, symbol: str, price_data: np.ndarray
+        self, symbol: str, price_data: np.ndarray,
     ) -> Dict[str, float]:
         """84.6%ベース予測取得"""
         try:
@@ -2587,11 +2585,11 @@ class AdvancedPrecisionBreakthrough87System:
                     confidence = 0.5
                 return {"prediction": prediction, "confidence": confidence}
             return {"prediction": 50.0, "confidence": 0.3}
-        except Exception as e:
+        except Exception:
             return {"prediction": 50.0, "confidence": 0.0}
 
     def _create_market_state(
-        self, price_data: np.ndarray, volume_data: np.ndarray
+        self, price_data: np.ndarray, volume_data: np.ndarray,
     ) -> np.ndarray:
         """DQN用市場状態作成"""
         try:
@@ -2607,7 +2605,7 @@ class AdvancedPrecisionBreakthrough87System:
                     np.std(recent_prices) + 1e-8
                 )
             return state
-        except Exception as e:
+        except Exception:
             return np.zeros(50)
 
     def _convert_action_to_score(self, action: int) -> float:
@@ -2616,7 +2614,7 @@ class AdvancedPrecisionBreakthrough87System:
         return action_map.get(action, 50.0)
 
     def _apply_87_percent_correction(
-        self, prediction: float, confidence: float, symbol: str
+        self, prediction: float, confidence: float, symbol: str,
     ) -> Dict[str, float]:
         """87%精度補正適用"""
         try:
@@ -2642,7 +2640,7 @@ class AdvancedPrecisionBreakthrough87System:
                 "confidence": corrected_confidence,
                 "correction_applied": abs(corrected_prediction - prediction) > 0.1,
             }
-        except Exception as e:
+        except Exception:
             return {
                 "prediction": prediction,
                 "confidence": confidence,
@@ -2650,7 +2648,7 @@ class AdvancedPrecisionBreakthrough87System:
             }
 
     def _analyze_model_contributions(
-        self, predictions: Dict[str, float], confidences: Dict[str, float]
+        self, predictions: Dict[str, float], confidences: Dict[str, float],
     ) -> Dict[str, Any]:
         """モデル貢献度分析"""
         try:
@@ -2668,11 +2666,11 @@ class AdvancedPrecisionBreakthrough87System:
                     "weighted_impact": predictions[model] * contribution_ratio,
                 }
             return contributions
-        except Exception as e:
+        except Exception:
             return {}
 
     def _return_fallback_prediction(
-        self, symbol: str, error: str = None
+        self, symbol: str, error: str = None,
     ) -> Dict[str, Any]:
         """フォールバック予測"""
         return {
@@ -2724,7 +2722,7 @@ class MetaLearningOptimizer:
         self.adaptation_memory = {}
 
     def create_symbol_profile(
-        self, symbol: str, historical_data: pd.DataFrame
+        self, symbol: str, historical_data: pd.DataFrame,
     ) -> Dict[str, float]:
         """銘柄特性プロファイル作成"""
         try:
@@ -2735,7 +2733,7 @@ class MetaLearningOptimizer:
                 "sector_correlation": self._analyze_sector_correlation(symbol),
                 "liquidity_score": self._calculate_liquidity_score(historical_data),
                 "momentum_sensitivity": self._analyze_momentum_sensitivity(
-                    historical_data
+                    historical_data,
                 ),
             }
             self.symbol_profiles[symbol] = profile
@@ -2783,10 +2781,9 @@ class MetaLearningOptimizer:
         finance_stocks = ["8306", "8035"]
         if symbol in tech_stocks:
             return 0.8  # 高相関
-        elif symbol in finance_stocks:
+        if symbol in finance_stocks:
             return 0.7
-        else:
-            return 0.5  # 中立
+        return 0.5  # 中立
 
     def _calculate_liquidity_score(self, data: pd.DataFrame) -> float:
         """流動性スコア計算"""
@@ -2806,7 +2803,7 @@ class MetaLearningOptimizer:
         return float(momentum_persistence)
 
     def adapt_model_parameters(
-        self, symbol: str, base_prediction: float, confidence: float
+        self, symbol: str, base_prediction: float, confidence: float,
     ) -> Dict[str, float]:
         """モデルパラメータの適応調整"""
         try:
@@ -2882,7 +2879,7 @@ class DQNReinforcementLearner:
         }
 
     def extract_market_state(
-        self, symbol: str, historical_data: pd.DataFrame
+        self, symbol: str, historical_data: pd.DataFrame,
     ) -> np.ndarray:
         """市場状態特徴量抽出"""
         try:
@@ -2927,7 +2924,7 @@ class DQNReinforcementLearner:
                     / data["Close"].iloc[-1],
                     data["Close"].iloc[-1] / data["Close"].iloc[-5] - 1,
                     len(data),
-                ]
+                ],
             )
             # NaN値処理
             state = np.nan_to_num(state, 0.0)
@@ -2964,7 +2961,7 @@ class DQNReinforcementLearner:
         return np.argmax(q_values)
 
     def get_trading_signal(
-        self, symbol: str, historical_data: pd.DataFrame
+        self, symbol: str, historical_data: pd.DataFrame,
     ) -> Dict[str, Any]:
         """取引シグナル生成 - 87%精度向上版"""
         try:
@@ -2992,12 +2989,12 @@ class DQNReinforcementLearner:
             # DQN信頼度の強化計算
             base_confidence = float(q_max)
             volatility_adjustment = min(
-                market_volatility * 2, 0.2
+                market_volatility * 2, 0.2,
             )  # ボラティリティボーナス
             trend_adjustment = min(trend_strength * 0.3, 0.15)  # トレンド強度ボーナス
 
             enhanced_confidence = min(
-                base_confidence + volatility_adjustment + trend_adjustment, 0.95
+                base_confidence + volatility_adjustment + trend_adjustment, 0.95,
             )
 
             # アクション別の追加調整
@@ -3063,7 +3060,7 @@ class Precision87BreakthroughSystem:
             data_provider = StockDataProvider()
             historical_data = data_provider.get_stock_data(symbol, period="1y")
             historical_data = data_provider.calculate_technical_indicators(
-                historical_data
+                historical_data,
             )
             if len(historical_data) < 100:
                 return self._default_prediction(symbol, "Insufficient data")
@@ -3071,7 +3068,7 @@ class Precision87BreakthroughSystem:
             base_prediction = self._get_base_846_prediction(symbol, historical_data)
             # 2. メタ学習最適化
             symbol_profile = self.meta_learner.create_symbol_profile(
-                symbol, historical_data
+                symbol, historical_data,
             )
             # 基本パラメータを辞書として作成
             base_params = {
@@ -3081,18 +3078,18 @@ class Precision87BreakthroughSystem:
                 "confidence": base_prediction["confidence"],
             }
             meta_adaptation = self.meta_learner.adapt_model_parameters(
-                symbol, symbol_profile, base_params
+                symbol, symbol_profile, base_params,
             )
             # 3. DQN強化学習
             dqn_signal = self.dqn_agent.get_trading_signal(symbol, historical_data)
             # 4. 高度アンサンブル統合
             final_prediction = self._integrate_87_predictions(
-                base_prediction, meta_adaptation, dqn_signal, symbol_profile
+                base_prediction, meta_adaptation, dqn_signal, symbol_profile,
             )
             # 5. 87%精度チューニング
             tuned_prediction = self._apply_87_precision_tuning(final_prediction, symbol)
             self.logger.info(
-                f"87%精度予測完了 {symbol}: {tuned_prediction['final_accuracy']:.1f}%"
+                f"87%精度予測完了 {symbol}: {tuned_prediction['final_accuracy']:.1f}%",
             )
             return tuned_prediction
         except Exception as e:
@@ -3100,7 +3097,7 @@ class Precision87BreakthroughSystem:
             return self._default_prediction(symbol, str(e))
 
     def _get_base_846_prediction(
-        self, symbol: str, data: pd.DataFrame
+        self, symbol: str, data: pd.DataFrame,
     ) -> Dict[str, float]:
         """84.6%ベースシステム予測"""
         try:
@@ -3163,7 +3160,7 @@ class Precision87BreakthroughSystem:
             return pd.Series([50] * len(prices), index=prices.index)
 
     def _integrate_87_predictions(
-        self, base_pred: Dict, meta_adapt: Dict, dqn_signal: Dict, profile: Dict
+        self, base_pred: Dict, meta_adapt: Dict, dqn_signal: Dict, profile: Dict,
     ) -> Dict[str, Any]:
         """87%予測統合 - 実際の価格予測版"""
         try:
@@ -3236,7 +3233,7 @@ class Precision87BreakthroughSystem:
             }
 
     def _apply_87_precision_tuning(
-        self, prediction: Dict, symbol: str
+        self, prediction: Dict, symbol: str,
     ) -> Dict[str, Any]:
         """87%精度チューニング - 実価格対応版"""
         try:
@@ -3245,7 +3242,7 @@ class Precision87BreakthroughSystem:
 
             # 実際の予測価格を使用
             predicted_price = prediction.get(
-                "predicted_price", prediction.get("current_price", 100.0)
+                "predicted_price", prediction.get("current_price", 100.0),
             )
             current_price = prediction.get("current_price", 100.0)
             predicted_change_rate = prediction.get("predicted_change_rate", 0.0)
@@ -3390,7 +3387,7 @@ class RedisCache:
             import redis
 
             self.redis_client = redis.Redis(
-                host=host, port=port, db=db, decode_responses=True, socket_timeout=5
+                host=host, port=port, db=db, decode_responses=True, socket_timeout=5,
             )
             # 接続テスト
             self.redis_client.ping()
@@ -3398,7 +3395,7 @@ class RedisCache:
             logger.info("Redis cache connected successfully")
         except Exception as e:
             logger.warning(
-                f"Redis not available, falling back to memory cache: {str(e)}"
+                f"Redis not available, falling back to memory cache: {e!s}",
             )
             self.redis_available = False
             self.memory_cache = {}
@@ -3408,10 +3405,9 @@ class RedisCache:
         try:
             if self.redis_available:
                 return self.redis_client.get(key)
-            else:
-                return self.memory_cache.get(key)
+            return self.memory_cache.get(key)
         except Exception as e:
-            logger.error(f"Cache get error: {str(e)}")
+            logger.error(f"Cache get error: {e!s}")
             return None
 
     def set(self, key: str, value: str, ttl: int = 3600):
@@ -3423,7 +3419,7 @@ class RedisCache:
                 self.memory_cache[key] = value
                 # メモリキャッシュのTTL管理は簡略化
         except Exception as e:
-            logger.error(f"Cache set error: {str(e)}")
+            logger.error(f"Cache set error: {e!s}")
 
     def get_json(self, key: str) -> Optional[Dict]:
         """JSON形式でキャッシュ取得"""
@@ -3435,7 +3431,7 @@ class RedisCache:
                 return json.loads(data)
             return None
         except Exception as e:
-            logger.error(f"Cache JSON get error: {str(e)}")
+            logger.error(f"Cache JSON get error: {e!s}")
             return None
 
     def set_json(self, key: str, value: Dict, ttl: int = 3600):
@@ -3445,7 +3441,7 @@ class RedisCache:
 
             self.set(key, json.dumps(value), ttl)
         except Exception as e:
-            logger.error(f"Cache JSON set error: {str(e)}")
+            logger.error(f"Cache JSON set error: {e!s}")
 
 
 class MetaLearningOptimizer:
@@ -3457,7 +3453,7 @@ class MetaLearningOptimizer:
         self.best_model_for_symbol = {}
 
     def extract_meta_features(
-        self, symbol: str, data: pd.DataFrame
+        self, symbol: str, data: pd.DataFrame,
     ) -> Dict[str, float]:
         """メタ特徴量抽出"""
         if data.empty:
@@ -3497,13 +3493,12 @@ class MetaLearningOptimizer:
         # メタ特徴量に基づく推奨
         if meta_features.get("price_volatility", 0) > 0.05:
             return "ensemble"  # 高ボラティリティ → アンサンブル
-        elif meta_features.get("data_length", 0) > 500:
+        if meta_features.get("data_length", 0) > 500:
             return "deep_learning"  # 長期データ → 深層学習
-        else:
-            return "xgboost"  # デフォルト → XGBoost
+        return "xgboost"  # デフォルト → XGBoost
 
     def update_model_performance(
-        self, symbol: str, model_name: str, performance: float
+        self, symbol: str, model_name: str, performance: float,
     ):
         """モデル性能を更新"""
         if symbol not in self.model_performance_history:
@@ -3511,7 +3506,7 @@ class MetaLearningOptimizer:
         if model_name not in self.model_performance_history[symbol]:
             self.model_performance_history[symbol][model_name] = []
         self.model_performance_history[symbol][model_name].append(
-            {"timestamp": datetime.now(), "performance": performance}
+            {"timestamp": datetime.now(), "performance": performance},
         )
         # 最新10回の平均性能で最適モデル更新
         recent_performances = {}
@@ -3520,7 +3515,7 @@ class MetaLearningOptimizer:
             recent_performances[model] = np.mean(recent) if recent else 0
         if recent_performances:
             self.best_model_for_symbol[symbol] = max(
-                recent_performances.keys(), key=lambda k: recent_performances[k]
+                recent_performances.keys(), key=lambda k: recent_performances[k],
             )
 
     def create_symbol_profile(self, symbol: str, data: pd.DataFrame) -> Dict[str, Any]:
@@ -3597,7 +3592,7 @@ class MetaLearningOptimizer:
 
             # 季節要因（簡易）
             seasonal_factor = 1.0 + 0.1 * np.sin(
-                2 * np.pi * (pd.Timestamp.now().month - 1) / 12
+                2 * np.pi * (pd.Timestamp.now().month - 1) / 12,
             )
 
             # セクター強度（銘柄コードから推定）
@@ -3630,7 +3625,7 @@ class MetaLearningOptimizer:
             }
 
     def adapt_model_parameters(
-        self, symbol: str, symbol_profile: Dict[str, Any], base_params: Dict[str, Any]
+        self, symbol: str, symbol_profile: Dict[str, Any], base_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """銘柄特性に基づくモデルパラメータ適応 - 87%精度向上版"""
         try:
@@ -3738,7 +3733,7 @@ class MetaLearningOptimizer:
 
             # 最終パラメータ設定
             adapted_params["adapted_prediction"] = float(
-                np.clip(adapted_prediction, 10, 90)
+                np.clip(adapted_prediction, 10, 90),
             )
             adapted_params["adapted_confidence"] = float(adapted_confidence)
             adapted_params["meta_boost_applied"] = float(total_boost)
@@ -3758,7 +3753,7 @@ class MetaLearningOptimizer:
             fallback = base_params.copy()
             fallback["adapted_prediction"] = base_params.get("prediction", 50.0) + 1.0
             fallback["adapted_confidence"] = min(
-                base_params.get("confidence", 0.5) + 0.05, 0.9
+                base_params.get("confidence", 0.5) + 0.05, 0.9,
             )
             return fallback
 
@@ -3811,7 +3806,7 @@ class UltraHighPerformancePredictor:
                 try:
                     future.result()
                 except Exception as e:
-                    logger.error(f"Training error: {str(e)}")
+                    logger.error(f"Training error: {e!s}")
         # 並列予測器初期化
         self.parallel_predictor = ParallelStockPredictor(self.ensemble_predictor)
         logger.info("Ultra-high performance system training completed!")
@@ -3841,7 +3836,7 @@ class UltraHighPerformancePredictor:
                 predictions["deep_lstm"] = 50.0
             try:
                 predictions["deep_transformer"] = self.deep_transformer.predict_deep(
-                    symbol
+                    symbol,
                 )
             except:
                 predictions["deep_transformer"] = 50.0
@@ -3883,5 +3878,5 @@ class UltraHighPerformancePredictor:
             self.redis_cache.set(cache_key, str(final_score), ttl=3600)
             return final_score
         except Exception as e:
-            logger.error(f"Ultra prediction error for {symbol}: {str(e)}")
+            logger.error(f"Ultra prediction error for {symbol}: {e!s}")
             return 50.0

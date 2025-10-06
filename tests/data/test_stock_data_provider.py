@@ -34,7 +34,9 @@ def test_get_financial_metrics_returns_defaults_when_yfinance_missing(monkeypatc
 
     def fail_helper(self, ticker, metrics):
         call_count["count"] += 1
-        raise AssertionError("helper should not be invoked when yfinance is unavailable")
+        raise AssertionError(
+            "helper should not be invoked when yfinance is unavailable",
+        )
 
     monkeypatch.setattr(
         StockDataProvider,
@@ -80,7 +82,7 @@ def test_get_financial_metrics_uses_yfinance_helper_when_available(monkeypatch):
                 "previous_close": 99.5,
                 "ten_day_average_volume": 1000,
                 "actual_ticker": ticker,
-            }
+            },
         )
         return True
 

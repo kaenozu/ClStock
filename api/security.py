@@ -1,15 +1,14 @@
+"""Security middleware for the ClStock API
 """
-Security middleware for the ClStock API
-"""
-
-from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Dict, Callable, Optional, Set
-import time
 
 import os
-
+import time
 from functools import wraps
+from typing import Callable, Dict, Optional, Set
+
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
 from utils.logger_config import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +32,6 @@ _TEST_TOKENS = {
 
 def _redact_secret(value: Optional[str], visible: int = 4) -> str:
     """Create a redacted representation for sensitive values."""
-
     if value is None:
         return "<none>"
 
@@ -53,7 +51,6 @@ def _redact_secret(value: Optional[str], visible: int = 4) -> str:
 
 def reset_env_token_cache() -> None:
     """Reset cached environment token values and warning tracking."""
-
     _env_cache.clear()
     _logged_missing_env_vars.clear()
     _env_tokens_cache.clear()
@@ -64,7 +61,6 @@ def reset_env_token_cache() -> None:
 
 def _set_api_keys_cache(new_keys: Dict[str, str]) -> Dict[str, str]:
     """Store API keys in the local cache."""
-
     global _API_KEYS_CACHE
     _API_KEYS_CACHE = dict(new_keys)
     return _API_KEYS_CACHE
@@ -72,7 +68,6 @@ def _set_api_keys_cache(new_keys: Dict[str, str]) -> Dict[str, str]:
 
 def _initialize_api_keys() -> Dict[str, str]:
     """Initialize API keys from config or environment variables lazily."""
-
     try:
         from config.secrets import API_KEYS as secrets_api_keys  # type: ignore
 
@@ -112,9 +107,6 @@ def _initialize_api_keys() -> Dict[str, str]:
 
 def _get_api_keys(force_refresh: bool = False) -> Dict[str, str]:
     """Return the configured API keys, loading them lazily when required."""
-
-    global _API_KEYS_CACHE
-
     if force_refresh or _API_KEYS_CACHE is None:
         _set_api_keys_cache(_initialize_api_keys())
 
@@ -129,6 +121,7 @@ def _get_env_with_warning(var_name: str) -> Optional[str]:
 
     Returns:
         環境変数の値。存在しない場合は None。
+
     """
     if var_name in _env_cache:
         return _env_cache[var_name]
@@ -144,7 +137,6 @@ def _get_env_with_warning(var_name: str) -> Optional[str]:
 
 def _get_env_tokens_from_cache() -> Dict[str, str]:
     """Fetch cached environment-based tokens, refreshing if necessary."""
-
     admin_token = _get_env_with_warning("API_ADMIN_TOKEN")
     user_token = _get_env_with_warning("API_USER_TOKEN")
 
@@ -167,6 +159,7 @@ def _get_env_tokens_from_cache() -> Dict[str, str]:
 
     return _env_tokens_cache
 
+
 # Simple in-memory storage for rate limiting
 # In production, you would use Redis or similar
 rate_limit_storage: Dict[str, Dict[str, int]] = {}
@@ -181,7 +174,6 @@ def configure_security(
     enable_test_tokens: Optional[bool] = None,
 ) -> None:
     """Configure security settings, primarily for testing purposes."""
-
     global TEST_TOKENS, ALLOW_TEST_TOKENS
 
     if api_keys is not None:
@@ -196,6 +188,7 @@ def configure_security(
 
     if enable_test_tokens is not None:
         ALLOW_TEST_TOKENS = enable_test_tokens
+
 
 security = HTTPBearer()
 
@@ -279,7 +272,7 @@ def verify_api_key(
     user_type = api_keys[token]
     if user_type == UNCONFIGURED_ROLE:
         logger.error(
-            "Placeholder API key used while security configuration is incomplete."
+            "Placeholder API key used while security configuration is incomplete.",
         )
         raise HTTPException(
             status_code=503,
@@ -291,20 +284,17 @@ def verify_api_key(
 
 def _is_test_token_flag_enabled() -> bool:
     """Check if the environment flag for test tokens is enabled."""
-
     flag_value = os.getenv(_TEST_TOKEN_FLAG, "").strip().lower()
     return flag_value in {"1", "true", "yes", "on"}
 
 
 def _should_include_test_tokens() -> bool:
     """テスト用トークンを許可するかを判定"""
-
     return ALLOW_TEST_TOKENS or _is_test_token_flag_enabled()
 
 
 def _build_allowed_tokens() -> Dict[str, str]:
     """許可されたトークンの一覧を構築"""
-
     tokens = dict(_get_api_keys())
 
     env_tokens = _get_env_tokens_from_cache()
@@ -313,11 +303,11 @@ def _build_allowed_tokens() -> Dict[str, str]:
     if _should_include_test_tokens():
         if _is_test_token_flag_enabled():
             logger.warning(
-                "Test tokens enabled via environment flag. Do not use in production."
+                "Test tokens enabled via environment flag. Do not use in production.",
             )
         elif ALLOW_TEST_TOKENS:
             logger.warning(
-                "Test tokens enabled via configuration. Do not use in production."
+                "Test tokens enabled via configuration. Do not use in production.",
             )
         tokens.update(TEST_TOKENS)
 
@@ -341,7 +331,7 @@ def verify_token(token: str) -> str:
     user_type = allowed_tokens[token]
     if user_type == UNCONFIGURED_ROLE:
         logger.error(
-            "Placeholder API token used while security configuration is incomplete."
+            "Placeholder API token used while security configuration is incomplete.",
         )
         raise HTTPException(
             status_code=503,
@@ -424,4 +414,3 @@ def add_security_middleware(app: FastAPI):
         return response
 
     logger.info("Security middleware added to application")
-

@@ -1,21 +1,20 @@
-"""
-並列特徴量計算システム - 統合リファクタリング版
+"""並列特徴量計算システム - 統合リファクタリング版
 3-5倍の性能向上を実現する高度な並列処理システム
 """
 
-import os
 import logging
-import pandas as pd
-import numpy as np
-from typing import List, Optional, Dict, Any
-from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
-from functools import partial
+import os
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
+from functools import partial
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+import pandas as pd
 
 
 class ParallelFeatureCalculator:
-    """
-    統合リファクタリング版並列特徴量計算システム
+    """統合リファクタリング版並列特徴量計算システム
 
     特徴:
     - 自動スレッド数最適化
@@ -36,13 +35,13 @@ class ParallelFeatureCalculator:
         timeout: int = TIMEOUT_SECONDS,
         memory_limit_mb: int = MEMORY_LIMIT_MB,
     ):
-        """
-        並列特徴量計算器の初期化
+        """並列特徴量計算器の初期化
 
         Args:
             n_jobs: ワーカー数 (-1で自動設定)
             timeout: 処理タイムアウト(秒)
             memory_limit_mb: メモリ制限(MB)
+
         """
         self.n_jobs = self._optimize_worker_count(n_jobs)
         self.timeout = timeout
@@ -56,18 +55,18 @@ class ParallelFeatureCalculator:
 
         self.logger.info(
             f"Initialized ParallelFeatureCalculator: "
-            f"workers={self.n_jobs}, timeout={self.timeout}s"
+            f"workers={self.n_jobs}, timeout={self.timeout}s",
         )
 
     def _optimize_worker_count(self, n_jobs: int) -> int:
-        """
-        最適なワーカー数の決定
+        """最適なワーカー数の決定
 
         Args:
             n_jobs: 指定されたワーカー数
 
         Returns:
             int: 最適化されたワーカー数
+
         """
         if n_jobs == -1:
             cpu_count = os.cpu_count() or 4
@@ -87,10 +86,9 @@ class ParallelFeatureCalculator:
         return min(optimal, memory_limited_workers)
 
     def calculate_features_parallel(
-        self, symbols: List[str], data_provider, batch_processing: bool = True
+        self, symbols: List[str], data_provider, batch_processing: bool = True,
     ) -> pd.DataFrame:
-        """
-        複数銘柄の特徴量を並列計算
+        """複数銘柄の特徴量を並列計算
 
         Args:
             symbols: 銘柄コードリスト
@@ -99,6 +97,7 @@ class ParallelFeatureCalculator:
 
         Returns:
             pd.DataFrame: 統合された特徴量データ
+
         """
         start_time = time.time()
 
@@ -108,32 +107,30 @@ class ParallelFeatureCalculator:
         try:
             self.logger.info(
                 f"Starting parallel feature calculation for {len(symbols)} symbols "
-                f"using {self.n_jobs} workers"
+                f"using {self.n_jobs} workers",
             )
 
             if batch_processing and len(symbols) > self.BATCH_SIZE:
                 # 大量データの場合はバッチ処理
                 return self._calculate_features_batch(symbols, data_provider)
-            else:
-                # 標準並列処理
-                return self._calculate_features_standard(symbols, data_provider)
+            # 標準並列処理
+            return self._calculate_features_standard(symbols, data_provider)
 
         except Exception as e:
-            self.logger.error(f"Parallel feature calculation failed: {str(e)}")
+            self.logger.error(f"Parallel feature calculation failed: {e!s}")
             return pd.DataFrame()
 
         finally:
             execution_time = time.time() - start_time
             self.total_execution_time += execution_time
             self.logger.info(
-                f"Parallel feature calculation completed in {execution_time:.2f}s"
+                f"Parallel feature calculation completed in {execution_time:.2f}s",
             )
 
     def _calculate_features_standard(
-        self, symbols: List[str], data_provider
+        self, symbols: List[str], data_provider,
     ) -> pd.DataFrame:
-        """
-        標準並列処理による特徴量計算
+        """標準並列処理による特徴量計算
 
         Args:
             symbols: 銘柄コードリスト
@@ -141,10 +138,11 @@ class ParallelFeatureCalculator:
 
         Returns:
             pd.DataFrame: 特徴量データ
+
         """
         # 並列処理関数の準備
         calculate_single = partial(
-            self._calculate_single_symbol_features, data_provider=data_provider
+            self._calculate_single_symbol_features, data_provider=data_provider,
         )
 
         # 結果格納
@@ -174,7 +172,7 @@ class ParallelFeatureCalculator:
                     if completed_count % 10 == 0:
                         progress = (completed_count / len(symbols)) * 100
                         self.logger.info(
-                            f"Progress: {completed_count}/{len(symbols)} ({progress:.1f}%)"
+                            f"Progress: {completed_count}/{len(symbols)} ({progress:.1f}%)",
                         )
 
                 except TimeoutError:
@@ -182,7 +180,7 @@ class ParallelFeatureCalculator:
                     self.error_count += 1
 
                 except Exception as e:
-                    self.logger.error(f"Error processing {symbol}: {str(e)}")
+                    self.logger.error(f"Error processing {symbol}: {e!s}")
                     self.error_count += 1
 
         if not all_features:
@@ -196,20 +194,19 @@ class ParallelFeatureCalculator:
 
             self.logger.info(
                 f"Feature calculation completed: "
-                f"{len(combined_features)} samples from {len(all_features)} symbols"
+                f"{len(combined_features)} samples from {len(all_features)} symbols",
             )
 
             return combined_features
 
         except Exception as e:
-            self.logger.error(f"Feature combination failed: {str(e)}")
+            self.logger.error(f"Feature combination failed: {e!s}")
             return pd.DataFrame()
 
     def _calculate_features_batch(
-        self, symbols: List[str], data_provider
+        self, symbols: List[str], data_provider,
     ) -> pd.DataFrame:
-        """
-        バッチ処理による特徴量計算（大量データ用）
+        """バッチ処理による特徴量計算（大量データ用）
 
         Args:
             symbols: 銘柄コードリスト
@@ -217,6 +214,7 @@ class ParallelFeatureCalculator:
 
         Returns:
             pd.DataFrame: 特徴量データ
+
         """
         all_features = []
 
@@ -225,13 +223,13 @@ class ParallelFeatureCalculator:
             batch_symbols = symbols[i : i + self.BATCH_SIZE]
 
             self.logger.info(
-                f"Processing batch {i//self.BATCH_SIZE + 1}: "
-                f"{len(batch_symbols)} symbols"
+                f"Processing batch {i // self.BATCH_SIZE + 1}: "
+                f"{len(batch_symbols)} symbols",
             )
 
             # バッチ処理実行
             batch_features = self._calculate_features_standard(
-                batch_symbols, data_provider
+                batch_symbols, data_provider,
             )
 
             if not batch_features.empty:
@@ -249,14 +247,13 @@ class ParallelFeatureCalculator:
         try:
             return pd.concat(all_features, ignore_index=True)
         except Exception as e:
-            self.logger.error(f"Batch result combination failed: {str(e)}")
+            self.logger.error(f"Batch result combination failed: {e!s}")
             return pd.DataFrame()
 
     def _calculate_single_symbol_features(
-        self, symbol: str, data_provider
+        self, symbol: str, data_provider,
     ) -> Optional[pd.DataFrame]:
-        """
-        単一銘柄の特徴量計算（並列処理用）
+        """単一銘柄の特徴量計算（並列処理用）
 
         Args:
             symbol: 銘柄コード
@@ -264,6 +261,7 @@ class ParallelFeatureCalculator:
 
         Returns:
             Optional[pd.DataFrame]: 特徴量データ
+
         """
         try:
             # データ取得
@@ -290,19 +288,19 @@ class ParallelFeatureCalculator:
 
         except Exception as e:
             self.logger.debug(
-                f"Single symbol feature calculation failed for {symbol}: {str(e)}"
+                f"Single symbol feature calculation failed for {symbol}: {e!s}",
             )
             return None
 
     def _calculate_technical_indicators_fast(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-        高速技術指標計算（ベクトル化処理）
+        """高速技術指標計算（ベクトル化処理）
 
         Args:
             data: 株価データ
 
         Returns:
             pd.DataFrame: 技術指標データ
+
         """
         features = pd.DataFrame(index=data.index)
 
@@ -330,7 +328,7 @@ class ParallelFeatureCalculator:
 
             # ボリンジャーバンド
             bb_upper, bb_lower = self._calculate_bollinger_bands_fast(
-                data["Close"], 20, 2
+                data["Close"], 20, 2,
             )
             features["bb_upper"] = bb_upper
             features["bb_lower"] = bb_lower
@@ -340,19 +338,19 @@ class ParallelFeatureCalculator:
             features = features.fillna(0)
 
         except Exception as e:
-            self.logger.debug(f"Technical indicators calculation failed: {str(e)}")
+            self.logger.debug(f"Technical indicators calculation failed: {e!s}")
 
         return features
 
     def _calculate_advanced_features_fast(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-        高度な特徴量の高速計算
+        """高度な特徴量の高速計算
 
         Args:
             data: 株価データ
 
         Returns:
             pd.DataFrame: 高度な特徴量データ
+
         """
         features = pd.DataFrame(index=data.index)
 
@@ -383,13 +381,12 @@ class ParallelFeatureCalculator:
             features = features.fillna(method="ffill").fillna(0)
 
         except Exception as e:
-            self.logger.debug(f"Advanced features calculation failed: {str(e)}")
+            self.logger.debug(f"Advanced features calculation failed: {e!s}")
 
         return features
 
     def _calculate_rsi_fast(self, prices: pd.Series, period: int = 14) -> pd.Series:
-        """
-        高速RSI計算（ベクトル化）
+        """高速RSI計算（ベクトル化）
 
         Args:
             prices: 価格データ
@@ -397,6 +394,7 @@ class ParallelFeatureCalculator:
 
         Returns:
             pd.Series: RSIデータ
+
         """
         try:
             delta = prices.diff()
@@ -411,12 +409,11 @@ class ParallelFeatureCalculator:
             return rsi.fillna(50)  # NaNは中性値で埋める
 
         except Exception as e:
-            self.logger.debug(f"RSI calculation failed: {str(e)}")
+            self.logger.debug(f"RSI calculation failed: {e!s}")
             return pd.Series(50, index=prices.index)  # デフォルト値
 
     def _calculate_macd_fast(self, prices: pd.Series, fast=12, slow=26, signal=9):
-        """
-        高速MACD計算（ベクトル化）
+        """高速MACD計算（ベクトル化）
 
         Args:
             prices: 価格データ
@@ -426,6 +423,7 @@ class ParallelFeatureCalculator:
 
         Returns:
             tuple: (MACD線, シグナル線)
+
         """
         try:
             ema_fast = prices.ewm(span=fast).mean()
@@ -436,15 +434,14 @@ class ParallelFeatureCalculator:
             return macd_line.fillna(0), signal_line.fillna(0)
 
         except Exception as e:
-            self.logger.debug(f"MACD calculation failed: {str(e)}")
+            self.logger.debug(f"MACD calculation failed: {e!s}")
             zero_series = pd.Series(0, index=prices.index)
             return zero_series, zero_series
 
     def _calculate_bollinger_bands_fast(
-        self, prices: pd.Series, period: int = 20, std_dev: int = 2
+        self, prices: pd.Series, period: int = 20, std_dev: int = 2,
     ):
-        """
-        高速ボリンジャーバンド計算（ベクトル化）
+        """高速ボリンジャーバンド計算（ベクトル化）
 
         Args:
             prices: 価格データ
@@ -453,6 +450,7 @@ class ParallelFeatureCalculator:
 
         Returns:
             tuple: (上限, 下限)
+
         """
         try:
             ma = prices.rolling(window=period).mean()
@@ -463,15 +461,15 @@ class ParallelFeatureCalculator:
             return upper.fillna(method="ffill"), lower.fillna(method="ffill")
 
         except Exception as e:
-            self.logger.debug(f"Bollinger Bands calculation failed: {str(e)}")
+            self.logger.debug(f"Bollinger Bands calculation failed: {e!s}")
             return prices, prices  # フォールバック
 
     def _check_memory_usage(self) -> bool:
-        """
-        メモリ使用量チェック
+        """メモリ使用量チェック
 
         Returns:
             bool: メモリ使用量が制限を超えているか
+
         """
         try:
             import psutil
@@ -485,11 +483,11 @@ class ParallelFeatureCalculator:
             return False
 
     def get_performance_stats(self) -> Dict[str, Any]:
-        """
-        性能統計の取得
+        """性能統計の取得
 
         Returns:
             Dict[str, Any]: 性能統計情報
+
         """
         avg_time = self.total_execution_time / max(1, self.processed_symbols)
 

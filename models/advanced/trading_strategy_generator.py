@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-自動取引戦略生成システム
+"""自動取引戦略生成システム
 AI駆動で最適な取引戦略を自動生成・最適化
 """
 
 import logging
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, asdict
-from enum import Enum
-import json
 
 
 class ActionType(Enum):
@@ -98,7 +96,7 @@ class TechnicalIndicators:
 
     @staticmethod
     def calculate_bollinger_bands(
-        data: pd.Series, window: int = 20, num_std: float = 2
+        data: pd.Series, window: int = 20, num_std: float = 2,
     ) -> Dict[str, pd.Series]:
         """ボリンジャーバンド"""
         sma = data.rolling(window=window).mean()
@@ -112,7 +110,7 @@ class TechnicalIndicators:
 
     @staticmethod
     def calculate_macd(
-        data: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9
+        data: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9,
     ) -> Dict[str, pd.Series]:
         """MACD"""
         ema_fast = data.ewm(span=fast).mean()
@@ -149,7 +147,7 @@ class StrategyGenerator:
         self.indicators = TechnicalIndicators()
 
     def generate_momentum_strategy(
-        self, symbol: str, price_data: pd.DataFrame, parameters: Dict[str, Any] = None
+        self, symbol: str, price_data: pd.DataFrame, parameters: Dict[str, Any] = None,
     ) -> TradingStrategy:
         """モメンタム戦略生成"""
         if parameters is None:
@@ -168,7 +166,7 @@ class StrategyGenerator:
         ]
 
         exit_conditions = [
-            f"短期MA < 長期MA（トレンド転換）",
+            "短期MA < 長期MA（トレンド転換）",
             f"RSI > {parameters['rsi_overbought']}（過買い）",
             "ストップロス: -5%",
             "利益確定: +10%",
@@ -183,7 +181,7 @@ class StrategyGenerator:
 
         # パフォーマンス計算（過去データ基準）
         performance = self._calculate_strategy_performance(
-            price_data, StrategyType.MOMENTUM, parameters
+            price_data, StrategyType.MOMENTUM, parameters,
         )
 
         return TradingStrategy(
@@ -201,7 +199,7 @@ class StrategyGenerator:
         )
 
     def generate_mean_reversion_strategy(
-        self, symbol: str, price_data: pd.DataFrame, parameters: Dict[str, Any] = None
+        self, symbol: str, price_data: pd.DataFrame, parameters: Dict[str, Any] = None,
     ) -> TradingStrategy:
         """平均回帰戦略生成"""
         if parameters is None:
@@ -214,14 +212,14 @@ class StrategyGenerator:
             }
 
         entry_conditions = [
-            f"価格がボリンジャーバンド下限を下回る",
+            "価格がボリンジャーバンド下限を下回る",
             f"RSI < {parameters['oversold_threshold']}（売られすぎ）",
             "価格がサポートレベル近辺",
         ]
 
         exit_conditions = [
             "価格がボリンジャーバンド中央線に到達",
-            f"RSI > 50（中立域復帰）",
+            "RSI > 50（中立域復帰）",
             "ストップロス: -3%",
             "利益確定: +6%",
         ]
@@ -234,7 +232,7 @@ class StrategyGenerator:
         }
 
         performance = self._calculate_strategy_performance(
-            price_data, StrategyType.MEAN_REVERSION, parameters
+            price_data, StrategyType.MEAN_REVERSION, parameters,
         )
 
         return TradingStrategy(
@@ -252,7 +250,7 @@ class StrategyGenerator:
         )
 
     def generate_breakout_strategy(
-        self, symbol: str, price_data: pd.DataFrame, parameters: Dict[str, Any] = None
+        self, symbol: str, price_data: pd.DataFrame, parameters: Dict[str, Any] = None,
     ) -> TradingStrategy:
         """ブレイクアウト戦略生成"""
         if parameters is None:
@@ -266,7 +264,7 @@ class StrategyGenerator:
         entry_conditions = [
             f"価格が{parameters['resistance_period']}日高値を更新",
             f"出来高が平均の{parameters['volume_threshold']}倍以上",
-            f"ブレイクアウト幅がATRの{parameters['breakout_strength']*100}%以上",
+            f"ブレイクアウト幅がATRの{parameters['breakout_strength'] * 100}%以上",
         ]
 
         exit_conditions = [
@@ -284,7 +282,7 @@ class StrategyGenerator:
         }
 
         performance = self._calculate_strategy_performance(
-            price_data, StrategyType.BREAKOUT, parameters
+            price_data, StrategyType.BREAKOUT, parameters,
         )
 
         return TradingStrategy(
@@ -348,7 +346,7 @@ class StrategyGenerator:
 
             return {
                 "expected_return": min(
-                    max(base_return, -0.5), 2.0
+                    max(base_return, -0.5), 2.0,
                 ),  # -50%から200%に制限
                 "max_drawdown": min(max(max_drawdown, 0.05), 0.5),  # 5%から50%に制限
                 "sharpe_ratio": min(max(sharpe_ratio, -2.0), 3.0),  # -2から3に制限
@@ -356,7 +354,7 @@ class StrategyGenerator:
             }
 
         except Exception as e:
-            self.logger.error(f"Performance calculation failed: {str(e)}")
+            self.logger.error(f"Performance calculation failed: {e!s}")
             return {
                 "expected_return": 0.05,
                 "max_drawdown": 0.15,
@@ -391,15 +389,15 @@ class SignalGenerator:
             # 戦略タイプ別シグナル生成
             if strategy.strategy_type == StrategyType.MOMENTUM:
                 signal = self._generate_momentum_signal(
-                    symbol, price_data, strategy, current_price
+                    symbol, price_data, strategy, current_price,
                 )
             elif strategy.strategy_type == StrategyType.MEAN_REVERSION:
                 signal = self._generate_mean_reversion_signal(
-                    symbol, price_data, strategy, current_price
+                    symbol, price_data, strategy, current_price,
                 )
             elif strategy.strategy_type == StrategyType.BREAKOUT:
                 signal = self._generate_breakout_signal(
-                    symbol, price_data, strategy, current_price
+                    symbol, price_data, strategy, current_price,
                 )
             else:
                 signal = None
@@ -412,7 +410,7 @@ class SignalGenerator:
                 signals.append(signal)
 
         except Exception as e:
-            self.logger.error(f"Signal generation failed: {str(e)}")
+            self.logger.error(f"Signal generation failed: {e!s}")
 
         return signals
 
@@ -428,15 +426,15 @@ class SignalGenerator:
 
         # 移動平均計算
         short_ma = self.indicators.calculate_sma(
-            price_data["Close"], params["short_ma_period"]
+            price_data["Close"], params["short_ma_period"],
         ).iloc[-1]
         long_ma = self.indicators.calculate_sma(
-            price_data["Close"], params["long_ma_period"]
+            price_data["Close"], params["long_ma_period"],
         ).iloc[-1]
 
         # RSI計算
         rsi = self.indicators.calculate_rsi(
-            price_data["Close"], params["rsi_period"]
+            price_data["Close"], params["rsi_period"],
         ).iloc[-1]
 
         # 出来高チェック
@@ -448,7 +446,6 @@ class SignalGenerator:
         current_volume = (
             price_data["Volume"].iloc[-1] if "Volume" in price_data.columns else 1
         )
-
         volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
 
         # シグナル判定
@@ -457,7 +454,6 @@ class SignalGenerator:
             and params["rsi_oversold"] < rsi < params["rsi_overbought"]
             and volume_ratio > 1.2
         ):
-
             confidence = min(0.9, (short_ma - long_ma) / long_ma * 10 + 0.5)
 
             return TradingSignal(
@@ -494,7 +490,7 @@ class SignalGenerator:
 
         # ボリンジャーバンド計算
         bb = self.indicators.calculate_bollinger_bands(
-            price_data["Close"], params["bollinger_period"], params["bollinger_std"]
+            price_data["Close"], params["bollinger_period"], params["bollinger_std"],
         )
 
         lower_band = bb["lower"].iloc[-1]
@@ -502,12 +498,11 @@ class SignalGenerator:
 
         # RSI計算
         rsi = self.indicators.calculate_rsi(
-            price_data["Close"], params["rsi_period"]
+            price_data["Close"], params["rsi_period"],
         ).iloc[-1]
 
         # 平均回帰シグナル（売られすぎからの回復）
         if current_price < lower_band and rsi < params["oversold_threshold"]:
-
             confidence = min(0.9, (lower_band - current_price) / lower_band * 5 + 0.4)
 
             return TradingSignal(
@@ -567,9 +562,8 @@ class SignalGenerator:
             current_price > breakout_threshold
             and volume_ratio > params["volume_threshold"]
         ):
-
             confidence = min(
-                0.9, (current_price - resistance_level) / resistance_level * 10 + 0.5
+                0.9, (current_price - resistance_level) / resistance_level * 10 + 0.5,
             )
 
             return TradingSignal(
@@ -595,7 +589,7 @@ class SignalGenerator:
         return None
 
     def _adjust_signal_with_sentiment(
-        self, signal: TradingSignal, sentiment_data: Dict[str, Any]
+        self, signal: TradingSignal, sentiment_data: Dict[str, Any],
     ) -> TradingSignal:
         """センチメントに基づくシグナル調整"""
         sentiment_score = sentiment_data.get("current_sentiment", {}).get("score", 0)
@@ -607,7 +601,7 @@ class SignalGenerator:
 
         elif signal.action == ActionType.SELL and sentiment_score < -0.2:
             signal.confidence = min(
-                0.95, signal.confidence + abs(sentiment_score) * 0.2
+                0.95, signal.confidence + abs(sentiment_score) * 0.2,
             )
             signal.reasoning += f" + ネガティブセンチメント({sentiment_score:.2f})"
 
@@ -620,8 +614,7 @@ class SignalGenerator:
 
 
 class AutoTradingStrategyGenerator:
-    """
-    自動取引戦略生成システム
+    """自動取引戦略生成システム
 
     特徴:
     - AI駆動戦略生成
@@ -661,15 +654,15 @@ class AutoTradingStrategyGenerator:
             try:
                 if strategy_type == StrategyType.MOMENTUM:
                     strategy = self.strategy_generator.generate_momentum_strategy(
-                        symbol, price_data
+                        symbol, price_data,
                     )
                 elif strategy_type == StrategyType.MEAN_REVERSION:
                     strategy = self.strategy_generator.generate_mean_reversion_strategy(
-                        symbol, price_data
+                        symbol, price_data,
                     )
                 elif strategy_type == StrategyType.BREAKOUT:
                     strategy = self.strategy_generator.generate_breakout_strategy(
-                        symbol, price_data
+                        symbol, price_data,
                     )
                 else:
                     continue
@@ -679,7 +672,7 @@ class AutoTradingStrategyGenerator:
 
             except Exception as e:
                 self.logger.error(
-                    f"Strategy generation failed for {strategy_type}: {str(e)}"
+                    f"Strategy generation failed for {strategy_type}: {e!s}",
                 )
 
         return strategies
@@ -705,7 +698,7 @@ class AutoTradingStrategyGenerator:
         # 各戦略からシグナル生成
         for strategy in symbol_strategies:
             signals = self.signal_generator.generate_signals(
-                symbol, price_data, strategy, sentiment_data
+                symbol, price_data, strategy, sentiment_data,
             )
             all_signals.extend(signals)
 
@@ -719,7 +712,7 @@ class AutoTradingStrategyGenerator:
         return all_signals
 
     def optimize_strategy(
-        self, symbol: str, strategy_name: str, performance_data: Dict[str, float]
+        self, symbol: str, strategy_name: str, performance_data: Dict[str, float],
     ) -> bool:
         """戦略最適化"""
         try:
@@ -733,7 +726,6 @@ class AutoTradingStrategyGenerator:
 
             # パフォーマンスが悪い場合はパラメータ調整
             actual_return = performance_data.get("actual_return", 0)
-            actual_sharpe = performance_data.get("actual_sharpe", 0)
 
             if actual_return < strategy.expected_return * 0.8:
                 # パフォーマンス悪化 - パラメータ調整
@@ -747,47 +739,47 @@ class AutoTradingStrategyGenerator:
             return True
 
         except Exception as e:
-            self.logger.error(f"Strategy optimization failed: {str(e)}")
+            self.logger.error(f"Strategy optimization failed: {e!s}")
             return False
 
     def _adjust_strategy_parameters(
-        self, strategy: TradingStrategy, adjustment_type: str
+        self, strategy: TradingStrategy, adjustment_type: str,
     ):
         """戦略パラメータ調整"""
         if strategy.strategy_type == StrategyType.MOMENTUM:
             if adjustment_type == "underperform":
                 # より保守的に
                 strategy.parameters["rsi_overbought"] = max(
-                    60, strategy.parameters["rsi_overbought"] - 5
+                    60, strategy.parameters["rsi_overbought"] - 5,
                 )
                 strategy.parameters["rsi_oversold"] = min(
-                    40, strategy.parameters["rsi_oversold"] + 5
+                    40, strategy.parameters["rsi_oversold"] + 5,
                 )
             else:
                 # より積極的に
                 strategy.parameters["rsi_overbought"] = min(
-                    80, strategy.parameters["rsi_overbought"] + 5
+                    80, strategy.parameters["rsi_overbought"] + 5,
                 )
                 strategy.parameters["rsi_oversold"] = max(
-                    20, strategy.parameters["rsi_oversold"] - 5
+                    20, strategy.parameters["rsi_oversold"] - 5,
                 )
 
         elif strategy.strategy_type == StrategyType.MEAN_REVERSION:
             if adjustment_type == "underperform":
                 # より厳しい条件
                 strategy.parameters["oversold_threshold"] = max(
-                    20, strategy.parameters["oversold_threshold"] - 5
+                    20, strategy.parameters["oversold_threshold"] - 5,
                 )
                 strategy.parameters["bollinger_std"] = min(
-                    2.5, strategy.parameters["bollinger_std"] + 0.2
+                    2.5, strategy.parameters["bollinger_std"] + 0.2,
                 )
             else:
                 # より緩い条件
                 strategy.parameters["oversold_threshold"] = min(
-                    35, strategy.parameters["oversold_threshold"] + 5
+                    35, strategy.parameters["oversold_threshold"] + 5,
                 )
                 strategy.parameters["bollinger_std"] = max(
-                    1.5, strategy.parameters["bollinger_std"] - 0.2
+                    1.5, strategy.parameters["bollinger_std"] - 0.2,
                 )
 
     def get_strategy_performance(self, symbol: str) -> Dict[str, Any]:
@@ -802,7 +794,7 @@ class AutoTradingStrategyGenerator:
         performance_summary = {
             "strategies_count": len(symbol_strategies),
             "avg_expected_return": np.mean(
-                [s.expected_return for s in symbol_strategies]
+                [s.expected_return for s in symbol_strategies],
             ),
             "avg_sharpe_ratio": np.mean([s.sharpe_ratio for s in symbol_strategies]),
             "avg_win_rate": np.mean([s.win_rate for s in symbol_strategies]),
@@ -818,13 +810,13 @@ class AutoTradingStrategyGenerator:
                     "sharpe_ratio": strategy.sharpe_ratio,
                     "win_rate": strategy.win_rate,
                     "max_drawdown": strategy.max_drawdown,
-                }
+                },
             )
 
         return performance_summary
 
     def get_recent_signals(
-        self, symbol: Optional[str] = None, limit: int = 10
+        self, symbol: Optional[str] = None, limit: int = 10,
     ) -> List[Dict[str, Any]]:
         """最近のシグナル取得"""
         signals = self.signals_history
@@ -848,12 +840,12 @@ class AutoTradingStrategyGenerator:
             "strategy_performance": performance,
             "recent_signals": recent_signals,
             "recommendations": self._generate_strategy_recommendations(
-                symbol, performance
+                symbol, performance,
             ),
         }
 
     def _generate_strategy_recommendations(
-        self, symbol: str, performance: Dict[str, Any]
+        self, symbol: str, performance: Dict[str, Any],
     ) -> List[str]:
         """戦略推奨事項生成"""
         recommendations = []

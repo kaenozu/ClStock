@@ -3,12 +3,12 @@
 import logging
 import os
 from importlib import reload
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from fastapi.security import HTTPAuthorizationCredentials
+from fastapi.testclient import TestClient
 
 # Test tokens used across the suite
 TEST_DEV_KEY = "test-dev-api-key"
@@ -139,7 +139,7 @@ class TestAPIAuthentication:
 
         invalid_api_key = "invalid_api_token"
         credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer", credentials=invalid_api_key
+            scheme="Bearer", credentials=invalid_api_key,
         )
 
         with caplog.at_level(logging.WARNING):
@@ -164,7 +164,7 @@ class TestAPIAuthentication:
             api_keys={
                 os.environ["CLSTOCK_DEV_KEY"]: "user",
                 os.environ["CLSTOCK_ADMIN_KEY"]: "administrator",
-            }
+            },
         )
         custom_token = "custom_admin_token"
         result = verify_token(custom_token)
@@ -180,7 +180,7 @@ class TestAPIAuthentication:
             api_keys={
                 os.environ["CLSTOCK_DEV_KEY"]: "user",
                 os.environ["CLSTOCK_ADMIN_KEY"]: "administrator",
-            }
+            },
         )
         custom_token = "custom_user_token"
         result = verify_token(custom_token)
@@ -206,7 +206,6 @@ class TestAPIAuthentication:
 
     def test_verify_token_missing_env_logs_warning_once(self, monkeypatch):
         """Missing environment variables should only emit one warning each"""
-
         monkeypatch.setenv("CLSTOCK_DEV_KEY", "test-dev-key")
         monkeypatch.setenv("CLSTOCK_ADMIN_KEY", "test-admin-key")
         monkeypatch.delenv("API_ADMIN_TOKEN", raising=False)
@@ -248,7 +247,6 @@ class TestAPIAuthentication:
 
     def test_configure_security_custom_test_tokens(self):
         """configure_security で指定したテストトークンが利用可能になる"""
-
         original_test_tokens = dict(security_module.TEST_TOKENS)
         original_allow_flag = security_module.ALLOW_TEST_TOKENS
 
@@ -270,7 +268,6 @@ class TestAPIAuthentication:
 
     def test_configure_security_overrides_test_tokens(self, monkeypatch):
         """configure_security should respect custom test tokens"""
-
         monkeypatch.delenv("API_ENABLE_TEST_TOKENS", raising=False)
 
         security_module.configure_security(
@@ -292,8 +289,6 @@ class TestAPIEndpointSecurity:
 
     def setup_method(self):
         """各テストメソッドの前に実行"""
-        from fastapi import FastAPI
-
         if hasattr(security_module, "reset_env_token_cache"):
             security_module.reset_env_token_cache()
 
@@ -314,9 +309,7 @@ class TestAPIEndpointSecurity:
 
     @patch("api.secure_endpoints.verify_token")
     @patch("data.stock_data.StockDataProvider")
-    def test_secure_endpoint_with_valid_auth(
-        self, mock_provider, mock_verify
-    ):
+    def test_secure_endpoint_with_valid_auth(self, mock_provider, mock_verify):
         """有効な認証でのセキュアエンドポイントアクセス"""
         # モック設定
         mock_verify.return_value = "user"
@@ -340,7 +333,7 @@ class TestAPIEndpointSecurity:
         # 有効な認証でのテスト
         headers = {"Authorization": f"Bearer {TEST_DEV_KEY}"}
         response = self.client.get(
-            "/secure/stock/7203/data?period=1mo", headers=headers
+            "/secure/stock/7203/data?period=1mo", headers=headers,
         )
 
         if response.status_code == 200:
@@ -350,24 +343,21 @@ class TestAPIEndpointSecurity:
     @patch("api.secure_endpoints.verify_token")
     @patch("api.secure_endpoints.StockDataProvider")
     def test_secure_endpoint_unknown_symbol_returns_404(
-        self, mock_provider, mock_verify
+        self, mock_provider, mock_verify,
     ):
         """未登録銘柄を要求した際に404を返すことを確認"""
-
         from utils.exceptions import DataFetchError
 
         mock_verify.return_value = "user"
 
         mock_provider_instance = Mock()
         mock_provider_instance.get_stock_data.side_effect = DataFetchError(
-            "UNKNOWN", "Symbol not found"
+            "UNKNOWN", "Symbol not found",
         )
         mock_provider.return_value = mock_provider_instance
 
         headers = {"Authorization": f"Bearer {TEST_DEV_KEY}"}
-        response = self.client.get(
-            "/secure/stock/UNKNOWN/data", headers=headers
-        )
+        response = self.client.get("/secure/stock/UNKNOWN/data", headers=headers)
 
         assert response.status_code == 404
         assert "UNKNOWN" in response.json()["detail"]
@@ -380,9 +370,7 @@ class TestAPIEndpointSecurity:
         assert response.json()["status"] == "healthy"
 
     @patch("api.secure_endpoints.verify_token")
-    def test_admin_only_endpoint_user_access(
-        self, mock_verify
-    ):
+    def test_admin_only_endpoint_user_access(self, mock_verify):
         """管理者専用エンドポイントへの一般ユーザーアクセス"""
         # 一般ユーザーとして認証
         mock_verify.return_value = "user"
@@ -393,9 +381,7 @@ class TestAPIEndpointSecurity:
 
     @patch("api.secure_endpoints.verify_token")
     @patch("data.stock_data.StockDataProvider")
-    def test_admin_only_endpoint_admin_access(
-        self, mock_provider, mock_verify
-    ):
+    def test_admin_only_endpoint_admin_access(self, mock_provider, mock_verify):
         """管理者専用エンドポイントへの管理者アクセス"""
         # 管理者として認証
         mock_verify.return_value = "administrator"
@@ -410,7 +396,8 @@ class TestAPIEndpointSecurity:
 
         import pandas as pd
 
-        mock_df = pd.DataFrame(mock_data, index=pd.date_range("2023-01-01", periods=100)
+        mock_df = pd.DataFrame(
+            mock_data, index=pd.date_range("2023-01-01", periods=100),
         )
 
         mock_provider_instance = Mock()
@@ -429,7 +416,7 @@ class TestAPIEndpointSecurity:
     @patch("api.secure_endpoints.verify_token")
     @patch("api.secure_endpoints.StockDataProvider")
     def test_admin_only_endpoint_data_fetch_error_returns_not_found(
-        self, mock_provider, mock_verify
+        self, mock_provider, mock_verify,
     ):
         """データ取得エラー時に404が返ることを検証"""
         from utils.exceptions import DataFetchError
@@ -438,7 +425,7 @@ class TestAPIEndpointSecurity:
 
         mock_provider_instance = Mock()
         mock_provider_instance.get_stock_data.side_effect = DataFetchError(
-            "7203", "No data available"
+            "7203", "No data available",
         )
         mock_provider.return_value = mock_provider_instance
 
@@ -449,9 +436,7 @@ class TestAPIEndpointSecurity:
         assert "No data available" in response.json()["detail"]
 
     @patch("api.secure_endpoints.verify_token")
-    def test_batch_endpoint_symbol_limit_user(
-        self, mock_verify
-    ):
+    def test_batch_endpoint_symbol_limit_user(self, mock_verify):
         """バッチエンドポイントの銘柄数制限（一般ユーザー）"""
         # 一般ユーザーとして認証
         mock_verify.return_value = "user"
@@ -469,9 +454,7 @@ class TestAPIEndpointSecurity:
 
     @patch("api.secure_endpoints.verify_token")
     @patch("data.stock_data.StockDataProvider")
-    def test_batch_endpoint_symbol_limit_admin(
-        self, mock_provider, mock_verify
-    ):
+    def test_batch_endpoint_symbol_limit_admin(self, mock_provider, mock_verify):
         """バッチエンドポイントの銘柄数制限（管理者）"""
         # 管理者として認証
         mock_verify.return_value = "administrator"
@@ -512,8 +495,6 @@ class TestInputValidation:
 
     def setup_method(self):
         """各テストメソッドの前に実行"""
-        from fastapi import FastAPI
-
         if hasattr(security_module, "reset_env_token_cache"):
             security_module.reset_env_token_cache()
 
@@ -528,9 +509,7 @@ class TestInputValidation:
 
         headers = {"Authorization": f"Bearer {TEST_DEV_KEY}"}
         # 無効な銘柄コード
-        response = self.client.get(
-            "/secure/stock/INVALID@SYMBOL/data", headers=headers
-        )
+        response = self.client.get("/secure/stock/INVALID@SYMBOL/data", headers=headers)
         assert response.status_code == 400  # Bad Request
 
     @patch("api.secure_endpoints.verify_token")
@@ -541,7 +520,7 @@ class TestInputValidation:
         headers = {"Authorization": f"Bearer {TEST_DEV_KEY}"}
         # 無効な期間
         response = self.client.get(
-            "/secure/stock/7203/data?period=invalid_period", headers=headers
+            "/secure/stock/7203/data?period=invalid_period", headers=headers,
         )
         assert response.status_code == 400  # Bad Request
 
@@ -553,7 +532,7 @@ class TestInputValidation:
         headers = {"Authorization": f"Bearer {TEST_DEV_KEY}"}
         # SQLインジェクション試行
         response = self.client.get(
-            "/secure/stock/7203'; DROP TABLE stocks; --/data", headers=headers
+            "/secure/stock/7203'; DROP TABLE stocks; --/data", headers=headers,
         )
         assert response.status_code == 400  # Bad Request
 
@@ -565,6 +544,6 @@ class TestInputValidation:
         headers = {"Authorization": f"Bearer {TEST_DEV_KEY}"}
         # XSS試行
         response = self.client.get(
-            "/secure/stock/<script>alert('xss')</script>/data", headers=headers
+            "/secure/stock/<script>alert('xss')</script>/data", headers=headers,
         )
         assert response.status_code in {400, 404}  # Bad Request or route rejection

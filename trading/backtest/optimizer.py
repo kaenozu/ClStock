@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import replace
-from typing import Any, Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:  # pragma: no cover - type checking only
-    from trading.backtest_engine import BacktestConfig, BacktestResult, BacktestEngine
+    from trading.backtest_engine import BacktestConfig, BacktestEngine, BacktestResult
 
 
 class BacktestOptimizer:
@@ -19,21 +19,20 @@ class BacktestOptimizer:
 
     def optimize_parameters(
         self,
-        base_config: "BacktestConfig",
+        base_config: BacktestConfig,
         parameter_ranges: Dict[str, List[float]],
         optimization_metric: str,
-        engine_factory: Callable[["BacktestConfig"], "BacktestEngine"],
+        engine_factory: Callable[[BacktestConfig], BacktestEngine],
     ) -> Dict[str, Any]:
         """Perform a brute-force parameter search."""
-
         try:
             best_params: Dict[str, float] = {}
             best_score = float("-inf")
-            all_results: List[Tuple[Dict[str, float], float, "BacktestResult"]] = []
+            all_results: List[Tuple[Dict[str, float], float, BacktestResult]] = []
 
             param_combinations = self._generate_parameter_combinations(parameter_ranges)
             self.logger.info(
-                f"パラメータ最適化開始: {len(param_combinations)}通りの組み合わせ"
+                f"パラメータ最適化開始: {len(param_combinations)}通りの組み合わせ",
             )
 
             with ThreadPoolExecutor(max_workers=4) as executor:
@@ -59,7 +58,7 @@ class BacktestOptimizer:
                             best_params = params
 
                         self.logger.info(
-                            f"パラメータテスト完了: {params} スコア: {score:.4f}"
+                            f"パラメータテスト完了: {params} スコア: {score:.4f}",
                         )
                     except Exception as exc:  # pragma: no cover - defensive logging
                         self.logger.error(f"パラメータテストエラー {params}: {exc}")
@@ -76,7 +75,7 @@ class BacktestOptimizer:
             return {}
 
     def _generate_parameter_combinations(
-        self, parameter_ranges: Dict[str, List[float]]
+        self, parameter_ranges: Dict[str, List[float]],
     ) -> List[Dict[str, float]]:
         import itertools
 
@@ -91,21 +90,21 @@ class BacktestOptimizer:
 
     def _test_parameter_combination(
         self,
-        base_config: "BacktestConfig",
+        base_config: BacktestConfig,
         params: Dict[str, float],
         metric: str,
-        engine_factory: Callable[["BacktestConfig"], "BacktestEngine"],
-    ) -> Tuple[float, "BacktestResult"]:
+        engine_factory: Callable[[BacktestConfig], BacktestEngine],
+    ) -> Tuple[float, BacktestResult]:
         test_config = replace(
             base_config,
             precision_threshold=params.get(
-                "precision_threshold", base_config.precision_threshold
+                "precision_threshold", base_config.precision_threshold,
             ),
             confidence_threshold=params.get(
-                "confidence_threshold", base_config.confidence_threshold
+                "confidence_threshold", base_config.confidence_threshold,
             ),
             max_position_size=params.get(
-                "max_position_size", base_config.max_position_size
+                "max_position_size", base_config.max_position_size,
             ),
             target_symbols=base_config.target_symbols,
         )

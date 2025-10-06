@@ -5,13 +5,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Dict, List
 
-import numpy as np
 import pytest
+
+import numpy as np
 
 
 def _install_sklearn_stub():
     """Provide a lightweight stub for ``sklearn`` dependencies used in tests."""
-
     import sys
     import types
 
@@ -135,7 +135,6 @@ class DummyPredictor(StockPredictor):
 @pytest.fixture(autouse=True)
 def reset_predictor_factory():
     """Ensure the global factory registry is reset between tests."""
-
     original_registry = PredictorFactory._registered_predictors.copy()
     original_instances = PredictorFactory._instances.copy()
     yield
@@ -148,12 +147,12 @@ def test_register_and_create_custom_predictor():
     factory.register_predictor(ModelType.PARALLEL, DummyPredictor)
 
     config = ModelConfiguration(
-        model_type=ModelType.PARALLEL, prediction_mode=PredictionMode.AGGRESSIVE
+        model_type=ModelType.PARALLEL, prediction_mode=PredictionMode.AGGRESSIVE,
     )
     provider = StockDataProvider()
 
     predictor = factory.create_predictor(
-        ModelType.PARALLEL, config=config, data_provider=provider
+        ModelType.PARALLEL, config=config, data_provider=provider,
     )
 
     result = predictor.predict("7203")

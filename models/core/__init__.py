@@ -1,26 +1,24 @@
-"""
-Core interfaces and base classes for ClStock Models
+"""Core interfaces and base classes for ClStock Models
 """
 
+from .base_predictor import BaseStockPredictor
+from .factory import PredictorFactory
 from .interfaces import (
-    StockPredictor,
-    PredictionResult,
     DataProvider,
     ModelConfiguration,
     PerformanceMetrics,
+    PredictionResult,
+    StockPredictor,
 )
-
-from .factory import PredictorFactory
 from .manager import ModelManager
-from .base_predictor import BaseStockPredictor
 
 __all__ = [
-    "StockPredictor",
-    "PredictionResult",
+    "BaseStockPredictor",
     "DataProvider",
     "ModelConfiguration",
-    "PerformanceMetrics",
-    "PredictorFactory",
     "ModelManager",
-    "BaseStockPredictor",
+    "PerformanceMetrics",
+    "PredictionResult",
+    "PredictorFactory",
+    "StockPredictor",
 ]

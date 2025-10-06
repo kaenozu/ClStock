@@ -1,21 +1,21 @@
 from datetime import datetime
 from unittest.mock import Mock, patch
 
-import pandas as pd
 import pytest
 
-from trading.tse.analysis import StockProfile
-from models.base.interfaces import PredictionResult
+import pandas as pd
 from models.advanced.risk_management_framework import (
     PortfolioRisk,
     RiskLevel,
 )
 from models.advanced.trading_strategy_generator import (
-    TradingStrategy,
+    ActionType,
     StrategyType,
     TradingSignal,
-    ActionType,
+    TradingStrategy,
 )
+from models.base.interfaces import PredictionResult
+from trading.tse.analysis import StockProfile
 
 
 def _make_trading_strategy(name: str = "momentum") -> TradingStrategy:
@@ -54,16 +54,14 @@ def sample_processed_data():
 class TestFullAutoInvestmentSystemInitialisation:
     def test_initialises_with_new_component_classes(self):
         with patch("full_auto_system.StockDataProvider") as mock_provider, patch(
-            "full_auto_system.HybridStockPredictor"
+            "full_auto_system.HybridStockPredictor",
         ) as mock_predictor, patch(
-            "full_auto_system.PortfolioOptimizer"
+            "full_auto_system.PortfolioOptimizer",
         ) as mock_optimizer, patch(
-            "full_auto_system.MarketSentimentAnalyzer"
+            "full_auto_system.MarketSentimentAnalyzer",
         ) as mock_sentiment, patch(
-            "full_auto_system.StrategyGenerator"
-        ) as mock_strategy, patch(
-            "full_auto_system.RiskManager"
-        ) as mock_risk:
+            "full_auto_system.StrategyGenerator",
+        ) as mock_strategy, patch("full_auto_system.RiskManager") as mock_risk:
             from full_auto_system import FullAutoInvestmentSystem
 
             system = FullAutoInvestmentSystem()
@@ -79,11 +77,13 @@ class TestFullAutoInvestmentSystemInitialisation:
 
 
 class TestPortfolioOptimizationHelper:
-    def test_optimizer_helper_returns_selected_stocks_structure(self, sample_processed_data):
+    def test_optimizer_helper_returns_selected_stocks_structure(
+        self, sample_processed_data,
+    ):
         with patch("full_auto_system.StockDataProvider"), patch(
-            "full_auto_system.HybridStockPredictor"
+            "full_auto_system.HybridStockPredictor",
         ), patch("full_auto_system.MarketSentimentAnalyzer"), patch(
-            "full_auto_system.StrategyGenerator"
+            "full_auto_system.StrategyGenerator",
         ), patch("full_auto_system.RiskManager"):
             from full_auto_system import FullAutoInvestmentSystem
 
@@ -98,7 +98,7 @@ class TestPortfolioOptimizationHelper:
                 profit_potential=0.3,
                 diversity_score=0.4,
                 combined_score=0.9,
-            )
+            ),
         ]
 
         with patch.object(
@@ -115,7 +115,7 @@ class TestPortfolioOptimizationHelper:
         sent_profiles = call_args[0]
         assert all(isinstance(profile, StockProfile) for profile in sent_profiles)
         assert {profile.symbol for profile in sent_profiles} == set(
-            sample_processed_data.keys()
+            sample_processed_data.keys(),
         )
 
 
@@ -165,9 +165,7 @@ class TestRiskManagerAdapter:
         adapter = RiskManagerAdapter(manager=mock_manager)
         predictions = {"predicted_price": 120.0}
 
-        result = adapter.analyze_risk(
-            "AAA", sample_processed_data["AAA"], predictions
-        )
+        result = adapter.analyze_risk("AAA", sample_processed_data["AAA"], predictions)
 
         mock_manager.analyze_portfolio_risk.assert_called_once()
         expected_score = (portfolio_risk.total_risk_score - 1.0) / 3.0
@@ -211,7 +209,10 @@ class TestStrategyGeneratorAdapter:
             metadata={},
         )
 
-        mock_signal_generator.generate_signals.return_value = [weaker_signal, buy_signal]
+        mock_signal_generator.generate_signals.return_value = [
+            weaker_signal,
+            buy_signal,
+        ]
 
         from full_auto_system import RiskAssessment, StrategyGeneratorAdapter
 
@@ -224,14 +225,14 @@ class TestStrategyGeneratorAdapter:
         )
 
         adapter = StrategyGeneratorAdapter(
-            generator=mock_generator, signal_generator=mock_signal_generator
+            generator=mock_generator, signal_generator=mock_signal_generator,
         )
 
         sentiment = {"sentiment_score": 0.25}
         predictions = {"predicted_price": 110.0}
 
         result = adapter.generate_strategy(
-            "AAA", sample_processed_data["AAA"], predictions, risk_assessment, sentiment
+            "AAA", sample_processed_data["AAA"], predictions, risk_assessment, sentiment,
         )
 
         mock_generator.generate_momentum_strategy.assert_called_once()
@@ -239,5 +240,7 @@ class TestStrategyGeneratorAdapter:
         assert result["entry_price"] == pytest.approx(buy_signal.entry_price)
         assert result["target_price"] == pytest.approx(buy_signal.take_profit)
         assert result["stop_loss"] == pytest.approx(buy_signal.stop_loss)
-        expected_return = (buy_signal.take_profit - buy_signal.entry_price) / buy_signal.entry_price
+        expected_return = (
+            buy_signal.take_profit - buy_signal.entry_price
+        ) / buy_signal.entry_price
         assert result["expected_return"] == pytest.approx(expected_return)

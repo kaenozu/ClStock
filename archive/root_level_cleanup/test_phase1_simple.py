@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Phase 1機能簡易テスト
+"""Phase 1機能簡易テスト
 インテリジェントキャッシュ + 次世代モード機能の動作確認
 """
 
-import sys
-import os
-import time
 import logging
+import os
+import sys
 from datetime import datetime
 
 # ロギング設定
@@ -43,7 +40,7 @@ def main():
         print("\n[成功] Phase 1機能簡易テスト完了!")
 
     except Exception as e:
-        print(f"\n[エラー] テスト失敗: {str(e)}")
+        print(f"\n[エラー] テスト失敗: {e!s}")
         import traceback
 
         traceback.print_exc()
@@ -63,16 +60,17 @@ def test_imports():
         print(f"   [OK] キャッシュ統計取得: ヒット率={stats.get('hit_rate', 0):.2f}")
 
     except Exception as e:
-        print(f"   [ERROR] インポートエラー: {str(e)}")
+        print(f"   [ERROR] インポートエラー: {e!s}")
         raise
 
 
 def test_cache_standalone():
     """キャッシュ単体テスト"""
     try:
-        from models.hybrid.intelligent_cache import IntelligentPredictionCache
-        from models.base.interfaces import PredictionResult
         from datetime import datetime
+
+        from models.base.interfaces import PredictionResult
+        from models.hybrid.intelligent_cache import IntelligentPredictionCache
 
         cache = IntelligentPredictionCache()
 
@@ -102,7 +100,7 @@ def test_cache_standalone():
         print(f"   [OK] メモリキャッシュサイズ: {stats.get('memory_cache_size', 0)}")
 
     except Exception as e:
-        print(f"   [ERROR] キャッシュテストエラー: {str(e)}")
+        print(f"   [ERROR] キャッシュテストエラー: {e!s}")
         raise
 
 
@@ -114,11 +112,11 @@ def test_prediction_modes():
 
         # ファイル読み込みで次世代モード確認
         hybrid_file = os.path.join(
-            os.path.dirname(__file__), "models_new", "hybrid", "hybrid_predictor.py"
+            os.path.dirname(__file__), "models_new", "hybrid", "hybrid_predictor.py",
         )
 
         if os.path.exists(hybrid_file):
-            with open(hybrid_file, "r", encoding="utf-8") as f:
+            with open(hybrid_file, encoding="utf-8") as f:
                 content = f.read()
 
             # 次世代モード確認
@@ -142,7 +140,7 @@ def test_prediction_modes():
 
         # 学習型最適化確認
         adaptive_file = os.path.join(
-            os.path.dirname(__file__), "models_new", "hybrid", "adaptive_optimizer.py"
+            os.path.dirname(__file__), "models_new", "hybrid", "adaptive_optimizer.py",
         )
         if os.path.exists(adaptive_file):
             print("   [OK] 学習型最適化システムファイル確認")
@@ -150,7 +148,7 @@ def test_prediction_modes():
             print("   [WARNING] 学習型最適化システムファイル未確認")
 
     except Exception as e:
-        print(f"   [ERROR] 予測モードテストエラー: {str(e)}")
+        print(f"   [ERROR] 予測モードテストエラー: {e!s}")
         raise
 
 

@@ -27,17 +27,17 @@ def test_import_does_not_modify_sys_path(monkeypatch, module_name):
     class GuardedPath(list):
         def append(self, item):
             raise AssertionError(
-                f"sys.path.append was called with {item!r} during import of {module_name}"
+                f"sys.path.append was called with {item!r} during import of {module_name}",
             )
 
         def extend(self, items):
             raise AssertionError(
-                f"sys.path.extend was called with {items!r} during import of {module_name}"
+                f"sys.path.extend was called with {items!r} during import of {module_name}",
             )
 
         def insert(self, index, item):
             raise AssertionError(
-                f"sys.path.insert was called with {item!r} during import of {module_name}"
+                f"sys.path.insert was called with {item!r} during import of {module_name}",
             )
 
     guarded_path = GuardedPath(sys.path)

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import hashlib
+import logging
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Callable, ClassVar
-import logging
+from typing import Any, Callable, ClassVar, Dict, Iterable, List, Optional
 
-import hashlib
-logger = logging.getLogger(__name__) # 修正
+logger = logging.getLogger(__name__)  # 修正
 
 import json
 
@@ -18,10 +18,12 @@ import numpy as np
 import pandas as pd
 
 try:
-    from sklearn.preprocessing import StandardScaler
     import xgboost as xgb
+    from sklearn.preprocessing import StandardScaler
+
     _xgb_available = True
 except ImportError:
+
     class StandardScaler:
         def __init__(self):
             self.mean_ = None
@@ -41,6 +43,7 @@ except ImportError:
 
         def fit_transform(self, X):
             return self.fit(X).transform(X)
+
     _xgb_available = False
 
 from data.stock_data import StockDataProvider
@@ -64,7 +67,7 @@ class PredictorInterface(ABC):
 
     @abstractmethod
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult: ...
 
     @abstractmethod
@@ -83,7 +86,9 @@ class StockPredictor(PredictorInterface):
 
         return Provider()
 
-    data_provider_factory: ClassVar[Callable[[], StockDataProvider]] = _default_data_provider
+    data_provider_factory: ClassVar[Callable[[], StockDataProvider]] = (
+        _default_data_provider
+    )
 
     def __init__(
         self,
@@ -95,7 +100,7 @@ class StockPredictor(PredictorInterface):
         self.data_provider = data_provider or self.data_provider_factory()
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         raise NotImplementedError
 
@@ -146,7 +151,7 @@ class EnsembleStockPredictor(StockPredictor):
         )
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         if not self.is_trained():
             raise ValueError("Ensemble must be trained before prediction")
@@ -163,7 +168,9 @@ class EnsembleStockPredictor(StockPredictor):
             try:
                 prediction = model.predict(symbol, data)
             except Exception as e:
-                logger.warning(f"Prediction failed for symbol {symbol} with model {model.__class__.__name__}: {e}")
+                logger.warning(
+                    f"Prediction failed for symbol {symbol} with model {model.__class__.__name__}: {e}",
+                )
                 continue
             valid_predictions.append(prediction)
             valid_weights.append(weight)
@@ -210,7 +217,7 @@ class CacheablePredictor(StockPredictor):
     ) -> None:
         super().__init__(model_type="cacheable", data_provider=data_provider)
         self.cache_size = cache_size
-        self._prediction_cache: "OrderedDict[str, PredictionResult]" = OrderedDict()
+        self._prediction_cache: OrderedDict[str, PredictionResult] = OrderedDict()
 
     def _get_cache_key(self, symbol: str, data_hash: str) -> str:
         return f"{symbol}_{data_hash}_cacheable"
@@ -225,7 +232,7 @@ class CacheablePredictor(StockPredictor):
         return hashlib.sha256(json_repr.encode("utf-8")).hexdigest()
 
     def cache_prediction(
-        self, symbol: str, data: Optional[pd.DataFrame], result: PredictionResult
+        self, symbol: str, data: Optional[pd.DataFrame], result: PredictionResult,
     ) -> None:
         data_hash = self._get_data_hash(data)
         cache_key = self._get_cache_key(symbol, data_hash)
@@ -235,7 +242,7 @@ class CacheablePredictor(StockPredictor):
             self._prediction_cache.popitem(last=False)
 
     def get_cached_prediction(
-        self, symbol: str, data: Optional[pd.DataFrame]
+        self, symbol: str, data: Optional[pd.DataFrame],
     ) -> Optional[PredictionResult]:
         data_hash = self._get_data_hash(data)
         cache_key = self._get_cache_key(symbol, data_hash)
@@ -281,16 +288,15 @@ class MLStockPredictor(CacheablePredictor):
                 learning_rate=0.1,
                 random_state=42,
             )
+        # フォールバック用のモデル
+        elif _xgb_available:
+            # xgboostは利用可能だが、model_typeが"xgboost"でない場合
+            # ここでは _SimpleRegressor を使用する例
+            # 必要に応じて他のモデルタイプも考慮
+            self.model: Optional[_SimpleRegressor] = _SimpleRegressor()
         else:
-            # フォールバック用のモデル
-            if _xgb_available:
-                # xgboostは利用可能だが、model_typeが"xgboost"でない場合
-                # ここでは _SimpleRegressor を使用する例
-                # 必要に応じて他のモデルタイプも考慮
-                self.model: Optional[_SimpleRegressor] = _SimpleRegressor()
-            else:
-                # xgboostが利用不可能な場合
-                self.model = _SimpleRegressor()
+            # xgboostが利用不可能な場合
+            self.model = _SimpleRegressor()
         self.feature_names: List[str] = []
         self.model_directory = Path("models_cache")
         self.model_directory.mkdir(exist_ok=True)
@@ -395,14 +401,14 @@ class MLStockPredictor(CacheablePredictor):
                 "return_1d": returns_1d,
                 "return_5d": returns_5d,
                 "recommendation_score": returns_5d.clip(-20, 20) + 50,
-            }
+            },
         ).dropna()
 
         targets_cls = pd.DataFrame(
             {
                 "direction_1d": (returns_1d > 0).astype(int),
                 "direction_5d": (returns_5d > 0).astype(int),
-            }
+            },
         ).loc[targets_reg.index]
 
         return targets_reg, targets_cls
@@ -480,7 +486,7 @@ class MLStockPredictor(CacheablePredictor):
     # Prediction
     # ------------------------------------------------------------------
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         if not self.is_trained():
             raise ValueError("Model must be trained before prediction")
@@ -507,7 +513,7 @@ class MLStockPredictor(CacheablePredictor):
         prediction_value = 50.0
         if self.model is not None:
             prediction_value = float(
-                np.asarray(self.model.predict(scaled)).flatten()[0]
+                np.asarray(self.model.predict(scaled)).flatten()[0],
             )
         confidence = min(max(abs(prediction_value - 50.0) / 50.0, 0.0), 1.0)
         metadata = {
@@ -516,7 +522,7 @@ class MLStockPredictor(CacheablePredictor):
             "features_used": len(self.feature_names),
         }
         result = PredictionResult(
-            prediction_value, confidence, datetime.now(), metadata
+            prediction_value, confidence, datetime.now(), metadata,
         )
         self.cache_prediction(symbol, data, result)
         return result
@@ -539,7 +545,6 @@ class MLStockPredictor(CacheablePredictor):
     # ------------------------------------------------------------------
     def calculate_score(self, symbol: str) -> float:
         """Compute a simple heuristic score in the 0-100 range."""
-
         try:
             raw_data = self.data_provider.get_stock_data(symbol, "6mo")
         except Exception as exc:  # pragma: no cover - defensive logging
@@ -553,7 +558,7 @@ class MLStockPredictor(CacheablePredictor):
             data = self.data_provider.calculate_technical_indicators(raw_data)
         except Exception as exc:  # pragma: no cover - defensive logging
             logger.warning(
-                "Failed to calculate technical indicators for %s: %s", symbol, exc
+                "Failed to calculate technical indicators for %s: %s", symbol, exc,
             )
             data = raw_data
 
@@ -619,7 +624,9 @@ class MLStockPredictor(CacheablePredictor):
         if technical_data is None or technical_data.empty:
             raise ValueError(f"Unable to prepare technical indicators for {symbol}")
 
-        close_col = next((c for c in technical_data.columns if c.lower() == "close"), None)
+        close_col = next(
+            (c for c in technical_data.columns if c.lower() == "close"), None,
+        )
         if close_col is None:
             raise ValueError("Technical data must contain a Close column")
 
@@ -687,7 +694,7 @@ class MLStockPredictor(CacheablePredictor):
 
         recommendations.sort(key=lambda rec: rec.score, reverse=True)
 
-        limited = recommendations[:max(top_n, 0)]
+        limited = recommendations[: max(top_n, 0)]
         for idx, recommendation in enumerate(limited, start=1):
             recommendation.rank = idx
 

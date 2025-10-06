@@ -1,10 +1,8 @@
-import numpy as np
-import pandas as pd
 import pytest
 
-
+import numpy as np
+import pandas as pd
 from utils.technical_indicators import calculate_keltner_channels
-
 
 pytest.importorskip("pandas")
 
@@ -20,18 +18,12 @@ def test_calculate_keltner_channels_values():
     close = pd.Series([9.5, 10.5, 11.5, 12.5])
 
     channels = calculate_keltner_channels(
-        high=high, low=low, close=close, window=2, multiplier=1.5
+        high=high, low=low, close=close, window=2, multiplier=1.5,
     )
 
-    expected_middle = pd.Series(
-        [9.5, 10.0555556, 10.7962964, 11.7098766]
-    )
-    expected_upper = pd.Series(
-        [np.nan, 11.9305556, 13.4212964, 14.7098766]
-    )
-    expected_lower = pd.Series(
-        [np.nan, 8.1805556, 8.1712964, 8.7098766]
-    )
+    expected_middle = pd.Series([9.5, 10.0555556, 10.7962964, 11.7098766])
+    expected_upper = pd.Series([np.nan, 11.9305556, 13.4212964, 14.7098766])
+    expected_lower = pd.Series([np.nan, 8.1805556, 8.1712964, 8.7098766])
 
     pd.testing.assert_series_equal(
         channels["Middle"],
@@ -68,7 +60,7 @@ def test_calculate_keltner_channels_error_fallback():
             "Upper": close,
             "Middle": close,
             "Lower": close,
-        }
+        },
     )
 
     pd.testing.assert_frame_equal(channels, expected)

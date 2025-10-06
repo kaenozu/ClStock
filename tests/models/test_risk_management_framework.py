@@ -5,7 +5,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -39,7 +38,10 @@ def test_risk_manager_provides_summary_for_balanced_portfolio():
     manager = RiskManager()
 
     portfolio = {"positions": {"AAPL": 60_000, "GOOGL": 40_000}}
-    price_data = {symbol: _generate_price_frame(100 + idx * 5) for idx, symbol in enumerate(portfolio["positions"].keys())}
+    price_data = {
+        symbol: _generate_price_frame(100 + idx * 5)
+        for idx, symbol in enumerate(portfolio["positions"].keys())
+    }
 
     risk_report = manager.analyze_portfolio_risk(portfolio, price_data)
 
@@ -49,4 +51,10 @@ def test_risk_manager_provides_summary_for_balanced_portfolio():
     summary = manager.get_risk_summary()
     assert summary["current_risk_level"] in {level.value for level in RiskLevel}
     assert summary["max_safe_position_size"] > 0
-    assert summary["risk_breakdown"].keys() >= {"market", "liquidity", "concentration", "volatility", "correlation"}
+    assert summary["risk_breakdown"].keys() >= {
+        "market",
+        "liquidity",
+        "concentration",
+        "volatility",
+        "correlation",
+    }

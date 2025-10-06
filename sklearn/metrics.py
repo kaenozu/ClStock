@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 __all__ = [
-    "mean_squared_error",
-    "mean_absolute_error",
-    "r2_score",
     "accuracy_score",
+    "mean_absolute_error",
+    "mean_squared_error",
+    "r2_score",
 ]
 
 

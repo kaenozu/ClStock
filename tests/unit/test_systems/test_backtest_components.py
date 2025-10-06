@@ -1,18 +1,22 @@
 import importlib
 import sys
 import types
-from datetime import datetime, timedelta
+from datetime import datetime
+from unittest.mock import Mock
+
+import pytest
 
 import numpy as np
 import pandas as pd
-import pytest
-
-import sys
-from unittest.mock import Mock
 
 # trading.backtest が存在しない場合のフォールバック
 try:
-    from trading.backtest import BacktestOptimizer, BacktestRunner, generate_backtest_charts, generate_recommendations
+    from trading.backtest import (
+        BacktestOptimizer,
+        BacktestRunner,
+        generate_backtest_charts,
+        generate_recommendations,
+    )
 except ImportError:
     BacktestOptimizer = Mock()
     BacktestRunner = Mock()
@@ -23,7 +27,6 @@ except ImportError:
 @pytest.fixture
 def backtest_engine_module(monkeypatch):
     """Load ``trading.backtest_engine`` with lightweight stubs."""
-
     dummy_precision_module = types.ModuleType("models.precision.precision_87_system")
 
     class _Precision:
@@ -31,7 +34,7 @@ def backtest_engine_module(monkeypatch):
 
     dummy_precision_module.Precision87BreakthroughSystem = _Precision
     monkeypatch.setitem(
-        sys.modules, "models.precision.precision_87_system", dummy_precision_module
+        sys.modules, "models.precision.precision_87_system", dummy_precision_module,
     )
 
     dummy_data_module = types.ModuleType("data.stock_data")
@@ -62,7 +65,7 @@ class DummyPortfolioManager:
 
     def add_position(self, symbol, quantity, price, signal_type) -> None:
         self.positions[symbol] = types.SimpleNamespace(
-            quantity=quantity, market_value=quantity * price
+            quantity=quantity, market_value=quantity * price,
         )
         self.current_cash -= quantity * price
 
@@ -112,12 +115,12 @@ def test_backtest_runner_produces_result(monkeypatch, backtest_engine_module):
     BacktestResult = backtest_engine_module.BacktestResult
 
     monkeypatch.setattr(
-        "trading.backtest.runner.DemoPortfolioManager", DummyPortfolioManager
+        "trading.backtest.runner.DemoPortfolioManager", DummyPortfolioManager,
     )
     monkeypatch.setattr("trading.backtest.runner.DemoRiskManager", DummyRiskManager)
     monkeypatch.setattr("trading.backtest.runner.TradeRecorder", DummyTradeRecorder)
     monkeypatch.setattr(
-        "trading.backtest.runner.PerformanceTracker", DummyPerformanceTracker
+        "trading.backtest.runner.PerformanceTracker", DummyPerformanceTracker,
     )
 
     config = BacktestConfig(

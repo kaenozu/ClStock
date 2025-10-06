@@ -7,9 +7,10 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Dict, Iterable, List
 
+import pytest
+
 import numpy as np
 import pandas as pd
-import pytest
 
 
 @dataclass
@@ -58,12 +59,16 @@ class _DummyPredictor:
         duration = time.time() - start
         return SimpleNamespace(results=predictions, duration=duration)
 
-    def _calculate_features_optimized(self, symbol: str, data: pd.DataFrame) -> Dict[str, float]:
+    def _calculate_features_optimized(
+        self, symbol: str, data: pd.DataFrame,
+    ) -> Dict[str, float]:
         self.feature_cache.add(1)
         return {"mean_close": float(data["Close"].mean())}
 
 
-def _single_prediction_metrics(predictor: _DummyPredictor, symbols: List[str]) -> Dict[str, Any]:
+def _single_prediction_metrics(
+    predictor: _DummyPredictor, symbols: List[str],
+) -> Dict[str, Any]:
     timings: List[float] = []
     for symbol in symbols:
         start = time.perf_counter()
@@ -78,7 +83,9 @@ def _single_prediction_metrics(predictor: _DummyPredictor, symbols: List[str]) -
     }
 
 
-def _batch_prediction_metrics(predictor: _DummyPredictor, symbols: List[str]) -> Dict[str, Any]:
+def _batch_prediction_metrics(
+    predictor: _DummyPredictor, symbols: List[str],
+) -> Dict[str, Any]:
     outcome = predictor.predict_batch(symbols)
     duration = max(outcome.duration, 1e-6)
     return {
@@ -88,7 +95,9 @@ def _batch_prediction_metrics(predictor: _DummyPredictor, symbols: List[str]) ->
     }
 
 
-def _cache_effectiveness_metrics(predictor: _DummyPredictor, symbols: List[str]) -> Dict[str, Any]:
+def _cache_effectiveness_metrics(
+    predictor: _DummyPredictor, symbols: List[str],
+) -> Dict[str, Any]:
     predictor.prediction_cache = _DummyCache()
     for symbol in symbols:
         predictor.predict(symbol)
@@ -127,7 +136,9 @@ def dummy_predictor() -> _DummyPredictor:
 
 
 @pytest.mark.performance
-def test_enhanced_performance_suite_collects_metrics(dummy_predictor: _DummyPredictor) -> None:
+def test_enhanced_performance_suite_collects_metrics(
+    dummy_predictor: _DummyPredictor,
+) -> None:
     symbols = ["7203", "6758", "8306", "8031"]
 
     single = _single_prediction_metrics(dummy_predictor, symbols[:3])
@@ -143,7 +154,9 @@ def test_enhanced_performance_suite_collects_metrics(dummy_predictor: _DummyPred
 
 
 @pytest.mark.performance
-def test_cache_metrics_reflect_prediction_calls(dummy_predictor: _DummyPredictor) -> None:
+def test_cache_metrics_reflect_prediction_calls(
+    dummy_predictor: _DummyPredictor,
+) -> None:
     symbols = ["7203", "6758"]
     metrics = _cache_effectiveness_metrics(dummy_predictor, symbols)
 
@@ -152,7 +165,9 @@ def test_cache_metrics_reflect_prediction_calls(dummy_predictor: _DummyPredictor
 
 
 @pytest.mark.performance
-def test_parallel_metrics_include_feature_timings(dummy_predictor: _DummyPredictor) -> None:
+def test_parallel_metrics_include_feature_timings(
+    dummy_predictor: _DummyPredictor,
+) -> None:
     symbols = ["7203", "6758", "8306"]
     metrics = _parallel_metrics(dummy_predictor, symbols)
 

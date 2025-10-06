@@ -1,8 +1,8 @@
 """Configuration for config tests."""
 
-import pytest
 import os
-from unittest.mock import patch
+
+import pytest
 
 
 @pytest.fixture

@@ -16,7 +16,9 @@ def dummy_settings(tmp_path):
 @pytest.fixture(autouse=True)
 def override_dependencies(monkeypatch, dummy_settings, fastapi_dependency_stubs):
     monkeypatch.setattr("app.personal_dashboard.get_settings", lambda: dummy_settings)
-    monkeypatch.setattr("app.personal_dashboard.StockDataProvider", lambda: SimpleNamespace())
+    monkeypatch.setattr(
+        "app.personal_dashboard.StockDataProvider", lambda: SimpleNamespace(),
+    )
 
 
 @pytest.fixture
@@ -26,7 +28,9 @@ def personal_dashboard(fastapi_dependency_stubs):
     return PersonalDashboard()
 
 
-def test_get_recent_predictions_accepts_days_parameter(dummy_settings, personal_dashboard):
+def test_get_recent_predictions_accepts_days_parameter(
+    dummy_settings, personal_dashboard,
+):
     dashboard = personal_dashboard
 
     conn = sqlite3.connect(dummy_settings.database.personal_portfolio_db)

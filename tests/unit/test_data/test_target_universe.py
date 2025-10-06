@@ -4,7 +4,6 @@ import pytest
 
 from config.target_universe import get_target_universe
 
-
 EXPECTED_CORE_CODES = {
     "6758",
     "7203",

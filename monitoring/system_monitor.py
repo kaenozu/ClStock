@@ -1,24 +1,24 @@
-"""
-ClStock システム監視・パフォーマンス監視統合モジュール
+"""ClStock システム監視・パフォーマンス監視統合モジュール
 """
 
 import os
 import sys
-import time
-import psutil
 import threading
+import time
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, field
-from collections import defaultdict, deque
+from typing import Any, Dict, List, Optional
+
+import psutil
 
 # プロジェクトルート設定
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
-from utils.logger_config import get_logger
 from config.settings import get_settings
+from utils.logger_config import get_logger
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -75,7 +75,7 @@ class SystemMonitor:
         self.max_history_points = max_history_points
         self.system_metrics_history: deque = deque(maxlen=max_history_points)
         self.process_metrics_history: Dict[int, deque] = defaultdict(
-            lambda: deque(maxlen=100)
+            lambda: deque(maxlen=100),
         )
         self.alerts: deque = deque(maxlen=500)
 
@@ -102,7 +102,7 @@ class SystemMonitor:
         self._shutdown_event.clear()
 
         self.monitor_thread = threading.Thread(
-            target=self._monitoring_loop, args=(interval_seconds,), daemon=True
+            target=self._monitoring_loop, args=(interval_seconds,), daemon=True,
         )
         self.monitor_thread.start()
 
@@ -212,7 +212,7 @@ class SystemMonitor:
                     "status",
                     "create_time",
                     "num_threads",
-                ]
+                ],
             ):
                 try:
                     proc_info = proc.info
@@ -274,7 +274,7 @@ class SystemMonitor:
                     category="CPU",
                     message=f"高CPU使用率: {metrics.cpu_percent:.1f}%",
                     details={"cpu_percent": metrics.cpu_percent},
-                )
+                ),
             )
 
         # メモリ使用率チェック
@@ -290,7 +290,7 @@ class SystemMonitor:
                         "memory_percent": metrics.memory_percent,
                         "memory_available_mb": metrics.memory_available_mb,
                     },
-                )
+                ),
             )
 
         # ディスク使用率チェック
@@ -306,7 +306,7 @@ class SystemMonitor:
                         "disk_usage_percent": metrics.disk_usage_percent,
                         "disk_free_gb": metrics.disk_free_gb,
                     },
-                )
+                ),
             )
 
         # アラート登録
@@ -379,7 +379,7 @@ class SystemMonitor:
 
         # CPU使用率順でソート
         sorted_processes = sorted(
-            latest_processes.values(), key=lambda x: x.cpu_percent, reverse=True
+            latest_processes.values(), key=lambda x: x.cpu_percent, reverse=True,
         )
 
         for proc in sorted_processes[:20]:  # トップ20
@@ -394,7 +394,7 @@ class SystemMonitor:
                     "num_threads": proc.num_threads,
                     "uptime_hours": (datetime.now() - proc.create_time).total_seconds()
                     / 3600,
-                }
+                },
             )
 
         return process_summary
@@ -491,7 +491,7 @@ if __name__ == "__main__":
 
         # レポート生成
         report = monitor.generate_performance_report()
-        print(f"\n=== パフォーマンスレポート ===")
+        print("\n=== パフォーマンスレポート ===")
         print(f"監視時間: {report['monitoring_duration_hours']:.1f}時間")
         print(f"データポイント: {report['data_points']}件")
         print(f"CPU平均: {report['cpu_stats']['avg']:.1f}%")

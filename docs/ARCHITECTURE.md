@@ -1,83 +1,39 @@
-# ClStock System Architecture
+# ClStock アーキテクチャ概要
 
-## Overview
+## 1. 概要
 
-ClStock is a stock recommendation system that provides mid-term (30-90 day) stock predictions for Japanese equities. The system combines technical analysis, machine learning models, and market data to generate actionable investment recommendations.
+ClStockは、AIによる株価予測と投資推奨を行うための統合システムです。REST API、CLI、CUIを通じて、推奨銘柄ランキング、売買タイミング、目標価格などを提供します。バックエンドでは、複数の機械学習モデル、データ取得モジュール、非同期処理基盤が連携して動作します。
 
-## System Components
+## 2. 主要コンポーネント
 
-### 1. Data Layer
-- **StockDataProvider**: Fetches and processes stock market data from Yahoo Finance
-- **Cache System**: Implements in-memory and file-based caching for performance optimization
-- **Technical Indicators**: Calculates key technical indicators (SMA, RSI, MACD, etc.)
+システムの主要なディレクトリと、その役割は以下の通りです。
 
-### 2. Prediction Layer
-- **StockPredictor**: Core prediction engine that combines rule-based and ML approaches
-- **ML Models**: XGBoost and LightGBM models for enhanced predictions
-- **Ensemble Methods**: Combines multiple models for improved accuracy
+- **/api**: FastAPIを利用したAPIエンドポイントの定義。外部へのデータ提供を担当します。
+- **/app**: メインアプリケーションのロジック。FastAPIのアプリケーションインスタンスや、Webダッシュボードの定義が含まれます。
+- **/config**: 設定ファイル群。`settings.py`でプロジェクト全体の設定を一元管理し、環境変数による上書きも可能です。
+- **/data**: データ取得・処理モジュール。`StockDataProvider`が株価データの取得とキャッシュを担当します。
+- **/models**: 機械学習モデルの実装。予測器のインターフェース、各種モデル（アンサンブル、時系列解析など）、学習パイプラインが含まれます。
+- **/systems**: システム全体の管理機能。プロセスマネージャーやモニタリング機能などが含まれます。
+- **/trading**: 取引戦略やポートフォリオ管理のロジック。バックテストエンジンもここに配置されます。
+- **/utils**: プロジェクト全体で利用される共通のユーティリティ関数群（ロガー設定など）。
+- **/clstock_cli.py**: プロジェクト全体の操作を行うためのコマンドラインインターフェース（CLI）のエントリーポイント。
 
-### 3. API Layer
-- **FastAPI Endpoints**: RESTful API for accessing recommendations and stock data
-- **Security Module**: API key authentication and rate limiting
-- **Response Models**: Pydantic models for data validation and serialization
+## 3. データフロー
 
-### 4. Application Layer
-- **CUI Interface**: Command-line interface for user interaction
-- **Dashboard**: Web-based dashboard for visualizing recommendations
-- **Demo Trading System**: Simulated trading environment for testing strategies
+1.  **データ取得**: `clstock_cli.py` やAPIリクエストを起点に、`data.StockDataProvider` が外部（例: yfinance）から株価データを取得します。
+2.  **特徴量生成**: 取得した生データから、`models`内の各予測器が必要とする特徴量（テクニカル指標など）を計算します。
+3.  **予測実行**: `models`内の機械学習モデル（`MLStockPredictor`など）が、特徴量を入力として株価の将来価格や推奨度スコアを予測します。
+4.  **戦略決定**: `trading`モジュールが、モデルの予測結果とリスク管理ロジックに基づき、具体的な投資戦略（推奨アクション、目標価格など）を生成します。
+5.  **結果提供**:
+    - **API**: `api.endpoints`を通じて、予測結果や推奨情報がJSON形式で外部に提供されます。
+    - **CLI/CUI**: `clstock_cli.py`や`investment_advisor_cui.py`が、整形された結果をコンソールに表示します。
+    - **Dashboard**: `app.personal_dashboard.py`が、Webブラウザ上でポートフォリオや予測結果を可視化します。
 
-### 5. Infrastructure Layer
-- **Configuration Management**: Centralized configuration system
-- **Logging**: Structured logging with centralized management
-- **Monitoring**: System performance and health monitoring
-- **Error Handling**: Comprehensive exception handling framework
+## 4. 技術スタック
 
-## Data Flow
-
-1. **Data Ingestion**: StockDataProvider fetches data from Yahoo Finance
-2. **Processing**: Technical indicators are calculated and data is cached
-3. **Prediction**: StockPredictor generates recommendations using multiple models
-4. **API Serving**: Recommendations are exposed via REST API
-5. **Presentation**: Data is displayed through CUI or web dashboard
-
-## Key Design Decisions
-
-### Model Architecture
-- Hybrid approach combining rule-based logic with machine learning
-- Multiple models ensemble for improved accuracy (87%+)
-- Fallback mechanisms to ensure system reliability
-
-### Performance Optimization
-- Multi-level caching strategy to reduce API calls
-- Asynchronous data fetching where possible
-- Memory-efficient data processing pipelines
-
-### Reliability
-- Comprehensive error handling with custom exception types
-- Graceful degradation when external services are unavailable
-- Health checks and monitoring for system status
-
-## Technology Stack
-
-- **Language**: Python 3.8+
-- **Web Framework**: FastAPI
-- **ML Libraries**: Scikit-learn, XGBoost, LightGBM
-- **Data Processing**: Pandas, NumPy
-- **Visualization**: Matplotlib, Seaborn
-- **Infrastructure**: psutil for system monitoring
-- **Testing**: Pytest with coverage reporting
-- **Code Quality**: Black, Flake8, MyPy, Bandit
-
-## Deployment Architecture
-
-The system can be deployed in multiple configurations:
-1. **Standalone Application**: Direct execution with CUI
-2. **API Server**: REST API service for integration
-3. **Hybrid Mode**: Combined API and CUI operation
-
-## Security Considerations
-
-- API key authentication for all endpoints
-- Rate limiting to prevent abuse
-- Input validation and sanitization
-- Secure configuration management
+- **Webフレームワーク**: FastAPI, Uvicorn
+- **コマンドライン**: Click
+- **データ処理**: pandas, NumPy
+- **機械学習**: scikit-learn, PyTorch, LightGBM, XGBoost
+- **テスト**: pytest
+- **その他**: SHAP (モデル解釈性), Tenacity (リトライ処理)

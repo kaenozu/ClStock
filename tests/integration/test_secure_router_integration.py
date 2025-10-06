@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
-import pandas as pd
 from fastapi.testclient import TestClient
 
+import pandas as pd
 from app.main import app
-
 
 client = TestClient(app)
 

@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-ハイブリッド予測システムテスト
+"""ハイブリッド予測システムテスト
 速度と精度を両立した最強システムの動作確認
 """
 
-import sys
-import os
-import time
 import logging
-from datetime import datetime
-import numpy as np
-import pandas as pd
-from typing import List, Dict, Any
+import os
+import sys
+import time
 import traceback
+from datetime import datetime
+from typing import Any, Dict, List
+
+import numpy as np
 
 # ロギング設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -42,13 +40,13 @@ def main():
             display_test_results(test_results)
         else:
             print(
-                f"\n[失敗] ハイブリッドテスト失敗: {test_results.get('error', 'Unknown error')}"
+                f"\n[失敗] ハイブリッドテスト失敗: {test_results.get('error', 'Unknown error')}",
             )
 
     except KeyboardInterrupt:
         print("\n\nテストが中断されました")
     except Exception as e:
-        print(f"\n[エラー] 予期しないエラー: {str(e)}")
+        print(f"\n[エラー] 予期しないエラー: {e!s}")
         traceback.print_exc()
 
 
@@ -57,18 +55,18 @@ def run_hybrid_system_tests() -> Dict[str, Any]:
     try:
         print("1. ハイブリッドシステム初期化")
 
+        from data.stock_data import StockDataProvider
         from models.hybrid.hybrid_predictor import (
             HybridStockPredictor,
             PredictionMode,
         )
-        from data.stock_data import StockDataProvider
 
         # データプロバイダー初期化
         data_provider = StockDataProvider()
 
         # ハイブリッドシステム初期化
         hybrid_system = HybridStockPredictor(
-            data_provider=data_provider, default_mode=PredictionMode.AUTO
+            data_provider=data_provider, default_mode=PredictionMode.AUTO,
         )
 
         print("   [OK] ハイブリッドシステム初期化完了")
@@ -97,22 +95,22 @@ def run_hybrid_system_tests() -> Dict[str, Any]:
         # パフォーマンステスト
         print("\n3. パフォーマンステスト")
         test_results["performance_tests"] = test_hybrid_performance(
-            hybrid_system, test_symbols
+            hybrid_system, test_symbols,
         )
 
         # 統合機能テスト
         print("\n4. 統合機能テスト")
         test_results["integration_tests"] = test_integration_features(
-            hybrid_system, test_symbols
+            hybrid_system, test_symbols,
         )
 
         test_results["success"] = True
         return test_results
 
     except ImportError as e:
-        return {"success": False, "error": f"モジュールインポートエラー: {str(e)}"}
+        return {"success": False, "error": f"モジュールインポートエラー: {e!s}"}
     except Exception as e:
-        return {"success": False, "error": f"テスト実行エラー: {str(e)}"}
+        return {"success": False, "error": f"テスト実行エラー: {e!s}"}
 
 
 def test_prediction_modes(hybrid_system, test_symbols: List[str]) -> Dict[str, Any]:
@@ -128,7 +126,6 @@ def test_prediction_modes(hybrid_system, test_symbols: List[str]) -> Dict[str, A
         PredictionMode.BALANCED,
         PredictionMode.AUTO,
     ]:
-
         print(f"   {mode.value}モードテスト...")
         mode_data = {
             "predictions": [],
@@ -149,33 +146,33 @@ def test_prediction_modes(hybrid_system, test_symbols: List[str]) -> Dict[str, A
                         "confidence": result.confidence,
                         "accuracy": result.accuracy,
                         "metadata": result.metadata,
-                    }
+                    },
                 )
 
                 print(
                     f"     {symbol}: 予測値={result.prediction:.1f}, "
                     f"信頼度={result.confidence:.2f}, "
-                    f"システム={result.metadata.get('system_used', 'unknown')}"
+                    f"システム={result.metadata.get('system_used', 'unknown')}",
                 )
 
             except Exception as e:
                 logger.error(
-                    f"Mode {mode.value} prediction failed for {symbol}: {str(e)}"
+                    f"Mode {mode.value} prediction failed for {symbol}: {e!s}",
                 )
 
         mode_data["total_time"] = time.time() - start_time
 
         if mode_data["predictions"]:
             mode_data["avg_confidence"] = np.mean(
-                [p["confidence"] for p in mode_data["predictions"]]
+                [p["confidence"] for p in mode_data["predictions"]],
             )
             mode_data["avg_accuracy"] = np.mean(
-                [p["accuracy"] for p in mode_data["predictions"]]
+                [p["accuracy"] for p in mode_data["predictions"]],
             )
 
         print(
             f"     総時間: {mode_data['total_time']:.3f}秒, "
-            f"平均信頼度: {mode_data['avg_confidence']:.2f}"
+            f"平均信頼度: {mode_data['avg_confidence']:.2f}",
         )
 
         mode_results[mode.value] = mode_data
@@ -204,11 +201,11 @@ def test_hybrid_performance(hybrid_system, test_symbols: List[str]) -> Dict[str,
 
         print(
             f"     バッチ処理: {batch_time:.3f}秒, "
-            f"スループット: {len(test_symbols) / batch_time:.1f}銘柄/秒"
+            f"スループット: {len(test_symbols) / batch_time:.1f}銘柄/秒",
         )
 
     except Exception as e:
-        logger.error(f"Batch processing test failed: {str(e)}")
+        logger.error(f"Batch processing test failed: {e!s}")
         performance_data["batch_processing"] = {"error": str(e)}
 
     # 信頼度計算テスト
@@ -220,7 +217,7 @@ def test_hybrid_performance(hybrid_system, test_symbols: List[str]) -> Dict[str,
             confidence_data[symbol] = confidence
             print(f"     {symbol}: 信頼度={confidence:.2f}")
         except Exception as e:
-            logger.error(f"Confidence calculation failed for {symbol}: {str(e)}")
+            logger.error(f"Confidence calculation failed for {symbol}: {e!s}")
 
     performance_data["confidence_calculation"] = confidence_data
 
@@ -234,7 +231,7 @@ def test_hybrid_performance(hybrid_system, test_symbols: List[str]) -> Dict[str,
             print(f"     総予測回数: {perf_stats['total_predictions']}")
 
     except Exception as e:
-        logger.error(f"Performance statistics failed: {str(e)}")
+        logger.error(f"Performance statistics failed: {e!s}")
 
     return performance_data
 
@@ -261,16 +258,16 @@ def test_integration_features(hybrid_system, test_symbols: List[str]) -> Dict[st
                         "mode_used": result.metadata.get("mode_used", "unknown"),
                         "system_used": result.metadata.get("system_used", "unknown"),
                         "prediction_time": result.metadata.get("prediction_time", 0),
-                    }
+                    },
                 )
 
                 print(
-                    f"     {symbol} 回{i+1}: モード={result.metadata.get('mode_used', 'unknown')}, "
-                    f"システム={result.metadata.get('system_used', 'unknown')}"
+                    f"     {symbol} 回{i + 1}: モード={result.metadata.get('mode_used', 'unknown')}, "
+                    f"システム={result.metadata.get('system_used', 'unknown')}",
                 )
 
         except Exception as e:
-            logger.error(f"Auto mode test failed for {symbol}: {str(e)}")
+            logger.error(f"Auto mode test failed for {symbol}: {e!s}")
 
     integration_data["auto_mode_selection"] = auto_mode_results
 
@@ -297,11 +294,11 @@ def test_integration_features(hybrid_system, test_symbols: List[str]) -> Dict[st
                 print(
                     f"     {symbol} {mode.value}: "
                     f"システム={result.metadata.get('system_used', 'unknown')}, "
-                    f"時間={switch_time:.3f}秒"
+                    f"時間={switch_time:.3f}秒",
                 )
 
             except Exception as e:
-                logger.error(f"System switching test failed: {str(e)}")
+                logger.error(f"System switching test failed: {e!s}")
 
         switching_results[symbol] = symbol_results
 
@@ -335,7 +332,7 @@ def display_test_results(results: Dict[str, Any]):
                 print(f"    平均精度: {data['avg_accuracy']:.1f}%")
                 print(f"    総処理時間: {data['total_time']:.3f}秒")
                 print(
-                    f"    銘柄あたり時間: {data['total_time']/len(data['predictions']):.3f}秒"
+                    f"    銘柄あたり時間: {data['total_time'] / len(data['predictions']):.3f}秒",
                 )
 
     # パフォーマンステスト結果
@@ -348,14 +345,14 @@ def display_test_results(results: Dict[str, Any]):
             and "error" not in perf_tests["batch_processing"]
         ):
             batch_data = perf_tests["batch_processing"]
-            print(f"  バッチ処理:")
+            print("  バッチ処理:")
             print(f"    スループット: {batch_data['throughput']:.1f} 銘柄/秒")
-            print(f"    成功率: {batch_data['success_rate']*100:.1f}%")
+            print(f"    成功率: {batch_data['success_rate'] * 100:.1f}%")
 
         if "performance_statistics" in perf_tests:
             stats = perf_tests["performance_statistics"]
             if "avg_prediction_time" in stats:
-                print(f"  統計:")
+                print("  統計:")
                 print(f"    平均予測時間: {stats['avg_prediction_time']:.3f}秒")
                 print(f"    総予測回数: {stats['total_predictions']}")
 

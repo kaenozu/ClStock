@@ -6,9 +6,9 @@ import math
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import pandas as pd
 import pytest
 
+import pandas as pd
 from api import endpoints
 
 
@@ -35,8 +35,10 @@ def _build_history() -> pd.DataFrame:
             "High": base + 1.0,
             "Low": base - 1.0,
             "Close": base,
-            "Volume": pd.Series([20_000 + i * 50 for i in range(20)], dtype="int", index=idx),
-        }
+            "Volume": pd.Series(
+                [20_000 + i * 50 for i in range(20)], dtype="int", index=idx,
+            ),
+        },
     )
 
 
@@ -66,10 +68,10 @@ def _ticker_stub(symbol: str) -> SimpleNamespace:
     return ticker
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_stock_route_works_with_real_provider() -> None:
     with patch("data.stock_data.get_cache", return_value=_MemoryCache()), patch(
-        "data.stock_data.yf.Ticker", side_effect=_ticker_stub
+        "data.stock_data.yf.Ticker", side_effect=_ticker_stub,
     ):
         payload = await endpoints.get_stock_data("7203", "1mo")
 

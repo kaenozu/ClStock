@@ -1,4 +1,5 @@
 """XGBoost stub module for testing environment."""
+
 from __future__ import annotations
 
 import importlib.machinery

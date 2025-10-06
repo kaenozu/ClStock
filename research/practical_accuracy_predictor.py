@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""
-MAPE問題を回避した実用的な精度重視予測システム
+"""MAPE問題を回避した実用的な精度重視予測システム
 """
 
-import pandas as pd
-import numpy as np
 from typing import Dict, List, Tuple
-import logging
-from utils.logger_config import setup_logger
 
+import numpy as np
+import pandas as pd
 from data.stock_data import StockDataProvider
+from utils.logger_config import setup_logger
 
 # ログ設定
 logger = setup_logger(__name__)
@@ -102,7 +100,7 @@ class PracticalAccuracyPredictor:
             return probabilities
 
         except Exception as e:
-            logger.error(f"Error predicting probabilities for {symbol}: {str(e)}")
+            logger.error(f"Error predicting probabilities for {symbol}: {e!s}")
             return {
                 "neutral": 1.0,
                 "up_small": 0.0,
@@ -156,7 +154,7 @@ class PracticalAccuracyPredictor:
             return (worst_case, expected, best_case)
 
         except Exception as e:
-            logger.error(f"Error predicting range for {symbol}: {str(e)}")
+            logger.error(f"Error predicting range for {symbol}: {e!s}")
             return (-0.01, 0.0, 0.01)
 
     def test_range_prediction_accuracy(self, symbols: List[str]) -> Dict:
@@ -191,7 +189,7 @@ class PracticalAccuracyPredictor:
 
                     # 範囲予測（過去データのみ使用）
                     worst, expected, best = self._predict_range_with_data(
-                        historical_data
+                        historical_data,
                     )
 
                     results["predictions"].append((worst, expected, best))
@@ -207,13 +205,13 @@ class PracticalAccuracyPredictor:
                     results["expected_errors"].append(expected_error)
 
             except Exception as e:
-                logger.warning(f"Error testing {symbol}: {str(e)}")
+                logger.warning(f"Error testing {symbol}: {e!s}")
                 continue
 
         return results
 
     def _predict_range_with_data(
-        self, data: pd.DataFrame
+        self, data: pd.DataFrame,
     ) -> Tuple[float, float, float]:
         """過去データのみを使った範囲予測"""
         try:
@@ -296,7 +294,7 @@ def main():
     metrics = calculate_practical_metrics(results)
 
     if "error" not in metrics:
-        print(f"実用的予測精度結果:")
+        print("実用的予測精度結果:")
         print(f"  範囲内精度: {metrics['range_accuracy']:.1f}%")
         print(f"  期待値MAE: {metrics['expected_mae']:.4f}")
         print(f"  実用的MAPE: {metrics['practical_mape']:.2f}%")
@@ -305,7 +303,7 @@ def main():
         print(f"  平均絶対リターン: {metrics['mean_abs_actual']:.4f}")
 
     # 現在の予測例
-    print(f"\n現在の予測例（範囲予測）:")
+    print("\n現在の予測例（範囲予測）:")
     print("-" * 40)
 
     test_symbols = symbols[:5]
@@ -316,10 +314,10 @@ def main():
         print(f"{symbol}:")
         print(f"  予測範囲: {worst:.3f} ～ {best:.3f} (期待値: {expected:.3f})")
         print(
-            f"  確率: 上昇{(probs['up_small']+probs['up_large']):.1%}, 中立{probs['neutral']:.1%}, 下降{(probs['down_small']+probs['down_large']):.1%}"
+            f"  確率: 上昇{(probs['up_small'] + probs['up_large']):.1%}, 中立{probs['neutral']:.1%}, 下降{(probs['down_small'] + probs['down_large']):.1%}",
         )
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     if "error" not in metrics:
         if metrics["practical_mape"] < 15:
             print("✓ 実用レベル達成！")
@@ -331,7 +329,7 @@ def main():
             print("継続改善が必要")
 
         print(
-            f"最終結果: 実用的MAPE {metrics['practical_mape']:.2f}%, 範囲精度 {metrics['range_accuracy']:.1f}%"
+            f"最終結果: 実用的MAPE {metrics['practical_mape']:.2f}%, 範囲精度 {metrics['range_accuracy']:.1f}%",
         )
 
 

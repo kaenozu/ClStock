@@ -8,8 +8,8 @@ from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
 
+import numpy as np
 from trading.models import TradeRecord
 
 
@@ -93,8 +93,20 @@ class ChartGenerator:
         regular_trades = [trade for trade in trades if not trade.precision_87_achieved]
 
         if precision_87_trades and regular_trades:
-            precision_87_wins = len([trade for trade in precision_87_trades if trade.profit_loss and trade.profit_loss > 0])
-            regular_wins = len([trade for trade in regular_trades if trade.profit_loss and trade.profit_loss > 0])
+            precision_87_wins = len(
+                [
+                    trade
+                    for trade in precision_87_trades
+                    if trade.profit_loss and trade.profit_loss > 0
+                ],
+            )
+            regular_wins = len(
+                [
+                    trade
+                    for trade in regular_trades
+                    if trade.profit_loss and trade.profit_loss > 0
+                ],
+            )
 
             precision_87_win_rate = precision_87_wins / len(precision_87_trades) * 100
             regular_win_rate = regular_wins / len(regular_trades) * 100
@@ -108,8 +120,12 @@ class ChartGenerator:
             ax1.set_ylim(0, 100)
 
         if precision_87_trades and regular_trades:
-            precision_87_avg = np.mean([trade.profit_loss or 0.0 for trade in precision_87_trades])
-            regular_avg = np.mean([trade.profit_loss or 0.0 for trade in regular_trades])
+            precision_87_avg = np.mean(
+                [trade.profit_loss or 0.0 for trade in precision_87_trades],
+            )
+            regular_avg = np.mean(
+                [trade.profit_loss or 0.0 for trade in regular_trades],
+            )
 
             categories = ["87%精度取引", "通常取引"]
             avg_returns = [precision_87_avg, regular_avg]

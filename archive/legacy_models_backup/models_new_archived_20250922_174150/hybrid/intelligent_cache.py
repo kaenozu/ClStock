@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-インテリジェント予測キャッシュシステム
+"""インテリジェント予測キャッシュシステム
 90%の予測で即座応答を実現する高度キャッシングシステム
 """
 
-import time
-import pickle
 import hashlib
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Optional, Any, Tuple
-from functools import lru_cache
-import numpy as np
-import pandas as pd
+import pickle
 import threading
+import time
+from datetime import datetime
+from typing import Any, Dict, Optional
+
+import numpy as np
 
 try:
     import redis
@@ -140,8 +137,7 @@ class CacheInvalidationEngine:
 
 
 class IntelligentPredictionCache:
-    """
-    インテリジェント予測キャッシュシステム
+    """インテリジェント予測キャッシュシステム
 
     特徴:
     - Redis + インメモリ二重キャッシュ
@@ -175,7 +171,7 @@ class IntelligentPredictionCache:
                 self.logger.info("Redis cache connected successfully")
             except Exception as e:
                 self.logger.warning(
-                    f"Redis connection failed: {str(e)}, using in-memory cache"
+                    f"Redis connection failed: {e!s}, using in-memory cache",
                 )
                 self.redis_client = None
 
@@ -207,14 +203,14 @@ class IntelligentPredictionCache:
         self._start_cleanup_thread()
 
         self.logger.info(
-            f"IntelligentPredictionCache initialized with cleanup_interval={cleanup_interval}s, max_cache_size={max_cache_size}"
+            f"IntelligentPredictionCache initialized with cleanup_interval={cleanup_interval}s, max_cache_size={max_cache_size}",
         )
 
     def _start_cleanup_thread(self):
         """自動クリーンアップスレッドを開始"""
         if self.auto_cleanup_enabled and self.cleanup_thread is None:
             self.cleanup_thread = threading.Thread(
-                target=self._cleanup_worker, daemon=True
+                target=self._cleanup_worker, daemon=True,
             )
             self.cleanup_thread.start()
             self.logger.info("Automatic cache cleanup thread started")
@@ -247,7 +243,7 @@ class IntelligentPredictionCache:
                 self._cleanup_by_size_limit()
 
             self.logger.debug(
-                f"Cache cleanup completed. Memory cache size: {len(self.memory_cache)}"
+                f"Cache cleanup completed. Memory cache size: {len(self.memory_cache)}",
             )
 
         except Exception as e:
@@ -278,7 +274,8 @@ class IntelligentPredictionCache:
         """サイズ制限に基づくキャッシュクリーンアップ"""
         # タイムスタンプでソートして古いものから削除
         sorted_items = sorted(
-            self.cache_timestamps.items(), key=lambda x: x[1][0]  # timestampでソート
+            self.cache_timestamps.items(),
+            key=lambda x: x[1][0],  # timestampでソート
         )
 
         # サイズ制限に合わせて削除
@@ -291,12 +288,12 @@ class IntelligentPredictionCache:
             removed_count += 1
 
         self.logger.info(
-            f"Removed {removed_count} oldest cache entries due to size limit"
+            f"Removed {removed_count} oldest cache entries due to size limit",
         )
         return removed_count
 
     def get_cache_key(
-        self, symbol: str, mode: PredictionMode, data_hash: str = None
+        self, symbol: str, mode: PredictionMode, data_hash: str = None,
     ) -> str:
         """キャッシュキー生成"""
         if data_hash is None:
@@ -312,7 +309,7 @@ class IntelligentPredictionCache:
         return hashlib.sha256(hash_input.encode()).hexdigest()[:8]
 
     def get_cached_prediction(
-        self, symbol: str, mode: PredictionMode
+        self, symbol: str, mode: PredictionMode,
     ) -> Optional[PredictionResult]:
         """キャッシュから予測結果取得"""
         cache_key = self.get_cache_key(symbol, mode)
@@ -341,7 +338,7 @@ class IntelligentPredictionCache:
         return None
 
     def cache_prediction(
-        self, symbol: str, mode: PredictionMode, result: PredictionResult
+        self, symbol: str, mode: PredictionMode, result: PredictionResult,
     ):
         """予測結果をキャッシュ"""
         cache_key = self.get_cache_key(symbol, mode)
@@ -354,7 +351,7 @@ class IntelligentPredictionCache:
         self._set_to_memory(cache_key, result, ttl)
 
         self.logger.debug(
-            f"Cached prediction for {symbol} ({mode.value}) with TTL {ttl}s"
+            f"Cached prediction for {symbol} ({mode.value}) with TTL {ttl}s",
         )
 
     def _get_from_redis(self, cache_key: str) -> Optional[PredictionResult]:
@@ -367,7 +364,7 @@ class IntelligentPredictionCache:
             if cached_data:
                 return pickle.loads(cached_data)
         except Exception as e:
-            self.logger.warning(f"Redis get error: {str(e)}")
+            self.logger.warning(f"Redis get error: {e!s}")
 
         return None
 
@@ -380,7 +377,7 @@ class IntelligentPredictionCache:
             serialized_data = pickle.dumps(result)
             self.redis_client.setex(cache_key, ttl, serialized_data)
         except Exception as e:
-            self.logger.warning(f"Redis set error: {str(e)}")
+            self.logger.warning(f"Redis set error: {e!s}")
 
     def _get_from_memory(self, cache_key: str) -> Optional[PredictionResult]:
         """インメモリからデータ取得"""
@@ -439,7 +436,7 @@ class IntelligentPredictionCache:
                 if keys:
                     self.redis_client.delete(*keys)
             except Exception as e:
-                self.logger.warning(f"Redis invalidation error: {str(e)}")
+                self.logger.warning(f"Redis invalidation error: {e!s}")
 
         # インメモリ削除
         keys_to_delete = [
@@ -477,7 +474,7 @@ class IntelligentPredictionCache:
                 if keys:
                     self.redis_client.delete(*keys)
             except Exception as e:
-                self.logger.warning(f"Redis clear error: {str(e)}")
+                self.logger.warning(f"Redis clear error: {e!s}")
 
         # インメモリ削除
         self.memory_cache.clear()

@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-リスク管理フレームワーク
+"""リスク管理フレームワーク
 包括的なリスク分析・監視・制御システム
 """
 
 import logging
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List
+
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, asdict
-from enum import Enum
-import json
 
 
 class RiskLevel(Enum):
@@ -68,7 +66,7 @@ class VolatilityAnalyzer:
         self.logger = logging.getLogger(__name__)
 
     def calculate_historical_volatility(
-        self, price_data: pd.Series, window: int = 30
+        self, price_data: pd.Series, window: int = 30,
     ) -> float:
         """ヒストリカルボラティリティ計算"""
         try:
@@ -77,7 +75,7 @@ class VolatilityAnalyzer:
             annualized_volatility = volatility * np.sqrt(252)  # 年率換算
             return annualized_volatility
         except Exception as e:
-            self.logger.error(f"Historical volatility calculation failed: {str(e)}")
+            self.logger.error(f"Historical volatility calculation failed: {e!s}")
             return 0.3  # デフォルト値
 
     def calculate_garch_volatility(self, price_data: pd.Series) -> float:
@@ -95,7 +93,7 @@ class VolatilityAnalyzer:
 
             return volatility
         except Exception as e:
-            self.logger.error(f"GARCH volatility calculation failed: {str(e)}")
+            self.logger.error(f"GARCH volatility calculation failed: {e!s}")
             return self.calculate_historical_volatility(price_data)
 
     def calculate_volatility_regime(self, price_data: pd.Series) -> str:
@@ -106,10 +104,9 @@ class VolatilityAnalyzer:
 
             if current_vol > long_term_vol * 1.5:
                 return "high_volatility"
-            elif current_vol < long_term_vol * 0.7:
+            if current_vol < long_term_vol * 0.7:
                 return "low_volatility"
-            else:
-                return "normal_volatility"
+            return "normal_volatility"
         except Exception:
             return "normal_volatility"
 
@@ -139,11 +136,11 @@ class VaRCalculator:
             var = -(mean_return + z_score * std_return) * np.sqrt(holding_period)
             return max(var, 0)  # 負の値は0にクリップ
         except Exception as e:
-            self.logger.error(f"Parametric VaR calculation failed: {str(e)}")
+            self.logger.error(f"Parametric VaR calculation failed: {e!s}")
             return 0.05  # デフォルト5%
 
     def calculate_historical_var(
-        self, returns: pd.Series, confidence_level: float = 0.95
+        self, returns: pd.Series, confidence_level: float = 0.95,
     ) -> float:
         """ヒストリカルVaR計算"""
         try:
@@ -156,11 +153,11 @@ class VaRCalculator:
 
             return max(var, 0)
         except Exception as e:
-            self.logger.error(f"Historical VaR calculation failed: {str(e)}")
+            self.logger.error(f"Historical VaR calculation failed: {e!s}")
             return 0.05
 
     def calculate_conditional_var(
-        self, returns: pd.Series, confidence_level: float = 0.95
+        self, returns: pd.Series, confidence_level: float = 0.95,
     ) -> float:
         """条件付きVaR（CVaR/Expected Shortfall）計算"""
         try:
@@ -175,7 +172,7 @@ class VaRCalculator:
 
             return cvar
         except Exception as e:
-            self.logger.error(f"Conditional VaR calculation failed: {str(e)}")
+            self.logger.error(f"Conditional VaR calculation failed: {e!s}")
             return 0.07
 
 
@@ -186,7 +183,7 @@ class CorrelationAnalyzer:
         self.logger = logging.getLogger(__name__)
 
     def calculate_rolling_correlation(
-        self, price_data: Dict[str, pd.Series], window: int = 60
+        self, price_data: Dict[str, pd.Series], window: int = 60,
     ) -> pd.DataFrame:
         """ローリング相関計算"""
         try:
@@ -199,11 +196,11 @@ class CorrelationAnalyzer:
 
             return rolling_corr
         except Exception as e:
-            self.logger.error(f"Rolling correlation calculation failed: {str(e)}")
+            self.logger.error(f"Rolling correlation calculation failed: {e!s}")
             return pd.DataFrame()
 
     def detect_correlation_clusters(
-        self, correlation_matrix: pd.DataFrame, threshold: float = 0.7
+        self, correlation_matrix: pd.DataFrame, threshold: float = 0.7,
     ) -> Dict[str, List[str]]:
         """相関クラスター検出"""
         try:
@@ -229,7 +226,7 @@ class CorrelationAnalyzer:
 
             return clusters
         except Exception as e:
-            self.logger.error(f"Correlation cluster detection failed: {str(e)}")
+            self.logger.error(f"Correlation cluster detection failed: {e!s}")
             return {}
 
 
@@ -246,7 +243,7 @@ class DrawdownAnalyzer:
             drawdown = (equity_curve - running_max) / running_max
             return drawdown
         except Exception as e:
-            self.logger.error(f"Drawdown series calculation failed: {str(e)}")
+            self.logger.error(f"Drawdown series calculation failed: {e!s}")
             return pd.Series()
 
     def calculate_max_drawdown(self, equity_curve: pd.Series) -> float:
@@ -256,7 +253,7 @@ class DrawdownAnalyzer:
             max_drawdown = drawdown_series.min()
             return abs(max_drawdown)
         except Exception as e:
-            self.logger.error(f"Max drawdown calculation failed: {str(e)}")
+            self.logger.error(f"Max drawdown calculation failed: {e!s}")
             return 0.0
 
     def calculate_drawdown_duration(self, equity_curve: pd.Series) -> Dict[str, int]:
@@ -272,10 +269,9 @@ class DrawdownAnalyzer:
             for is_dd in in_drawdown:
                 if is_dd:
                     current_period += 1
-                else:
-                    if current_period > 0:
-                        drawdown_periods.append(current_period)
-                        current_period = 0
+                elif current_period > 0:
+                    drawdown_periods.append(current_period)
+                    current_period = 0
 
             if current_period > 0:
                 drawdown_periods.append(current_period)
@@ -286,7 +282,7 @@ class DrawdownAnalyzer:
                 "current_duration": current_period,
             }
         except Exception as e:
-            self.logger.error(f"Drawdown duration calculation failed: {str(e)}")
+            self.logger.error(f"Drawdown duration calculation failed: {e!s}")
             return {"max_duration": 0, "avg_duration": 0, "current_duration": 0}
 
 
@@ -327,7 +323,7 @@ class LiquidityAnalyzer:
 
             return metrics
         except Exception as e:
-            self.logger.error(f"Liquidity metrics calculation failed: {str(e)}")
+            self.logger.error(f"Liquidity metrics calculation failed: {e!s}")
             return {}
 
     def assess_liquidity_risk(self, liquidity_metrics: Dict[str, float]) -> RiskLevel:
@@ -358,20 +354,18 @@ class LiquidityAnalyzer:
 
             if risk_score >= 4:
                 return RiskLevel.CRITICAL
-            elif risk_score >= 3:
+            if risk_score >= 3:
                 return RiskLevel.HIGH
-            elif risk_score >= 2:
+            if risk_score >= 2:
                 return RiskLevel.MEDIUM
-            else:
-                return RiskLevel.LOW
+            return RiskLevel.LOW
 
         except Exception:
             return RiskLevel.MEDIUM
 
 
 class RiskManager:
-    """
-    リスク管理フレームワーク
+    """リスク管理フレームワーク
 
     特徴:
     - 包括的リスク分析
@@ -405,7 +399,7 @@ class RiskManager:
         self.logger.info("RiskManager initialized")
 
     def analyze_portfolio_risk(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame]
+        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
     ) -> PortfolioRisk:
         """ポートフォリオリスク分析"""
         try:
@@ -434,7 +428,7 @@ class RiskManager:
 
             # 5. 相関リスク
             correlation_risk = self._analyze_correlation_risk(
-                portfolio_data, price_data
+                portfolio_data, price_data,
             )
             risk_metrics["correlation_risk"] = correlation_risk
             risk_scores.append(self._risk_level_to_score(correlation_risk.risk_level))
@@ -448,7 +442,7 @@ class RiskManager:
                 "market": self._risk_level_to_score(market_risk.risk_level),
                 "liquidity": self._risk_level_to_score(liquidity_risk.risk_level),
                 "concentration": self._risk_level_to_score(
-                    concentration_risk.risk_level
+                    concentration_risk.risk_level,
                 ),
                 "volatility": self._risk_level_to_score(volatility_risk.risk_level),
                 "correlation": self._risk_level_to_score(correlation_risk.risk_level),
@@ -456,7 +450,7 @@ class RiskManager:
 
             # 推奨事項生成
             recommendations = self._generate_risk_recommendations(
-                risk_metrics, total_risk_score
+                risk_metrics, total_risk_score,
             )
 
             # 安全なポジションサイズ計算
@@ -478,17 +472,17 @@ class RiskManager:
             return portfolio_risk
 
         except Exception as e:
-            self.logger.error(f"Portfolio risk analysis failed: {str(e)}")
+            self.logger.error(f"Portfolio risk analysis failed: {e!s}")
             return self._create_default_portfolio_risk()
 
     def _analyze_market_risk(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame]
+        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
     ) -> RiskMetric:
         """市場リスク分析"""
         try:
             # ポートフォリオリターン計算
             portfolio_returns = self._calculate_portfolio_returns(
-                portfolio_data, price_data
+                portfolio_data, price_data,
             )
 
             if len(portfolio_returns) < 30:
@@ -504,7 +498,7 @@ class RiskManager:
 
             # 95% VaR計算
             var_95 = self.var_calculator.calculate_historical_var(
-                portfolio_returns, 0.95
+                portfolio_returns, 0.95,
             )
 
             # リスクレベル判定
@@ -528,7 +522,7 @@ class RiskManager:
             )
 
         except Exception as e:
-            self.logger.error(f"Market risk analysis failed: {str(e)}")
+            self.logger.error(f"Market risk analysis failed: {e!s}")
             return RiskMetric(
                 metric_name="Market Risk (VaR)",
                 current_value=0.10,
@@ -540,7 +534,7 @@ class RiskManager:
             )
 
     def _analyze_liquidity_risk(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame]
+        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
     ) -> RiskMetric:
         """流動性リスク分析"""
         try:
@@ -549,7 +543,7 @@ class RiskManager:
             for symbol, position in portfolio_data.get("positions", {}).items():
                 if symbol in price_data:
                     metrics = self.liquidity_analyzer.calculate_liquidity_metrics(
-                        price_data[symbol]
+                        price_data[symbol],
                     )
                     risk_level = self.liquidity_analyzer.assess_liquidity_risk(metrics)
                     liquidity_scores.append(self._risk_level_to_score(risk_level))
@@ -572,7 +566,7 @@ class RiskManager:
             )
 
         except Exception as e:
-            self.logger.error(f"Liquidity risk analysis failed: {str(e)}")
+            self.logger.error(f"Liquidity risk analysis failed: {e!s}")
             return RiskMetric(
                 metric_name="Liquidity Risk",
                 current_value=2.0,
@@ -629,7 +623,7 @@ class RiskManager:
             )
 
         except Exception as e:
-            self.logger.error(f"Concentration risk analysis failed: {str(e)}")
+            self.logger.error(f"Concentration risk analysis failed: {e!s}")
             return RiskMetric(
                 metric_name="Concentration Risk",
                 current_value=0.10,
@@ -641,7 +635,7 @@ class RiskManager:
             )
 
     def _analyze_volatility_risk(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame]
+        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
     ) -> RiskMetric:
         """ボラティリティリスク分析"""
         try:
@@ -650,7 +644,7 @@ class RiskManager:
             for symbol, position in portfolio_data.get("positions", {}).items():
                 if symbol in price_data and "Close" in price_data[symbol].columns:
                     vol = self.volatility_analyzer.calculate_historical_volatility(
-                        price_data[symbol]["Close"]
+                        price_data[symbol]["Close"],
                     )
                     volatilities.append(vol)
 
@@ -680,7 +674,7 @@ class RiskManager:
             )
 
         except Exception as e:
-            self.logger.error(f"Volatility risk analysis failed: {str(e)}")
+            self.logger.error(f"Volatility risk analysis failed: {e!s}")
             return RiskMetric(
                 metric_name="Volatility Risk",
                 current_value=0.3,
@@ -692,7 +686,7 @@ class RiskManager:
             )
 
     def _analyze_correlation_risk(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame]
+        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
     ) -> RiskMetric:
         """相関リスク分析"""
         try:
@@ -728,7 +722,7 @@ class RiskManager:
 
             # 相関行列計算
             corr_matrix = self.correlation_analyzer.calculate_rolling_correlation(
-                price_series, 60
+                price_series, 60,
             )
 
             if corr_matrix.empty:
@@ -762,7 +756,7 @@ class RiskManager:
             )
 
         except Exception as e:
-            self.logger.error(f"Correlation risk analysis failed: {str(e)}")
+            self.logger.error(f"Correlation risk analysis failed: {e!s}")
             return RiskMetric(
                 metric_name="Correlation Risk",
                 current_value=0.5,
@@ -774,7 +768,7 @@ class RiskManager:
             )
 
     def _calculate_portfolio_returns(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame]
+        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
     ) -> pd.Series:
         """ポートフォリオリターン計算"""
         try:
@@ -796,13 +790,13 @@ class RiskManager:
                         portfolio_returns = weighted_returns
                     else:
                         portfolio_returns = portfolio_returns.add(
-                            weighted_returns, fill_value=0
+                            weighted_returns, fill_value=0,
                         )
 
             return portfolio_returns if portfolio_returns is not None else pd.Series()
 
         except Exception as e:
-            self.logger.error(f"Portfolio returns calculation failed: {str(e)}")
+            self.logger.error(f"Portfolio returns calculation failed: {e!s}")
             return pd.Series()
 
     def _risk_level_to_score(self, risk_level: RiskLevel) -> float:
@@ -819,15 +813,14 @@ class RiskManager:
         """スコアをリスクレベルに変換"""
         if score >= 3.5:
             return RiskLevel.CRITICAL
-        elif score >= 2.5:
+        if score >= 2.5:
             return RiskLevel.HIGH
-        elif score >= 1.5:
+        if score >= 1.5:
             return RiskLevel.MEDIUM
-        else:
-            return RiskLevel.LOW
+        return RiskLevel.LOW
 
     def _generate_risk_recommendations(
-        self, risk_metrics: Dict[str, RiskMetric], total_risk_score: float
+        self, risk_metrics: Dict[str, RiskMetric], total_risk_score: float,
     ) -> List[str]:
         """リスク推奨事項生成"""
         recommendations = []
@@ -835,11 +828,11 @@ class RiskManager:
         # 総合リスクスコアに基づく推奨
         if total_risk_score >= 3.5:
             recommendations.append(
-                "【緊急】リスクレベルが危険域です。ポジション縮小を強く推奨"
+                "【緊急】リスクレベルが危険域です。ポジション縮小を強く推奨",
             )
         elif total_risk_score >= 2.5:
             recommendations.append(
-                "リスクレベルが高いです。ポジション調整を検討してください"
+                "リスクレベルが高いです。ポジション調整を検討してください",
             )
 
         # 個別メトリクスに基づく推奨
@@ -847,23 +840,23 @@ class RiskManager:
             if metric.risk_level == RiskLevel.CRITICAL:
                 if metric_name == "market_risk":
                     recommendations.append(
-                        "市場リスクが危険レベル：ヘッジ取引やポジション縮小を検討"
+                        "市場リスクが危険レベル：ヘッジ取引やポジション縮小を検討",
                     )
                 elif metric_name == "concentration_risk":
                     recommendations.append(
-                        "集中リスクが高い：ポートフォリオの分散化が必要"
+                        "集中リスクが高い：ポートフォリオの分散化が必要",
                     )
                 elif metric_name == "correlation_risk":
                     recommendations.append(
-                        "相関リスクが高い：異なるセクター・地域への分散投資を検討"
+                        "相関リスクが高い：異なるセクター・地域への分散投資を検討",
                     )
                 elif metric_name == "liquidity_risk":
                     recommendations.append(
-                        "流動性リスクが高い：より流動性の高い銘柄への切り替えを検討"
+                        "流動性リスクが高い：より流動性の高い銘柄への切り替えを検討",
                     )
                 elif metric_name == "volatility_risk":
                     recommendations.append(
-                        "ボラティリティが危険レベル：防御的ポジション構築を推奨"
+                        "ボラティリティが危険レベル：防御的ポジション構築を推奨",
                     )
 
         if not recommendations:
@@ -878,12 +871,11 @@ class RiskManager:
         # リスクスコアに基づく調整
         if total_risk_score >= 3.5:
             return base_max_position * 0.3  # 70%削減
-        elif total_risk_score >= 2.5:
+        if total_risk_score >= 2.5:
             return base_max_position * 0.5  # 50%削減
-        elif total_risk_score >= 1.5:
+        if total_risk_score >= 1.5:
             return base_max_position * 0.7  # 30%削減
-        else:
-            return base_max_position
+        return base_max_position
 
     def _update_risk_history(self, portfolio_risk: PortfolioRisk):
         """リスク履歴更新"""
@@ -934,9 +926,8 @@ class RiskManager:
 
             if trend > 0.1:
                 return "increasing"
-            elif trend < -0.1:
+            if trend < -0.1:
                 return "decreasing"
-            else:
-                return "stable"
+            return "stable"
 
         return "stable"

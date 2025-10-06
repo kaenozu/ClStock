@@ -1,13 +1,13 @@
 import os
+from datetime import datetime
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, Mock
-import pandas as pd
-from datetime import datetime
 
-from app.main import app
+import pandas as pd
 from api.schemas import RecommendationResponse
+from app.main import app
 
 AUTH_HEADER = {"Authorization": "Bearer admin_token_secure_2024"}
 
@@ -22,7 +22,7 @@ class TestAPI:
     def client(self):
         """テストクライアントのセットアップ"""
         with patch.dict(
-            os.environ, {"API_ADMIN_TOKEN": "admin_token_secure_2024"}, clear=False
+            os.environ, {"API_ADMIN_TOKEN": "admin_token_secure_2024"}, clear=False,
         ):
             client = TestClient(app)
             client.headers.update({"Authorization": "Bearer admin_token_secure_2024"})
@@ -87,12 +87,12 @@ class TestAPI:
         with patch("api.endpoints.MLStockPredictor") as mock_predictor_class:
             mock_predictor = Mock()
             mock_predictor.get_top_recommendations.return_value = [
-                sample_recommendation
+                sample_recommendation,
             ]
             mock_predictor_class.return_value = mock_predictor
 
             response = client.get(
-                "/api/v1/recommendations?top_n=1", headers=AUTH_HEADER
+                "/api/v1/recommendations?top_n=1", headers=AUTH_HEADER,
             )
             assert response.status_code == 200
 
@@ -121,7 +121,7 @@ class TestAPI:
 
             # top_n=3でテスト
             response = client.get(
-                "/api/v1/recommendations?top_n=3", headers=AUTH_HEADER
+                "/api/v1/recommendations?top_n=3", headers=AUTH_HEADER,
             )
             assert response.status_code == 200
 
@@ -133,23 +133,18 @@ class TestAPI:
     def test_get_recommendations_invalid_params(self, client):
         """無効なパラメータでの推奨銘柄エンドポイントテスト"""
         # top_nが範囲外
-        response = client.get(
-            "/api/v1/recommendations?top_n=51", headers=AUTH_HEADER
-        )
+        response = client.get("/api/v1/recommendations?top_n=51", headers=AUTH_HEADER)
         assert response.status_code == 422  # Validation Error
 
-        response = client.get(
-            "/api/v1/recommendations?top_n=0", headers=AUTH_HEADER
-        )
+        response = client.get("/api/v1/recommendations?top_n=0", headers=AUTH_HEADER)
         assert response.status_code == 422  # Validation Error
 
     @pytest.mark.api
     def test_get_single_recommendation_endpoint(self, client, sample_recommendation):
         """特定銘柄推奨エンドポイントのテスト"""
         with patch("api.endpoints.MLStockPredictor") as mock_predictor_class, patch(
-            "api.endpoints.StockDataProvider"
+            "api.endpoints.StockDataProvider",
         ) as mock_provider_class:
-
             mock_predictor = Mock()
             mock_predictor.generate_recommendation.return_value = sample_recommendation
             mock_predictor_class.return_value = mock_predictor
@@ -158,9 +153,7 @@ class TestAPI:
             mock_provider.get_all_stock_symbols.return_value = ["7203", "6758", "9984"]
             mock_provider_class.return_value = mock_provider
 
-            response = client.get(
-                "/api/v1/recommendation/7203", headers=AUTH_HEADER
-            )
+            response = client.get("/api/v1/recommendation/7203", headers=AUTH_HEADER)
             assert response.status_code == 200
 
             data = response.json()
@@ -175,9 +168,7 @@ class TestAPI:
             mock_provider.get_all_stock_symbols.return_value = ["7203", "6758"]
             mock_provider_class.return_value = mock_provider
 
-            response = client.get(
-                "/api/v1/recommendation/9999", headers=AUTH_HEADER
-            )
+            response = client.get("/api/v1/recommendation/9999", headers=AUTH_HEADER)
             assert response.status_code == 404
             assert "見つかりません" in response.json()["detail"]
 
@@ -246,9 +237,7 @@ class TestAPI:
             mock_predictor.get_top_recommendations.side_effect = Exception("Test error")
             mock_predictor_class.return_value = mock_predictor
 
-            response = client.get(
-                "/api/v1/recommendations", headers=AUTH_HEADER
-            )
+            response = client.get("/api/v1/recommendations", headers=AUTH_HEADER)
             assert response.status_code == 500
             assert "推奨銘柄の取得に失敗しました" in response.json()["detail"]
             mock_predictor.get_top_recommendations.assert_called_once_with(10)
@@ -259,25 +248,21 @@ class TestAPI:
         with patch("api.endpoints.MLStockPredictor") as mock_predictor_class:
             mock_predictor = Mock()
             mock_predictor.get_top_recommendations.return_value = [
-                sample_recommendation
+                sample_recommendation,
             ]
             mock_predictor_class.return_value = mock_predictor
 
             # 営業時間内をシミュレート (10時)
             with patch("api.endpoints.datetime") as mock_datetime:
                 mock_datetime.now.return_value = datetime(2023, 1, 1, 10, 0, 0)
-                response = client.get(
-                    "/api/v1/recommendations", headers=AUTH_HEADER
-                )
+                response = client.get("/api/v1/recommendations", headers=AUTH_HEADER)
                 data = response.json()
                 assert "市場営業中" in data["market_status"]
 
             # 営業時間外をシミュレート (18時)
             with patch("api.endpoints.datetime") as mock_datetime:
                 mock_datetime.now.return_value = datetime(2023, 1, 1, 18, 0, 0)
-                response = client.get(
-                    "/api/v1/recommendations", headers=AUTH_HEADER
-                )
+                response = client.get("/api/v1/recommendations", headers=AUTH_HEADER)
                 data = response.json()
                 assert "市場営業時間外" in data["market_status"]
 
@@ -292,7 +277,7 @@ class TestAPI:
 
             # 実際の推奨取得（ネットワーク接続が必要）
             response = client.get(
-                "/api/v1/recommendations?top_n=1", headers=AUTH_HEADER
+                "/api/v1/recommendations?top_n=1", headers=AUTH_HEADER,
             )
             if response.status_code == 200:
                 data = response.json()

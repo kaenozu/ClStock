@@ -1,12 +1,12 @@
 """Comprehensive tests for the ClStock CLI."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from click.testing import CliRunner
 from datetime import datetime
+from unittest.mock import Mock, patch
 
-from clstock_cli import cli
+from click.testing import CliRunner
+
 from ClStock.systems.process_manager import ProcessInfo, ProcessStatus
+from clstock_cli import cli
 
 
 class TestClStockCLI:
@@ -46,7 +46,7 @@ class TestClStockCLI:
                     name="test_service",
                     command="python test.py",
                     status=ProcessStatus.STOPPED,
-                )
+                ),
             ]
             mock_get_pm.return_value = mock_pm
 
@@ -84,9 +84,8 @@ class TestClStockCLI:
     def test_service_stop_without_name(self):
         """Test service stop command without specifying a service name."""
         with patch("clstock_cli.get_process_manager") as mock_get_pm, patch(
-            "clstock_cli.click.confirm"
+            "clstock_cli.click.confirm",
         ) as mock_confirm:
-
             mock_pm = Mock()
             mock_get_pm.return_value = mock_pm
             mock_confirm.return_value = True  # User confirms
@@ -118,7 +117,7 @@ class TestClStockCLI:
             mock_get_pm.return_value = mock_pm
 
             result = self.runner.invoke(
-                cli, ["service", "stop", "--force", "test_service"]
+                cli, ["service", "stop", "--force", "test_service"],
             )
 
             assert result.exit_code == 0
@@ -295,7 +294,7 @@ class TestClStockCLI:
             mock_provider_class.return_value = mock_provider
 
             result = self.runner.invoke(
-                cli, ["data", "fetch", "--symbol", "1234", "--symbol", "5678"]
+                cli, ["data", "fetch", "--symbol", "1234", "--symbol", "5678"],
             )
 
             assert result.exit_code == 0
@@ -333,7 +332,7 @@ class TestClStockCLI:
             mock_cache_dir.__truediv__ = Mock(return_value=mock_cache_dir)
 
             mock_project_root.__truediv__ = Mock(
-                side_effect=[mock_logs_dir, mock_data_dir, mock_cache_dir]
+                side_effect=[mock_logs_dir, mock_data_dir, mock_cache_dir],
             )
 
             result = self.runner.invoke(cli, ["setup"])

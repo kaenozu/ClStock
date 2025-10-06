@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-ClStock 高度アンサンブル学習テストシステム
+"""ClStock 高度アンサンブル学習テストシステム
 84.6%精度突破を目指す統合検証システム
 
 実装機能:
@@ -10,21 +9,20 @@ ClStock 高度アンサンブル学習テストシステム
 - 深層学習最適化 (LSTM/Transformer)
 """
 
-import sys
-import os
 import logging
-from utils.logger_config import setup_logger
-import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Tuple, Union
+import sys
 import warnings
+from datetime import datetime
+from typing import Any, Dict, List
+
+import numpy as np
+from utils.logger_config import setup_logger
 
 warnings.filterwarnings("ignore")
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -93,15 +91,16 @@ class AdvancedEnsembleTestSystem:
 
         # 総合評価
         test_results["performance_summary"] = self._generate_performance_summary(
-            test_results
+            test_results,
         )
 
         return test_results
 
     def _get_system_info(self) -> Dict[str, Any]:
         """システム情報取得"""
-        import psutil
         import platform
+
+        import psutil
 
         return {
             "timestamp": datetime.now().isoformat(),
@@ -163,7 +162,7 @@ class AdvancedEnsembleTestSystem:
                     successful_analyses += 1
 
                 logger.info(
-                    f"{symbol}: センチメント={sentiment_result['sentiment_score']:.3f}, 信頼度={sentiment_result['confidence']:.3f}"
+                    f"{symbol}: センチメント={sentiment_result['sentiment_score']:.3f}, 信頼度={sentiment_result['confidence']:.3f}",
                 )
 
             except Exception as e:
@@ -243,7 +242,7 @@ class AdvancedEnsembleTestSystem:
                 logger.info(
                     f"{symbol}: 予測={result['ensemble_prediction']:.1f}, "
                     f"信頼度={result['ensemble_confidence']:.3f}, "
-                    f"高信頼={result['high_confidence']}"
+                    f"高信頼={result['high_confidence']}",
                 )
 
             except Exception as e:
@@ -307,7 +306,7 @@ class AdvancedEnsembleTestSystem:
                     logger.info(
                         f"{symbol}: ベース={base_confidence:.3f}, "
                         f"アンサンブル={ensemble_confidence:.3f}, "
-                        f"改善={ensemble_confidence - base_confidence:+.3f}"
+                        f"改善={ensemble_confidence - base_confidence:+.3f}",
                     )
 
                 except Exception as e:
@@ -323,7 +322,7 @@ class AdvancedEnsembleTestSystem:
                     ensemble_wins / total_comparisons if total_comparisons > 0 else 0
                 ),
                 "average_improvement": np.mean(
-                    [r.get("improvement", 0) for r in comparison_results.values()]
+                    [r.get("improvement", 0) for r in comparison_results.values()],
                 ),
                 "individual_comparisons": comparison_results,
                 "total_comparisons": total_comparisons,
@@ -334,7 +333,7 @@ class AdvancedEnsembleTestSystem:
             return {"status": "error", "error": str(e)}
 
     def _generate_performance_summary(
-        self, test_results: Dict[str, Any]
+        self, test_results: Dict[str, Any],
     ) -> Dict[str, Any]:
         """総合パフォーマンス評価"""
         logger.info("\n" + "=" * 60)
@@ -409,24 +408,24 @@ class AdvancedEnsembleTestSystem:
                 "grade": grade,
                 "target_achieved": projected_accuracy >= 85.0,  # 85%目標
                 "recommendation": self._generate_recommendations(
-                    scores, projected_accuracy
+                    scores, projected_accuracy,
                 ),
             }
 
             # 結果表示
-            logger.info(f"個別スコア:")
+            logger.info("個別スコア:")
             for key, score in scores.items():
                 logger.info(f"  {key}: {score:.1f}")
 
-            logger.info(f"\n総合評価:")
+            logger.info("\n総合評価:")
             logger.info(f"  総合スコア: {overall_score:.1f}/100")
             logger.info(
-                f"  予測精度: {projected_accuracy:.1f}% (基準: {baseline_accuracy}%)"
+                f"  予測精度: {projected_accuracy:.1f}% (基準: {baseline_accuracy}%)",
             )
             logger.info(f"  精度改善: {projected_accuracy - baseline_accuracy:+.1f}%")
             logger.info(f"  評価グレード: {grade}")
             logger.info(
-                f"  目標達成: {'✅ YES' if summary['target_achieved'] else '❌ NO'}"
+                f"  目標達成: {'✅ YES' if summary['target_achieved'] else '❌ NO'}",
             )
 
             return summary
@@ -436,7 +435,7 @@ class AdvancedEnsembleTestSystem:
             return {"status": "error", "error": str(e)}
 
     def _generate_recommendations(
-        self, scores: Dict[str, float], projected_accuracy: float
+        self, scores: Dict[str, float], projected_accuracy: float,
     ) -> List[str]:
         """改善推奨事項生成"""
         recommendations = []
@@ -506,7 +505,7 @@ def main():
             print("\n🎉 85%精度目標達成！")
             print(f"予測精度: {summary.get('projected_accuracy', 0):.1f}%")
         else:
-            print(f"\n📈 継続改善が必要")
+            print("\n📈 継続改善が必要")
             print(f"現在予測精度: {summary.get('projected_accuracy', 0):.1f}%")
             print("推奨改善事項:")
             for rec in summary.get("recommendation", []):

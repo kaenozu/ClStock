@@ -1,24 +1,23 @@
 #!/usr/bin/env python3
-"""
-ClStock 統合CLI
+"""ClStock 統合CLI
 全機能へのエントリーポイント
 """
 
-import sys
-import os
+import logging
 import time
-import click
 from pathlib import Path
 from typing import Optional
 
+import click
+
+from ClStock.config.settings import get_settings
+from ClStock.systems.process_manager import ProcessStatus, get_process_manager
+from ClStock.utils.logger_config import get_logger
+from data.stock_data import StockDataProvider
+from investment_advisor_cui import InvestmentAdvisorCUI
+
 # プロジェクトルート設定
 PROJECT_ROOT = Path(__file__).parent
-
-from ClStock.systems.process_manager import get_process_manager, ProcessStatus
-from ClStock.utils.logger_config import get_logger
-from ClStock.config.settings import get_settings
-
-from investment_advisor_cui import InvestmentAdvisorCUI  # 追加
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -26,15 +25,17 @@ settings = get_settings()
 
 def _raise_cli_error(message: str) -> None:
     """Log and raise a ClickException with the provided message."""
-    
     logger.error(message)
     raise click.ClickException(message)
 
 
 def _bad_parameter(message: str, param_name: Optional[str] = None) -> None:
     """Raise a BadParameter error while preserving logging."""
-    
-    logger.error(f"Bad parameter {param_name}: {message}" if param_name else f"Bad parameter: {message}")
+    logger.error(
+        f"Bad parameter {param_name}: {message}"
+        if param_name
+        else f"Bad parameter: {message}",
+    )
     if param_name:
         raise click.BadParameter(message, param_hint=param_name)
     raise click.BadParameter(message)
@@ -45,8 +46,6 @@ def _bad_parameter(message: str, param_name: Optional[str] = None) -> None:
 def cli(verbose):
     """ClStock 統合管理CLI"""
     if verbose:
-        import logging
-
         logging.getLogger().setLevel(logging.DEBUG)
         logger.info("詳細モード有効")
 
@@ -54,7 +53,6 @@ def cli(verbose):
 @cli.group()
 def service():
     """サービス管理コマンド"""
-    pass
 
 
 @service.command()
@@ -71,14 +69,13 @@ def start(name: Optional[str]):
         message = f"[失敗] サービス開始失敗: {name}"
         logger.error(message)
         raise click.ClickException(message)
-    else:
-        # 利用可能なサービス表示
-        click.echo("利用可能なサービス:")
-        for service_info in manager.list_services():
-            status_emoji = (
-                "🟢" if service_info.status == ProcessStatus.RUNNING else "🔴"
-            )
-            click.echo(f"  {status_emoji} {service_info.name}: {service_info.command}")
+    # 利用可能なサービス表示
+    click.echo("利用可能なサービス:")
+    for service_info in manager.list_services():
+        status_emoji = (
+            "🟢" if service_info.status == ProcessStatus.RUNNING else "🔴"
+        )
+        click.echo(f"  {status_emoji} {service_info.name}: {service_info.command}")
 
 
 @service.command()
@@ -95,11 +92,10 @@ def stop(name: Optional[str], force: bool):
         message = f"[失敗] サービス停止失敗: {name}"
         logger.error(message)
         raise click.ClickException(message)
-    else:
-        # 全サービス停止確認
-        if click.confirm("全サービスを停止しますか？"):
-            manager.stop_all_services(force=force)
-            click.echo("[成功] 全サービス停止完了")
+    # 全サービス停止確認
+    if click.confirm("全サービスを停止しますか？"):
+        manager.stop_all_services(force=force)
+        click.echo("[成功] 全サービス停止完了")
 
 
 @service.command()
@@ -133,10 +129,10 @@ def status(watch: bool):
         click.echo(f"[実行中] 実行中: {system_status['running']}")
         click.echo(f"[失敗] 失敗: {system_status['failed']}")
         click.echo(
-            f"[監視] 監視: {'有効' if system_status['monitoring_active'] else '無効'}"
+            f"[監視] 監視: {'有効' if system_status['monitoring_active'] else '無効'}",
         )
         click.echo(
-            f"[時刻] 時刻: {system_status['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}"
+            f"[時刻] 時刻: {system_status['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}",
         )
         click.echo()
 
@@ -152,7 +148,7 @@ def status(watch: bool):
             }.get(service_info.status, "[不明]")
 
             click.echo(
-                f"  {status_emoji} {service_info.name:<20} {service_info.status.value}"
+                f"  {status_emoji} {service_info.name:<20} {service_info.status.value}",
             )
 
             if service_info.pid:
@@ -161,7 +157,7 @@ def status(watch: bool):
                 uptime = (
                     system_status["timestamp"] - service_info.start_time
                 ).total_seconds()
-                click.echo(f"      稼働時間: {uptime/60:.1f}分")
+                click.echo(f"      稼働時間: {uptime / 60:.1f}分")
             if service_info.last_error:
                 click.echo(f"      エラー: {service_info.last_error}")
             if service_info.restart_count > 0:
@@ -194,7 +190,6 @@ def monitor():
 @cli.group()
 def system():
     """システム管理コマンド"""
-    pass
 
 
 @system.command()
@@ -232,7 +227,7 @@ def predict(symbol: str):
     """予測システムの実行 (CUI表示改善版)"""
     # 銘柄コードの形式チェック（数値のみ or 数値+.T）
     is_numeric = symbol.isdigit()
-    is_numeric_with_t = symbol.endswith('.T') and symbol[:-2].isdigit()
+    is_numeric_with_t = symbol.endswith(".T") and symbol[:-2].isdigit()
     if not (is_numeric or is_numeric_with_t):
         message = "[失敗] 銘柄コードは数値のみ、または数値+.T形式で有効です"
         logger.error(message)
@@ -245,15 +240,14 @@ def predict(symbol: str):
     click.echo(f"🔮 予測システム実行: {symbol}")
 
     try:
-        advisor = InvestmentAdvisorCUI() # インスタンス生成
-        analysis = advisor.get_comprehensive_analysis(symbol) # 分析実行
+        advisor = InvestmentAdvisorCUI()  # インスタンス生成
+        analysis = advisor.get_comprehensive_analysis(symbol)  # 分析実行
         # analysisの内容を整形して出力 (display_recommendationsの一部を流用)
         integrated = analysis["integrated_recommendation"]
         short = analysis["short_term"]
-        medium = analysis["medium_term"]
-        name = analysis['name']
+        name = analysis["name"]
 
-        click.echo(f"💡 投資判断:")
+        click.echo("💡 投資判断:")
         click.echo(f"  銘柄: {name} ({symbol})")
         click.echo(f"  推奨: {integrated['action']}")
         click.echo(f"  タイミング: {integrated['timing']}")
@@ -304,7 +298,6 @@ def integration():
 @cli.group()
 def data():
     """データ管理コマンド"""
-    pass
 
 
 @data.command()
@@ -318,22 +311,20 @@ def fetch(symbol, period):
     # 1y: 1年, 2y: 2年, 5y: 5年, 10y: 10年
     # ytd: 年初来 (Year to Date), max: 利用可能な最も長い期間
     valid_periods = [
-        "1d",   # 1日
-        "5d",   # 5日
+        "1d",  # 1日
+        "5d",  # 5日
         "1mo",  # 1ヶ月
         "3mo",  # 3ヶ月
         "6mo",  # 6ヶ月
-        "1y",   # 1年
-        "2y",   # 2年
-        "5y",   # 5年
+        "1y",  # 1年
+        "2y",  # 2年
+        "5y",  # 5年
         "10y",  # 10年
         "ytd",  # 年初来 (Year to Date)
         "max",  # 利用可能な最も長い期間
     ]
     if period not in valid_periods:
-        message = (
-            f"[失敗] 無効な期間: {period}. 有効な期間: {', '.join(valid_periods)}"
-        )
+        message = f"[失敗] 無効な期間: {period}. 有効な期間: {', '.join(valid_periods)}"
         logger.error(message)
         raise click.BadParameter(message, param_hint="period")
 
@@ -350,8 +341,6 @@ def fetch(symbol, period):
     click.echo(f"📊 データ取得: {list(symbol)} (期間: {period})")
 
     try:
-        from data.stock_data import StockDataProvider
-
         provider = StockDataProvider()
 
         for sym in symbol:
@@ -362,13 +351,13 @@ def fetch(symbol, period):
                 latest_price = data["Close"].iloc[-1]
                 click.echo(f"    最新価格: {latest_price:.1f}円")
             else:
-                click.echo(f"    [失敗] データ取得失敗")
+                click.echo("    [失敗] データ取得失敗")
 
         click.echo("[成功] データ取得完了")
 
     except Exception as e:
         message = f"[失敗] データ取得エラー: {e}"
-        logger.exception(message)
+        logger.error(message)
         raise click.ClickException(message)
 
 
@@ -389,21 +378,8 @@ def setup():
             dir_path.mkdir(parents=True, exist_ok=True)
             click.echo(f"📁 ディレクトリ作成: {dir_path}")
 
-    # 依存関係チェック
-    click.echo("📦 依存関係チェック...")
-    try:
-        import pandas
-        import numpy
-        import yfinance
-
-
-        click.echo("[成功] 必要なライブラリがインストール済み")
-    except ImportError as e:
-        message = f"[失敗] 不足ライブラリ: {e}"
-        logger.error(message)
-        raise click.ClickException(
-            f"{message}\npip install -r requirements.txt を実行してください"
-        )
+    # 依存関係の確認は requirements.txt で管理されているため、ここでのチェックは不要
+    click.echo("📦 依存関係は requirements.txt に基づいてインストールしてください。")
 
     click.echo("[成功] セットアップ完了")
 

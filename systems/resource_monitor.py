@@ -1,4 +1,5 @@
 """Shared resource monitoring utilities for process management."""
+
 from __future__ import annotations
 
 import threading
@@ -28,7 +29,6 @@ class ResourceMonitor:
 
     def get_system_usage(self) -> SystemUsage:
         """Return the current CPU and memory usage, cached for ``cache_ttl`` seconds."""
-
         now = time.monotonic()
 
         with self._lock:
@@ -49,6 +49,5 @@ class ResourceMonitor:
 
     def invalidate(self) -> None:
         """Clear any cached system usage snapshot."""
-
         with self._lock:
             self._cached_usage = None

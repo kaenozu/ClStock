@@ -1,29 +1,27 @@
-"""
-セキュアなAPIエンドポイント
+"""セキュアなAPIエンドポイント
 認証・認可・入力検証を実装した安全なエンドポイント群
 """
 
-from fastapi import APIRouter, HTTPException, Query, Depends, Body
-from fastapi.security import HTTPAuthorizationCredentials
-from typing import Dict, Any
-from datetime import datetime
 import logging
+from datetime import datetime
+from typing import Any, Dict
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi.security import HTTPAuthorizationCredentials
 
 # セキュリティと検証機能
 from api.security import security, verify_token
-from utils.validators import (
-    validate_stock_symbol,
-    validate_period,
-    validate_symbols_list,
-    ValidationError,
-    log_validation_error,
-)
-
-from utils.exceptions import DataFetchError
 
 # データプロバイダー
 from data.stock_data import StockDataProvider
 from utils.exceptions import DataFetchError
+from utils.validators import (
+    ValidationError,
+    log_validation_error,
+    validate_period,
+    validate_stock_symbol,
+    validate_symbols_list,
+)
 
 # ログ設定
 logger = logging.getLogger(__name__)
@@ -35,12 +33,11 @@ router = APIRouter(prefix="/secure", tags=["secure"])
 async def get_stock_data(
     symbol: str,
     period: str = Query(
-        "1y", description="期間 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y)"
+        "1y", description="期間 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y)",
     ),
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """
-    セキュアな株価データ取得エンドポイント
+    """セキュアな株価データ取得エンドポイント
     認証済みユーザーのみアクセス可能
     """
     try:
@@ -57,7 +54,7 @@ async def get_stock_data(
 
         if data.empty:
             raise HTTPException(
-                status_code=404, detail=f"No data found for symbol: {symbol}"
+                status_code=404, detail=f"No data found for symbol: {symbol}",
             )
 
         # レスポンス作成
@@ -83,18 +80,16 @@ async def get_stock_data(
 
     except ValidationError as e:
         log_validation_error(
-            e, {"endpoint": "/secure/stock/data", "symbol": symbol, "period": period}
+            e, {"endpoint": "/secure/stock/data", "symbol": symbol, "period": period},
         )
         raise HTTPException(status_code=400, detail=str(e))
     except DataFetchError as e:
-        logger.info(
-            "Stock data not found for symbol %s: %s", symbol, str(e)
-        )
+        logger.info("Stock data not found for symbol %s: %s", symbol, str(e))
         raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching stock data: {str(e)}")
+        logger.error(f"Error fetching stock data: {e!s}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -103,8 +98,7 @@ async def get_batch_stock_data(
     symbols_data: Dict[str, Any] = Body(...),
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """
-    複数銘柄の一括データ取得（セキュア版）
+    """複数銘柄の一括データ取得（セキュア版）
     """
     try:
         # 認証検証
@@ -160,16 +154,15 @@ async def get_batch_stock_data(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in batch stock data: {str(e)}")
+        logger.error(f"Error in batch stock data: {e!s}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/analysis/{symbol}")
 async def get_stock_analysis(
-    symbol: str, credentials: HTTPAuthorizationCredentials = Depends(security)
+    symbol: str, credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """
-    株式分析エンドポイント（管理者専用）
+    """株式分析エンドポイント（管理者専用）
     """
     try:
         # 認証検証
@@ -188,7 +181,7 @@ async def get_stock_analysis(
 
         if data.empty:
             raise HTTPException(
-                status_code=404, detail=f"No data found for symbol: {symbol}"
+                status_code=404, detail=f"No data found for symbol: {symbol}",
             )
 
         # テクニカル指標を計算
@@ -231,19 +224,18 @@ async def get_stock_analysis(
         log_validation_error(e, {"endpoint": "/secure/analysis", "symbol": symbol})
         raise HTTPException(status_code=400, detail=str(e))
     except DataFetchError as e:
-        logger.error(f"Error in stock analysis: {str(e)}")
+        logger.error(f"Error in stock analysis: {e!s}")
         raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in stock analysis: {str(e)}")
+        logger.error(f"Error in stock analysis: {e!s}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/health")
 async def health_check():
-    """
-    ヘルスチェックエンドポイント（認証不要）
+    """ヘルスチェックエンドポイント（認証不要）
     """
     return {
         "status": "healthy",

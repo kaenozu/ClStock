@@ -1,13 +1,15 @@
 from concurrent.futures import Future
 from unittest.mock import MagicMock
 
+import pytest
+
 import pandas as pd
 import pandas.testing as pdt
-import pytest
 
 # lightgbmが利用できない場合はテストをスキップ
 try:
     import lightgbm as lgb
+
     LIGHTGBM_AVAILABLE = True
 except ImportError:
     LIGHTGBM_AVAILABLE = False
@@ -19,7 +21,9 @@ from models.ml_stock_predictor import MLStockPredictor
 
 
 @pytest.mark.parametrize("symbols", [["AAA", "BBB", "CCC"]])
-def test_prepare_dataset_parallel_matches_sequential_and_submits_tasks(monkeypatch, symbols):
+def test_prepare_dataset_parallel_matches_sequential_and_submits_tasks(
+    monkeypatch, symbols,
+):
     predictor = MLStockPredictor()
 
     # Ensure deterministic data and feature creation
@@ -57,7 +61,8 @@ def test_prepare_dataset_parallel_matches_sequential_and_submits_tasks(monkeypat
     mock_executor.__enter__.return_value.submit.side_effect = submit_side_effect
 
     monkeypatch.setattr(
-        "models.ml_stock_predictor.ThreadPoolExecutor", lambda max_workers=None: mock_executor
+        "models.ml_stock_predictor.ThreadPoolExecutor",
+        lambda max_workers=None: mock_executor,
     )
 
     parallel = predictor.prepare_dataset(symbols, parallel=True)

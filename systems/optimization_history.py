@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""
-最適化履歴管理システム
+"""最適化履歴管理システム
 銘柄選定の履歴を保持し、ロールバック可能にする
 """
 
+import hashlib
 import json
+import logging
 import shutil
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict
-import hashlib
-import logging
+from typing import Any, Dict, List, Optional
 
 # 定数定義
 DEFAULT_KEEP_RECORDS = 30
@@ -65,12 +64,12 @@ class OptimizationHistoryManager:
         """履歴を読み込む"""
         if not self.history_file.exists():
             self.logger.info(
-                "No existing history file found. Starting with empty history."
+                "No existing history file found. Starting with empty history.",
             )
             return []
 
         try:
-            with open(self.history_file, "r", encoding="utf-8") as f:
+            with open(self.history_file, encoding="utf-8") as f:
                 data = json.load(f)
                 records = []
                 for item in data:
@@ -126,7 +125,6 @@ class OptimizationHistoryManager:
         auto_apply: bool = False,
     ) -> str:
         """最適化結果を保存"""
-
         # 現在のアクティブ設定をバックアップ
         if auto_apply:
             self._backup_current_config()
@@ -322,7 +320,6 @@ class OptimizationHistoryManager:
 
     def get_optimal_stocks_from_config(self) -> List[str]:
         """設定ファイルから最適銘柄リストを取得"""
-
         try:
             from config.settings import get_settings
 
@@ -330,7 +327,7 @@ class OptimizationHistoryManager:
             default_optimal_stocks = list(settings.target_stocks.keys())[:10]
 
             if self.current_config_file.exists():
-                with open(self.current_config_file, "r", encoding="utf-8") as f:
+                with open(self.current_config_file, encoding="utf-8") as f:
                     config = json.load(f)
                     return config.get("optimal_stocks", default_optimal_stocks)
 
@@ -380,6 +377,6 @@ if __name__ == "__main__":
 
     # 統計表示
     stats = manager.get_statistics()
-    print(f"\n📈 統計情報:")
+    print("\n📈 統計情報:")
     print(f"総記録数: {stats['total_records']}")
     print(f"平均収益率: {stats['average_return']:.2f}%")

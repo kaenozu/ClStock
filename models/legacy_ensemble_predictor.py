@@ -7,21 +7,20 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import joblib
+import lightgbm as lgb
 import numpy as np
 import pandas as pd
 import torch
-import lightgbm as lgb
 import xgboost as xgb
+from data.stock_data import StockDataProvider
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
 
-from data.stock_data import StockDataProvider
-
-from .ml_stock_predictor import MLStockPredictor
 from .deep_learning import DeepLearningPredictor
-from .sentiment import MacroEconomicDataProvider, SentimentAnalyzer
+from .ml_stock_predictor import MLStockPredictor
 
 logger = logging.getLogger(__name__)
+
 
 class EnsembleStockPredictor:
     """複数モデルのアンサンブル予測器"""
@@ -42,9 +41,8 @@ class EnsembleStockPredictor:
 
     def prepare_ensemble_models(self):
         """複数のモデルタイプを準備"""
-        from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+        from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
         from sklearn.neural_network import MLPRegressor
-        
 
         # XGBoost
         xgb_model = xgb.XGBRegressor(
@@ -69,15 +67,15 @@ class EnsembleStockPredictor:
         )
         # Random Forest
         rf_model = RandomForestRegressor(
-            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1
+            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1,
         )
         # Gradient Boosting
         gb_model = GradientBoostingRegressor(
-            n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42
+            n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42,
         )
         # Neural Network
         nn_model = MLPRegressor(
-            hidden_layer_sizes=(100, 50), max_iter=500, random_state=42
+            hidden_layer_sizes=(100, 50), max_iter=500, random_state=42,
         )
         # アンサンブルに追加（重み付け）
         self.add_model("xgboost", xgb_model, weight=0.3)
@@ -87,7 +85,7 @@ class EnsembleStockPredictor:
         self.add_model("neural_network", nn_model, weight=0.05)
 
     def train_ensemble(
-        self, symbols: List[str], target_column: str = "recommendation_score"
+        self, symbols: List[str], target_column: str = "recommendation_score",
     ):
         """アンサンブルモデルを訓練"""
         from config.settings import get_settings
@@ -134,10 +132,10 @@ class EnsembleStockPredictor:
                 model_predictions[name] = test_pred
                 model_scores[name] = test_mse
                 logger.info(
-                    f"{name} - Train MSE: {train_mse:.4f}, Test MSE: {test_mse:.4f}"
+                    f"{name} - Train MSE: {train_mse:.4f}, Test MSE: {test_mse:.4f}",
                 )
             except Exception as e:
-                logger.error(f"Error training {name}: {str(e)}")
+                logger.error(f"Error training {name}: {e!s}")
                 # 失敗したモデルは除外
                 del self.models[name]
                 del self.weights[name]
@@ -166,7 +164,7 @@ class EnsembleStockPredictor:
                 self.weights[name] = inverse_scores[name] / total_inverse
 
     def _ensemble_predict_from_predictions(
-        self, model_predictions: Dict[str, np.ndarray]
+        self, model_predictions: Dict[str, np.ndarray],
     ) -> np.ndarray:
         """複数モデルの予測を重み付き平均"""
         weighted_sum = np.zeros_like(list(model_predictions.values())[0])
@@ -196,7 +194,7 @@ class EnsembleStockPredictor:
             latest_features = features.iloc[-1:].copy()
             # 特徴量を訓練時と同じ順序に調整
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0
+                columns=self.feature_names, fill_value=0,
             )
             # スケーリング
             features_scaled = self.scaler.transform(latest_features)
@@ -207,17 +205,16 @@ class EnsembleStockPredictor:
                     pred = model.predict(features_scaled)[0]
                     predictions[name] = pred
                 except Exception as e:
-                    logger.warning(f"Error with {name} prediction: {str(e)}")
+                    logger.warning(f"Error with {name} prediction: {e!s}")
             # アンサンブル予測
             if predictions:
                 ensemble_score = self._ensemble_predict_from_predictions(
-                    {name: np.array([pred]) for name, pred in predictions.items()}
+                    {name: np.array([pred]) for name, pred in predictions.items()},
                 )[0]
                 return max(0, min(100, float(ensemble_score)))
-            else:
-                return 50.0
+            return 50.0
         except Exception as e:
-            logger.error(f"Error in ensemble prediction for {symbol}: {str(e)}")
+            logger.error(f"Error in ensemble prediction for {symbol}: {e!s}")
             return 50.0
 
     def save_ensemble(self):
@@ -234,7 +231,7 @@ class EnsembleStockPredictor:
             joblib.dump(ensemble_data, ensemble_file)
             logger.info(f"Ensemble saved to {ensemble_file}")
         except Exception as e:
-            logger.error(f"Error saving ensemble: {str(e)}")
+            logger.error(f"Error saving ensemble: {e!s}")
 
     def load_ensemble(self) -> bool:
         """アンサンブルモデルを読み込み"""
@@ -251,12 +248,12 @@ class EnsembleStockPredictor:
             logger.info(f"Ensemble loaded from {ensemble_file}")
             return True
         except Exception as e:
-            logger.error(f"Error loading ensemble: {str(e)}")
+            logger.error(f"Error loading ensemble: {e!s}")
             return False
 
+
 class AdvancedEnsemblePredictor:
-    """
-    84.6%精度突破を目指す高度アンサンブル学習システム
+    """84.6%精度突破を目指す高度アンサンブル学習システム
     特徴:
     - BERT活用ニュースセンチメント分析
     - マクロ経済指標統合
@@ -302,18 +299,24 @@ class AdvancedEnsemblePredictor:
         """BERT活用センチメント分析器初期化"""
         try:
             # transformersライブラリが利用可能な場合のみ
-            from transformers import BertTokenizer, BertForSequenceClassification
+            from transformers import BertForSequenceClassification, BertTokenizer
 
             # 日本語BERT事前学習モデル
             model_name = "cl-tohoku/bert-base-japanese-whole-word-masking"
             # セキュリティ向上: 特定のリビジョンを指定
-            revision = "f012345678901234567890123456789012345678"  # 特定のコミットハッシュ
-            self.tokenizer = BertTokenizer.from_pretrained(model_name, revision=revision)  # nosec B615
-            self.bert_model = BertForSequenceClassification.from_pretrained(model_name, revision=revision)  # nosec B615
+            revision = (
+                "f012345678901234567890123456789012345678"  # 特定のコミットハッシュ
+            )
+            self.tokenizer = BertTokenizer.from_pretrained(
+                model_name, revision=revision,
+            )  # nosec B615
+            self.bert_model = BertForSequenceClassification.from_pretrained(
+                model_name, revision=revision,
+            )  # nosec B615
             self.logger.info("BERT センチメント分析器初期化完了")
         except ImportError:
             self.logger.warning(
-                "transformersライブラリが利用不可 - 簡易センチメント分析を使用"
+                "transformersライブラリが利用不可 - 簡易センチメント分析を使用",
             )
             self.sentiment_analyzer = self._create_simple_sentiment_analyzer()
         except Exception as e:
@@ -511,7 +514,7 @@ class AdvancedEnsemblePredictor:
             for model_name, pred in predictions.items():
                 if pred is not None and model_name in adjusted_weights:
                     weight = adjusted_weights[model_name] * confidences.get(
-                        model_name, 0.5
+                        model_name, 0.5,
                     )
                     ensemble_score += pred * weight
                     total_weight += weight
@@ -521,7 +524,7 @@ class AdvancedEnsemblePredictor:
                 ensemble_score = 50.0  # デフォルト
             # 信頼度算出
             ensemble_confidence = min(
-                total_weight / sum(adjusted_weights.values()), 1.0
+                total_weight / sum(adjusted_weights.values()), 1.0,
             )
             return {
                 "ensemble_prediction": ensemble_score,
@@ -556,7 +559,7 @@ class AdvancedEnsemblePredictor:
             return {"prediction": 50.0, "confidence": 0.0}
 
     def _adjust_weights_dynamically(
-        self, confidences: Dict[str, float]
+        self, confidences: Dict[str, float],
     ) -> Dict[str, float]:
         """信頼度ベース動的重み調整"""
         adjusted_weights = {}
@@ -603,8 +606,6 @@ class AdvancedEnsemblePredictor:
             def objective(weights_array):
                 """最適化目的関数"""
                 # weights_arrayを辞書に変換
-                weight_names = list(self.weights.keys())
-                weights_dict = dict(zip(weight_names, weights_array))
                 total_accuracy = 0
                 valid_predictions = 0
                 for symbol in symbols[:10]:  # サンプル制限
@@ -615,7 +616,7 @@ class AdvancedEnsemblePredictor:
                             # 簡易精度評価（実際はバックテストが必要）
                             total_accuracy += ensemble_result["ensemble_confidence"]
                             valid_predictions += 1
-                    except:
+                    except Exception:
                         continue
                 return -(total_accuracy / max(valid_predictions, 1))  # 最大化のため負値
 
@@ -640,6 +641,7 @@ class AdvancedEnsemblePredictor:
         except Exception as e:
             self.logger.error(f"重み最適化エラー: {e}")
 
+
 class ParallelStockPredictor:
     """並列処理対応の高速株価予測器"""
 
@@ -650,8 +652,6 @@ class ParallelStockPredictor:
 
     def predict_multiple_stocks_parallel(self, symbols: List[str]) -> Dict[str, float]:
         """複数銘柄の並列予測"""
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-
         results = {}
         # キャッシュチェック
         uncached_symbols = []
@@ -676,14 +676,12 @@ class ParallelStockPredictor:
                     results[symbol] = score
                     self.batch_cache[symbol] = score
                 except Exception as e:
-                    logger.error(f"Error predicting {symbol}: {str(e)}")
+                    logger.error(f"Error predicting {symbol}: {e!s}")
                     results[symbol] = 50.0
         return results
 
     def batch_data_preparation(self, symbols: List[str]) -> Dict[str, pd.DataFrame]:
         """バッチデータ準備（並列）"""
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-
         data_results = {}
         with ThreadPoolExecutor(max_workers=self.n_jobs) as executor:
             future_to_symbol = {
@@ -697,7 +695,7 @@ class ParallelStockPredictor:
                     if not data.empty:
                         data_results[symbol] = data
                 except Exception as e:
-                    logger.error(f"Error getting data for {symbol}: {str(e)}")
+                    logger.error(f"Error getting data for {symbol}: {e!s}")
         return data_results
 
     def _get_stock_data_safe(self, symbol: str) -> pd.DataFrame:
@@ -705,7 +703,7 @@ class ParallelStockPredictor:
         try:
             return self.ensemble_predictor.data_provider.get_stock_data(symbol, "1y")
         except Exception as e:
-            logger.error(f"Error fetching data for {symbol}: {str(e)}")
+            logger.error(f"Error fetching data for {symbol}: {e!s}")
             return pd.DataFrame()
 
     def clear_batch_cache(self):

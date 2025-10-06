@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""
-87%精度突破統合システム
+"""87%精度突破統合システム
 ClStock最高精度予測システムの独立モジュール
 """
 
 import logging
+from datetime import datetime
+from typing import Any, Dict
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any
-from ..core.interfaces import PredictionResult, ModelType
+
 from ..core.base_predictor import BaseStockPredictor
-from datetime import datetime
+from ..core.interfaces import PredictionResult
 
 
 class Precision87BreakthroughSystem(BaseStockPredictor):
@@ -89,7 +90,9 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
             "components": ["base_model", "meta_learning", "dqn_reinforcement"],
         }
 
-    def predict_with_87_precision(self, symbol: str, start: str = None, end: str = None) -> Dict[str, Any]:
+    def predict_with_87_precision(
+        self, symbol: str, start: str = None, end: str = None,
+    ) -> Dict[str, Any]:
         """87%精度予測実行"""
         try:
             from data.stock_data import StockDataProvider
@@ -97,11 +100,13 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
             # データ取得
             data_provider = StockDataProvider()
             if start is not None and end is not None:
-                historical_data = data_provider.get_stock_data(symbol, start=start, end=end)
+                historical_data = data_provider.get_stock_data(
+                    symbol, start=start, end=end,
+                )
             else:
                 historical_data = data_provider.get_stock_data(symbol, period="1y")
             historical_data = data_provider.calculate_technical_indicators(
-                historical_data
+                historical_data,
             )
 
             if len(historical_data) < 100:
@@ -112,7 +117,7 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
 
             # 2. メタ学習最適化
             symbol_profile = self.meta_learner.create_symbol_profile(
-                symbol, historical_data
+                symbol, historical_data,
             )
             # 基本パラメータを辞書として作成
             base_params = {
@@ -122,7 +127,7 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
                 "confidence": base_prediction["confidence"],
             }
             meta_adaptation = self.meta_learner.adapt_model_parameters(
-                symbol, symbol_profile, base_params
+                symbol, symbol_profile, base_params,
             )
 
             # 3. DQN強化学習
@@ -130,14 +135,14 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
 
             # 4. 高度アンサンブル統合
             final_prediction = self._integrate_87_predictions(
-                base_prediction, meta_adaptation, dqn_signal, symbol_profile
+                base_prediction, meta_adaptation, dqn_signal, symbol_profile,
             )
 
             # 5. 87%精度チューニング
             tuned_prediction = self._apply_87_precision_tuning(final_prediction, symbol)
 
             self.logger.info(
-                f"87%精度予測完了 {symbol}: {tuned_prediction['final_accuracy']:.1f}%"
+                f"87%精度予測完了 {symbol}: {tuned_prediction['final_accuracy']:.1f}%",
             )
             return tuned_prediction
 
@@ -146,7 +151,7 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
             return self._default_prediction(symbol, str(e))
 
     def _get_base_846_prediction(
-        self, symbol: str, data: pd.DataFrame
+        self, symbol: str, data: pd.DataFrame,
     ) -> Dict[str, float]:
         """84.6%ベースシステム予測"""
         try:
@@ -215,7 +220,7 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
             return pd.Series([50] * len(prices), index=prices.index)
 
     def _integrate_87_predictions(
-        self, base_pred: Dict, meta_adapt: Dict, dqn_signal: Dict, profile: Dict
+        self, base_pred: Dict, meta_adapt: Dict, dqn_signal: Dict, profile: Dict,
     ) -> Dict[str, Any]:
         """87%予測統合 - 実際の価格予測版"""
         try:
@@ -288,7 +293,7 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
             }
 
     def _apply_87_precision_tuning(
-        self, prediction: Dict, symbol: str
+        self, prediction: Dict, symbol: str,
     ) -> Dict[str, Any]:
         """87%精度チューニング - 実価格対応版"""
         try:
@@ -297,7 +302,7 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
 
             # 実際の予測価格を使用
             predicted_price = prediction.get(
-                "predicted_price", prediction.get("current_price", 100.0)
+                "predicted_price", prediction.get("current_price", 100.0),
             )
             current_price = prediction.get("current_price", 100.0)
             predicted_change_rate = prediction.get("predicted_change_rate", 0.0)

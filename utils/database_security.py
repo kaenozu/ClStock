@@ -1,12 +1,11 @@
-"""
-データベースセキュリティユーティリティ
+"""データベースセキュリティユーティリティ
 SQLインジェクション対策とセキュアなクエリ実行
 """
 
-import sqlite3
 import logging
-from typing import Any, List, Dict, Optional, Union
+import sqlite3
 from contextlib import contextmanager
+from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +30,7 @@ class SecureDatabase:
         except Exception as e:
             if conn:
                 conn.rollback()
-            logger.error(f"Database error: {str(e)}")
+            logger.error(f"Database error: {e!s}")
             raise
         finally:
             if conn:
@@ -43,8 +42,7 @@ class SecureDatabase:
         params: Optional[Union[tuple, dict]] = None,
         fetch_all: bool = True,
     ) -> List[Dict[str, Any]]:
-        """
-        パラメータ化クエリの安全な実行
+        """パラメータ化クエリの安全な実行
 
         Args:
             query: SQL クエリ（パラメータプレースホルダー付き）
@@ -57,6 +55,7 @@ class SecureDatabase:
         Raises:
             ValueError: 危険なクエリが検出された場合
             sqlite3.Error: データベースエラー
+
         """
         # 危険なクエリパターンをチェック
         self._validate_query(query)
@@ -72,15 +71,13 @@ class SecureDatabase:
             if fetch_all:
                 rows = cursor.fetchall()
                 return [dict(row) for row in rows]
-            else:
-                row = cursor.fetchone()
-                return [dict(row)] if row else []
+            row = cursor.fetchone()
+            return [dict(row)] if row else []
 
     def execute_safe_update(
-        self, query: str, params: Optional[Union[tuple, dict]] = None
+        self, query: str, params: Optional[Union[tuple, dict]] = None,
     ) -> int:
-        """
-        安全な更新クエリの実行
+        """安全な更新クエリの実行
 
         Args:
             query: 更新SQL クエリ
@@ -88,6 +85,7 @@ class SecureDatabase:
 
         Returns:
             影響を受けた行数
+
         """
         self._validate_query(query)
 
@@ -110,14 +108,14 @@ class SecureDatabase:
             return cursor.rowcount
 
     def _validate_query(self, query: str):
-        """
-        クエリの安全性を検証
+        """クエリの安全性を検証
 
         Args:
             query: 検証するSQL クエリ
 
         Raises:
             ValueError: 危険なクエリパターンが検出された場合
+
         """
         query_upper = query.upper()
 
@@ -145,7 +143,7 @@ class SecureDatabase:
         for pattern in dangerous_patterns:
             if pattern in query_upper:
                 logger.warning(
-                    f"Potentially dangerous query pattern detected: {pattern}"
+                    f"Potentially dangerous query pattern detected: {pattern}",
                 )
                 raise ValueError(f"Query contains dangerous pattern: {pattern}")
 
@@ -156,10 +154,9 @@ class SecureDatabase:
             logger.warning("Query may contain string literals - use parameters instead")
 
     def get_stock_data_safe(
-        self, symbol: str, limit: int = 1000
+        self, symbol: str, limit: int = 1000,
     ) -> List[Dict[str, Any]]:
-        """
-        安全な株価データ取得
+        """安全な株価データ取得
 
         Args:
             symbol: 銘柄コード
@@ -167,6 +164,7 @@ class SecureDatabase:
 
         Returns:
             株価データのリスト
+
         """
         query = """
         SELECT date, open, high, low, close, volume
@@ -188,8 +186,7 @@ class SecureDatabase:
         close: float,
         volume: int,
     ) -> int:
-        """
-        安全な株価データ挿入
+        """安全な株価データ挿入
 
         Args:
             symbol: 銘柄コード
@@ -202,6 +199,7 @@ class SecureDatabase:
 
         Returns:
             影響を受けた行数
+
         """
         query = """
         INSERT OR REPLACE INTO stock_prices
@@ -213,14 +211,14 @@ class SecureDatabase:
         return self.execute_safe_update(query, params)
 
     def search_stocks_safe(self, search_term: str) -> List[Dict[str, Any]]:
-        """
-        安全な銘柄検索
+        """安全な銘柄検索
 
         Args:
             search_term: 検索語句
 
         Returns:
             検索結果のリスト
+
         """
         # 検索語句のサニタイズ
         search_term = str(search_term).strip()[:50]  # 長さ制限

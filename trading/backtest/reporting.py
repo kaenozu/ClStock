@@ -13,10 +13,9 @@ if False:  # pragma: no cover - typing helper
 
 
 def generate_backtest_charts(
-    result: "BacktestResult", logger: Optional[object] = None
+    result: BacktestResult, logger: Optional[object] = None,
 ) -> Dict[str, str]:
     """Create base64-encoded charts summarising the backtest."""
-
     charts: Dict[str, str] = {}
 
     try:
@@ -51,9 +50,8 @@ def generate_backtest_charts(
     return charts
 
 
-def generate_recommendations(result: "BacktestResult") -> List[str]:
+def generate_recommendations(result: BacktestResult) -> List[str]:
     """Create a list of improvement suggestions for the strategy."""
-
     recommendations: List[str] = []
 
     if result.sharpe_ratio < 1.0:
@@ -61,15 +59,17 @@ def generate_recommendations(result: "BacktestResult") -> List[str]:
 
     if result.max_drawdown > 0.2:
         recommendations.append(
-            "最大ドローダウンが大きいため、リスク管理を強化してください"
+            "最大ドローダウンが大きいため、リスク管理を強化してください",
         )
 
     if result.win_rate < 50:
-        recommendations.append("勝率が低いため、エントリー条件の見直しを検討してください")
+        recommendations.append(
+            "勝率が低いため、エントリー条件の見直しを検討してください",
+        )
 
     if result.precision_87_success_rate < 60:
         recommendations.append(
-            "87%精度取引の成功率が低いため、精度判定基準の調整が必要です"
+            "87%精度取引の成功率が低いため、精度判定基準の調整が必要です",
         )
 
     return recommendations

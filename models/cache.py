@@ -7,6 +7,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+
 class AdvancedCacheManager:
     """高度なキャッシュ管理システム"""
 
@@ -21,16 +22,15 @@ class AdvancedCacheManager:
         }
 
     def get_cached_features(
-        self, symbol: str, data_hash: str
+        self, symbol: str, data_hash: str,
     ) -> Optional[pd.DataFrame]:
         """特徴量キャッシュから取得"""
         cache_key = f"{symbol}_{data_hash}"
         if cache_key in self.feature_cache:
             self.cache_stats["hits"] += 1
             return self.feature_cache[cache_key]
-        else:
-            self.cache_stats["misses"] += 1
-            return None
+        self.cache_stats["misses"] += 1
+        return None
 
     def cache_features(self, symbol: str, data_hash: str, features: pd.DataFrame):
         """特徴量をキャッシュ"""
@@ -44,9 +44,8 @@ class AdvancedCacheManager:
         if cache_key in self.prediction_cache:
             self.cache_stats["hits"] += 1
             return self.prediction_cache[cache_key]
-        else:
-            self.cache_stats["misses"] += 1
-            return None
+        self.cache_stats["misses"] += 1
+        return None
 
     def cache_prediction(self, symbol: str, features_hash: str, prediction: float):
         """予測結果をキャッシュ"""
@@ -80,6 +79,7 @@ class AdvancedCacheManager:
             "total_requests": total_requests,
         }
 
+
 class RedisCache:
     """Redis高速キャッシュシステム"""
 
@@ -88,7 +88,7 @@ class RedisCache:
             import redis
 
             self.redis_client = redis.Redis(
-                host=host, port=port, db=db, decode_responses=True, socket_timeout=5
+                host=host, port=port, db=db, decode_responses=True, socket_timeout=5,
             )
             # 接続テスト
             self.redis_client.ping()
@@ -96,7 +96,7 @@ class RedisCache:
             logger.info("Redis cache connected successfully")
         except Exception as e:
             logger.warning(
-                f"Redis not available, falling back to memory cache: {str(e)}"
+                f"Redis not available, falling back to memory cache: {e!s}",
             )
             self.redis_available = False
             self.memory_cache = {}
@@ -106,10 +106,9 @@ class RedisCache:
         try:
             if self.redis_available:
                 return self.redis_client.get(key)
-            else:
-                return self.memory_cache.get(key)
+            return self.memory_cache.get(key)
         except Exception as e:
-            logger.error(f"Cache get error: {str(e)}")
+            logger.error(f"Cache get error: {e!s}")
             return None
 
     def set(self, key: str, value: str, ttl: int = 3600):
@@ -121,7 +120,7 @@ class RedisCache:
                 self.memory_cache[key] = value
                 # メモリキャッシュのTTL管理は簡略化
         except Exception as e:
-            logger.error(f"Cache set error: {str(e)}")
+            logger.error(f"Cache set error: {e!s}")
 
     def get_json(self, key: str) -> Optional[Dict]:
         """JSON形式でキャッシュ取得"""
@@ -133,7 +132,7 @@ class RedisCache:
                 return json.loads(data)
             return None
         except Exception as e:
-            logger.error(f"Cache JSON get error: {str(e)}")
+            logger.error(f"Cache JSON get error: {e!s}")
             return None
 
     def set_json(self, key: str, value: Dict, ttl: int = 3600):
@@ -143,4 +142,4 @@ class RedisCache:
 
             self.set(key, json.dumps(value), ttl)
         except Exception as e:
-            logger.error(f"Cache JSON set error: {str(e)}")
+            logger.error(f"Cache JSON set error: {e!s}")

@@ -29,7 +29,9 @@ class TargetUniverse:
     default_suffix: str = ".T"
 
     def __post_init__(self) -> None:  # pragma: no cover - simple dataclass wiring
-        object.__setattr__(self, "_by_code", {symbol.code: symbol for symbol in self.symbols})
+        object.__setattr__(
+            self, "_by_code", {symbol.code: symbol for symbol in self.symbols},
+        )
 
     @property
     def base_codes(self) -> List[str]:
@@ -42,7 +44,9 @@ class TargetUniverse:
         defaults = [symbol.code for symbol in self.symbols if symbol.is_core]
         return defaults or self.base_codes
 
-    def format_codes(self, codes: Iterable[str], suffix: str | None = None) -> List[str]:
+    def format_codes(
+        self, codes: Iterable[str], suffix: str | None = None,
+    ) -> List[str]:
         """Format the given codes with the desired suffix (``.T`` by default)."""
         suffix = self.default_suffix if suffix is None else suffix
         return [f"{self.to_base(code)}{suffix}" for code in codes]
@@ -56,7 +60,7 @@ class TargetUniverse:
         return self.format_codes(self.base_codes, suffix=suffix)
 
     def variants_for(
-        self, code: str, *, suffixes: Sequence[str] | None = None
+        self, code: str, *, suffixes: Sequence[str] | None = None,
     ) -> List[str]:
         """Return the base code and formatted variants for the requested symbol."""
         base = self.to_base(code)
@@ -115,7 +119,9 @@ _TARGET_SYMBOLS: Tuple[TargetSymbol, ...] = (
     TargetSymbol("9437", "NTT Docomo Inc", "NTTドコモ"),
     TargetSymbol("6098", "Recruit Holdings Co", "リクルートホールディングス"),
     TargetSymbol("9613", "NTT Data Corp", "NTTデータ"),
-    TargetSymbol("8316", "Sumitomo Mitsui Financial Group", "三井住友フィナンシャルグループ"),
+    TargetSymbol(
+        "8316", "Sumitomo Mitsui Financial Group", "三井住友フィナンシャルグループ",
+    ),
     TargetSymbol("8411", "Mizuho Financial Group", "みずほフィナンシャルグループ"),
     TargetSymbol("8604", "Nomura Holdings", "野村ホールディングス"),
     TargetSymbol("8058", "Mitsubishi Corp", "三菱商事"),
@@ -150,7 +156,6 @@ _TARGET_UNIVERSE = TargetUniverse(symbols=_TARGET_SYMBOLS)
 
 def get_target_universe() -> TargetUniverse:
     """Return the immutable global target universe definition."""
-
     return _TARGET_UNIVERSE
 
 

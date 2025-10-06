@@ -1,13 +1,13 @@
-"""
-並列特徴量計算システム - 3-5倍の性能向上を実現
+"""並列特徴量計算システム - 3-5倍の性能向上を実現
 """
 
-import os
 import logging
-import pandas as pd
-from typing import List
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
+from typing import List
+
+import pandas as pd
 
 
 class ParallelFeatureCalculator:
@@ -18,17 +18,16 @@ class ParallelFeatureCalculator:
         self.logger = logging.getLogger(__name__)
 
     def calculate_features_parallel(
-        self, symbols: List[str], data_provider
+        self, symbols: List[str], data_provider,
     ) -> pd.DataFrame:
         """複数銘柄の特徴量を並列計算"""
-
         self.logger.info(
-            f"Calculating features for {len(symbols)} symbols using {self.n_jobs} threads"
+            f"Calculating features for {len(symbols)} symbols using {self.n_jobs} threads",
         )
 
         # 並列処理関数の準備
         calculate_single = partial(
-            self._calculate_single_symbol_features, data_provider=data_provider
+            self._calculate_single_symbol_features, data_provider=data_provider,
         )
 
         # 特徴量データを格納
@@ -52,11 +51,11 @@ class ParallelFeatureCalculator:
                     completed_count += 1
                     if completed_count % 10 == 0:
                         self.logger.info(
-                            f"Processed {completed_count}/{len(symbols)} symbols"
+                            f"Processed {completed_count}/{len(symbols)} symbols",
                         )
 
                 except Exception as e:
-                    self.logger.error(f"Error processing {symbol}: {str(e)}")
+                    self.logger.error(f"Error processing {symbol}: {e!s}")
 
         if not all_features:
             return pd.DataFrame()
@@ -64,13 +63,13 @@ class ParallelFeatureCalculator:
         # 全特徴量を結合
         combined_features = pd.concat(all_features, ignore_index=True)
         self.logger.info(
-            f"Parallel feature calculation completed: {len(combined_features)} samples"
+            f"Parallel feature calculation completed: {len(combined_features)} samples",
         )
 
         return combined_features
 
     def _calculate_single_symbol_features(
-        self, symbol: str, data_provider
+        self, symbol: str, data_provider,
     ) -> pd.DataFrame:
         """単一銘柄の特徴量計算（並列処理用）"""
         try:
@@ -92,7 +91,7 @@ class ParallelFeatureCalculator:
             return features
 
         except Exception as e:
-            self.logger.error(f"Error calculating features for {symbol}: {str(e)}")
+            self.logger.error(f"Error calculating features for {symbol}: {e!s}")
             return pd.DataFrame()
 
     def _calculate_technical_indicators_fast(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -176,7 +175,7 @@ class ParallelFeatureCalculator:
         return macd_line, signal_line
 
     def _calculate_bollinger_bands_fast(
-        self, prices: pd.Series, period: int = 20, std_dev: int = 2
+        self, prices: pd.Series, period: int = 20, std_dev: int = 2,
     ):
         """高速ボリンジャーバンド計算（ベクトル化）"""
         ma = prices.rolling(window=period).mean()

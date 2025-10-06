@@ -15,7 +15,9 @@ def _normalize_extension(ext: str) -> str:
     return ext
 
 
-def _normalize_rules(rules: Optional[MutableMapping[str, Iterable[str]]]) -> Dict[str, set[str]]:
+def _normalize_rules(
+    rules: Optional[MutableMapping[str, Iterable[str]]],
+) -> Dict[str, set[str]]:
     normalized: Dict[str, set[str]] = {}
     if not rules:
         return normalized
@@ -52,8 +54,8 @@ def organize_files(
     -------
     Dict[str, List[pathlib.Path]]
         Mapping of destination folder names to the moved files.
-    """
 
+    """
     base_path = Path(directory)
     if not base_path.exists():
         raise FileNotFoundError(f"Directory not found: {base_path}")
@@ -80,7 +82,9 @@ def organize_files(
                     break
 
         if destination_folder is None:
-            if not extension and "" in {ext for extensions in normalized_rules.values() for ext in extensions}:
+            if not extension and "" in {
+                ext for extensions in normalized_rules.values() for ext in extensions
+            }:
                 # Explicit rule for files without extension
                 for folder, extensions in normalized_rules.items():
                     if "" in extensions:
@@ -97,4 +101,3 @@ def organize_files(
         moved.setdefault(destination_folder, []).append(destination_path)
 
     return moved
-

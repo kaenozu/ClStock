@@ -165,7 +165,9 @@ class TSE4000Optimizer:
         """包括的最適化実行"""
         self._print_optimization_header()
 
-        logger.info("Starting comprehensive optimisation for %d symbols", len(self.all_symbols))
+        logger.info(
+            "Starting comprehensive optimisation for %d symbols", len(self.all_symbols),
+        )
         start_time = time.time()
         profiles = self.analyzer.parallel_analysis(self.all_symbols)
         analysis_time = time.time() - start_time
@@ -192,7 +194,7 @@ class TSE4000Optimizer:
             print(f"\n{portfolio_size}銘柄ポートフォリオ最適化...")
 
             selected = self.portfolio_optimizer.optimize_portfolio(
-                profiles, portfolio_size
+                profiles, portfolio_size,
             )
             selected_symbols = [p.symbol for p in selected]
 
@@ -208,7 +210,7 @@ class TSE4000Optimizer:
         return results
 
     def display_optimization_results(
-        self, results: Dict, all_profiles: List[StockProfile]
+        self, results: Dict, all_profiles: List[StockProfile],
     ):
         print("\n" + "=" * 80)
         print("最適化結果サマリー")
@@ -248,7 +250,7 @@ class TSE4000Optimizer:
 
             print(
                 f"{size:>6} {backtest['return_rate']:>+7.2f}% {backtest['total_return']:>+11,.0f}円 "
-                f"{backtest['total_trades']:>7} {performance_score:>+7.1f}"
+                f"{backtest['total_trades']:>7} {performance_score:>+7.1f}",
             )
 
     def _display_optimal_portfolio_details(self, best_result: Tuple[int, Dict]):
@@ -269,18 +271,18 @@ class TSE4000Optimizer:
             for profile in profiles:
                 print(
                     f"  {profile.symbol}: 総合スコア {profile.combined_score:.1f} "
-                    f"(利益性: {profile.profit_potential:+.1f}%, 多様性: {profile.diversity_score:.1f})"
+                    f"(利益性: {profile.profit_potential:+.1f}%, 多様性: {profile.diversity_score:.1f})",
                 )
 
     def _display_top_performers(self, all_profiles: List[StockProfile]):
-        print(f"\n全体トップ10銘柄:")
+        print("\n全体トップ10銘柄:")
         print("-" * 50)
         top_performers = sorted(
-            all_profiles, key=lambda x: x.combined_score, reverse=True
+            all_profiles, key=lambda x: x.combined_score, reverse=True,
         )[:10]
         for i, profile in enumerate(top_performers, 1):
             print(
-                f"{i:2d}. {profile.symbol} [{profile.sector}] スコア: {profile.combined_score:.1f}"
+                f"{i:2d}. {profile.symbol} [{profile.sector}] スコア: {profile.combined_score:.1f}",
             )
 
     def _finalize_results_display(
@@ -293,7 +295,7 @@ class TSE4000Optimizer:
 
         print("\n[保存] 結果保存中...")
         save_result = self.reporter.save_optimization_results(
-            best_result, results, all_profiles
+            best_result, results, all_profiles,
         )
         if save_result:
             self.reporter.print_save_success(save_result)

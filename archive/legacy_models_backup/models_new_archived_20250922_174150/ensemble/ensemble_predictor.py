@@ -1,36 +1,36 @@
 #!/usr/bin/env python3
-"""
-アンサンブル予測器モジュール
+"""アンサンブル予測器モジュール
 複数のML技法を統合した高精度予測システム
 """
 
 import logging
-import os
+from pathlib import Path
+from typing import Any, Dict, List
+
+import joblib
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Any
-from pathlib import Path
-import joblib
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
 
 # サードパーティ ML ライブラリ
 try:
-    import xgboost as xgb
     import lightgbm as lgb
+    import xgboost as xgb
 except ImportError:
     xgb = None
     lgb = None
 
-from ..base.interfaces import StockPredictor, PredictionResult
-from data.stock_data import StockDataProvider
 from datetime import datetime
 
+from data.stock_data import StockDataProvider
+
+from ..base.interfaces import PredictionResult, StockPredictor
+from .memory_efficient_cache import MemoryEfficientCache
+from .multi_timeframe_integrator import MultiTimeframeIntegrator
 
 # 分離されたクラスのインポート
 from .parallel_feature_calculator import ParallelFeatureCalculator
-from .memory_efficient_cache import MemoryEfficientCache
-from .multi_timeframe_integrator import MultiTimeframeIntegrator
 
 
 class EnsembleStockPredictor(StockPredictor):
@@ -83,7 +83,7 @@ class EnsembleStockPredictor(StockPredictor):
         # メモリ効率キャッシュシステム（定数使用）
         self.feature_cache = MemoryEfficientCache(max_size=self.FEATURE_CACHE_SIZE)
         self.prediction_cache = MemoryEfficientCache(
-            max_size=self.PREDICTION_CACHE_SIZE
+            max_size=self.PREDICTION_CACHE_SIZE,
         )
 
         # マルチタイムフレーム統合システム
@@ -117,13 +117,13 @@ class EnsembleStockPredictor(StockPredictor):
         return valid_symbols
 
     def _safe_model_operation(
-        self, operation_name: str, operation_func, fallback_value=None
+        self, operation_name: str, operation_func, fallback_value=None,
     ):
         """モデル操作の安全な実行"""
         try:
             return operation_func()
         except Exception as e:
-            self.logger.error(f"Error in {operation_name}: {str(e)}")
+            self.logger.error(f"Error in {operation_name}: {e!s}")
             return fallback_value
 
     def _check_dependencies(self) -> Dict[str, bool]:
@@ -137,9 +137,9 @@ class EnsembleStockPredictor(StockPredictor):
         }
 
         try:
-            import sklearn
             import numpy
             import pandas
+            import sklearn
         except ImportError as e:
             self.logger.error(f"Critical dependency missing: {e}")
             dependencies.update({"sklearn": False, "numpy": False, "pandas": False})
@@ -153,9 +153,8 @@ class EnsembleStockPredictor(StockPredictor):
 
     def prepare_ensemble_models(self):
         """複数のモデルタイプを準備"""
-        from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+        from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
         from sklearn.neural_network import MLPRegressor
-        from sklearn.svm import SVR
 
         models_to_add = []
 
@@ -188,19 +187,19 @@ class EnsembleStockPredictor(StockPredictor):
 
         # Random Forest
         rf_model = RandomForestRegressor(
-            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1
+            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1,
         )
         models_to_add.append(("random_forest", rf_model, 0.2))
 
         # Gradient Boosting
         gb_model = GradientBoostingRegressor(
-            n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42
+            n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42,
         )
         models_to_add.append(("gradient_boost", gb_model, 0.15))
 
         # Neural Network
         nn_model = MLPRegressor(
-            hidden_layer_sizes=(100, 50), max_iter=500, random_state=42
+            hidden_layer_sizes=(100, 50), max_iter=500, random_state=42,
         )
         models_to_add.append(("neural_network", nn_model, 0.05))
 
@@ -209,7 +208,7 @@ class EnsembleStockPredictor(StockPredictor):
             self.add_model(name, model, weight=weight)
 
     def train_ensemble(
-        self, symbols: List[str], target_column: str = "recommendation_score"
+        self, symbols: List[str], target_column: str = "recommendation_score",
     ):
         """アンサンブルモデルを訓練"""
         from config.settings import get_settings
@@ -275,11 +274,11 @@ class EnsembleStockPredictor(StockPredictor):
                 model_scores[name] = test_mse
 
                 self.logger.info(
-                    f"{name} - Train MSE: {train_mse:.4f}, Test MSE: {test_mse:.4f}"
+                    f"{name} - Train MSE: {train_mse:.4f}, Test MSE: {test_mse:.4f}",
                 )
 
             except Exception as e:
-                self.logger.error(f"Error training {name}: {str(e)}")
+                self.logger.error(f"Error training {name}: {e!s}")
                 # 失敗したモデルは除外
                 del self.models[name]
                 del self.weights[name]
@@ -314,7 +313,7 @@ class EnsembleStockPredictor(StockPredictor):
                 self.weights[name] = inverse_scores[name] / total_inverse
 
     def _ensemble_predict_from_predictions(
-        self, model_predictions: Dict[str, np.ndarray]
+        self, model_predictions: Dict[str, np.ndarray],
     ) -> np.ndarray:
         """複数モデルの予測を重み付き平均"""
         weighted_sum = np.zeros_like(list(model_predictions.values())[0])
@@ -361,7 +360,7 @@ class EnsembleStockPredictor(StockPredictor):
             if not self.is_trained:
                 if not self.load_ensemble():
                     self.logger.warning(
-                        f"No trained model available for {symbol}, using fallback"
+                        f"No trained model available for {symbol}, using fallback",
                     )
                     return self._fallback_prediction(symbol)
 
@@ -395,24 +394,24 @@ class EnsembleStockPredictor(StockPredictor):
                 },
             )
         except ValueError as e:
-            self.logger.error(f"Data validation error for {symbol}: {str(e)}")
+            self.logger.error(f"Data validation error for {symbol}: {e!s}")
             return self._fallback_prediction(
-                symbol, error=f"データ検証エラー: {str(e)}"
+                symbol, error=f"データ検証エラー: {e!s}",
             )
         except KeyError as e:
-            self.logger.error(f"Missing data key for {symbol}: {str(e)}")
+            self.logger.error(f"Missing data key for {symbol}: {e!s}")
             return self._fallback_prediction(
-                symbol, error=f"データキーエラー: {str(e)}"
+                symbol, error=f"データキーエラー: {e!s}",
             )
         except RuntimeError as e:
-            self.logger.error(f"Model execution error for {symbol}: {str(e)}")
+            self.logger.error(f"Model execution error for {symbol}: {e!s}")
             return self._fallback_prediction(
-                symbol, error=f"モデル実行エラー: {str(e)}"
+                symbol, error=f"モデル実行エラー: {e!s}",
             )
         except Exception as e:
-            self.logger.error(f"Unexpected error in predict for {symbol}: {str(e)}")
+            self.logger.error(f"Unexpected error in predict for {symbol}: {e!s}")
             return self._fallback_prediction(
-                symbol, error=f"予期しないエラー: {str(e)}"
+                symbol, error=f"予期しないエラー: {e!s}",
             )
 
     def _fallback_prediction(self, symbol: str, error: str = None) -> PredictionResult:
@@ -434,7 +433,7 @@ class EnsembleStockPredictor(StockPredictor):
                     prediction = self.NEUTRAL_PREDICTION_VALUE
 
                 confidence = min(
-                    self.MAX_CONFIDENCE_RATIO, abs(trend) * self.CONFIDENCE_MULTIPLIER
+                    self.MAX_CONFIDENCE_RATIO, abs(trend) * self.CONFIDENCE_MULTIPLIER,
                 )
             else:
                 prediction = self.NEUTRAL_PREDICTION_VALUE
@@ -463,7 +462,7 @@ class EnsembleStockPredictor(StockPredictor):
             # 入力検証
             valid_symbols = self._validate_symbols_list(symbols)
             self.logger.info(
-                f"Processing batch prediction for {len(valid_symbols)} symbols"
+                f"Processing batch prediction for {len(valid_symbols)} symbols",
             )
 
             results = []
@@ -477,28 +476,28 @@ class EnsembleStockPredictor(StockPredictor):
                     # 進捗ログ（大量データ処理時用）
                     if (i + 1) % 10 == 0:
                         self.logger.info(
-                            f"Processed {i + 1}/{len(valid_symbols)} symbols"
+                            f"Processed {i + 1}/{len(valid_symbols)} symbols",
                         )
 
                 except Exception as e:
-                    self.logger.error(f"Error predicting {symbol}: {str(e)}")
+                    self.logger.error(f"Error predicting {symbol}: {e!s}")
                     failed_count += 1
                     # エラーでも結果は返す（フォールバック）
                     results.append(self._fallback_prediction(symbol, error=str(e)))
 
             if failed_count > 0:
                 self.logger.warning(
-                    f"Batch prediction completed with {failed_count} failures"
+                    f"Batch prediction completed with {failed_count} failures",
                 )
 
             return results
 
         except ValueError as e:
-            self.logger.error(f"Batch prediction validation error: {str(e)}")
+            self.logger.error(f"Batch prediction validation error: {e!s}")
             # 無効な入力の場合、空のリストを返す
             return []
         except Exception as e:
-            self.logger.error(f"Batch prediction error: {str(e)}")
+            self.logger.error(f"Batch prediction error: {e!s}")
             # 重大なエラーの場合、全て中性予測で返す
             return [
                 self._fallback_prediction(sym, error=str(e))
@@ -525,7 +524,7 @@ class EnsembleStockPredictor(StockPredictor):
             return max(0.1, min(0.95, confidence))
 
         except Exception as e:
-            self.logger.error(f"Error calculating confidence for {symbol}: {str(e)}")
+            self.logger.error(f"Error calculating confidence for {symbol}: {e!s}")
             return 0.1
 
     def get_model_info(self) -> Dict[str, Any]:
@@ -559,7 +558,7 @@ class EnsembleStockPredictor(StockPredictor):
 
             # マルチタイムフレーム統合分析
             timeframe_analysis = self.timeframe_integrator.integrate_predictions(
-                symbol, self.data_provider
+                symbol, self.data_provider,
             )
 
             # 基本の特徴量ベース予測
@@ -599,26 +598,26 @@ class EnsembleStockPredictor(StockPredictor):
             self.logger.debug(
                 f"Enhanced prediction for {symbol}: "
                 f"base={base_prediction:.1f}, integrated={integrated_prediction:.1f}, "
-                f"confidence={confidence_adjustment:.2f}, final={result:.1f}"
+                f"confidence={confidence_adjustment:.2f}, final={result:.1f}",
             )
 
             return result
 
         except ConnectionError as e:
-            self.logger.error(f"Data connection error for {symbol}: {str(e)}")
+            self.logger.error(f"Data connection error for {symbol}: {e!s}")
             return self.NEUTRAL_PREDICTION_VALUE
         except KeyError as e:
-            self.logger.error(f"Missing data key for {symbol}: {str(e)}")
+            self.logger.error(f"Missing data key for {symbol}: {e!s}")
             return self.NEUTRAL_PREDICTION_VALUE
         except ValueError as e:
-            self.logger.error(f"Data validation error for {symbol}: {str(e)}")
+            self.logger.error(f"Data validation error for {symbol}: {e!s}")
             return self.NEUTRAL_PREDICTION_VALUE
         except RuntimeError as e:
-            self.logger.error(f"Model execution error for {symbol}: {str(e)}")
+            self.logger.error(f"Model execution error for {symbol}: {e!s}")
             return self.NEUTRAL_PREDICTION_VALUE
         except Exception as e:
             self.logger.error(
-                f"Unexpected error in enhanced ensemble prediction for {symbol}: {str(e)}"
+                f"Unexpected error in enhanced ensemble prediction for {symbol}: {e!s}",
             )
             return self.NEUTRAL_PREDICTION_VALUE
 
@@ -640,7 +639,7 @@ class EnsembleStockPredictor(StockPredictor):
 
             # 特徴量を訓練時と同じ順序に調整
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0
+                columns=self.feature_names, fill_value=0,
             )
 
             # スケーリング
@@ -653,25 +652,24 @@ class EnsembleStockPredictor(StockPredictor):
                     pred = model.predict(features_scaled)[0]
                     predictions[name] = pred
                 except Exception as e:
-                    self.logger.warning(f"Error with {name} prediction: {str(e)}")
+                    self.logger.warning(f"Error with {name} prediction: {e!s}")
 
             # アンサンブル予測
             if predictions:
                 ensemble_score = self._ensemble_predict_from_predictions(
-                    {name: np.array([pred]) for name, pred in predictions.items()}
+                    {name: np.array([pred]) for name, pred in predictions.items()},
                 )[0]
                 return max(0, min(100, float(ensemble_score)))
-            else:
-                return 50.0
+            return 50.0
 
         except Exception as e:
             self.logger.error(
-                f"Error in base ensemble prediction for {symbol}: {str(e)}"
+                f"Error in base ensemble prediction for {symbol}: {e!s}",
             )
             return 50.0
 
     def _calculate_features_optimized(
-        self, symbol: str, data: pd.DataFrame
+        self, symbol: str, data: pd.DataFrame,
     ) -> pd.DataFrame:
         """最適化された特徴量計算（キャッシュ対応）"""
         # キャッシュキー生成（データのハッシュベース）
@@ -687,7 +685,7 @@ class EnsembleStockPredictor(StockPredictor):
         try:
             # 並列特徴量計算システムを使用
             features = self.parallel_calculator._calculate_single_symbol_features(
-                symbol, self.data_provider
+                symbol, self.data_provider,
             )
 
             if not features.empty:
@@ -699,7 +697,7 @@ class EnsembleStockPredictor(StockPredictor):
 
         except Exception as e:
             self.logger.error(
-                f"Error calculating optimized features for {symbol}: {str(e)}"
+                f"Error calculating optimized features for {symbol}: {e!s}",
             )
             # フォールバック：従来の特徴量計算
             return self._calculate_features_fallback(data)
@@ -712,7 +710,7 @@ class EnsembleStockPredictor(StockPredictor):
             ml_predictor = MLStockPredictor()
             return ml_predictor.prepare_features(data)
         except Exception as e:
-            self.logger.error(f"Fallback feature calculation failed: {str(e)}")
+            self.logger.error(f"Fallback feature calculation failed: {e!s}")
             return pd.DataFrame()
 
     def save_ensemble(self):
@@ -729,7 +727,7 @@ class EnsembleStockPredictor(StockPredictor):
             joblib.dump(ensemble_data, ensemble_file)
             self.logger.info(f"Ensemble saved to {ensemble_file}")
         except Exception as e:
-            self.logger.error(f"Error saving ensemble: {str(e)}")
+            self.logger.error(f"Error saving ensemble: {e!s}")
 
     def load_ensemble(self) -> bool:
         """アンサンブルモデルを読み込み"""
@@ -749,5 +747,5 @@ class EnsembleStockPredictor(StockPredictor):
             return True
 
         except Exception as e:
-            self.logger.error(f"Error loading ensemble: {str(e)}")
+            self.logger.error(f"Error loading ensemble: {e!s}")
             return False

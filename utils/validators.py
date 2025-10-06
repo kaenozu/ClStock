@@ -1,11 +1,10 @@
-"""
-入力検証ユーティリティ
+"""入力検証ユーティリティ
 セキュリティ強化のための検証関数群
 """
 
-import re
 import logging
-from typing import Any, Optional, List, Union
+import re
+from typing import List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -13,12 +12,10 @@ logger = logging.getLogger(__name__)
 class ValidationError(Exception):
     """検証エラー"""
 
-    pass
 
 
 def validate_stock_symbol(symbol: str) -> str:
-    """
-    株式銘柄コードの検証
+    """株式銘柄コードの検証
 
     Args:
         symbol: 検証する銘柄コード
@@ -28,6 +25,7 @@ def validate_stock_symbol(symbol: str) -> str:
 
     Raises:
         ValidationError: 無効な銘柄コードの場合
+
     """
     if not symbol:
         raise ValidationError("Stock symbol cannot be empty")
@@ -47,8 +45,7 @@ def validate_stock_symbol(symbol: str) -> str:
 
 
 def validate_period(period: str) -> str:
-    """
-    期間パラメータの検証
+    """期間パラメータの検証
 
     Args:
         period: 検証する期間
@@ -58,6 +55,7 @@ def validate_period(period: str) -> str:
 
     Raises:
         ValidationError: 無効な期間の場合
+
     """
     if not period:
         raise ValidationError("Period cannot be empty")
@@ -81,20 +79,19 @@ def validate_period(period: str) -> str:
 
     if period not in valid_periods:
         raise ValidationError(
-            f"Invalid period: {period}. Valid periods: {', '.join(valid_periods)}"
+            f"Invalid period: {period}. Valid periods: {', '.join(valid_periods)}",
         )
 
     return period
 
 
 def validate_numeric_range(
-    value: Union[str, int, float],
+    value: Union[str, float],
     min_val: Optional[float] = None,
     max_val: Optional[float] = None,
     field_name: str = "value",
 ) -> float:
-    """
-    数値範囲の検証
+    """数値範囲の検証
 
     Args:
         value: 検証する値
@@ -107,6 +104,7 @@ def validate_numeric_range(
 
     Raises:
         ValidationError: 無効な数値の場合
+
     """
     try:
         num_value = float(value)
@@ -123,8 +121,7 @@ def validate_numeric_range(
 
 
 def validate_email(email: str) -> str:
-    """
-    メールアドレスの検証
+    """メールアドレスの検証
 
     Args:
         email: 検証するメールアドレス
@@ -134,6 +131,7 @@ def validate_email(email: str) -> str:
 
     Raises:
         ValidationError: 無効なメールアドレスの場合
+
     """
     if not email:
         raise ValidationError("Email cannot be empty")
@@ -153,8 +151,7 @@ def validate_email(email: str) -> str:
 
 
 def sanitize_string(value: str, max_length: int = 1000) -> str:
-    """
-    文字列のサニタイズ
+    """文字列のサニタイズ
 
     Args:
         value: サニタイズする文字列
@@ -165,6 +162,7 @@ def sanitize_string(value: str, max_length: int = 1000) -> str:
 
     Raises:
         ValidationError: 無効な文字列の場合
+
     """
     if not isinstance(value, str):
         value = str(value)
@@ -180,8 +178,7 @@ def sanitize_string(value: str, max_length: int = 1000) -> str:
 
 
 def validate_api_key(api_key: str) -> str:
-    """
-    API キーの検証
+    """API キーの検証
 
     Args:
         api_key: 検証するAPI キー
@@ -191,6 +188,7 @@ def validate_api_key(api_key: str) -> str:
 
     Raises:
         ValidationError: 無効なAPI キーの場合
+
     """
     if not api_key:
         raise ValidationError("API key cannot be empty")
@@ -209,8 +207,7 @@ def validate_api_key(api_key: str) -> str:
 
 
 def validate_symbols_list(symbols: List[str], max_count: int = 100) -> List[str]:
-    """
-    銘柄コードリストの検証
+    """銘柄コードリストの検証
 
     Args:
         symbols: 銘柄コードのリスト
@@ -221,6 +218,7 @@ def validate_symbols_list(symbols: List[str], max_count: int = 100) -> List[str]
 
     Raises:
         ValidationError: 無効なリストの場合
+
     """
     if not symbols:
         raise ValidationError("Symbols list cannot be empty")
@@ -242,10 +240,9 @@ def validate_symbols_list(symbols: List[str], max_count: int = 100) -> List[str]
 
 
 def validate_date_range(
-    start_date: Optional[str] = None, end_date: Optional[str] = None
+    start_date: Optional[str] = None, end_date: Optional[str] = None,
 ) -> tuple:
-    """
-    日付範囲の検証
+    """日付範囲の検証
 
     Args:
         start_date: 開始日 (YYYY-MM-DD)
@@ -256,8 +253,9 @@ def validate_date_range(
 
     Raises:
         ValidationError: 無効な日付の場合
+
     """
-    from datetime import datetime, timedelta
+    from datetime import datetime
 
     date_format = "%Y-%m-%d"
 
@@ -266,7 +264,7 @@ def validate_date_range(
             start_dt = datetime.strptime(start_date, date_format)
         except ValueError:
             raise ValidationError(
-                f"Invalid start date format: {start_date}. Use YYYY-MM-DD"
+                f"Invalid start date format: {start_date}. Use YYYY-MM-DD",
             )
     else:
         start_dt = None
@@ -276,7 +274,7 @@ def validate_date_range(
             end_dt = datetime.strptime(end_date, date_format)
         except ValueError:
             raise ValidationError(
-                f"Invalid end date format: {end_date}. Use YYYY-MM-DD"
+                f"Invalid end date format: {end_date}. Use YYYY-MM-DD",
             )
     else:
         end_dt = None
@@ -293,12 +291,12 @@ def validate_date_range(
 
 
 def log_validation_error(error: ValidationError, context: dict = None):
-    """
-    検証エラーをログに記録
+    """検証エラーをログに記録
 
     Args:
         error: 検証エラー
         context: 追加のコンテキスト情報
+
     """
     context = context or {}
-    logger.warning(f"Validation error: {str(error)}", extra=context)
+    logger.warning(f"Validation error: {error!s}", extra=context)

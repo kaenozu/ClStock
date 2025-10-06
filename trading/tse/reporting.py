@@ -55,7 +55,7 @@ class OptimizationReporter:
             all_profiles,
         )
         report_file = self._save_report_file(
-            timestamp, best_size, backtest_result, selected_profiles, results
+            timestamp, best_size, backtest_result, selected_profiles, results,
         )
 
         return {
@@ -67,7 +67,7 @@ class OptimizationReporter:
         }
 
     def _save_csv_file(
-        self, timestamp: str, selected_profiles: List[StockProfile]
+        self, timestamp: str, selected_profiles: List[StockProfile],
     ) -> str:
         csv_filename = f"optimal_portfolio_{timestamp}.csv"
         with open(csv_filename, "w", newline="", encoding="utf-8") as csvfile:
@@ -81,7 +81,7 @@ class OptimizationReporter:
                     "Diversity_Score",
                     "Volatility",
                     "Market_Cap",
-                ]
+                ],
             )
 
             for profile in selected_profiles:
@@ -94,7 +94,7 @@ class OptimizationReporter:
                         f"{profile.diversity_score:.2f}",
                         f"{profile.volatility:.4f}",
                         f"{profile.market_cap:.0f}",
-                    ]
+                    ],
                 )
 
         print(f"[保存完了] 最適ポートフォリオCSV: {csv_filename}")
@@ -159,7 +159,7 @@ class OptimizationReporter:
         return comparison
 
     def _create_optimal_portfolio_data(
-        self, selected_profiles: List[StockProfile]
+        self, selected_profiles: List[StockProfile],
     ) -> List[Dict]:
         portfolio_data = []
         for profile in selected_profiles:
@@ -172,12 +172,12 @@ class OptimizationReporter:
                     "diversity_score": round(profile.diversity_score, 2),
                     "volatility": round(profile.volatility, 4),
                     "market_cap": int(profile.market_cap),
-                }
+                },
             )
         return portfolio_data
 
     def _create_sector_analysis_data(
-        self, selected_profiles: List[StockProfile]
+        self, selected_profiles: List[StockProfile],
     ) -> Dict:
         sector_groups: Dict[str, Dict] = {}
         for profile in selected_profiles:
@@ -196,9 +196,11 @@ class OptimizationReporter:
                 info["avg_score"] = 0
         return sector_groups
 
-    def _create_top_performers_data(self, all_profiles: List[StockProfile]) -> List[Dict]:
+    def _create_top_performers_data(
+        self, all_profiles: List[StockProfile],
+    ) -> List[Dict]:
         top_performers = sorted(
-            all_profiles, key=lambda x: x.combined_score, reverse=True
+            all_profiles, key=lambda x: x.combined_score, reverse=True,
         )[:10]
         return [
             {
@@ -244,7 +246,7 @@ class OptimizationReporter:
         reportfile.write("TSE 4000銘柄最適化投資推奨レポート\n")
         reportfile.write("=" * 80 + "\n")
         reportfile.write(
-            f"作成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}\n\n"
+            f"作成日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}\n\n",
         )
 
         self._write_strategy_summary(reportfile, best_size, backtest_result)
@@ -254,7 +256,7 @@ class OptimizationReporter:
         self._write_execution_timing(reportfile)
 
     def _write_strategy_summary(
-        self, reportfile, best_size: int, backtest_result: Dict
+        self, reportfile, best_size: int, backtest_result: Dict,
     ):
         reportfile.write("📊 投資戦略サマリー\n")
         reportfile.write("-" * 40 + "\n")
@@ -277,13 +279,13 @@ class OptimizationReporter:
         for sector, info in sector_analysis.items():
             percentage = (info["count"] / best_size) * 100 if best_size else 0
             reportfile.write(
-                f"{sector.upper()}: {info['count']}銘柄 ({percentage:.1f}%) "
+                f"{sector.upper()}: {info['count']}銘柄 ({percentage:.1f}%) ",
             )
             reportfile.write(f"- 平均スコア: {info['avg_score']:.1f}\n")
             reportfile.write(f"  推奨銘柄: {', '.join(info['symbols'])}\n\n")
 
     def _write_top_recommendations(
-        self, reportfile, selected_profiles: List[StockProfile]
+        self, reportfile, selected_profiles: List[StockProfile],
     ):
         reportfile.write("💎 トップ推奨銘柄（上位5銘柄）\n")
         reportfile.write("-" * 40 + "\n")
@@ -318,5 +320,5 @@ class OptimizationReporter:
         print(f"JSON: {save_result['json_file']}")
         print(f"レポート: {save_result['report_file']}")
         print(
-            f"最適解: {save_result['optimal_portfolio_size']}銘柄で{save_result['expected_return']}期待利益"
+            f"最適解: {save_result['optimal_portfolio_size']}銘柄で{save_result['expected_return']}期待利益",
         )

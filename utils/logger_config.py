@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
-"""
-ログ設定の一元管理モジュール
+"""ログ設定の一元管理モジュール
 logging.basicConfigの複数回呼び出し問題を解決
 """
 
 import logging
 import sys
 import threading
-from pathlib import Path
-from typing import Dict, List, Set, Optional, Any
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
 
 def setup_logger(
-    name: str = None, level: int = logging.INFO, format_string: str = None
+    name: str = None, level: int = logging.INFO, format_string: str = None,
 ) -> logging.Logger:
-    """
-    安全なログ設定
+    """安全なログ設定
 
     Args:
         name: ロガー名（Noneの場合はルートロガー）
@@ -25,6 +23,7 @@ def setup_logger(
 
     Returns:
         設定済みロガー
+
     """
     if format_string is None:
         format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -58,14 +57,14 @@ def setup_logger(
 
 
 def get_logger(name: str = None) -> logging.Logger:
-    """
-    ロガーを取得（既存の場合はそのまま返す）
+    """ロガーを取得（既存の場合はそのまま返す）
 
     Args:
         name: ロガー名
 
     Returns:
         ロガー
+
     """
     logger = logging.getLogger(name)
 
@@ -77,12 +76,12 @@ def get_logger(name: str = None) -> logging.Logger:
 
 
 def set_log_level(level: int, logger_name: str = None):
-    """
-    安全にログレベルを変更
+    """安全にログレベルを変更
 
     Args:
         level: 新しいログレベル
         logger_name: ロガー名（Noneの場合はルートロガー）
+
     """
     logger = logging.getLogger(logger_name)
     logger.setLevel(level)
@@ -118,7 +117,7 @@ class CentralizedLogger:
                 self.log_files[service_name] = Path(log_file_path)
 
     def collect_service_logs(
-        self, service_name: str, max_lines: int = 100
+        self, service_name: str, max_lines: int = 100,
     ) -> List[str]:
         """サービスのログ収集"""
         logs = []
@@ -127,7 +126,7 @@ class CentralizedLogger:
             log_file = self.log_files[service_name]
             if log_file.exists():
                 try:
-                    with open(log_file, "r", encoding="utf-8") as f:
+                    with open(log_file, encoding="utf-8") as f:
                         lines = f.readlines()
                         logs.extend(lines[-max_lines:])
                 except Exception as e:
@@ -145,7 +144,7 @@ class CentralizedLogger:
         return all_logs
 
     def write_centralized_log(
-        self, message: str, level: str = "INFO", service: str = "SYSTEM"
+        self, message: str, level: str = "INFO", service: str = "SYSTEM",
     ):
         """集約ログへの書き込み"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -159,7 +158,7 @@ class CentralizedLogger:
             print(f"集約ログ書き込み失敗: {e}", file=sys.stderr)
 
     def get_recent_logs(
-        self, hours: int = 1, service_filter: Optional[str] = None
+        self, hours: int = 1, service_filter: Optional[str] = None,
     ) -> List[str]:
         """最近のログ取得"""
         recent_logs = []
@@ -169,7 +168,7 @@ class CentralizedLogger:
             return recent_logs
 
         try:
-            with open(self.centralized_log, "r", encoding="utf-8") as f:
+            with open(self.centralized_log, encoding="utf-8") as f:
                 for line in f:
                     # タイムスタンプ解析
                     try:
@@ -246,12 +245,12 @@ class CentralizedLogger:
                     cleaned_files.append(str(log_file))
             except Exception as e:
                 self.write_centralized_log(
-                    f"ログクリーンアップ失敗 {log_file}: {e}", "WARNING"
+                    f"ログクリーンアップ失敗 {log_file}: {e}", "WARNING",
                 )
 
         if cleaned_files:
             self.write_centralized_log(
-                f"古いログファイル削除: {len(cleaned_files)}件", "INFO"
+                f"古いログファイル削除: {len(cleaned_files)}件", "INFO",
             )
 
         return cleaned_files

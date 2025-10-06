@@ -1,22 +1,22 @@
-"""
-ClStock リスクマネージャー
+"""ClStock リスクマネージャー
 
 ポジションサイジング、ストップロス、VAR計算など
 包括的なリスク管理システム
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass
-from collections import defaultdict
-import pandas as pd
-import numpy as np
-from scipy import stats
 import math
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import pandas as pd
 
 # 既存システム
 from data.stock_data import StockDataProvider
+
 from .trading_strategy import SignalType
 
 
@@ -66,19 +66,18 @@ class PortfolioRisk:
 
 
 class DemoRiskManager:
-    """
-    デモ取引リスクマネージャー
+    """デモ取引リスクマネージャー
 
     87%精度システムと統合されたリスク管理
     """
 
     def __init__(
-        self, initial_capital: float = 1000000, risk_limits: Optional[RiskLimit] = None
+        self, initial_capital: float = 1000000, risk_limits: Optional[RiskLimit] = None,
     ):
-        """
-        Args:
-            initial_capital: 初期資本
-            risk_limits: リスク制限設定
+        """Args:
+        initial_capital: 初期資本
+        risk_limits: リスク制限設定
+
         """
         self.initial_capital = initial_capital
         self.current_capital = initial_capital
@@ -113,8 +112,7 @@ class DemoRiskManager:
         confidence: float = 0.0,
         precision: float = 85.0,
     ) -> bool:
-        """
-        新規ポジション開設可能性判定
+        """新規ポジション開設可能性判定
 
         Args:
             symbol: 銘柄コード
@@ -124,6 +122,7 @@ class DemoRiskManager:
 
         Returns:
             開設可能フラグ
+
         """
         try:
             # 基本的な資金チェック
@@ -137,7 +136,7 @@ class DemoRiskManager:
 
             if position_ratio > max_allowed:
                 self.logger.info(
-                    f"ポジションサイズ超過: {symbol} {position_ratio:.1%} > {max_allowed:.1%}"
+                    f"ポジションサイズ超過: {symbol} {position_ratio:.1%} > {max_allowed:.1%}",
                 )
                 return False
 
@@ -148,7 +147,7 @@ class DemoRiskManager:
 
             if new_sector_exposure > self.risk_limits.max_sector_exposure:
                 self.logger.info(
-                    f"セクター集中度超過: {sector} {new_sector_exposure:.1%}"
+                    f"セクター集中度超過: {sector} {new_sector_exposure:.1%}",
                 )
                 return False
 
@@ -183,8 +182,7 @@ class DemoRiskManager:
         precision: float,
         stop_loss_pct: float = 0.05,
     ) -> float:
-        """
-        最適ポジションサイズ計算（Kelly基準 + リスク調整）
+        """最適ポジションサイズ計算（Kelly基準 + リスク調整）
 
         Args:
             symbol: 銘柄コード
@@ -195,6 +193,7 @@ class DemoRiskManager:
 
         Returns:
             推奨ポジションサイズ（金額）
+
         """
         try:
             # Kelly基準による基本計算
@@ -230,7 +229,7 @@ class DemoRiskManager:
 
             # 上限制限
             max_position_ratio = self._calculate_dynamic_position_limit(
-                confidence, precision
+                confidence, precision,
             )
             position_ratio = min(abs(adjusted_kelly), max_position_ratio)
 
@@ -243,7 +242,7 @@ class DemoRiskManager:
             self.logger.info(
                 f"最適ポジションサイズ計算: {symbol} "
                 f"Kelly:{kelly_ratio:.3f} 調整後:{position_ratio:.3f} "
-                f"サイズ:{position_size:,.0f}円"
+                f"サイズ:{position_size:,.0f}円",
             )
 
             return position_size
@@ -258,8 +257,7 @@ class DemoRiskManager:
         confidence_level: float = 0.95,
         holding_period: int = 1,
     ) -> float:
-        """
-        ポートフォリオVaR計算
+        """ポートフォリオVaR計算
 
         Args:
             positions: ポジション情報
@@ -268,6 +266,7 @@ class DemoRiskManager:
 
         Returns:
             VaR値
+
         """
         try:
             if not positions:
@@ -293,7 +292,7 @@ class DemoRiskManager:
                 return 0.0
 
             returns_matrix = np.array(
-                [returns[-min_length:] for returns in returns_data.values()]
+                [returns[-min_length:] for returns in returns_data.values()],
             ).T
 
             # ポートフォリオ重み計算
@@ -301,8 +300,8 @@ class DemoRiskManager:
             weights = np.array(
                 [
                     positions[symbol]["market_value"] / total_value
-                    for symbol in returns_data.keys()
-                ]
+                    for symbol in returns_data
+                ],
             )
 
             # ポートフォリオリターン計算
@@ -325,10 +324,9 @@ class DemoRiskManager:
             return 0.0
 
     def calculate_expected_shortfall(
-        self, positions: Dict[str, Dict[str, Any]], confidence_level: float = 0.95
+        self, positions: Dict[str, Dict[str, Any]], confidence_level: float = 0.95,
     ) -> float:
-        """
-        期待ショートフォール（CVaR）計算
+        """期待ショートフォール（CVaR）計算
 
         Args:
             positions: ポジション情報
@@ -336,6 +334,7 @@ class DemoRiskManager:
 
         Returns:
             期待ショートフォール
+
         """
         try:
             # VaR計算と同様の前処理
@@ -357,15 +356,15 @@ class DemoRiskManager:
                 return 0.0
 
             returns_matrix = np.array(
-                [returns[-min_length:] for returns in returns_data.values()]
+                [returns[-min_length:] for returns in returns_data.values()],
             ).T
 
             total_value = sum(pos["market_value"] for pos in positions.values())
             weights = np.array(
                 [
                     positions[symbol]["market_value"] / total_value
-                    for symbol in returns_data.keys()
-                ]
+                    for symbol in returns_data
+                ],
             )
 
             portfolio_returns = np.dot(returns_matrix, weights)
@@ -397,8 +396,7 @@ class DemoRiskManager:
         position_type: SignalType,
         stop_loss_pct: float = 0.05,
     ) -> bool:
-        """
-        ストップロス条件チェック
+        """ストップロス条件チェック
 
         Args:
             symbol: 銘柄コード
@@ -409,13 +407,14 @@ class DemoRiskManager:
 
         Returns:
             ストップロス実行フラグ
+
         """
         try:
             if position_type == SignalType.BUY:
                 # 買いポジション
                 loss_pct = (entry_price - current_price) / entry_price
                 return loss_pct >= stop_loss_pct
-            elif position_type == SignalType.SELL:
+            if position_type == SignalType.SELL:
                 # 売りポジション
                 loss_pct = (current_price - entry_price) / entry_price
                 return loss_pct >= stop_loss_pct
@@ -427,14 +426,14 @@ class DemoRiskManager:
             return False
 
     def update_risk_metrics(
-        self, current_positions: Dict[str, Dict[str, Any]], daily_pnl: float
+        self, current_positions: Dict[str, Dict[str, Any]], daily_pnl: float,
     ):
-        """
-        リスクメトリクス更新
+        """リスクメトリクス更新
 
         Args:
             current_positions: 現在のポジション
             daily_pnl: 日次損益
+
         """
         try:
             # PnL履歴更新
@@ -446,8 +445,7 @@ class DemoRiskManager:
             current_total = self.current_capital + sum(
                 pos.get("market_value", 0) for pos in current_positions.values()
             )
-            if current_total > self.max_capital:
-                self.max_capital = current_total
+            self.max_capital = max(self.max_capital, current_total)
 
             # ドローダウン計算
             self.current_drawdown = (
@@ -544,7 +542,7 @@ class DemoRiskManager:
         self.risk_alerts.clear()
 
     def _calculate_dynamic_position_limit(
-        self, confidence: float, precision: float
+        self, confidence: float, precision: float,
     ) -> float:
         """動的ポジション制限計算"""
         base_limit = self.risk_limits.max_position_size
@@ -624,10 +622,9 @@ class DemoRiskManager:
             # 実際にはVIX指数や市場ボラティリティを使用
             if self.current_drawdown > 0.1:
                 return 0.5  # 高リスク時は縮小
-            elif self.current_drawdown < 0.05:
+            if self.current_drawdown < 0.05:
                 return 1.0  # 低リスク時は通常
-            else:
-                return 0.8  # 中リスク時は少し縮小
+            return 0.8  # 中リスク時は少し縮小
 
         except Exception as e:
             self.logger.error(f"市場リスク乗数エラー: {e}")
@@ -646,7 +643,7 @@ class DemoRiskManager:
                         "severity": "HIGH",
                         "message": f"ドローダウン {self.current_drawdown:.1%} が制限値の80%に接近",
                         "timestamp": datetime.now().isoformat(),
-                    }
+                    },
                 )
 
             # セクター集中度アラート
@@ -658,7 +655,7 @@ class DemoRiskManager:
                             "severity": "MEDIUM",
                             "message": f"{sector}セクターの集中度 {exposure:.1%} が制限値の90%に接近",
                             "timestamp": datetime.now().isoformat(),
-                        }
+                        },
                     )
 
             # VaRアラート
@@ -672,7 +669,7 @@ class DemoRiskManager:
                             "severity": "HIGH",
                             "message": f"VaR {var_ratio:.1%} が資本の10%を超過",
                             "timestamp": datetime.now().isoformat(),
-                        }
+                        },
                     )
 
             # 新しいアラートのみ追加
@@ -730,8 +727,6 @@ class DemoRiskManager:
             "8031.T": "商社",
             "8035.T": "商社",
             "8058.T": "商社",
-            "8306.T": "銀行",
             "8802.T": "不動産",
             "9101.T": "運輸",
-            "9022.T": "運輸",
         }

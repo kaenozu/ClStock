@@ -1,20 +1,17 @@
-"""
-Test for Issue #9: Hybrid predictor bug fixes
+"""Test for Issue #9: Hybrid predictor bug fixes
 - GPU batch returns deterministic data instead of random
 - Real-time learning receives actual prices
 """
 
-import pytest
-import numpy as np
-from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import Mock, patch
 
-from models.hybrid import RefactoredHybridPredictor
 from models.core.interfaces import (
-    ModelConfiguration,
     DataProvider,
+    ModelConfiguration,
     PredictionResult,
 )
+from models.hybrid import RefactoredHybridPredictor
 
 
 class TestHybridPredictorIssue9:
@@ -32,8 +29,7 @@ class TestHybridPredictorIssue9:
         )
 
     def test_batch_prediction_returns_deterministic_data(self):
-        """
-        Issue #9 修正確認: バッチ予測が決定論的データを返すことを確認
+        """Issue #9 修正確認: バッチ予測が決定論的データを返すことを確認
         （ランダムデータを返さない）
         """
         # モックデータの設定
@@ -43,7 +39,7 @@ class TestHybridPredictorIssue9:
             {
                 "Close": [100.0, 101.0, 102.0, 103.0, 104.0],
                 "Volume": [1000, 1100, 1200, 1300, 1400],
-            }
+            },
         )
         self.mock_data_provider.get_stock_data.return_value = mock_data
 
@@ -71,8 +67,7 @@ class TestHybridPredictorIssue9:
                 assert value == 50.0 or value > 0  # 正の値であることを確認
 
     def test_real_time_learning_uses_actual_prices(self):
-        """
-        Issue #9 修正確認: リアルタイム学習が実際の価格を使用することを確認
+        """Issue #9 修正確認: リアルタイム学習が実際の価格を使用することを確認
         （予測値を実際値として使わない）
         """
         import pandas as pd
@@ -100,8 +95,7 @@ class TestHybridPredictorIssue9:
             assert last_entry["error"] > 0
 
     def test_large_batch_does_not_use_random_uniform(self):
-        """
-        大規模バッチがnp.random.uniform(800, 5000)を使用しないことを確認
+        """大規模バッチがnp.random.uniform(800, 5000)を使用しないことを確認
         """
         import pandas as pd
 
@@ -128,8 +122,7 @@ class TestHybridPredictorIssue9:
             assert value == 50.0
 
     def test_learning_system_feedback_with_zero_error(self):
-        """
-        実際の価格が利用可能な場合、エラーが正しく計算されることを確認
+        """実際の価格が利用可能な場合、エラーが正しく計算されることを確認
         """
         import pandas as pd
 
@@ -160,8 +153,7 @@ class TestHybridPredictorIssue9:
                 assert last_entry["actual"] == exact_price
 
     def test_batch_processing_with_errors(self):
-        """
-        バッチ処理中のエラーハンドリングが適切であることを確認
+        """バッチ処理中のエラーハンドリングが適切であることを確認
         """
         import pandas as pd
 
@@ -188,8 +180,7 @@ class TestHybridPredictorIssue9:
         assert "ERROR002" in result.errors
 
     def test_learning_statistics(self):
-        """
-        学習統計が正しく計算されることを確認
+        """学習統計が正しく計算されることを確認
         """
         import pandas as pd
 
@@ -205,7 +196,7 @@ class TestHybridPredictorIssue9:
             self.mock_data_provider.get_stock_data.return_value = mock_data
 
             with patch.object(
-                self.predictor.ensemble_predictor, "predict"
+                self.predictor.ensemble_predictor, "predict",
             ) as mock_predict:
                 mock_predict.return_value = PredictionResult(
                     prediction=predicted,

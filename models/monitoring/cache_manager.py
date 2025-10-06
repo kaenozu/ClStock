@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""
-キャッシュ管理モジュール
+"""キャッシュ管理モジュール
 高度なキャッシュシステムによる性能最適化
 """
 
-import logging
-from dataclasses import asdict
-from typing import Optional, Dict, Any, List
-import pandas as pd
-from pathlib import Path
 import hashlib
 import json
+import logging
 import threading
+from dataclasses import asdict
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import pandas as pd
 
 from ..core.interfaces import CacheProvider
 
@@ -51,7 +51,7 @@ class AdvancedCacheManager(CacheProvider):
         self._start_cleanup_thread()
 
         logger.info(
-            f"AdvancedCacheManager initialized with cleanup_interval={cleanup_interval}s, max_cache_size={max_cache_size}"
+            f"AdvancedCacheManager initialized with cleanup_interval={cleanup_interval}s, max_cache_size={max_cache_size}",
         )
 
     def _start_cleanup_thread(self):
@@ -67,11 +67,11 @@ class AdvancedCacheManager(CacheProvider):
 
         try:
             self.cleanup_thread = threading.Thread(
-                target=self._cleanup_worker, daemon=True, name="CacheCleanupWorker"
+                target=self._cleanup_worker, daemon=True, name="CacheCleanupWorker",
             )
             self.cleanup_thread.start()
             logger.info(
-                "Automatic cache cleanup thread started for AdvancedCacheManager"
+                "Automatic cache cleanup thread started for AdvancedCacheManager",
             )
         except Exception as e:
             logger.error(f"Failed to start cleanup thread: {e}")
@@ -92,7 +92,7 @@ class AdvancedCacheManager(CacheProvider):
                 if not self._shutdown_event.is_set():
                     self.cleanup_old_cache()
                     logger.debug(
-                        f"Periodic cache cleanup completed. Feature cache: {len(self.feature_cache)}, Prediction cache: {len(self.prediction_cache)}"
+                        f"Periodic cache cleanup completed. Feature cache: {len(self.feature_cache)}, Prediction cache: {len(self.prediction_cache)}",
                     )
 
             except Exception as e:
@@ -100,8 +100,7 @@ class AdvancedCacheManager(CacheProvider):
                 # エラーが発生しても継続するが、短い間隔で再試行
                 if not self._shutdown_event.wait(5):  # 5秒待機
                     continue
-                else:
-                    break
+                break
 
         logger.info("Cache cleanup worker stopped gracefully")
 
@@ -119,7 +118,7 @@ class AdvancedCacheManager(CacheProvider):
 
             if self.cleanup_thread.is_alive():
                 logger.warning(
-                    "Cache cleanup thread did not terminate gracefully within timeout"
+                    "Cache cleanup thread did not terminate gracefully within timeout",
                 )
                 # デーモンスレッドの場合は強制終了は避ける
             else:
@@ -184,7 +183,7 @@ class AdvancedCacheManager(CacheProvider):
         self._update_cache_stats()
 
     def get_cached_features(
-        self, symbol: str, data_hash: str
+        self, symbol: str, data_hash: str,
     ) -> Optional[pd.DataFrame]:
         """特徴量キャッシュから取得"""
         cache_key = f"features_{symbol}_{data_hash}"
@@ -244,7 +243,7 @@ class AdvancedCacheManager(CacheProvider):
             logger.debug(
                 f"Cache cleanup completed. Removed {removed_feature} expired features, "
                 f"{removed_prediction} expired predictions, {feature_removed_lru} LRU features, "
-                f"{prediction_removed_lru} LRU predictions"
+                f"{prediction_removed_lru} LRU predictions",
             )
 
     def _remove_expired_entries(self, cache: Dict) -> int:
@@ -334,14 +333,14 @@ class AdvancedCacheManager(CacheProvider):
             if not self.cache_file.exists():
                 return False
 
-            with open(self.cache_file, "r", encoding="utf-8") as f:
+            with open(self.cache_file, encoding="utf-8") as f:
                 cache_data = json.load(f)
 
             self.feature_cache = self._deserialize_cache(
-                cache_data.get("feature_cache", {})
+                cache_data.get("feature_cache", {}),
             )
             self.prediction_cache = self._deserialize_cache(
-                cache_data.get("prediction_cache", {})
+                cache_data.get("prediction_cache", {}),
             )
             self.cache_stats = cache_data.get("cache_stats", self.cache_stats)
 
@@ -407,14 +406,14 @@ class RealTimeCacheManager(AdvancedCacheManager):
         self._start_realtime_cleanup_thread()
 
         logger.info(
-            f"RealTimeCacheManager initialized with cleanup_interval={cleanup_interval}s, max_cache_size={max_cache_size}"
+            f"RealTimeCacheManager initialized with cleanup_interval={cleanup_interval}s, max_cache_size={max_cache_size}",
         )
 
     def _start_realtime_cleanup_thread(self):
         """リアルタイムキャッシュ用自動クリーンアップスレッドを開始"""
         if self.auto_cleanup_enabled:
             realtime_cleanup_thread = threading.Thread(
-                target=self._realtime_cleanup_worker, daemon=True
+                target=self._realtime_cleanup_worker, daemon=True,
             )
             realtime_cleanup_thread.start()
             logger.info("Automatic realtime cache cleanup thread started")
@@ -429,10 +428,10 @@ class RealTimeCacheManager(AdvancedCacheManager):
 
                 # リアルタイムキャッシュクリーンアップ実行
                 self.cleanup_real_time_cache(
-                    older_than_hours=2
+                    older_than_hours=2,
                 )  # 2時間以上古いデータをクリーンアップ
                 logger.debug(
-                    f"Realtime cache cleanup completed. Tick cache symbols: {len(self.tick_cache)}, Order book cache symbols: {len(self.order_book_cache)}"
+                    f"Realtime cache cleanup completed. Tick cache symbols: {len(self.tick_cache)}, Order book cache symbols: {len(self.order_book_cache)}",
                 )
 
             except Exception as e:
@@ -476,7 +475,7 @@ class RealTimeCacheManager(AdvancedCacheManager):
                 "data": tick_data,
                 "timestamp": tick_data.timestamp,
                 "cached_at": datetime.now(),
-            }
+            },
         )
 
         # 履歴サイズ制限
@@ -494,7 +493,7 @@ class RealTimeCacheManager(AdvancedCacheManager):
         self.set(latest_key, tick_data, ttl=300)
 
     def cache_order_book_data(
-        self, order_book_data, max_history: Optional[int] = None
+        self, order_book_data, max_history: Optional[int] = None,
     ) -> None:
         """板情報データを時系列キャッシュに保存"""
         from models.base.interfaces import OrderBookData
@@ -513,7 +512,7 @@ class RealTimeCacheManager(AdvancedCacheManager):
                 "data": order_book_data,
                 "timestamp": order_book_data.timestamp,
                 "cached_at": datetime.now(),
-            }
+            },
         )
 
         # 履歴サイズ制限
@@ -677,7 +676,7 @@ class RealTimeCacheManager(AdvancedCacheManager):
                         len(entries) for entries in self.order_book_cache.values()
                     ),
                 },
-            }
+            },
         )
 
         return base_stats
@@ -718,7 +717,7 @@ class RealTimeCacheManager(AdvancedCacheManager):
 
             if removed_count > 0:
                 logger.info(
-                    f"Cleaned up {removed_count} old order book entries for {symbol}"
+                    f"Cleaned up {removed_count} old order book entries for {symbol}",
                 )
 
             if not self.order_book_cache[symbol]:
@@ -726,7 +725,7 @@ class RealTimeCacheManager(AdvancedCacheManager):
 
         if total_removed > 0:
             logger.debug(
-                f"Realtime cache cleanup completed. Removed {total_removed} entries"
+                f"Realtime cache cleanup completed. Removed {total_removed} entries",
             )
 
         return total_removed
@@ -752,12 +751,11 @@ class RealTimeCacheManager(AdvancedCacheManager):
                         "bid_price": tick.bid_price,
                         "ask_price": tick.ask_price,
                         "trade_type": tick.trade_type,
-                    }
+                    },
                 )
 
             return pd.DataFrame(data)
 
-        elif format == "json":
+        if format == "json":
             return [asdict(tick) for tick in tick_history]
-        else:
-            return tick_history
+        return tick_history

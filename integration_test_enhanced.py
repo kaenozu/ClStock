@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-拡張機能と87%精度システムの統合テスト
+"""拡張機能と87%精度システムの統合テスト
 Phase 1機能の実際の効果を既存システムと比較評価
 """
 
-import sys
-import os
-import time
 import logging
-from datetime import datetime
-import numpy as np
-import pandas as pd
-from typing import List, Dict, Any, Tuple
+import os
+import sys
+import time
 import traceback
+from datetime import datetime
+from typing import Any, Dict, List
+
+import numpy as np
 
 # ロギング設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -42,13 +40,13 @@ def main():
             display_comprehensive_results(comparison_results)
         else:
             print(
-                f"\n[失敗] 統合テスト失敗: {comparison_results.get('error', 'Unknown error')}"
+                f"\n[失敗] 統合テスト失敗: {comparison_results.get('error', 'Unknown error')}",
             )
 
     except KeyboardInterrupt:
         print("\n\n統合テストが中断されました")
     except Exception as e:
-        print(f"\n[エラー] 予期しないエラー: {str(e)}")
+        print(f"\n[エラー] 予期しないエラー: {e!s}")
         traceback.print_exc()
 
 
@@ -66,19 +64,19 @@ def run_comprehensive_comparison() -> Dict[str, Any]:
             precision_system = Precision87BreakthroughSystem()
             print("   [OK] 87%精度システム初期化完了")
         except Exception as e:
-            logger.error(f"87%精度システム初期化失敗: {str(e)}")
+            logger.error(f"87%精度システム初期化失敗: {e!s}")
             precision_system = None
 
         # 拡張アンサンブルシステム初期化
         try:
-            from models.ensemble.ensemble_predictor import EnsembleStockPredictor
             from data.stock_data import StockDataProvider
+            from models.ensemble.ensemble_predictor import EnsembleStockPredictor
 
             data_provider = StockDataProvider()
             enhanced_system = EnsembleStockPredictor(data_provider=data_provider)
             print("   [OK] 拡張アンサンブルシステム初期化完了")
         except Exception as e:
-            logger.error(f"拡張システム初期化失敗: {str(e)}")
+            logger.error(f"拡張システム初期化失敗: {e!s}")
             enhanced_system = None
 
         if not precision_system and not enhanced_system:
@@ -90,12 +88,12 @@ def run_comprehensive_comparison() -> Dict[str, Any]:
 
         # 両システムでの予測比較
         comparison_results = compare_prediction_systems(
-            precision_system, enhanced_system, test_symbols
+            precision_system, enhanced_system, test_symbols,
         )
 
         # パフォーマンス比較
         performance_results = compare_system_performance(
-            precision_system, enhanced_system, test_symbols
+            precision_system, enhanced_system, test_symbols,
         )
 
         # 機能比較
@@ -110,11 +108,11 @@ def run_comprehensive_comparison() -> Dict[str, Any]:
         }
 
     except Exception as e:
-        return {"success": False, "error": f"統合比較実行エラー: {str(e)}"}
+        return {"success": False, "error": f"統合比較実行エラー: {e!s}"}
 
 
 def compare_prediction_systems(
-    precision_system, enhanced_system, test_symbols: List[str]
+    precision_system, enhanced_system, test_symbols: List[str],
 ) -> Dict[str, Any]:
     """予測システムの比較"""
     print("3. 予測精度・品質比較")
@@ -148,11 +146,11 @@ def compare_prediction_systems(
 
                 print(
                     f"     87%システム: 予測値={precision_data['prediction']:.1f}, "
-                    f"信頼度={precision_data['confidence']:.2f}, 時間={precision_time:.3f}秒"
+                    f"信頼度={precision_data['confidence']:.2f}, 時間={precision_time:.3f}秒",
                 )
 
             except Exception as e:
-                logger.error(f"87%システム予測エラー ({symbol}): {str(e)}")
+                logger.error(f"87%システム予測エラー ({symbol}): {e!s}")
 
         # 拡張アンサンブルシステムでの予測
         if enhanced_system:
@@ -173,23 +171,23 @@ def compare_prediction_systems(
 
                 print(
                     f"     拡張システム: 予測値={enhanced_data['prediction']:.1f}, "
-                    f"信頼度={enhanced_data['confidence']:.2f}, 時間={enhanced_time:.3f}秒"
+                    f"信頼度={enhanced_data['confidence']:.2f}, 時間={enhanced_time:.3f}秒",
                 )
 
             except Exception as e:
-                logger.error(f"拡張システム予測エラー ({symbol}): {str(e)}")
+                logger.error(f"拡張システム予測エラー ({symbol}): {e!s}")
 
     # 比較メトリクス計算
     if results["precision_87_results"] and results["enhanced_results"]:
         results["comparison_metrics"] = calculate_comparison_metrics(
-            results["precision_87_results"], results["enhanced_results"]
+            results["precision_87_results"], results["enhanced_results"],
         )
 
     return results
 
 
 def calculate_comparison_metrics(
-    precision_results: List[Dict], enhanced_results: List[Dict]
+    precision_results: List[Dict], enhanced_results: List[Dict],
 ) -> Dict[str, Any]:
     """比較メトリクスの計算"""
     metrics = {}
@@ -223,7 +221,7 @@ def calculate_comparison_metrics(
     for i in range(min(len(precision_results), len(enhanced_results))):
         if precision_results[i]["symbol"] == enhanced_results[i]["symbol"]:
             pred_diff = abs(
-                precision_results[i]["prediction"] - enhanced_results[i]["prediction"]
+                precision_results[i]["prediction"] - enhanced_results[i]["prediction"],
             )
             prediction_correlations.append(pred_diff)
 
@@ -240,7 +238,7 @@ def calculate_comparison_metrics(
 
 
 def compare_system_performance(
-    precision_system, enhanced_system, test_symbols: List[str]
+    precision_system, enhanced_system, test_symbols: List[str],
 ) -> Dict[str, Any]:
     """システムパフォーマンスの比較"""
     print("4. システムパフォーマンス比較")
@@ -270,11 +268,11 @@ def compare_system_performance(
 
             print(
                 f"     拡張システム バッチ処理: {enhanced_batch_time:.3f}秒 "
-                f"({len(enhanced_batch)}/{len(test_symbols)} 成功)"
+                f"({len(enhanced_batch)}/{len(test_symbols)} 成功)",
             )
 
         except Exception as e:
-            logger.error(f"拡張システム バッチ処理エラー: {str(e)}")
+            logger.error(f"拡張システム バッチ処理エラー: {e!s}")
 
     # メモリ効率性測定
     print("   メモリ効率測定...")
@@ -290,7 +288,7 @@ def compare_system_performance(
                 "feature_cache_size": enhanced_system.feature_cache.size(),
                 "prediction_cache_size": enhanced_system.prediction_cache.size(),
                 "parallel_workers": getattr(
-                    enhanced_system.parallel_calculator, "n_jobs", 1
+                    enhanced_system.parallel_calculator, "n_jobs", 1,
                 ),
             }
             performance_data["memory_efficiency"]["enhanced"] = cache_info
@@ -393,17 +391,17 @@ def display_comprehensive_results(results: Dict[str, Any]):
             # 速度比較
             if "avg_prediction_time" in metrics:
                 time_metrics = metrics["avg_prediction_time"]
-                print(f"   予測速度:")
+                print("   予測速度:")
                 print(f"     87%システム: {time_metrics.get('precision_87', 0):.3f}秒")
                 print(f"     拡張システム: {time_metrics.get('enhanced', 0):.3f}秒")
                 print(
-                    f"     速度改善: {time_metrics.get('improvement_ratio', 1.0):.1f}倍"
+                    f"     速度改善: {time_metrics.get('improvement_ratio', 1.0):.1f}倍",
                 )
 
             # 信頼度比較
             if "avg_confidence" in metrics:
                 conf_metrics = metrics["avg_confidence"]
-                print(f"   信頼度:")
+                print("   信頼度:")
                 print(f"     87%システム: {conf_metrics.get('precision_87', 0):.2f}")
                 print(f"     拡張システム: {conf_metrics.get('enhanced', 0):.2f}")
                 print(f"     信頼度差: {conf_metrics.get('difference', 0):+.2f}")
@@ -419,10 +417,10 @@ def display_comprehensive_results(results: Dict[str, Any]):
             and "enhanced" in perf_comp["batch_processing"]
         ):
             batch_data = perf_comp["batch_processing"]["enhanced"]
-            print(f"   バッチ処理（拡張システム）:")
+            print("   バッチ処理（拡張システム）:")
             print(f"     スループット: {batch_data.get('throughput', 0):.1f} 銘柄/秒")
             print(
-                f"     成功率: {batch_data.get('success_count', 0)}/{len(results.get('test_symbols', []))}"
+                f"     成功率: {batch_data.get('success_count', 0)}/{len(results.get('test_symbols', []))}",
             )
 
     # 機能比較結果

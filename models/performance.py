@@ -1,15 +1,13 @@
-﻿from __future__ import annotations
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from collections import OrderedDict
-from datetime import datetime
-from typing import Any, Dict, Iterable, List, Optional
+from __future__ import annotations
 
 import hashlib
 import os
+from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
-
 from data.stock_data import StockDataProvider
 from models.legacy_core import PredictionResult, StockPredictor
 
@@ -19,13 +17,13 @@ DEFAULT_FALLBACK_SCORE = 50.0
 class _IndexableSideEffect:
     """Iterator wrapper that also supports index access for MagicMock lists."""
 
-    __slots__ = ("_values", "_index")
+    __slots__ = ("_index", "_values")
 
     def __init__(self, values: Iterable[Any]):
         self._values = list(values)
         self._index = 0
 
-    def __iter__(self) -> "_IndexableSideEffect":
+    def __iter__(self) -> _IndexableSideEffect:
         return self
 
     def __next__(self) -> Any:
@@ -49,7 +47,7 @@ except ImportError:  # pragma: no cover
 
 
 if _unittest_mock is not None and not getattr(
-    _unittest_mock, "_clstock_side_effect_patch", False
+    _unittest_mock, "_clstock_side_effect_patch", False,
 ):
     _original_side_effect_prop = _unittest_mock.NonCallableMock.side_effect
 
@@ -58,7 +56,7 @@ if _unittest_mock is not None and not getattr(
 
     def _side_effect_setter(mock_self, value):
         if isinstance(value, (list, tuple)) and not isinstance(
-            value, _IndexableSideEffect
+            value, _IndexableSideEffect,
         ):
             value = _IndexableSideEffect(value)
         _original_side_effect_prop.fset(mock_self, value)
@@ -67,7 +65,7 @@ if _unittest_mock is not None and not getattr(
         _original_side_effect_prop.fdel(mock_self)
 
     _unittest_mock.NonCallableMock.side_effect = property(
-        _side_effect_getter, _side_effect_setter, _side_effect_deleter
+        _side_effect_getter, _side_effect_setter, _side_effect_deleter,
     )
     _unittest_mock._clstock_side_effect_patch = True
 
@@ -76,13 +74,13 @@ class AdvancedCacheManager:
     """Simplified cache manager compatible with legacy unit tests."""
 
     def __init__(
-        self, max_size: int = 1000, ttl_hours: int = 24, cleanup_interval: int = 1800
+        self, max_size: int = 1000, ttl_hours: int = 24, cleanup_interval: int = 1800,
     ) -> None:
         self.max_size = max_size
         self.ttl_hours = ttl_hours
         self.cleanup_interval = cleanup_interval
-        self.feature_cache: "OrderedDict[str, dict]" = OrderedDict()
-        self.prediction_cache: "OrderedDict[str, dict]" = OrderedDict()
+        self.feature_cache: OrderedDict[str, dict] = OrderedDict()
+        self.prediction_cache: OrderedDict[str, dict] = OrderedDict()
         self.cache_stats = {
             "hits": 0,
             "misses": 0,
@@ -101,7 +99,7 @@ class AdvancedCacheManager:
             cache.popitem(last=False)
 
     def cache_features(
-        self, symbol: str, data_hash: str, features: pd.DataFrame
+        self, symbol: str, data_hash: str, features: pd.DataFrame,
     ) -> None:
         key = f"{symbol}_{data_hash}"
         self.feature_cache[key] = {"data": features.copy()}
@@ -110,7 +108,7 @@ class AdvancedCacheManager:
         self._update_sizes()
 
     def get_cached_features(
-        self, symbol: str, data_hash: str
+        self, symbol: str, data_hash: str,
     ) -> Optional[pd.DataFrame]:
         key = f"{symbol}_{data_hash}"
         entry = self.feature_cache.get(key)
@@ -123,7 +121,7 @@ class AdvancedCacheManager:
         return None
 
     def cache_prediction(
-        self, symbol: str, features_hash: str, prediction: float
+        self, symbol: str, features_hash: str, prediction: float,
     ) -> None:
         key = f"{symbol}_{features_hash}"
         self.prediction_cache[key] = {"data": float(prediction)}
@@ -166,7 +164,7 @@ class AdvancedCacheManager:
             return "empty"
         if isinstance(data, pd.DataFrame):
             return hashlib.sha256(
-                data.to_json(date_format="iso", orient="split").encode("utf-8")
+                data.to_json(date_format="iso", orient="split").encode("utf-8"),
             ).hexdigest()
         return hashlib.sha256(str(data).encode("utf-8")).hexdigest()
 
@@ -181,7 +179,7 @@ class ParallelStockPredictor(StockPredictor):
     """Simplified parallel predictor used in the unit-test suite."""
 
     def __init__(
-        self, ensemble_predictor: StockPredictor, n_jobs: Optional[int] = None
+        self, ensemble_predictor: StockPredictor, n_jobs: Optional[int] = None,
     ) -> None:
         super().__init__(model_type="parallel")
         self.ensemble_predictor = ensemble_predictor
@@ -198,7 +196,7 @@ class ParallelStockPredictor(StockPredictor):
             return DEFAULT_FALLBACK_SCORE
 
     def predict_multiple_stocks_parallel(
-        self, symbols: Iterable[str]
+        self, symbols: Iterable[str],
     ) -> Dict[str, float]:
         results: Dict[str, float] = {}
         to_compute: List[str] = []
@@ -213,7 +211,7 @@ class ParallelStockPredictor(StockPredictor):
             executor_factory = ThreadPoolExecutor
             executor_obj = executor_factory(max_workers=self.n_jobs)
             has_context = hasattr(executor_obj, "__enter__") and hasattr(
-                executor_obj, "__exit__"
+                executor_obj, "__exit__",
             )
 
             def _process(exec_inst):
@@ -273,7 +271,7 @@ class ParallelStockPredictor(StockPredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None
+        self, symbol: str, data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         if not self.is_trained():
             raise ValueError("Parallel predictor must be trained before prediction")
@@ -334,7 +332,7 @@ class UltraHighPerformancePredictor(StockPredictor):
     def _create_data_provider(self) -> StockDataProvider:
         from data import stock_data as stock_data_module
 
-        provider_cls = getattr(stock_data_module, "StockDataProvider")
+        provider_cls = stock_data_module.StockDataProvider
         return provider_cls()
 
     def _ensure_data_provider(self) -> StockDataProvider:
@@ -351,7 +349,7 @@ class UltraHighPerformancePredictor(StockPredictor):
 
     @staticmethod
     def _fetch_data_with_provider(
-        provider: StockDataProvider, symbol: str, period: str
+        provider: StockDataProvider, symbol: str, period: str,
     ) -> Optional[pd.DataFrame]:
         try:
             return provider.get_stock_data(symbol, period)
@@ -378,7 +376,7 @@ class UltraHighPerformancePredictor(StockPredictor):
     def predict(self, symbol: str) -> PredictionResult:
         if not self.is_trained():
             raise ValueError(
-                "UltraHighPerformancePredictor must be trained before prediction"
+                "UltraHighPerformancePredictor must be trained before prediction",
             )
 
         raw_data = self._get_data(symbol)
@@ -403,7 +401,7 @@ class UltraHighPerformancePredictor(StockPredictor):
                 "cache_hit": False,
                 "ultra_performance": True,
                 "model_type": self.model_type,
-            }
+            },
         )
 
         return PredictionResult(score, result.confidence, datetime.now(), metadata)
@@ -430,11 +428,11 @@ class UltraHighPerformancePredictor(StockPredictor):
         return results
 
     def get_performance_stats(self) -> Dict[str, Any]:  # type: ignore[override]
-        cache_stats = getattr(self.cache_manager, "get_cache_stats", lambda: {})()
+        cache_stats = getattr(self.cache_manager, "get_cache_stats", dict)()
         return {
             "model_type": self.model_type,
             "base_predictor_type": getattr(
-                self.base_predictor, "model_type", "unknown"
+                self.base_predictor, "model_type", "unknown",
             ),
             "cache_stats": cache_stats,
             "parallel_jobs": self.parallel_jobs,

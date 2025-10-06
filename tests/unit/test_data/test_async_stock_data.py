@@ -8,8 +8,8 @@ from typing import List
 
 import pytest
 
-from utils.exceptions import DataFetchError
 import utils.cache as cache_module
+from utils.exceptions import DataFetchError
 
 CURRENT_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "..", "..", ".."))
@@ -80,7 +80,9 @@ pandas_stub.Timestamp = datetime
 sys.modules["pandas"] = pandas_stub
 
 MODULE_PATH = os.path.join(PROJECT_ROOT, "data", "async_stock_data.py")
-MODULE_SPEC = importlib.util.spec_from_file_location("data.async_stock_data", MODULE_PATH)
+MODULE_SPEC = importlib.util.spec_from_file_location(
+    "data.async_stock_data", MODULE_PATH,
+)
 async_stock_data = importlib.util.module_from_spec(MODULE_SPEC)
 MODULE_SPEC.loader.exec_module(async_stock_data)
 async_stock_data.pd = pandas_stub
@@ -126,7 +128,9 @@ def isolated_cache(monkeypatch):
     return cache
 
 
-def test_fetch_with_yfinance_async_awaits_sleep_before_success(monkeypatch, sample_dataframe):
+def test_fetch_with_yfinance_async_awaits_sleep_before_success(
+    monkeypatch, sample_dataframe,
+):
     provider = AsyncStockDataProvider()
     sleep_calls = []
 
@@ -145,7 +149,9 @@ def test_fetch_with_yfinance_async_awaits_sleep_before_success(monkeypatch, samp
     assert fake_loop.call_count == 1
 
 
-def test_fetch_with_yfinance_async_uses_async_sleep_on_retry(monkeypatch, sample_dataframe):
+def test_fetch_with_yfinance_async_uses_async_sleep_on_retry(
+    monkeypatch, sample_dataframe,
+):
     provider = AsyncStockDataProvider()
     sleep_calls = []
 
@@ -176,7 +182,7 @@ def test_fetch_with_yfinance_async_retries_with_async_sleep_on_exception(monkeyp
             Exception("HTTP 429 error"),
             Exception("HTTP 500 transient"),
             Exception("HTTP 429 error"),
-        ]
+        ],
     )
 
     monkeypatch.setattr(async_stock_data.asyncio, "get_event_loop", lambda: fake_loop)
@@ -251,7 +257,9 @@ async def test_get_stock_data_uses_local_before_yfinance(monkeypatch, sample_dat
 
 
 @pytest.mark.asyncio
-async def test_get_stock_data_attempts_http_before_yfinance(monkeypatch, sample_dataframe):
+async def test_get_stock_data_attempts_http_before_yfinance(
+    monkeypatch, sample_dataframe,
+):
     provider = AsyncStockDataProvider()
     empty = pandas_stub.DataFrame()
     order: List[str] = []

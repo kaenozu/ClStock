@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
-"""
-ClStock 中期予測システム（1ヶ月基準）
+"""ClStock 中期予測システム（1ヶ月基準）
 89%精度システムを1ヶ月予測に最適化
 売買シグナル生成機能付き
 """
 
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import yfinance as yf
-from typing import Dict, List, Tuple, Any
-import sys
 import os
+import sys
+from datetime import datetime
+from typing import Any, Dict
+
+import numpy as np
+import pandas as pd
 
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from models.precision.precision_87_system import Precision87BreakthroughSystem
 from data.stock_data import StockDataProvider
+from models.precision.precision_87_system import Precision87BreakthroughSystem
 
 
 class MediumTermPredictionSystem:
@@ -98,14 +97,13 @@ class MediumTermPredictionSystem:
 
         if ma_5 > ma_20 > ma_60:
             return "強い上昇トレンド"
-        elif ma_5 > ma_20:
+        if ma_5 > ma_20:
             return "上昇トレンド"
-        elif ma_5 < ma_20 < ma_60:
+        if ma_5 < ma_20 < ma_60:
             return "強い下降トレンド"
-        elif ma_5 < ma_20:
+        if ma_5 < ma_20:
             return "下降トレンド"
-        else:
-            return "横ばい"
+        return "横ばい"
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> float:
         """RSI計算"""
@@ -124,10 +122,9 @@ class MediumTermPredictionSystem:
 
         if recent_vol > avg_vol * 1.2:
             return "出来高増加"
-        elif recent_vol < avg_vol * 0.8:
+        if recent_vol < avg_vol * 0.8:
             return "出来高減少"
-        else:
-            return "出来高普通"
+        return "出来高普通"
 
     def _calculate_support_resistance(self, prices: pd.Series) -> Dict[str, float]:
         """サポート・レジスタンス計算"""
@@ -221,7 +218,7 @@ class MediumTermPredictionSystem:
         else:
             signals["recommendation"] = "HOLD"
             signals["hold_signal_strength"] = 100 - max(
-                signals["buy_signal_strength"], signals["sell_signal_strength"]
+                signals["buy_signal_strength"], signals["sell_signal_strength"],
             )
             signals["reasoning"].append("シグナル不明確、様子見推奨")
 
@@ -242,7 +239,7 @@ class MediumTermPredictionSystem:
             # 1ヶ月予測価格計算（89%精度システム + 中期トレンド分析）
             current_price = analysis["current_price"]
             precision_prediction = precision_result.get(
-                "final_prediction", current_price
+                "final_prediction", current_price,
             )
 
             # 中期調整係数
@@ -336,7 +333,7 @@ class MediumTermPredictionSystem:
         return max(0.3, min(0.95, confidence))
 
     def _create_fallback_analysis(
-        self, symbol: str, error: str = None
+        self, symbol: str, error: str = None,
     ) -> Dict[str, Any]:
         """フォールバック分析結果"""
         return {
@@ -356,7 +353,7 @@ class MediumTermPredictionSystem:
         }
 
     def _create_fallback_prediction(
-        self, symbol: str, error: str = None
+        self, symbol: str, error: str = None,
     ) -> Dict[str, Any]:
         """フォールバック予測結果"""
         return {

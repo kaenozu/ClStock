@@ -1,11 +1,11 @@
-"""
-マルチタイムフレーム統合システム - 複数時間軸の分析で精度向上
+"""マルチタイムフレーム統合システム - 複数時間軸の分析で精度向上
 """
 
 import logging
-import pandas as pd
+from typing import Any, Dict
+
 import numpy as np
-from typing import Dict, Any
+import pandas as pd
 
 
 class MultiTimeframeIntegrator:
@@ -43,7 +43,7 @@ class MultiTimeframeIntegrator:
 
             except Exception as e:
                 self.logger.error(
-                    f"Error analyzing {timeframe_name} timeframe for {symbol}: {str(e)}"
+                    f"Error analyzing {timeframe_name} timeframe for {symbol}: {e!s}",
                 )
 
         # 統合予測の計算
@@ -53,12 +53,12 @@ class MultiTimeframeIntegrator:
             "integrated_prediction": integrated_prediction,
             "timeframe_details": timeframe_results,
             "confidence_adjustment": self._calculate_confidence_adjustment(
-                timeframe_results
+                timeframe_results,
             ),
         }
 
     def _analyze_timeframe(
-        self, data: pd.DataFrame, timeframe: str
+        self, data: pd.DataFrame, timeframe: str,
     ) -> Dict[str, float]:
         """特定タイムフレームの分析"""
         if data.empty or len(data) < 10:
@@ -94,14 +94,10 @@ class MultiTimeframeIntegrator:
         current_price = data["Close"].iloc[-1]
 
         # トレンド強度
-        if short_ma > long_ma and current_price > short_ma:
+        if (short_ma > long_ma and current_price > short_ma) or (short_ma < long_ma and current_price < short_ma):
             trend_strength = (current_price - long_ma) / long_ma
             return min(100, max(-100, trend_strength * 100))
-        elif short_ma < long_ma and current_price < short_ma:
-            trend_strength = (current_price - long_ma) / long_ma
-            return min(100, max(-100, trend_strength * 100))
-        else:
-            return 0.0
+        return 0.0
 
     def _calculate_momentum_score(self, data: pd.DataFrame) -> float:
         """モメンタムスコア計算"""

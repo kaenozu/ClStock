@@ -1,7 +1,5 @@
-import types
 import sys
-
-import pytest
+import types
 
 from utils import context_managers
 
@@ -35,7 +33,7 @@ def test_final_cleanup_does_not_log_after_logging_shutdown(monkeypatch):
     monkeypatch.setattr(context_managers.logging, "shutdown", fake_logging_shutdown)
 
     fake_cache_module = types.SimpleNamespace(
-        shutdown_cache=lambda: events.append(("cache", "shutdown"))
+        shutdown_cache=lambda: events.append(("cache", "shutdown")),
     )
     monkeypatch.setitem(sys.modules, "utils.cache", fake_cache_module)
 

@@ -1,26 +1,30 @@
 """Pydantic response schemas for the public API."""
+
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
 
 class EntryPriceSchema(BaseModel):
     """Entry price information."""
+
     min: float
     max: float
 
 
 class TargetSchema(BaseModel):
     """Target price information."""
+
     label: str
     price: float
 
 
 class ChartRefsSchema(BaseModel):
     """Chart reference information."""
+
     support_levels: List[float]
     resistance_levels: List[float]
     indicators: List[str]
@@ -39,7 +43,9 @@ class StockRecommendationSchema(BaseModel):
     entry_condition: Optional[str] = None  # 追加
     entry_price: EntryPriceSchema  # target_price -> entry_price (object) に変更
     stop_loss: float
-    targets: List[TargetSchema]  # profit_target_1, profit_target_2 -> targets (array<object>) に変更
+    targets: List[
+        TargetSchema
+    ]  # profit_target_1, profit_target_2 -> targets (array<object>) に変更
     holding_period_days: int  # holding_period (str) -> holding_period_days (int) に変更
     confidence: Optional[float] = None  # 追加
     rationale: Optional[str] = None  # recommendation_reason -> rationale に変更

@@ -1,22 +1,23 @@
-﻿"""Comprehensive tests for the cache manager functionality."""
+"""Comprehensive tests for the cache manager functionality."""
 
-import pytest
-import pandas as pd
-import json
-import tempfile
 import os
-from unittest.mock import Mock, patch, MagicMock
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
-from models.monitoring.cache_manager import RealTimeCacheManager
-from models.monitoring.cache_manager import AdvancedCacheManager
+import pytest
+
+import pandas as pd
+from models.core.interfaces import (
+    DataProvider as OrderBookData,
+)
 
 # AdvancedCacheManager縺ｯ邨ｱ蜷医＆繧後∪縺励◆
 from models.core.interfaces import (
     PredictionResult as TickData,
-    DataProvider as OrderBookData,
 )
+from models.monitoring.cache_manager import AdvancedCacheManager, RealTimeCacheManager
 
 
 @pytest.fixture
@@ -29,7 +30,7 @@ def sample_dataframe():
             "low": [99, 100, 101],
             "close": [101, 102, 103],
             "volume": [1000, 1100, 1200],
-        }
+        },
     )
 
 
@@ -83,7 +84,7 @@ class TestAdvancedCacheManager:
     def test_initialization_custom_values(self):
         """Test AdvancedCacheManager initialization with custom values."""
         cache = AdvancedCacheManager(
-            max_cache_size=500, ttl_hours=12, cleanup_interval=900
+            max_cache_size=500, ttl_hours=12, cleanup_interval=900,
         )
 
         assert cache.max_cache_size == 500
@@ -318,7 +319,7 @@ class TestAdvancedCacheManager:
 
         # Create a temporary file for testing
         with tempfile.NamedTemporaryFile(
-            mode="w+", delete=False, suffix=".json"
+            mode="w+", delete=False, suffix=".json",
         ) as tmp_file:
             temp_path = tmp_file.name
 

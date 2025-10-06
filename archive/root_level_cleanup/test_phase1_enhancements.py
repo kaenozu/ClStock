@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Phase 1機能強化テスト
+"""Phase 1機能強化テスト
 インテリジェントキャッシュ + 次世代モード + 学習型最適化の統合テスト
 """
 
-import sys
-import os
-import time
 import logging
-from datetime import datetime
-import numpy as np
-import pandas as pd
-from typing import List, Dict, Any
+import os
+import sys
+import time
 import traceback
+from datetime import datetime
+from typing import Any, Dict, List
+
+import numpy as np
 
 # ロギング設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -42,13 +40,13 @@ def main():
             display_test_results(test_results)
         else:
             print(
-                f"\n[失敗] Phase 1テスト失敗: {test_results.get('error', 'Unknown error')}"
+                f"\n[失敗] Phase 1テスト失敗: {test_results.get('error', 'Unknown error')}",
             )
 
     except KeyboardInterrupt:
         print("\n\nテストが中断されました")
     except Exception as e:
-        print(f"\n[エラー] 予期しないエラー: {str(e)}")
+        print(f"\n[エラー] 予期しないエラー: {e!s}")
         traceback.print_exc()
 
 
@@ -57,11 +55,11 @@ def run_phase1_enhancement_tests() -> Dict[str, Any]:
     try:
         print("1. Phase 1ハイブリッドシステム初期化")
 
+        from data.stock_data import StockDataProvider
         from models.hybrid.hybrid_predictor import (
             HybridStockPredictor,
             PredictionMode,
         )
-        from data.stock_data import StockDataProvider
 
         # データプロバイダー初期化
         data_provider = StockDataProvider()
@@ -98,34 +96,34 @@ def run_phase1_enhancement_tests() -> Dict[str, Any]:
         # キャッシュシステムテスト
         print("\n2. インテリジェントキャッシュテスト")
         test_results["cache_tests"] = test_intelligent_cache(
-            enhanced_hybrid, test_symbols
+            enhanced_hybrid, test_symbols,
         )
 
         # 次世代予測モードテスト
         print("\n3. 次世代予測モードテスト")
         test_results["next_gen_mode_tests"] = test_next_generation_modes(
-            enhanced_hybrid, test_symbols
+            enhanced_hybrid, test_symbols,
         )
 
         # 学習型最適化テスト
         print("\n4. 学習型最適化テスト")
         test_results["adaptive_optimization_tests"] = test_adaptive_optimization(
-            enhanced_hybrid, test_symbols
+            enhanced_hybrid, test_symbols,
         )
 
         # パフォーマンス比較テスト
         print("\n5. パフォーマンス比較テスト")
         test_results["performance_comparison"] = test_performance_improvements(
-            enhanced_hybrid, test_symbols
+            enhanced_hybrid, test_symbols,
         )
 
         test_results["success"] = True
         return test_results
 
     except ImportError as e:
-        return {"success": False, "error": f"モジュールインポートエラー: {str(e)}"}
+        return {"success": False, "error": f"モジュールインポートエラー: {e!s}"}
     except Exception as e:
-        return {"success": False, "error": f"テスト実行エラー: {str(e)}"}
+        return {"success": False, "error": f"テスト実行エラー: {e!s}"}
 
 
 def test_intelligent_cache(hybrid_system, test_symbols: List[str]) -> Dict[str, Any]:
@@ -180,10 +178,9 @@ def test_intelligent_cache(hybrid_system, test_symbols: List[str]) -> Dict[str, 
 
 
 def test_next_generation_modes(
-    hybrid_system, test_symbols: List[str]
+    hybrid_system, test_symbols: List[str],
 ) -> Dict[str, Any]:
     """次世代予測モードテスト"""
-
     # 次世代モードリスト
     next_gen_modes = [
         PredictionMode.ULTRA_SPEED,
@@ -218,7 +215,7 @@ def test_next_generation_modes(
                         "confidence": result.confidence,
                         "accuracy": result.accuracy,
                         "metadata": result.metadata,
-                    }
+                    },
                 )
 
                 # モード固有の特徴確認
@@ -229,17 +226,17 @@ def test_next_generation_modes(
 
             except Exception as e:
                 logger.error(
-                    f"Mode {mode.value} prediction failed for {symbol}: {str(e)}"
+                    f"Mode {mode.value} prediction failed for {symbol}: {e!s}",
                 )
 
         mode_data["total_time"] = time.time() - start_time
 
         if mode_data["predictions"]:
             mode_data["avg_confidence"] = np.mean(
-                [p["confidence"] for p in mode_data["predictions"]]
+                [p["confidence"] for p in mode_data["predictions"]],
             )
             mode_data["avg_accuracy"] = np.mean(
-                [p["accuracy"] for p in mode_data["predictions"]]
+                [p["accuracy"] for p in mode_data["predictions"]],
             )
 
         mode_results[mode.value] = mode_data
@@ -248,7 +245,7 @@ def test_next_generation_modes(
 
 
 def test_adaptive_optimization(
-    hybrid_system, test_symbols: List[str]
+    hybrid_system, test_symbols: List[str],
 ) -> Dict[str, Any]:
     """学習型最適化テスト"""
     optimization_results = {
@@ -305,10 +302,9 @@ def test_adaptive_optimization(
 
 
 def test_performance_improvements(
-    hybrid_system, test_symbols: List[str]
+    hybrid_system, test_symbols: List[str],
 ) -> Dict[str, Any]:
     """パフォーマンス改善テスト"""
-
     # 従来システム（キャッシュ・最適化無効）との比較
     print("   パフォーマンス比較テスト...")
 
@@ -328,7 +324,7 @@ def test_performance_improvements(
     from models.hybrid.hybrid_predictor import HybridStockPredictor
 
     basic_hybrid = HybridStockPredictor(
-        enable_cache=False, enable_adaptive_optimization=False
+        enable_cache=False, enable_adaptive_optimization=False,
     )
 
     basic_times = []
@@ -394,7 +390,7 @@ def display_test_results(results: Dict[str, Any]):
             if "cache_statistics" in cache_tests:
                 stats = cache_tests["cache_statistics"]
                 if "hit_rate" in stats:
-                    print(f"  ヒット率: {stats['hit_rate']*100:.1f}%")
+                    print(f"  ヒット率: {stats['hit_rate'] * 100:.1f}%")
 
     # 次世代モードテスト結果
     if "next_gen_mode_tests" in results:
@@ -415,9 +411,9 @@ def display_test_results(results: Dict[str, Any]):
 
         if opt_tests.get("optimization_enabled"):
             print(f"  最適化実行回数: {opt_tests['optimization_triggers']}")
-            print(f"  状況: 有効")
+            print("  状況: 有効")
         else:
-            print(f"  状況: 無効")
+            print("  状況: 無効")
 
     # パフォーマンス比較結果
     if "performance_comparison" in results:

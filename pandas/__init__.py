@@ -53,7 +53,9 @@ else:
 
         def to_dict(self, orient: str = "records"):
             if orient != "records":
-                raise NotImplementedError("Only the 'records' orient is supported in the stub")
+                raise NotImplementedError(
+                    "Only the 'records' orient is supported in the stub",
+                )
             return [dict(zip(self.columns, row)) for row in self._rows]
 
     def read_sql_query(query: str, conn: sqlite3.Connection, params=None):

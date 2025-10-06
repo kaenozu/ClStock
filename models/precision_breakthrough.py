@@ -7,7 +7,6 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
-
 from data.stock_data import StockDataProvider
 
 from .deep_learning import DQNReinforcementLearner
@@ -33,12 +32,16 @@ class Precision87BreakthroughSystem:
         try:
             data_provider = StockDataProvider()
             historical_data = data_provider.get_stock_data(symbol, period="1y")
-            historical_data = data_provider.calculate_technical_indicators(historical_data)
+            historical_data = data_provider.calculate_technical_indicators(
+                historical_data,
+            )
             if len(historical_data) < 100:
                 return self._default_prediction(symbol, "Insufficient data")
 
             base_prediction = self._get_base_846_prediction(symbol, historical_data)
-            symbol_profile = self.meta_learner.create_symbol_profile(symbol, historical_data)
+            symbol_profile = self.meta_learner.create_symbol_profile(
+                symbol, historical_data,
+            )
             base_params = {
                 "learning_rate": 0.01,
                 "regularization": 0.01,
@@ -46,22 +49,24 @@ class Precision87BreakthroughSystem:
                 "confidence": base_prediction["confidence"],
             }
             meta_adaptation = self.meta_learner.adapt_model_parameters(
-                symbol, symbol_profile, base_params
+                symbol, symbol_profile, base_params,
             )
             dqn_signal = self.dqn_agent.get_trading_signal(symbol, historical_data)
             final_prediction = self._integrate_87_predictions(
-                base_prediction, meta_adaptation, dqn_signal, symbol_profile
+                base_prediction, meta_adaptation, dqn_signal, symbol_profile,
             )
             tuned_prediction = self._apply_87_precision_tuning(final_prediction, symbol)
             self.logger.info(
-                f"87%精度予測完了 {symbol}: {tuned_prediction['final_accuracy']:.1f}%"
+                f"87%精度予測完了 {symbol}: {tuned_prediction['final_accuracy']:.1f}%",
             )
             return tuned_prediction
         except Exception as exc:
             self.logger.error(f"87%精度予測エラー {symbol}: {exc}")
             return self._default_prediction(symbol, str(exc))
 
-    def _get_base_846_prediction(self, symbol: str, data: pd.DataFrame) -> Dict[str, float]:
+    def _get_base_846_prediction(
+        self, symbol: str, data: pd.DataFrame,
+    ) -> Dict[str, float]:
         try:
             close = data["Close"]
             sma_20 = close.rolling(20).mean()
@@ -133,10 +138,15 @@ class Precision87BreakthroughSystem:
                 "macro_exchange": 140.0,
             }
 
-    def _optimize_weights_for_87_precision(self, components: Dict[str, Dict[str, float]]):
+    def _optimize_weights_for_87_precision(
+        self, components: Dict[str, Dict[str, float]],
+    ):
         weights = self.ensemble_weights.copy()
         try:
-            if components.get("sentiment_macro", {}).get("sentiment_confidence", 0) > 0.7:
+            if (
+                components.get("sentiment_macro", {}).get("sentiment_confidence", 0)
+                > 0.7
+            ):
                 weights["sentiment_macro"] *= 1.2
             if components.get("meta_learning", {}).get("confidence", 0) > 0.75:
                 weights["meta_learning"] *= 1.1
@@ -164,7 +174,9 @@ class Precision87BreakthroughSystem:
                     "confidence": base_pred["confidence"],
                 },
                 "meta_learning": {
-                    "score": meta_adapt.get("adapted_prediction", base_pred["prediction"]),
+                    "score": meta_adapt.get(
+                        "adapted_prediction", base_pred["prediction"],
+                    ),
                     "confidence": meta_adapt.get("adaptation_confidence", 0.7),
                 },
                 "dqn_reinforcement": {
@@ -172,12 +184,19 @@ class Precision87BreakthroughSystem:
                     "confidence": dqn_signal.get("confidence", 0.6),
                     "signal_strength": dqn_signal.get("signal_strength", 0),
                 },
-                "sentiment_macro": self._get_sentiment_macro_factors(profile.get("symbol", "")),
+                "sentiment_macro": self._get_sentiment_macro_factors(
+                    profile.get("symbol", ""),
+                ),
             }
             weights = self._optimize_weights_for_87_precision(components)
             integrated_score = sum(
                 components[name]["score"] * weights.get(name, 0)
-                for name in ["base_model", "meta_learning", "dqn_reinforcement", "sentiment_macro"]
+                for name in [
+                    "base_model",
+                    "meta_learning",
+                    "dqn_reinforcement",
+                    "sentiment_macro",
+                ]
             )
             integrated_confidence = sum(
                 components[name].get("confidence", 0.5) * weights.get(name, 0)
@@ -208,7 +227,9 @@ class Precision87BreakthroughSystem:
             }
         except Exception as exc:
             self.logger.error(f"予測統合エラー: {exc}")
-            current_price = profile.get("current_price", 100.0) if "profile" in locals() else 100.0
+            current_price = (
+                profile.get("current_price", 100.0) if "profile" in locals() else 100.0
+            )
             return {
                 "integrated_score": 50.0,
                 "integrated_confidence": 0.5,
@@ -219,11 +240,15 @@ class Precision87BreakthroughSystem:
                 "weights_used": {},
             }
 
-    def _apply_87_precision_tuning(self, prediction: Dict[str, Any], symbol: str) -> Dict[str, Any]:
+    def _apply_87_precision_tuning(
+        self, prediction: Dict[str, Any], symbol: str,
+    ) -> Dict[str, Any]:
         try:
             score = prediction["integrated_score"]
             confidence = prediction["integrated_confidence"]
-            predicted_price = prediction.get("predicted_price", prediction.get("current_price", 100.0))
+            predicted_price = prediction.get(
+                "predicted_price", prediction.get("current_price", 100.0),
+            )
             current_price = prediction.get("current_price", 100.0)
             predicted_change_rate = prediction.get("predicted_change_rate", 0.0)
             if confidence > 0.8:

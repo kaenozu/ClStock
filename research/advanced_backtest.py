@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
-"""
-超高性能予測システムのバックテスト＆MAPE測定
+"""超高性能予測システムのバックテスト＆MAPE測定
 """
 
-import pandas as pd
+from typing import Dict, List
+
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from datetime import datetime, timedelta
-from typing import Dict, List, Tuple
-import logging
-from utils.logger_config import setup_logger
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from data.stock_data import StockDataProvider
 from models.predictor import StockPredictor
+from utils.logger_config import setup_logger
 
 # ログ設定
 logger = setup_logger(__name__)
@@ -52,7 +45,7 @@ class AdvancedBacktester:
         return smape
 
     def calculate_directional_accuracy(
-        self, actual_returns: np.ndarray, predicted_scores: np.ndarray
+        self, actual_returns: np.ndarray, predicted_scores: np.ndarray,
     ) -> float:
         """方向性精度計算（上昇/下降予測の正確性）"""
         actual_direction = (actual_returns > 0).astype(int)
@@ -62,7 +55,7 @@ class AdvancedBacktester:
         return accuracy
 
     def calculate_sharpe_ratio(
-        self, returns: np.ndarray, risk_free_rate: float = 0.001
+        self, returns: np.ndarray, risk_free_rate: float = 0.001,
     ) -> float:
         """シャープレシオ計算"""
         if np.std(returns) == 0:
@@ -83,7 +76,6 @@ class AdvancedBacktester:
         prediction_horizon: int = 30,
     ) -> Dict:
         """予測精度バックテスト実行"""
-
         logger.info(f"予測精度バックテスト開始: {len(symbols)}銘柄")
         logger.info(f"期間: {start_date} - {end_date}")
         logger.info(f"予測期間: {prediction_horizon}日")
@@ -101,14 +93,14 @@ class AdvancedBacktester:
         predictors = {
             "rule_based": StockPredictor(use_ml_model=False, use_ultra_mode=False),
             "ml_model": StockPredictor(
-                use_ml_model=True, ml_model_type="xgboost", use_ultra_mode=False
+                use_ml_model=True, ml_model_type="xgboost", use_ultra_mode=False,
             ),
             "ultra_model": StockPredictor(use_ultra_mode=True),
         }
 
         model_results = {
             name: {"predictions": [], "actuals": [], "returns": [], "scores": []}
-            for name in predictors.keys()
+            for name in predictors
         }
 
         for symbol in symbols:
@@ -159,14 +151,14 @@ class AdvancedBacktester:
                                 )  # 最大10%の下落予測
 
                             model_results[model_name]["predictions"].append(
-                                predicted_return
+                                predicted_return,
                             )
                             model_results[model_name]["actuals"].append(actual_return)
                             model_results[model_name]["returns"].append(actual_return)
                             model_results[model_name]["scores"].append(score)
 
                         except Exception as e:
-                            logger.error(f"予測エラー {model_name} {symbol}: {str(e)}")
+                            logger.error(f"予測エラー {model_name} {symbol}: {e!s}")
                             continue
 
                     # 共通結果記録
@@ -176,7 +168,7 @@ class AdvancedBacktester:
                     results["returns"].append(actual_return)
 
             except Exception as e:
-                logger.error(f"バックテストエラー {symbol}: {str(e)}")
+                logger.error(f"バックテストエラー {symbol}: {e!s}")
                 continue
 
         # 性能指標計算
@@ -236,7 +228,6 @@ class AdvancedBacktester:
         rebalance_frequency: int = 30,
     ) -> Dict:
         """投資シミュレーション実行"""
-
         logger.info(f"投資シミュレーション開始: 初期資本{initial_capital:,.0f}円")
 
         # 予測器初期化
@@ -264,7 +255,6 @@ class AdvancedBacktester:
 
         for i, date in enumerate(common_dates[:-rebalance_frequency]):
             if i % rebalance_frequency == 0:  # リバランス
-
                 # 現在のポートフォリオ価値計算
                 portfolio_value = current_capital
                 for symbol, shares in positions.items():
@@ -279,12 +269,12 @@ class AdvancedBacktester:
                         score = predictor.calculate_score(symbol)
                         scores[symbol] = score
                     except Exception as e:
-                        logger.warning(f"予測失敗 {symbol}: {str(e)}")
+                        logger.warning(f"予測失敗 {symbol}: {e!s}")
                         scores[symbol] = 50  # 中立スコア
 
                 # 上位3銘柄選択
                 top_symbols = sorted(
-                    scores.keys(), key=lambda x: scores[x], reverse=True
+                    scores.keys(), key=lambda x: scores[x], reverse=True,
                 )[:3]
 
                 # ポジションクリア
@@ -317,7 +307,7 @@ class AdvancedBacktester:
                     "portfolio_value": portfolio_value,
                     "cash": current_capital,
                     "positions": positions.copy(),
-                }
+                },
             )
 
         # ベンチマーク（均等投資）計算
@@ -373,10 +363,9 @@ class AdvancedBacktester:
         return simulation_results
 
     def generate_performance_report(
-        self, backtest_results: Dict, simulation_results: Dict
+        self, backtest_results: Dict, simulation_results: Dict,
     ):
         """性能レポート生成"""
-
         print("=" * 80)
         print("超高性能予測システム バックテスト結果レポート")
         print("=" * 80)
@@ -389,7 +378,7 @@ class AdvancedBacktester:
 
         # テーブル形式で表示
         print(
-            f"{'モデル':<15} {'MAPE':<8} {'方向精度':<8} {'相関係数':<8} {'サンプル数':<8}"
+            f"{'モデル':<15} {'MAPE':<8} {'方向精度':<8} {'相関係数':<8} {'サンプル数':<8}",
         )
         print("-" * 55)
 
@@ -402,25 +391,25 @@ class AdvancedBacktester:
             mape_str = f"{mape:.1f}%" if mape != float("inf") else "N/A"
 
             print(
-                f"{model_name:<15} {mape_str:<8} {direction:.3f}    {correlation:.3f}    {sample_size:<8}"
+                f"{model_name:<15} {mape_str:<8} {direction:.3f}    {correlation:.3f}    {sample_size:<8}",
             )
 
         # 2. 投資シミュレーション結果
-        print(f"\n2. 投資シミュレーション結果")
+        print("\n2. 投資シミュレーション結果")
         print("-" * 50)
 
         metrics = simulation_results["performance_metrics"]
 
         print(f"初期資本:           {metrics['Initial_Capital']:>15,.0f}円")
         print(f"最終資産:           {metrics['Final_Value']:>15,.0f}円")
-        print(f"総リターン:         {metrics['Total_Return']*100:>14.2f}%")
-        print(f"ベンチマーク:       {metrics['Benchmark_Return']*100:>14.2f}%")
-        print(f"アルファ:           {metrics['Alpha']*100:>14.2f}%")
+        print(f"総リターン:         {metrics['Total_Return'] * 100:>14.2f}%")
+        print(f"ベンチマーク:       {metrics['Benchmark_Return'] * 100:>14.2f}%")
+        print(f"アルファ:           {metrics['Alpha'] * 100:>14.2f}%")
         print(f"シャープレシオ:     {metrics['Sharpe_Ratio']:>15.3f}")
-        print(f"最大ドローダウン:   {metrics['Max_Drawdown']*100:>14.2f}%")
+        print(f"最大ドローダウン:   {metrics['Max_Drawdown'] * 100:>14.2f}%")
 
         # 3. 総合評価
-        print(f"\n3. 総合評価")
+        print("\n3. 総合評価")
         print("-" * 30)
 
         # ベストモデル特定
@@ -436,9 +425,9 @@ class AdvancedBacktester:
         print(f"最高精度モデル: {best_model} (MAPE: {best_score:.1f}%)")
 
         if metrics["Alpha"] > 0:
-            print(f"投資戦略: ベンチマーク超過 (+{metrics['Alpha']*100:.2f}%)")
+            print(f"投資戦略: ベンチマーク超過 (+{metrics['Alpha'] * 100:.2f}%)")
         else:
-            print(f"投資戦略: ベンチマーク未達 ({metrics['Alpha']*100:.2f}%)")
+            print(f"投資戦略: ベンチマーク未達 ({metrics['Alpha'] * 100:.2f}%)")
 
         if metrics["Sharpe_Ratio"] > 1.0:
             print(f"リスク調整: 優秀 (シャープレシオ: {metrics['Sharpe_Ratio']:.3f})")
@@ -452,7 +441,6 @@ class AdvancedBacktester:
 
 def main():
     """メイン実行関数"""
-
     # バックテスター初期化
     backtester = AdvancedBacktester()
 
@@ -474,7 +462,7 @@ def main():
     # 2. 投資シミュレーション
     print("\n投資シミュレーション実行中...")
     simulation_results = backtester.run_investment_simulation(
-        symbols=test_symbols, initial_capital=1000000, rebalance_frequency=30
+        symbols=test_symbols, initial_capital=1000000, rebalance_frequency=30,
     )
 
     # 3. レポート生成

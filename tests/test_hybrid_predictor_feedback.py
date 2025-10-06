@@ -1,11 +1,8 @@
-import asyncio
 from collections import deque
 from datetime import datetime
 
 import pandas as pd
-import pytest
-
-from models.core.interfaces import PredictionResult, PredictionMode
+from models.core.interfaces import PredictionMode, PredictionResult
 from models.hybrid import RefactoredHybridPredictor
 
 
@@ -14,7 +11,7 @@ class _StubLearner:
         self.calls = []
 
     def add_prediction_feedback(
-        self, prediction: float, actual: float, symbol: str
+        self, prediction: float, actual: float, symbol: str,
     ) -> None:
         self.calls.append((prediction, actual, symbol))
 

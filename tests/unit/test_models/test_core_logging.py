@@ -11,7 +11,9 @@ def test_core_reload_does_not_trigger_setup_logging(monkeypatch):
     import models.legacy_core as core
 
     def _fail(*args, **kwargs):
-        raise RuntimeError("setup_logging should not be called during models.core import")
+        raise RuntimeError(
+            "setup_logging should not be called during models.core import",
+        )
 
     monkeypatch.setattr("utils.logger.setup_logging", _fail)
 

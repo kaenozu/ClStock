@@ -10,8 +10,7 @@ import numpy as np
 
 try:  # pragma: no cover - optional dependency
     import torch
-    import torch.nn as nn
-    import torch.optim as optim
+    from torch import nn, optim
 except ImportError:  # pragma: no cover - fallback when torch is unavailable
     torch = None  # type: ignore[assignment]
     nn = None  # type: ignore[assignment]
@@ -23,13 +22,14 @@ def create_dqn_agent(logger: logging.Logger) -> Any:
 
     Falls back to a rule-based approximation when PyTorch is unavailable.
     """
-
     if torch is None or nn is None or optim is None:
         logger.warning("PyTorch不可 - DQN簡易版使用")
         return SimpleDQN()
 
     class DQNNetwork(nn.Module):  # type: ignore[misc]
-        def __init__(self, state_size: int = 50, action_size: int = 3, hidden_size: int = 256):
+        def __init__(
+            self, state_size: int = 50, action_size: int = 3, hidden_size: int = 256,
+        ):
             super().__init__()
             self.fc1 = nn.Linear(state_size, hidden_size)
             self.fc2 = nn.Linear(hidden_size, hidden_size)
@@ -49,14 +49,18 @@ def create_dqn_agent(logger: logging.Logger) -> Any:
         def __init__(self):
             self.state_size = 50
             self.action_size = 3  # 買い/売り/ホールド
-            self.memory: deque[Tuple[np.ndarray, int, float, np.ndarray, bool]] = deque(maxlen=10000)
+            self.memory: deque[Tuple[np.ndarray, int, float, np.ndarray, bool]] = deque(
+                maxlen=10000,
+            )
             self.epsilon = 1.0
             self.epsilon_min = 0.01
             self.epsilon_decay = 0.995
             self.learning_rate = 0.001
             self.q_network = DQNNetwork()
             self.target_network = DQNNetwork()
-            self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.learning_rate)
+            self.optimizer = optim.Adam(
+                self.q_network.parameters(), lr=self.learning_rate,
+            )
 
         def remember(self, state, action, reward, next_state, done):
             self.memory.append((state, action, reward, next_state, done))
@@ -122,7 +126,6 @@ class SimpleDQN:
 
 def create_multimodal_analyzer(logger: logging.Logger) -> Any:
     """Create the multi-modal analyzer with graceful fallbacks."""
-
     try:
         import io
 
@@ -194,14 +197,18 @@ def create_multimodal_analyzer(logger: logging.Logger) -> Any:
                 try:
                     chart_weight = 0.4
                     numerical_weight = 0.6
-                    chart_norm = chart_features / (np.linalg.norm(chart_features) + 1e-8)
+                    chart_norm = chart_features / (
+                        np.linalg.norm(chart_features) + 1e-8
+                    )
                     numerical_norm = numerical_features / (
                         np.linalg.norm(numerical_features) + 1e-8
                     )
-                    fused = np.concatenate([
-                        chart_norm * chart_weight,
-                        numerical_norm * numerical_weight,
-                    ])
+                    fused = np.concatenate(
+                        [
+                            chart_norm * chart_weight,
+                            numerical_norm * numerical_weight,
+                        ],
+                    )
                     return fused
                 except Exception:
                     return np.zeros(self.cnn_features_size + self.lstm_features_size)
@@ -211,7 +218,9 @@ def create_multimodal_analyzer(logger: logging.Logger) -> Any:
                     chart_image = self.create_chart_image(price_data)
                     chart_features = self.extract_chart_features(chart_image)
                     numerical_features = self.extract_numerical_features(price_data)
-                    fused_features = self.fuse_features(chart_features, numerical_features)
+                    fused_features = self.fuse_features(
+                        chart_features, numerical_features,
+                    )
                     prediction_score = np.mean(fused_features) * 100
                     confidence = min(np.std(fused_features) * 2, 1.0)
                     return {
@@ -239,7 +248,9 @@ class SimpleMultiModal:
 
     def predict_multimodal(self, price_data, volume_data=None):
         trend = np.mean(price_data[-5:]) - np.mean(price_data[-10:-5])
-        volatility = np.std(price_data[-20:]) if len(price_data) >= 20 else np.std(price_data)
+        volatility = (
+            np.std(price_data[-20:]) if len(price_data) >= 20 else np.std(price_data)
+        )
         score = 50 + trend * 1000 + (0.1 - volatility) * 100
         confidence = min(abs(trend) * 100, 1.0)
         return {"prediction_score": max(0, min(100, score)), "confidence": confidence}
@@ -298,7 +309,9 @@ class MetaLearningOptimizerAdapter:
 
     def meta_predict(self, symbol: str, base_prediction: float):
         try:
-            symbol_adaptation = self.symbol_adaptations.get(symbol, {"adaptation_strength": 0.0})
+            symbol_adaptation = self.symbol_adaptations.get(
+                symbol, {"adaptation_strength": 0.0},
+            )
             sector_adaptation = self.get_sector_adaptation(symbol)
             adaptation_strength = symbol_adaptation.get("adaptation_strength", 0.0)
             if adaptation_strength > 0.1:
@@ -356,13 +369,17 @@ class AdvancedEnsembleAdapter:
                     adjusted_weights[model] = max(0.05, min(0.6, adjusted_weight))
                 total_weight = sum(adjusted_weights.values())
                 if total_weight > 0:
-                    adjusted_weights = {k: v / total_weight for k, v in adjusted_weights.items()}
+                    adjusted_weights = {
+                        k: v / total_weight for k, v in adjusted_weights.items()
+                    }
                     return adjusted_weights
             return self.base_weights
         except Exception:
             return self.base_weights
 
-    def ensemble_predict(self, predictions: Dict[str, float], confidences: Dict[str, float]):
+    def ensemble_predict(
+        self, predictions: Dict[str, float], confidences: Dict[str, float],
+    ):
         try:
             weights = self.update_weights_dynamically(confidences)
             weighted_sum = 0.0
@@ -436,7 +453,11 @@ class MarketTransformerAdapter:
             attended_features = np.average(features, axis=0, weights=attention_weights)
             return attended_features
         except Exception:
-            return np.mean(features, axis=0) if len(features.shape) == 2 else np.zeros(self.feature_dim)
+            return (
+                np.mean(features, axis=0)
+                if len(features.shape) == 2
+                else np.zeros(self.feature_dim)
+            )
 
     def transformer_predict(self, price_data, volume_data=None):
         try:
@@ -462,14 +483,18 @@ def create_market_transformer() -> MarketTransformerAdapter:
     return MarketTransformerAdapter()
 
 
-def create_market_state(price_data: np.ndarray, volume_data: Optional[np.ndarray], state_size: int = 50) -> np.ndarray:
+def create_market_state(
+    price_data: np.ndarray, volume_data: Optional[np.ndarray], state_size: int = 50,
+) -> np.ndarray:
     try:
         if len(price_data) < state_size:
             state = np.zeros(state_size)
             state[-len(price_data) :] = price_data[-len(price_data) :]
         else:
             recent_prices = price_data[-state_size:]
-            state = (recent_prices - np.mean(recent_prices)) / (np.std(recent_prices) + 1e-8)
+            state = (recent_prices - np.mean(recent_prices)) / (
+                np.std(recent_prices) + 1e-8
+            )
         return state
     except Exception:
         return np.zeros(state_size)
@@ -481,14 +506,16 @@ def convert_action_to_score(action: int) -> float:
 
 
 def analyze_model_contributions(
-    predictions: Dict[str, float], confidences: Dict[str, float]
+    predictions: Dict[str, float], confidences: Dict[str, float],
 ) -> Dict[str, Any]:
     try:
         contributions: Dict[str, Dict[str, float]] = {}
         total_confidence = sum(confidences.values())
         for model in predictions:
             confidence = confidences.get(model, 0)
-            contribution_ratio = confidence / total_confidence if total_confidence > 0 else 0
+            contribution_ratio = (
+                confidence / total_confidence if total_confidence > 0 else 0
+            )
             contributions[model] = {
                 "prediction": predictions[model],
                 "confidence": confidence,
@@ -500,7 +527,9 @@ def analyze_model_contributions(
         return {}
 
 
-def return_fallback_prediction(symbol: str, error: Optional[str] = None) -> Dict[str, Any]:
+def return_fallback_prediction(
+    symbol: str, error: Optional[str] = None,
+) -> Dict[str, Any]:
     return {
         "symbol": symbol,
         "final_prediction": 50.0,

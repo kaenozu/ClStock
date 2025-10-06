@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""
-改善されたリターン率予測バックテスト（MAPE最適化）
+"""改善されたリターン率予測バックテスト（MAPE最適化）
 """
 
-import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple
-import logging
-from utils.logger_config import setup_logger
+from typing import Dict, List
 
+import numpy as np
+import pandas as pd
 from data.stock_data import StockDataProvider
 from models.predictor import StockPredictor
+from utils.logger_config import setup_logger
 
 # ログ設定
 logger = setup_logger(__name__)
@@ -50,7 +48,7 @@ class ReturnRateBacktester:
         return smape
 
     def calculate_directional_accuracy(
-        self, actual: np.ndarray, predicted: np.ndarray
+        self, actual: np.ndarray, predicted: np.ndarray,
     ) -> float:
         """方向性精度計算（上昇/下降の予測精度）"""
         actual_direction = np.sign(actual)
@@ -74,7 +72,6 @@ class ReturnRateBacktester:
         end_date: str = "2024-01-01",
     ) -> Dict:
         """ウォークフォワード分析による時系列バックテスト"""
-
         results = {
             "predictions": [],
             "actuals": [],
@@ -108,7 +105,7 @@ class ReturnRateBacktester:
 
                     # 実際のリターン取得
                     actual_return = self._get_actual_return(
-                        symbol, current_date, self.prediction_days
+                        symbol, current_date, self.prediction_days,
                     )
 
                     if actual_return is not None:
@@ -124,7 +121,7 @@ class ReturnRateBacktester:
 
                 except Exception as e:
                     logger.warning(
-                        f"Prediction failed for {symbol} at {current_date}: {str(e)}"
+                        f"Prediction failed for {symbol} at {current_date}: {e!s}",
                     )
                     continue
 
@@ -151,7 +148,7 @@ class ReturnRateBacktester:
 
             # 開始日に最も近いデータを見つける
             start_price_idx = data.index.get_indexer(
-                [start_date_utc], method="nearest"
+                [start_date_utc], method="nearest",
             )[0]
 
             # 終了日のインデックス計算
@@ -167,7 +164,7 @@ class ReturnRateBacktester:
             return actual_return
 
         except Exception as e:
-            logger.error(f"Error getting actual return for {symbol}: {str(e)}")
+            logger.error(f"Error getting actual return for {symbol}: {e!s}")
             return None
 
     def analyze_results(self, results: Dict) -> Dict:
@@ -235,7 +232,7 @@ class ReturnRateBacktester:
 改善されたリターン率予測バックテスト結果
 ========================================
 
-エラー: {analysis['error']}
+エラー: {analysis["error"]}
 有効な予測データが取得できませんでした。
 タイムゾーンやデータ取得の問題を確認してください。
 ========================================
@@ -247,21 +244,21 @@ class ReturnRateBacktester:
 ========================================
 
 基本メトリクス:
-  MAPE (平均絶対パーセント誤差): {analysis['mape']:.2f}%
-  SMAPE (対称MAPE): {analysis['smape']:.2f}%
-  方向性精度: {analysis['directional_accuracy']:.2f}%
-  MAE (平均絶対誤差): {analysis['mae']:.4f}
-  RMSE (二乗平均平方根誤差): {analysis['rmse']:.4f}
-  相関係数: {analysis['correlation']:.4f}
+  MAPE (平均絶対パーセント誤差): {analysis["mape"]:.2f}%
+  SMAPE (対称MAPE): {analysis["smape"]:.2f}%
+  方向性精度: {analysis["directional_accuracy"]:.2f}%
+  MAE (平均絶対誤差): {analysis["mae"]:.4f}
+  RMSE (二乗平均平方根誤差): {analysis["rmse"]:.4f}
+  相関係数: {analysis["correlation"]:.4f}
 
 予測統計:
-  総予測数: {analysis['total_predictions']}
-  予測リターン範囲: {analysis['predictions_range']['min']:.3f} ～ {analysis['predictions_range']['max']:.3f}
-  予測平均: {analysis['predictions_range']['mean']:.3f} ± {analysis['predictions_range']['std']:.3f}
+  総予測数: {analysis["total_predictions"]}
+  予測リターン範囲: {analysis["predictions_range"]["min"]:.3f} ～ {analysis["predictions_range"]["max"]:.3f}
+  予測平均: {analysis["predictions_range"]["mean"]:.3f} ± {analysis["predictions_range"]["std"]:.3f}
 
 実績統計:
-  実績リターン範囲: {analysis['actuals_range']['min']:.3f} ～ {analysis['actuals_range']['max']:.3f}
-  実績平均: {analysis['actuals_range']['mean']:.3f} ± {analysis['actuals_range']['std']:.3f}
+  実績リターン範囲: {analysis["actuals_range"]["min"]:.3f} ～ {analysis["actuals_range"]["max"]:.3f}
+  実績平均: {analysis["actuals_range"]["mean"]:.3f} ± {analysis["actuals_range"]["std"]:.3f}
 
 評価:
 """
@@ -284,7 +281,7 @@ class ReturnRateBacktester:
         else:
             report += "  方向性予測精度の改善が必要\n"
 
-        report += f"\n========================================\n"
+        report += "\n========================================\n"
 
         return report
 
@@ -304,7 +301,7 @@ def main():
 
     # バックテスト実行
     results = backtester.walk_forward_backtest(
-        symbols=test_symbols, start_date="2023-06-01", end_date="2023-12-01"
+        symbols=test_symbols, start_date="2023-06-01", end_date="2023-12-01",
     )
 
     # 結果分析
