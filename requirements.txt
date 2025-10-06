@@ -203,24 +203,24 @@ retrying==1.4.1
     # via dash
 rich==14.0.0
     # via bandit
+scikit-learn==1.5.1
+    # via
+    #   -r requirements.in
+    #   shap
 scipy==1.16.2
     # via
     #   -r requirements.in
     #   scikit-learn
     #   shap
-scikit-learn==1.5.1
-    # via
-    #   -r requirements.in
-    #   shap
 seaborn==0.13.2
     # via -r requirements.in
-shap==0.48.0
+shap==0.44.1
     # via -r requirements.in
 six==1.17.0
     # via
     #   html5lib
     #   python-dateutil
-slicer==0.0.8
+slicer==0.0.7
     # via shap
 soupsieve==2.7
     # via beautifulsoup4
@@ -248,7 +248,6 @@ typing-extensions==4.14.1
     #   dash
     #   gymnasium
     #   mypy
-    #   shap
     #   torch
 tzdata==2025.2
     # via pandas
