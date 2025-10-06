@@ -8,9 +8,8 @@
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple, Union
 import pandas as pd
-import numpy as np
 from dataclasses import dataclass, asdict
 
 try:
@@ -499,6 +498,10 @@ class DashboardGenerator:
         return summary_html
 
 
+class DataFetchError(RuntimeError):
+    """データ取得エラー"""
+
+
 class PredictionDashboard:
     """
     予測可視化ダッシュボード
@@ -510,10 +513,19 @@ class PredictionDashboard:
     - パフォーマンス監視
     """
 
-    def __init__(self, enable_web_server: bool = False):
+    def __init__(
+        self,
+        enable_web_server: bool = False,
+        prediction_service: Optional[Any] = None,
+        sentiment_service: Optional[Any] = None,
+        max_retries: int = 1,
+    ):
         self.logger = logging.getLogger(__name__)
         self.enable_web_server = enable_web_server
         self.dashboard_generator = DashboardGenerator()
+        self.prediction_service = prediction_service
+        self.sentiment_service = sentiment_service
+        self.max_retries = max(0, int(max_retries))
 
         # Webサーバー設定
         self.app = None
@@ -622,52 +634,215 @@ class PredictionDashboard:
             ],
         )
         def update_dashboard(symbol, n_clicks, n_intervals):
-            # 実際の実装では、ここで予測システムからデータを取得
-            # ダミーデータで表示
+            return self.generate_live_components(symbol)
 
-            # 予測チャート
-            prediction_fig = go.Figure()
-            prediction_fig.add_trace(
-                go.Scatter(
-                    x=pd.date_range(start="2024-01-01", periods=30, freq="D"),
-                    y=np.random.randn(30).cumsum() + 1000,
-                    name="予測価格",
-                )
+    def _ensure_visualization_data(
+        self, raw_data: Union[VisualizationData, Dict[str, Any]], symbol: str
+    ) -> VisualizationData:
+        if isinstance(raw_data, VisualizationData):
+            data = raw_data
+        elif isinstance(raw_data, dict):
+            data = VisualizationData(
+                symbol=raw_data.get("symbol", symbol),
+                predictions=raw_data.get("predictions", []),
+                historical_data=self._to_dataframe(raw_data.get("historical_data")),
+                sentiment_data=raw_data.get("sentiment_data"),
+                performance_metrics=raw_data.get("performance_metrics", {}),
+                timestamp=raw_data.get("timestamp", datetime.utcnow()),
             )
-            prediction_fig.update_layout(title=f"{symbol} 予測チャート")
+        else:
+            raise TypeError("Unsupported visualization data type")
 
-            # センチメントチャート
-            sentiment_fig = go.Figure()
-            sentiment_fig.add_trace(
-                go.Indicator(
-                    mode="gauge+number",
-                    value=np.random.uniform(-1, 1),
-                    title={"text": "センチメント"},
-                    gauge={"axis": {"range": [-1, 1]}},
+        if data.historical_data is None:
+            data.historical_data = pd.DataFrame()
+        elif not isinstance(data.historical_data, pd.DataFrame):
+            data.historical_data = pd.DataFrame(data.historical_data)
+
+        if data.predictions is None:
+            data.predictions = []
+
+        if not data.symbol:
+            data.symbol = symbol
+
+        return data
+
+    def _to_dataframe(self, value: Any) -> pd.DataFrame:
+        if value is None:
+            return pd.DataFrame()
+        if isinstance(value, pd.DataFrame):
+            return value
+        return pd.DataFrame(value)
+
+    def _fetch_visualization_data_with_retry(self, symbol: str) -> VisualizationData:
+        if not self.prediction_service:
+            raise DataFetchError("予測サービスが設定されていません")
+
+        attempts = self.max_retries + 1
+        last_error: Optional[Exception] = None
+
+        for attempt in range(attempts):
+            try:
+                raw_data = self.prediction_service.get_visualization_data(symbol)
+                return self._ensure_visualization_data(raw_data, symbol)
+            except Exception as exc:
+                last_error = exc
+                self.logger.warning(
+                    "Failed to fetch visualization data for %s (attempt %s/%s): %s",
+                    symbol,
+                    attempt + 1,
+                    attempts,
+                    exc,
                 )
-            )
 
-            # パフォーマンス指標
-            metrics = html.Div(
-                [
-                    dbc.Card(
-                        [
-                            dbc.CardBody(
-                                [
-                                    html.H4("パフォーマンス指標"),
-                                    html.P(f"精度: {np.random.uniform(80, 95):.1f}%"),
-                                    html.P(f"信頼度: {np.random.uniform(70, 90):.1f}%"),
-                                    html.P(
-                                        f"処理時間: {np.random.uniform(0.1, 1.0):.3f}秒"
-                                    ),
-                                ]
-                            )
-                        ]
+        message = str(last_error) if last_error else "不明なエラー"
+        raise DataFetchError(message)
+
+    def _build_prediction_figure(self, data: VisualizationData) -> go.Figure:
+        fig = go.Figure()
+
+        historical = data.historical_data
+        if not historical.empty:
+            close_series = historical.get("Close")
+            if close_series is not None:
+                fig.add_trace(
+                    go.Scatter(
+                        x=list(historical.index),
+                        y=list(close_series),
+                        mode="lines",
+                        name="実際価格",
                     )
-                ]
-            )
+                )
 
+        if data.predictions:
+            pred_times = []
+            pred_values = []
+            for pred in data.predictions:
+                timestamp = pred.get("timestamp")
+                value = pred.get("prediction")
+                if timestamp is not None and value is not None:
+                    pred_times.append(pd.to_datetime(timestamp))
+                    pred_values.append(value)
+
+            if pred_times:
+                fig.add_trace(
+                    go.Scatter(
+                        x=pred_times,
+                        y=pred_values,
+                        mode="lines+markers",
+                        name="予測価格",
+                    )
+                )
+
+        fig.update_layout(title=f"{data.symbol} 予測チャート", xaxis_title="日時", yaxis_title="価格")
+        return fig
+
+    def _build_sentiment_figure(self, sentiment_data: Dict[str, Any]) -> go.Figure:
+        if not sentiment_data:
+            return self._build_sentiment_error_figure("センチメントデータが利用できません")
+
+        if not PLOTLY_AVAILABLE:
+            fig = go.Figure()
+            fig.update_layout(title="センチメントデータ")
+            fig.add_annotation(
+                text="Plotlyが利用できません", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False
+            )
+            return fig
+
+        figure = go.Figure()
+        score = sentiment_data.get("current_sentiment", {}).get("score", 0)
+        figure.add_trace(
+            go.Indicator(
+                mode="gauge+number",
+                value=score,
+                title={"text": "センチメント"},
+                gauge={"axis": {"range": [-1, 1]}},
+            )
+        )
+
+        return figure
+
+    def _build_sentiment_error_figure(self, message: str) -> go.Figure:
+        fig = go.Figure()
+        fig.update_layout(title="センチメントデータ")
+        fig.add_annotation(
+            text=f"センチメント取得に失敗: {message}",
+            x=0.5,
+            y=0.5,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+        )
+        return fig
+
+    def _build_alert(self, message: str, color: str = "info") -> Any:
+        if DASH_AVAILABLE:
+            return dbc.Alert(message, color=color)
+        return message
+
+    def _build_metrics_component(self, metrics: Dict[str, Any]) -> Any:
+        if not metrics:
+            return self._build_alert("パフォーマンス指標を取得できませんでした", color="warning")
+
+        items = []
+        for key, value in metrics.items():
+            if isinstance(value, (int, float)):
+                text = f"{key}: {value:.3f}"
+            else:
+                text = f"{key}: {value}"
+            items.append(html.Li(text))
+
+        return html.Div([html.H4("パフォーマンス指標"), html.Ul(items)])
+
+    def generate_live_components(self, symbol: str) -> Tuple[go.Figure, go.Figure, Any]:
+        try:
+            visualization_data = self._fetch_visualization_data_with_retry(symbol)
+        except DataFetchError as exc:
+            message = f"データ取得に失敗: {exc}"
+            prediction_fig = self._build_error_figure(f"{symbol} 予測チャート", message)
+            sentiment_fig = self._build_sentiment_error_figure("データが利用できません")
+            metrics = self._build_alert(message, color="danger")
             return prediction_fig, sentiment_fig, metrics
+
+        prediction_fig = self._build_prediction_figure(visualization_data)
+
+        sentiment_data = visualization_data.sentiment_data
+        sentiment_error: Optional[str] = None
+        if self.sentiment_service:
+            try:
+                fetched_sentiment = self.sentiment_service.get_sentiment(symbol)
+                if fetched_sentiment:
+                    sentiment_data = fetched_sentiment
+            except Exception as exc:
+                sentiment_error = str(exc)
+                self.logger.warning(
+                    "Failed to fetch sentiment data for %s: %s", symbol, sentiment_error
+                )
+        elif not sentiment_data:
+            sentiment_error = "サービスが設定されていません"
+
+        if sentiment_error and not sentiment_data:
+            sentiment_fig = self._build_sentiment_error_figure(sentiment_error)
+        else:
+            sentiment_fig = self._build_sentiment_figure(sentiment_data or {})
+
+        metrics_component = self._build_metrics_component(
+            visualization_data.performance_metrics or {}
+        )
+
+        return prediction_fig, sentiment_fig, metrics_component
+
+    def _build_error_figure(self, title: str, message: str) -> go.Figure:
+        fig = go.Figure()
+        fig.update_layout(title=title)
+        fig.add_annotation(
+            text=message,
+            x=0.5,
+            y=0.5,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+        )
+        return fig
 
     def create_dashboard(self, visualization_data: VisualizationData) -> str:
         """ダッシュボード作成"""
