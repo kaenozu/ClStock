@@ -256,8 +256,8 @@ class AdvancedRiskManager:
             'position_concentration': 0.30  # 単一銘柄への集中度が30%を超えると警告
         }
     
-    def update_position(self, symbol: str, quantity: int, price: float):
-        """保有状況を更新"""
+    def update_position(self, symbol: str, quantity: int, price: float, cash_flow: float = 0.0):
+        """保有状況を更新し、現金残高も更新"""
         if quantity > 0:
             self.positions[symbol] = {
                 'quantity': quantity,
@@ -266,6 +266,9 @@ class AdvancedRiskManager:
             }
         elif symbol in self.positions:
             del self.positions[symbol]
+        
+        # 現金残高を更新
+        self.current_capital += cash_flow
     
     def calculate_portfolio_value(self) -> float:
         """ポートフォリオ価値を計算"""
