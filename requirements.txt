@@ -203,11 +203,11 @@ retrying==1.4.1
     # via dash
 rich==14.0.0
     # via bandit
-scikit-learn==1.5.1
+scikit-learn==1.3.2
     # via
     #   -r requirements.in
     #   shap
-scipy==1.15.3
+scipy==1.14.1
     # via
     #   -r requirements.in
     #   scikit-learn
@@ -266,4 +266,3 @@ zipp==3.23.0
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
-# scipy pin fix for CI
