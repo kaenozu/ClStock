@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import sys
 import os
+import types
 
 # ClStockプロジェクトのルートディレクトリをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -13,6 +14,76 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from models.custom_deep_predictor import CustomDeepPredictor
 from analysis.multimodal_integration import MultimodalIntegrator
 from models.attention_mechanism import TemporalAttention, MultiHeadTemporalAttention, AdaptiveTemporalAttention
+def _install_reinforcement_learning_stubs() -> None:
+    if "gym" not in sys.modules:
+        gym_stub = types.ModuleType("gym")
+
+        class _DummyEnv:
+            pass
+
+        gym_stub.Env = _DummyEnv
+        spaces_stub = types.ModuleType("gym.spaces")
+
+        class _DummyDiscrete:
+            def __init__(self, n):
+                self.n = n
+
+        class _DummyBox:
+            def __init__(self, low, high, shape, dtype=None):
+                self.low = low
+                self.high = high
+                self.shape = shape
+                self.dtype = dtype
+
+        spaces_stub.Discrete = _DummyDiscrete
+        spaces_stub.Box = _DummyBox
+        gym_stub.spaces = spaces_stub
+        sys.modules.setdefault("gym", gym_stub)
+        sys.modules.setdefault("gym.spaces", spaces_stub)
+
+    if "stable_baselines3" not in sys.modules:
+        sb3_stub = types.ModuleType("stable_baselines3")
+
+        class _DummyPPO:
+            def __init__(self, *_, **__):
+                pass
+
+            def learn(self, *_, **__):
+                return self
+
+            def predict(self, observation):
+                return 0, None
+
+        sb3_stub.PPO = _DummyPPO
+
+        common_stub = types.ModuleType("stable_baselines3.common")
+        vec_env_stub = types.ModuleType("stable_baselines3.common.vec_env")
+
+        class _DummyVecEnv:
+            def __init__(self, env_fns):
+                self.envs = [fn() for fn in env_fns]
+
+            def reset(self):
+                return self.envs[0].reset()
+
+        vec_env_stub.DummyVecEnv = _DummyVecEnv
+
+        callbacks_stub = types.ModuleType("stable_baselines3.common.callbacks")
+
+        class _DummyBaseCallback:
+            def __init__(self, *_, **__):
+                pass
+
+        callbacks_stub.BaseCallback = _DummyBaseCallback
+
+        sys.modules.setdefault("stable_baselines3", sb3_stub)
+        sys.modules.setdefault("stable_baselines3.common", common_stub)
+        sys.modules.setdefault("stable_baselines3.common.vec_env", vec_env_stub)
+        sys.modules.setdefault("stable_baselines3.common.callbacks", callbacks_stub)
+
+
+_install_reinforcement_learning_stubs()
+
 from systems.reinforcement_trading_system import ReinforcementTradingSystem
 from models.self_supervised_learning import SelfSupervisedModel, TemporalSelfSupervisedModel
 from analysis.model_interpretability import ModelInterpretability
@@ -129,10 +200,25 @@ class TestCustomDeepModel(unittest.TestCase):
         self.assertEqual(output_adaptive.shape[1], 48)
         print(f"Adaptive Temporal Attention - Output Shape: {output_adaptive.shape}")
         
+    class _StubMarketDataProvider:
+        """強化学習システム用の市場データスタブ。"""
+
+        def __init__(self):
+            dates = pd.date_range(start='2023-01-01', periods=30, freq='B')
+            self.data = pd.DataFrame({
+                'Open': np.linspace(100, 105, len(dates)),
+                'High': np.linspace(101, 106, len(dates)),
+                'Low': np.linspace(99, 104, len(dates)),
+                'Close': np.linspace(100.5, 105.5, len(dates)),
+                'Volume': np.linspace(1_000, 2_000, len(dates)),
+            }, index=dates)
+
+        def get_stock_data(self, symbol: str, period: str) -> pd.DataFrame:
+            return self.data.copy()
+
     def test_reinforcement_trading_system(self):
         """強化学習取引システムのテスト（最小限のテスト）"""
-        # テスト用のデータプロバイダーを設定（Noneの場合のデフォルト動作）
-        trading_system = ReinforcementTradingSystem(data_provider=None)
+        trading_system = ReinforcementTradingSystem(data_provider=self._StubMarketDataProvider())
         
         # 訓練（短い期間でテスト）
         trading_system.train_model('TEST_SYMBOL', period='10D', timesteps=100)
