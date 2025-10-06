@@ -1,19 +1,18 @@
 """Comprehensive tests for the logger configuration system."""
 
 import logging
-import pytest
-import tempfile
 import os
-from unittest.mock import patch, mock_open, MagicMock
-from pathlib import Path
+import tempfile
 from datetime import datetime, timedelta
+from pathlib import Path
+from unittest.mock import mock_open, patch
 
 from utils.logger_config import (
-    setup_logger,
-    get_logger,
-    set_log_level,
     CentralizedLogger,
     get_centralized_logger,
+    get_logger,
+    set_log_level,
+    setup_logger,
 )
 
 
@@ -128,7 +127,7 @@ class TestLoggerConfigurationComprehensive:
             cl.write_centralized_log("Test error message", "ERROR", "TEST_SERVICE")
 
             # Read back and verify
-            with open(temp_path, "r") as f:
+            with open(temp_path) as f:
                 content = f.read()
                 assert "Test info message" in content
                 assert "Test error message" in content
@@ -271,7 +270,7 @@ class TestLoggerConfigurationComprehensive:
         try:
             for i in range(3):
                 with tempfile.NamedTemporaryFile(
-                    suffix=".log", delete=False, dir=cl.log_dir
+                    suffix=".log", delete=False, dir=cl.log_dir,
                 ) as tmp_file:
                     temp_files.append(tmp_file.name)
 

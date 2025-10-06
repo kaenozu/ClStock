@@ -1,20 +1,20 @@
 """Comprehensive tests for the configuration system."""
 
 import os
-from unittest.mock import patch
 from pathlib import Path
+from unittest.mock import patch
 
 from config.settings import (
-    AppSettings,
-    DatabaseConfig,
-    PredictionConfig,
-    ModelConfig,
-    BacktestConfig,
-    TradingConfig,
     APIConfig,
+    AppSettings,
+    BacktestConfig,
+    DatabaseConfig,
     LoggingConfig,
+    ModelConfig,
+    PredictionConfig,
     ProcessConfig,
     RealTimeConfig,
+    TradingConfig,
     create_settings,
     get_settings,
 )
@@ -139,7 +139,7 @@ class TestConfigurationSystem:
         with patch.dict(
             os.environ,
             {
-                "CLSTOCK_API_TITLE": "Partial Test API"
+                "CLSTOCK_API_TITLE": "Partial Test API",
                 # Note: Not setting LOG_LEVEL, so it should remain unchanged
             },
         ):

@@ -13,7 +13,6 @@ from .meta_learning import MetaLearningOptimizer
 from .ml_stock_predictor import ModelPerformanceMonitor
 from .sentiment import SentimentAnalyzer
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -82,7 +81,9 @@ class UltraHighPerformancePredictor:
             except Exception:
                 predictions["deep_lstm"] = 50.0
             try:
-                predictions["deep_transformer"] = self.deep_transformer.predict_deep(symbol)
+                predictions["deep_transformer"] = self.deep_transformer.predict_deep(
+                    symbol,
+                )
             except Exception:
                 predictions["deep_transformer"] = 50.0
             try:
@@ -104,7 +105,9 @@ class UltraHighPerformancePredictor:
             if best_model in predictions:
                 self.model_weights[best_model] *= 1.2
                 total_weight = sum(self.model_weights.values())
-                self.model_weights = {k: v / total_weight for k, v in self.model_weights.items()}
+                self.model_weights = {
+                    k: v / total_weight for k, v in self.model_weights.items()
+                }
             final_score = sum(
                 predictions[model] * weight
                 for model, weight in self.model_weights.items()

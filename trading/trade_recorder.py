@@ -1,5 +1,4 @@
-"""
-ClStock 取引記録・レポートシステム
+"""ClStock 取引記録・レポートシステム
 
 取引履歴の詳細記録とパフォーマンスレポート生成
 87%精度システムの成果追跡とCSV/JSONエクスポート機能
@@ -22,13 +21,11 @@ from trading.tax.tax_calculator import TaxCalculator
 
 from .trading_strategy import SignalType
 
-
 _DEFAULT_DB_SUBPATH = Path("gemini-desktop") / "ClStock" / "data" / "trading_records.db"
 
 
 def _resolve_db_path(db_path: Optional[Union[str, PathLike]]) -> str:
     """Resolve the database path ensuring the parent directory exists."""
-
     if db_path is None:
         resolved_path = Path.home() / _DEFAULT_DB_SUBPATH
     else:
@@ -52,7 +49,6 @@ class TradeRecorder:
         tax_calculator: Optional[TaxCalculator] = None,
     ):
         """初期化"""
-
         resolved_db_path = _resolve_db_path(db_path)
         self.db_path = resolved_db_path
         self.repository = repository or TradeRepository(resolved_db_path)
@@ -69,7 +65,6 @@ class TradeRecorder:
 
     def record_trade(self, trade_data: Dict[str, Any]) -> bool:
         """取引記録"""
-
         try:
             trade_record = TradeRecord(
                 trade_id=trade_data.get("trade_id", ""),
@@ -79,9 +74,11 @@ class TradeRecorder:
                 quantity=trade_data.get("quantity", 0),
                 price=trade_data.get("price", 0.0),
                 timestamp=datetime.fromisoformat(
-                    trade_data.get("timestamp", datetime.now().isoformat())
+                    trade_data.get("timestamp", datetime.now().isoformat()),
                 ),
-                signal_type=SignalType(trade_data.get("signal_type", SignalType.HOLD.value)),
+                signal_type=SignalType(
+                    trade_data.get("signal_type", SignalType.HOLD.value),
+                ),
                 confidence=trade_data.get("confidence", 0.0),
                 precision=trade_data.get("precision", 0.0),
                 precision_87_achieved=trade_data.get("precision_87_achieved", False),
@@ -100,7 +97,9 @@ class TradeRecorder:
             self.trade_records.append(trade_record)
             self.repository.save_trade(trade_record)
 
-            self.logger.info("取引記録: %s %s", trade_record.symbol, trade_record.action)
+            self.logger.info(
+                "取引記録: %s %s", trade_record.symbol, trade_record.action,
+            )
             return True
 
         except Exception as exc:
@@ -114,7 +113,6 @@ class TradeRecorder:
         end_date: Optional[datetime] = None,
     ) -> PerformanceMetrics:
         """パフォーマンスレポート生成"""
-
         trades = self._filter_trades(session_id, start_date, end_date)
         return self.metrics_service.generate_report(trades)
 
@@ -124,7 +122,6 @@ class TradeRecorder:
         chart_types: Optional[List[str]] = None,
     ) -> Dict[str, str]:
         """取引チャート生成"""
-
         if chart_types is None:
             chart_types = [
                 "equity_curve",
@@ -136,7 +133,9 @@ class TradeRecorder:
         charts: Dict[str, str] = {}
         trades = self._filter_trades(session_id)
         completed_trades = [
-            trade for trade in trades if trade.action == "CLOSE" and trade.profit_loss is not None
+            trade
+            for trade in trades
+            if trade.action == "CLOSE" and trade.profit_loss is not None
         ]
 
         if not completed_trades:
@@ -167,7 +166,6 @@ class TradeRecorder:
         end_date: Optional[datetime] = None,
     ) -> bool:
         """CSV エクスポート"""
-
         trades = self._filter_trades(session_id, start_date, end_date)
         try:
             return self.export_service.export_to_csv(trades, filepath)
@@ -182,7 +180,6 @@ class TradeRecorder:
         include_performance: bool = True,
     ) -> bool:
         """JSON エクスポート"""
-
         trades = self._filter_trades(session_id)
         metrics: Optional[PerformanceMetrics] = None
         if include_performance:
@@ -206,7 +203,6 @@ class TradeRecorder:
         tax_year: Optional[int] = None,
     ) -> TaxCalculation:
         """税務計算"""
-
         trades = self._filter_trades(session_id)
         try:
             return self.tax_calculator.calculate(trades, tax_year)
@@ -225,7 +221,6 @@ class TradeRecorder:
 
     def get_precision_87_analysis(self) -> Dict[str, Any]:
         """87%精度システム分析"""
-
         try:
             return self.metrics_service.get_precision_87_analysis(self.trade_records)
         except Exception as exc:
@@ -234,12 +229,10 @@ class TradeRecorder:
 
     def set_session_id(self, session_id: str):
         """セッションID設定"""
-
         self.session_id = session_id
 
     def clear_records(self):
         """記録クリア"""
-
         self.trade_records.clear()
 
     def _filter_trades(
@@ -249,7 +242,6 @@ class TradeRecorder:
         end_date: Optional[datetime] = None,
     ) -> List[TradeRecord]:
         """取引フィルタリング"""
-
         trades = self.trade_records
 
         if session_id:

@@ -1,10 +1,9 @@
 """Tests for the logger configuration system."""
 
 import logging
-import pytest
-from unittest.mock import patch, mock_open
+from unittest.mock import mock_open, patch
 
-from utils.logger_config import setup_logger, get_logger, CentralizedLogger
+from utils.logger_config import CentralizedLogger, get_logger, setup_logger
 
 
 class TestLoggerConfig:
@@ -74,7 +73,7 @@ class TestLoggerConfig:
 
         # Mock the file existence
         with patch.object(
-            centralized_logger.centralized_log, "exists", return_value=True
+            centralized_logger.centralized_log, "exists", return_value=True,
         ):
             logs = centralized_logger.get_recent_logs(hours=1, service_filter="TEST")
             # Should return the log line
@@ -93,7 +92,7 @@ class TestLoggerConfig:
 
         # Mock the file existence
         with patch.object(
-            centralized_logger.centralized_log, "exists", return_value=True
+            centralized_logger.centralized_log, "exists", return_value=True,
         ):
             analysis = centralized_logger.analyze_log_patterns()
 

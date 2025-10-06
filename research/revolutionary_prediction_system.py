@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-"""
-革命的予測システム
+"""革命的予測システム
 95%以上の超高精度を目指す限界突破システム
 """
 
-import pandas as pd
+import warnings
+from typing import Dict, List, Optional
+
 import numpy as np
-from typing import Dict, List, Tuple, Optional
-import logging
-from utils.logger_config import setup_logger
+import pandas as pd
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import MinMaxScaler
-
-import warnings
+from utils.logger_config import setup_logger
 
 warnings.filterwarnings("ignore")
 
@@ -30,8 +28,7 @@ class RevolutionaryPredictionSystem:
         self.scaler = MinMaxScaler()
 
     def revolutionary_predict(self, symbol: str) -> Dict[str, float]:
-        """
-        革命的予測手法
+        """革命的予測手法
         複数の革新的アプローチを統合
         """
         try:
@@ -51,12 +48,12 @@ class RevolutionaryPredictionSystem:
 
             # 3. 確率収束予測（複数タイムフレームの収束点検出）
             convergence_prediction = self._probability_convergence_prediction(
-                golden_periods["data"]
+                golden_periods["data"],
             )
 
             # 4. 市場心理学的分析（群集行動の予測）
             psychology_analysis = self._market_psychology_analysis(
-                golden_periods["data"]
+                golden_periods["data"],
             )
 
             # 5. 異常検知ベース予測（正常パターンからの逸脱予測）
@@ -74,7 +71,7 @@ class RevolutionaryPredictionSystem:
             return final_prediction
 
         except Exception as e:
-            logger.error(f"Error in revolutionary prediction for {symbol}: {str(e)}")
+            logger.error(f"Error in revolutionary prediction for {symbol}: {e!s}")
             return self._neutral_result()
 
     def _neutral_result(self) -> Dict[str, float]:
@@ -108,7 +105,7 @@ class RevolutionaryPredictionSystem:
             # トレンドの安定性（方向が変わらない）
             (
                 sma_20.rolling(10).apply(
-                    lambda x: (x.iloc[-1] > x.iloc[0]) == (x.iloc[-2] > x.iloc[-3])
+                    lambda x: (x.iloc[-1] > x.iloc[0]) == (x.iloc[-2] > x.iloc[-3]),
                 )
             )
             &
@@ -356,7 +353,7 @@ class RevolutionaryPredictionSystem:
         return {"direction_bias": 0.5, "uncertainty": 1.0}
 
     def _probability_convergence_prediction(
-        self, data: pd.DataFrame
+        self, data: pd.DataFrame,
     ) -> Dict[str, float]:
         """確率収束予測（複数タイムフレームの収束点検出）"""
         if data.empty:
@@ -451,7 +448,7 @@ class RevolutionaryPredictionSystem:
                 crowd_behavior["confidence"],
                 psychological_levels["confidence"],
                 expectation_theory["confidence"],
-            ]
+            ],
         )
 
         return {
@@ -461,7 +458,7 @@ class RevolutionaryPredictionSystem:
         }
 
     def _calculate_fear_greed_index(
-        self, returns: pd.Series, volume: pd.Series
+        self, returns: pd.Series, volume: pd.Series,
     ) -> Dict[str, float]:
         """恐怖・貪欲指数計算"""
         try:
@@ -504,7 +501,7 @@ class RevolutionaryPredictionSystem:
             return {"direction": 0.5, "confidence": 0.0, "level": 0.5}
 
     def _analyze_crowd_behavior(
-        self, close: pd.Series, volume: pd.Series
+        self, close: pd.Series, volume: pd.Series,
     ) -> Dict[str, float]:
         """群集行動分析"""
         try:
@@ -544,7 +541,7 @@ class RevolutionaryPredictionSystem:
             for magnitude in [10, 100, 1000]:
                 round_level = round(current_price / magnitude) * magnitude
                 round_levels.extend(
-                    [round_level * 0.95, round_level, round_level * 1.05]
+                    [round_level * 0.95, round_level, round_level * 1.05],
                 )
 
             # 最も近い心理的レベル
@@ -662,7 +659,6 @@ class RevolutionaryPredictionSystem:
         golden_periods: Dict,
     ) -> Dict[str, float]:
         """超高精度統合（すべての手法を融合）"""
-
         # 各手法の方向性と信頼度を抽出
         methods = [
             (
@@ -800,13 +796,13 @@ class RevolutionaryPredictionSystem:
                         print("  *** 85%以上達成！")
 
             except Exception as e:
-                print(f"  エラー: {str(e)}")
+                print(f"  エラー: {e!s}")
                 continue
 
         return self._analyze_revolutionary_results(all_results, revolutionary_results)
 
     def _validate_revolutionary_prediction(
-        self, symbol: str, prediction: Dict
+        self, symbol: str, prediction: Dict,
     ) -> Optional[Dict]:
         """革命的予測の検証"""
         try:
@@ -847,11 +843,11 @@ class RevolutionaryPredictionSystem:
             return {"accuracy": correct / total, "samples": total, "correct": correct}
 
         except Exception as e:
-            logger.error(f"Error validating {symbol}: {str(e)}")
+            logger.error(f"Error validating {symbol}: {e!s}")
             return None
 
     def _analyze_revolutionary_results(
-        self, all_results: List[Dict], revolutionary_results: List[Dict]
+        self, all_results: List[Dict], revolutionary_results: List[Dict],
     ) -> Dict:
         """革命的結果分析"""
         if not all_results:
@@ -859,7 +855,7 @@ class RevolutionaryPredictionSystem:
 
         all_accuracies = [r["validation_accuracy"] for r in all_results]
 
-        print(f"\n" + "=" * 60)
+        print("\n" + "=" * 60)
         print("革命的システム最終結果")
         print("=" * 60)
 
@@ -888,11 +884,11 @@ class RevolutionaryPredictionSystem:
 
         max_accuracy = np.max(all_accuracies)
         if max_accuracy >= 0.95:
-            print(f"\n*** 限界突破！95%以上の革命的精度を達成！")
+            print("\n*** 限界突破！95%以上の革命的精度を達成！")
         elif max_accuracy >= 0.90:
-            print(f"\n*** 90%以上の超高精度を達成！")
+            print("\n*** 90%以上の超高精度を達成！")
         elif max_accuracy >= 0.85:
-            print(f"\n*** 85%以上の高精度を達成！")
+            print("\n*** 85%以上の高精度を達成！")
 
         return {
             "max_accuracy": max_accuracy,

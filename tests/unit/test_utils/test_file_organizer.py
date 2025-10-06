@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture
 def temp_workspace(tmp_path):
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -46,7 +46,9 @@ def test_file_organizer_places_unknown_extensions_in_default(temp_workspace):
 
     create_file(temp_workspace / "archive.zip")
 
-    organize_files(temp_workspace, rules={"documents": [".txt"]}, default_folder="others")
+    organize_files(
+        temp_workspace, rules={"documents": [".txt"]}, default_folder="others",
+    )
 
     assert (temp_workspace / "others" / "archive.zip").exists()
 
@@ -59,7 +61,9 @@ def test_file_organizer_skips_directories(temp_workspace):
     create_file(nested_dir / "keep.txt")
     create_file(temp_workspace / "root.log")
 
-    organize_files(temp_workspace, rules={"logs": [".log"]}, default_folder="uncategorized")
+    organize_files(
+        temp_workspace, rules={"logs": [".log"]}, default_folder="uncategorized",
+    )
 
     # Nested directory should remain untouched
     assert (nested_dir / "keep.txt").exists()

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""
-機械学習モデルの訓練スクリプト
+"""機械学習モデルの訓練スクリプト
 """
 
 import logging
-from utils.logger_config import setup_logger
-from models.ml_stock_predictor import MLStockPredictor
+
 from data.stock_data import StockDataProvider
+from models.ml_stock_predictor import MLStockPredictor
+from utils.logger_config import setup_logger
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 

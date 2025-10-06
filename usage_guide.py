@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-ハイブリッドシステム使い方デモ
+"""ハイブリッドシステム使い方デモ
 実際の使用例とベストプラクティス
 """
 
-import sys
 import os
+import sys
 
 sys.path.append(os.path.dirname(__file__))
 
 from models.hybrid.hybrid_predictor import HybridStockPredictor, PredictionMode
-from data.stock_data import StockDataProvider
 
 
 def demo_basic_usage():
@@ -82,13 +79,13 @@ def demo_batch_processing():
     batch_time = time.time() - start_time
 
     print(f"\n処理時間: {batch_time:.3f}秒")
-    print(f"スループット: {len(symbols)/batch_time:.1f}銘柄/秒")
-    print(f"成功率: {len(results)/len(symbols)*100:.1f}%")
+    print(f"スループット: {len(symbols) / batch_time:.1f}銘柄/秒")
+    print(f"成功率: {len(results) / len(symbols) * 100:.1f}%")
 
     print("\n個別結果:")
     for i, result in enumerate(results):
         print(
-            f"  {symbols[i]}: {result.prediction:.1f}円 (信頼度{result.confidence:.2f})"
+            f"  {symbols[i]}: {result.prediction:.1f}円 (信頼度{result.confidence:.2f})",
         )
 
 
@@ -115,10 +112,10 @@ def demo_real_time_scenario():
         elapsed = time.time() - start
         total_time += elapsed
 
-        print(f"  {symbol}: {result.prediction:.1f}円 ({elapsed*1000:.1f}ms)")
+        print(f"  {symbol}: {result.prediction:.1f}円 ({elapsed * 1000:.1f}ms)")
 
-    print(f"総処理時間: {total_time*1000:.1f}ms")
-    print(f"平均レスポンス: {total_time*1000/len(symbols):.1f}ms/銘柄")
+    print(f"総処理時間: {total_time * 1000:.1f}ms")
+    print(f"平均レスポンス: {total_time * 1000 / len(symbols):.1f}ms/銘柄")
 
 
 def demo_analysis_scenario():
@@ -141,7 +138,7 @@ def demo_analysis_scenario():
 
     # メタデータ詳細
     metadata = result.metadata
-    print(f"\n詳細情報:")
+    print("\n詳細情報:")
     print(f"  使用システム: {metadata.get('system_used', 'unknown')}")
     print(f"  予測戦略: {metadata.get('prediction_strategy', 'unknown')}")
 
@@ -175,7 +172,7 @@ def demo_monitoring():
     # パフォーマンス統計
     stats = hybrid_system.get_performance_stats()
     if "error" not in stats:
-        print(f"\n[PERF] パフォーマンス統計:")
+        print("\n[PERF] パフォーマンス統計:")
         print(f"  総予測回数: {stats['total_predictions']}")
         print(f"  平均処理時間: {stats['avg_prediction_time']:.3f}秒")
         print(f"  平均信頼度: {stats['avg_confidence']:.2f}")
@@ -204,7 +201,7 @@ def main():
         print("  - カスタム -> BALANCED")
 
     except Exception as e:
-        print(f"[ERROR] エラー: {str(e)}")
+        print(f"[ERROR] エラー: {e!s}")
         import traceback
 
         traceback.print_exc()

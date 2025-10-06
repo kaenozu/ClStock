@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-"""
-実用的なシンプル予測システム（MAPE最適化）
+"""実用的なシンプル予測システム（MAPE最適化）
 """
 
-import pandas as pd
 import numpy as np
-from typing import Tuple
-import logging
-from utils.logger_config import setup_logger
-
 from data.stock_data import StockDataProvider
+from utils.logger_config import setup_logger
 
 # ログ設定
 logger = setup_logger(__name__)
@@ -76,7 +71,7 @@ class PracticalPredictor:
             return max(-0.04, min(0.04, base_return))
 
         except Exception as e:
-            logger.error(f"Error predicting return rate for {symbol}: {str(e)}")
+            logger.error(f"Error predicting return rate for {symbol}: {e!s}")
             return 0.0
 
     def test_prediction_accuracy(self, symbols: list, test_days: int = 30) -> dict:
@@ -108,7 +103,7 @@ class PracticalPredictor:
 
                     # 簡易予測（この時点での）
                     historical_data = self.data_provider.calculate_technical_indicators(
-                        historical_data
+                        historical_data,
                     )
                     current_price = historical_data["Close"].iloc[-1]
                     sma_5 = historical_data["Close"].rolling(5).mean().iloc[-1]
@@ -128,7 +123,7 @@ class PracticalPredictor:
                     results["errors"].append(abs(predicted_return - actual_return))
 
             except Exception as e:
-                logger.warning(f"Error testing {symbol}: {str(e)}")
+                logger.warning(f"Error testing {symbol}: {e!s}")
                 continue
 
         return results
@@ -186,11 +181,11 @@ def main():
     for symbol in test_symbols:
         predicted_return = predictor.predict_return_rate(symbol)
         print(
-            f"{symbol}: 予測リターン率 {predicted_return:.3f} ({predicted_return*100:.1f}%)"
+            f"{symbol}: 予測リターン率 {predicted_return:.3f} ({predicted_return * 100:.1f}%)",
         )
 
     # 精度テスト
-    print(f"\n過去データでの精度テスト:")
+    print("\n過去データでの精度テスト:")
     print("-" * 30)
 
     results = predictor.test_prediction_accuracy(test_symbols, test_days=30)
@@ -203,7 +198,7 @@ def main():
         print(f"RMSE: {metrics['rmse']:.4f}")
         print(f"方向性精度: {metrics['directional_accuracy']:.1f}%")
 
-        print(f"\n評価:")
+        print("\n評価:")
         if metrics["mape"] < 15:
             print("✓ 実用レベル達成!")
         elif metrics["mape"] < 25:

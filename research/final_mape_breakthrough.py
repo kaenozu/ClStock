@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""
-MAPE < 15%達成のための最終突破システム
+"""MAPE < 15%達成のための最終突破システム
 """
 
-import pandas as pd
+from typing import Dict, List
+
 import numpy as np
-from typing import Dict, List, Tuple
-import logging
-from utils.logger_config import setup_logger
-
+import pandas as pd
 from data.stock_data import StockDataProvider
+from utils.logger_config import setup_logger
 
 # ログ設定
 logger = setup_logger(__name__)
@@ -38,7 +36,7 @@ class FinalMAPEBreakthrough:
 
             # 予測幅を極限まで小さく
             max_prediction = min(
-                0.002, recent_vol * 0.1
+                0.002, recent_vol * 0.1,
             )  # 0.2%または極小ボラティリティ
 
             # 平均回帰ベース
@@ -51,7 +49,7 @@ class FinalMAPEBreakthrough:
 
         except Exception as e:
             logger.error(
-                f"Error in ultra conservative prediction for {symbol}: {str(e)}"
+                f"Error in ultra conservative prediction for {symbol}: {e!s}",
             )
             return 0.0
 
@@ -71,8 +69,7 @@ class FinalMAPEBreakthrough:
             mape = (
                 np.mean(np.abs((valid_actual - valid_predicted) / valid_actual)) * 100
             )
-            if mape < best_mape:
-                best_mape = mape
+            best_mape = min(best_mape, mape)
 
         return best_mape
 
@@ -102,7 +99,7 @@ class FinalMAPEBreakthrough:
 
         except Exception as e:
             logger.error(
-                f"Error in momentum reversal prediction for {symbol}: {str(e)}"
+                f"Error in momentum reversal prediction for {symbol}: {e!s}",
             )
             return 0.0
 
@@ -167,7 +164,7 @@ class FinalMAPEBreakthrough:
 
                         # 予測（method_funcは現在の実装では使用せず、過去データベースで実装）
                         predicted_return = self._predict_with_historical_data(
-                            historical_data, method_name
+                            historical_data, method_name,
                         )
 
                         predictions.append(predicted_return)
@@ -183,7 +180,7 @@ class FinalMAPEBreakthrough:
 
                 except Exception as e:
                     logger.warning(
-                        f"Error testing {symbol} with {method_name}: {str(e)}"
+                        f"Error testing {symbol} with {method_name}: {e!s}",
                     )
                     continue
 
@@ -218,7 +215,7 @@ class FinalMAPEBreakthrough:
                 print(f"  MAE: {mae:.4f}")
                 print(f"  テスト数: {len(predictions)} (有効: {len(valid_errors)})")
                 print(
-                    f"  予測統計: 平均{np.mean(predictions_arr):.4f}, 標準偏差{np.std(predictions_arr):.4f}"
+                    f"  予測統計: 平均{np.mean(predictions_arr):.4f}, 標準偏差{np.std(predictions_arr):.4f}",
                 )
 
         return method_results
@@ -237,16 +234,15 @@ class FinalMAPEBreakthrough:
                 )
                 return recent_mean * 0.05  # 極小倍率
 
-            elif method == "momentum_reversal":
+            if method == "momentum_reversal":
                 # 反転予測
                 latest = returns.iloc[-1]
                 vol = returns.std()
                 if abs(latest) > vol * 0.5:
                     return -latest * 0.15
-                else:
-                    return latest * 0.05
+                return latest * 0.05
 
-            elif method == "ensemble_micro":
+            if method == "ensemble_micro":
                 # アンサンブル
                 conservative = (
                     returns.iloc[-3:].mean() * 0.05 if len(returns) >= 3 else 0
@@ -258,11 +254,10 @@ class FinalMAPEBreakthrough:
                 )
                 zero = 0.0
                 return np.average(
-                    [conservative, reversal, zero], weights=[0.3, 0.2, 0.5]
+                    [conservative, reversal, zero], weights=[0.3, 0.2, 0.5],
                 )
 
-            else:
-                return 0.0
+            return 0.0
 
         except Exception:
             return 0.0
@@ -282,7 +277,7 @@ def main():
     # 最終テスト
     results = breakthrough.test_breakthrough_system(symbols)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("最終結果サマリー")
     print("=" * 60)
 
@@ -292,7 +287,7 @@ def main():
     for method, metrics in results.items():
         print(f"{method}:")
         print(
-            f"  最良MAPE: {min(metrics['smart_mape'], metrics['traditional_mape']):.2f}%"
+            f"  最良MAPE: {min(metrics['smart_mape'], metrics['traditional_mape']):.2f}%",
         )
         print(f"  スマートMAPE: {metrics['smart_mape']:.2f}%")
         print(f"  従来MAPE: {metrics['traditional_mape']:.2f}%")
@@ -313,7 +308,7 @@ def main():
             print("  継続改善が必要")
         print()
 
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     if best_mape < 15:
         print(f"🎉 成功！ {best_method}でMAPE {best_mape:.2f}%達成！")
         print("実用レベルの予測精度を実現しました！")

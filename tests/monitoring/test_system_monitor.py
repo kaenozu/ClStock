@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 
-import pytest
 import psutil
+import pytest
 
 from monitoring.system_monitor import (
     PerformanceAlert,
@@ -61,7 +61,9 @@ def monitor(monkeypatch):
         dummy_thread_factory_calls.append(thread)
         return thread
 
-    monkeypatch.setattr("monitoring.system_monitor.threading.Thread", dummy_thread_factory)
+    monkeypatch.setattr(
+        "monitoring.system_monitor.threading.Thread", dummy_thread_factory,
+    )
     monitor._shutdown_event = DummyEvent()
     monitor._thread_factory_calls = dummy_thread_factory_calls
     return monitor
@@ -98,7 +100,9 @@ def test_monitoring_loop_collects_metrics_and_processes(monkeypatch, monitor):
         return SimpleNamespace(percent=70.0, free=200 * 1024 * 1024 * 1024)
 
     def fake_net_io_counters():
-        return SimpleNamespace(bytes_sent=100 * 1024 * 1024, bytes_recv=200 * 1024 * 1024)
+        return SimpleNamespace(
+            bytes_sent=100 * 1024 * 1024, bytes_recv=200 * 1024 * 1024,
+        )
 
     def fake_pids():
         return [1, 2, 3]
@@ -110,7 +114,9 @@ def test_monitoring_loop_collects_metrics_and_processes(monkeypatch, monitor):
                 "name": name,
                 "cpu_percent": cpu,
                 "memory_percent": memory,
-                "memory_info": SimpleNamespace(rss=50 * 1024 * 1024, vms=100 * 1024 * 1024),
+                "memory_info": SimpleNamespace(
+                    rss=50 * 1024 * 1024, vms=100 * 1024 * 1024,
+                ),
                 "status": "running",
                 "create_time": datetime.now().timestamp() - 3600,
                 "num_threads": 4,
@@ -123,12 +129,20 @@ def test_monitoring_loop_collects_metrics_and_processes(monkeypatch, monitor):
         yield DummyProcess(1, "proc1", 12.0, 1.2)
         yield DummyProcess(2, "proc2", 25.0, 0.5)
 
-    monkeypatch.setattr("monitoring.system_monitor.psutil.cpu_percent", fake_cpu_percent)
-    monkeypatch.setattr("monitoring.system_monitor.psutil.virtual_memory", fake_virtual_memory)
+    monkeypatch.setattr(
+        "monitoring.system_monitor.psutil.cpu_percent", fake_cpu_percent,
+    )
+    monkeypatch.setattr(
+        "monitoring.system_monitor.psutil.virtual_memory", fake_virtual_memory,
+    )
     monkeypatch.setattr("monitoring.system_monitor.psutil.disk_usage", fake_disk_usage)
-    monkeypatch.setattr("monitoring.system_monitor.psutil.net_io_counters", fake_net_io_counters)
+    monkeypatch.setattr(
+        "monitoring.system_monitor.psutil.net_io_counters", fake_net_io_counters,
+    )
     monkeypatch.setattr("monitoring.system_monitor.psutil.pids", fake_pids)
-    monkeypatch.setattr("monitoring.system_monitor.psutil.process_iter", fake_process_iter)
+    monkeypatch.setattr(
+        "monitoring.system_monitor.psutil.process_iter", fake_process_iter,
+    )
 
     monitor.monitoring_active = True
     monitor._shutdown_event.clear()
@@ -180,7 +194,9 @@ def test_collect_process_metrics_handles_failures(monkeypatch, monitor):
                 "name": "good",
                 "cpu_percent": 5.0,
                 "memory_percent": 0.5,
-                "memory_info": SimpleNamespace(rss=10 * 1024 * 1024, vms=20 * 1024 * 1024),
+                "memory_info": SimpleNamespace(
+                    rss=10 * 1024 * 1024, vms=20 * 1024 * 1024,
+                ),
                 "status": "sleeping",
                 "create_time": datetime.now().timestamp(),
                 "num_threads": 2,
@@ -203,7 +219,9 @@ def test_collect_process_metrics_handles_failures(monkeypatch, monitor):
         yield AccessDeniedProcess()
         raise RuntimeError("process failure")
 
-    monkeypatch.setattr("monitoring.system_monitor.psutil.process_iter", fake_process_iter)
+    monkeypatch.setattr(
+        "monitoring.system_monitor.psutil.process_iter", fake_process_iter,
+    )
 
     monitor._collect_process_metrics()
 
@@ -322,7 +340,7 @@ def test_status_and_reports(monkeypatch):
             "status": "running",
             "num_threads": 3,
             "uptime_hours": pytest.approx(2, rel=1e-2),
-        }
+        },
     ]
 
     report = monitor.generate_performance_report()
@@ -334,7 +352,10 @@ def test_status_and_reports(monkeypatch):
 
     # No data scenarios
     empty_monitor = SystemMonitor()
-    assert empty_monitor.get_current_system_status() == {"status": "no_data", "message": "監視データなし"}
+    assert empty_monitor.get_current_system_status() == {
+        "status": "no_data",
+        "message": "監視データなし",
+    }
     assert empty_monitor.generate_performance_report() == {"error": "監視データなし"}
 
     # Performance trends time window behaviour

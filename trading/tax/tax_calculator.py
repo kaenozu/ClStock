@@ -40,8 +40,16 @@ class TaxCalculator:
                 deductible_expenses=0.0,
             )
 
-        gains = [trade.profit_loss for trade in relevant_trades if trade.profit_loss and trade.profit_loss > 0]
-        losses = [abs(trade.profit_loss) for trade in relevant_trades if trade.profit_loss and trade.profit_loss < 0]
+        gains = [
+            trade.profit_loss
+            for trade in relevant_trades
+            if trade.profit_loss and trade.profit_loss > 0
+        ]
+        losses = [
+            abs(trade.profit_loss)
+            for trade in relevant_trades
+            if trade.profit_loss and trade.profit_loss < 0
+        ]
 
         total_realized_gains = float(sum(gains)) if gains else 0.0
         total_realized_losses = float(sum(losses)) if losses else 0.0
@@ -57,7 +65,9 @@ class TaxCalculator:
                 else:
                     long_term_gains += trade.profit_loss
 
-        deductible_expenses = sum(sum(trade.trading_costs.values()) for trade in relevant_trades)
+        deductible_expenses = sum(
+            sum(trade.trading_costs.values()) for trade in relevant_trades
+        )
         taxable_gains = max(net_capital_gains - deductible_expenses, 0)
         estimated_tax_liability = taxable_gains * 0.20315
 

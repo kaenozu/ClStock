@@ -1,12 +1,11 @@
-"""
-Network connection management utilities
+"""Network connection management utilities
 """
 
-import logging
-from typing import Optional, Dict, Any
 from contextlib import contextmanager
+from typing import Any, Optional
+
+from utils.connection_pool import HTTPConnectionPool, get_http_pool
 from utils.logger_config import get_logger
-from utils.connection_pool import get_http_pool, HTTPConnectionPool
 
 logger = get_logger(__name__)
 
@@ -23,17 +22,17 @@ class NetworkConnectionManager:
         """Get or create HTTP connection pool"""
         if self._http_pool is None:
             self._http_pool = get_http_pool(
-                max_connections=10, connection_timeout=self.timeout
+                max_connections=10, connection_timeout=self.timeout,
             )
         return self._http_pool
 
     @contextmanager
     def managed_session(self, **kwargs):
-        """
-        Context manager for HTTP sessions with automatic cleanup using connection pool
+        """Context manager for HTTP sessions with automatic cleanup using connection pool
 
         Args:
             **kwargs: Arguments to pass to requests.Session()
+
         """
         session = None
         try:
@@ -71,8 +70,7 @@ class NetworkConnectionManager:
         timeout: Optional[int] = None,
         **kwargs,
     ) -> Any:
-        """
-        Make HTTP request with retry logic using connection pool
+        """Make HTTP request with retry logic using connection pool
 
         Args:
             method: HTTP method (GET, POST, etc.)
@@ -86,6 +84,7 @@ class NetworkConnectionManager:
 
         Raises:
             requests.RequestException: If all retries fail
+
         """
         if max_retries is None:
             max_retries = self.max_retries
@@ -108,7 +107,7 @@ class NetworkConnectionManager:
                 last_exception = e
                 if attempt < max_retries:
                     logger.warning(
-                        f"Request failed (attempt {attempt + 1}/{max_retries + 1}): {e}"
+                        f"Request failed (attempt {attempt + 1}/{max_retries + 1}): {e}",
                     )
                     # Exponential backoff
                     import time
@@ -116,7 +115,7 @@ class NetworkConnectionManager:
                     time.sleep(2**attempt)
                 else:
                     logger.error(
-                        f"Request failed after {max_retries + 1} attempts: {e}"
+                        f"Request failed after {max_retries + 1} attempts: {e}",
                     )
             finally:
                 # Return connection to pool
@@ -137,11 +136,11 @@ def get_network_manager() -> NetworkConnectionManager:
 
 @contextmanager
 def managed_http_session(**kwargs):
-    """
-    Context manager for HTTP sessions
+    """Context manager for HTTP sessions
 
     Args:
         **kwargs: Arguments to pass to requests.Session()
+
     """
     with network_manager.managed_session(**kwargs) as session:
         yield session

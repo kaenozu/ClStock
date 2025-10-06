@@ -1,41 +1,31 @@
-"""
-ClStock バックテストエンジン
+"""ClStock バックテストエンジン
 
 87%精度システムの過去データでの戦略検証
 取引コスト、スリッページ、税金を考慮した高精度バックテスト
 """
 
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
-import pandas as pd
-import numpy as np
-import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import matplotlib.pyplot as plt
-import seaborn as sns
-from io import BytesIO
-import base64
 
-# 内部モジュール
-from .trading_strategy import TradingStrategy, TradingSignal, SignalType
-from .portfolio_manager import DemoPortfolioManager
-from .risk_manager import DemoRiskManager
-from .trade_recorder import TradeRecorder
-from .models import PerformanceMetrics
-from .performance_tracker import PerformanceTracker
+import numpy as np
+from config.target_universe import get_target_universe
+
+# 既存システム
+from data.stock_data import StockDataProvider
+from models.precision.precision_87_system import Precision87BreakthroughSystem
+
 from .backtest import (
     BacktestOptimizer,
     BacktestRunner,
     generate_backtest_charts,
     generate_recommendations,
 )
+from .models import PerformanceMetrics
 
-# 既存システム
-from data.stock_data import StockDataProvider
-from config.target_universe import get_target_universe
-from models.precision.precision_87_system import Precision87BreakthroughSystem
+# 内部モジュール
+from .trading_strategy import TradingStrategy
 
 
 @dataclass
@@ -101,16 +91,15 @@ class WalkForwardResult:
 
 
 class BacktestEngine:
-    """
-    87%精度システム統合バックテストエンジン
+    """87%精度システム統合バックテストエンジン
 
     過去データを使用した戦略検証と最適化
     """
 
     def __init__(self, config: BacktestConfig):
-        """
-        Args:
-            config: バックテスト設定
+        """Args:
+        config: バックテスト設定
+
         """
         self.config = config
 
@@ -133,10 +122,9 @@ class BacktestEngine:
         self.logger = logging.getLogger(__name__)
 
     def run_backtest(
-        self, symbols: Optional[List[str]] = None, parallel: bool = True
+        self, symbols: Optional[List[str]] = None, parallel: bool = True,
     ) -> BacktestResult:
-        """
-        バックテスト実行
+        """バックテスト実行
 
         Args:
             symbols: 対象銘柄リスト（Noneの場合は設定から取得）
@@ -144,6 +132,7 @@ class BacktestEngine:
 
         Returns:
             バックテスト結果
+
         """
         try:
             target_symbols = (
@@ -151,12 +140,12 @@ class BacktestEngine:
             )
 
             self.logger.info(
-                f"バックテスト開始: {self.config.start_date} - {self.config.end_date}"
+                f"バックテスト開始: {self.config.start_date} - {self.config.end_date}",
             )
             self.logger.info(f"対象銘柄数: {len(target_symbols)}")
 
             runner = BacktestRunner(
-                self.config, self.trading_strategy, self.data_provider, self.logger
+                self.config, self.trading_strategy, self.data_provider, self.logger,
             )
             result = runner.run_backtest(target_symbols)
 
@@ -168,10 +157,9 @@ class BacktestEngine:
             return self._empty_backtest_result()
 
     def run_walk_forward_analysis(
-        self, training_months: int = 6, testing_months: int = 1, step_months: int = 1
+        self, training_months: int = 6, testing_months: int = 1, step_months: int = 1,
     ) -> WalkForwardResult:
-        """
-        ウォークフォワード分析
+        """ウォークフォワード分析
 
         Args:
             training_months: 訓練期間（月数）
@@ -180,6 +168,7 @@ class BacktestEngine:
 
         Returns:
             ウォークフォワード分析結果
+
         """
         try:
             period_results = []
@@ -216,7 +205,7 @@ class BacktestEngine:
 
                 self.logger.info(
                     f"期間完了: {testing_start.date()} - {testing_end.date()} "
-                    f"リターン: {period_result.total_return:.2%}"
+                    f"リターン: {period_result.total_return:.2%}",
                 )
 
                 # 次の期間へ
@@ -269,8 +258,7 @@ class BacktestEngine:
         parameter_ranges: Dict[str, List[float]],
         optimization_metric: str = "sharpe_ratio",
     ) -> Dict[str, Any]:
-        """
-        パラメータ最適化
+        """パラメータ最適化
 
         Args:
             parameter_ranges: パラメータ範囲辞書
@@ -278,6 +266,7 @@ class BacktestEngine:
 
         Returns:
             最適化結果
+
         """
         optimizer = BacktestOptimizer(self.logger)
         return optimizer.optimize_parameters(
@@ -395,9 +384,8 @@ class BacktestEngine:
             portfolio_values=[],
         )
 
-
     def _calculate_combined_performance(
-        self, period_results: List[BacktestResult]
+        self, period_results: List[BacktestResult],
     ) -> PerformanceMetrics:
         """統合パフォーマンス計算"""
         if not period_results:
@@ -455,19 +443,19 @@ class BacktestEngine:
             max_consecutive_losses=0,  # 簡略化
             precision_87_trades=sum(r.precision_87_trades for r in period_results),
             precision_87_success_rate=np.mean(
-                [r.precision_87_success_rate for r in period_results]
+                [r.precision_87_success_rate for r in period_results],
             ),
             best_trade=max(
-                [max(r.daily_returns) if r.daily_returns else 0 for r in period_results]
+                [max(r.daily_returns) if r.daily_returns else 0 for r in period_results],
             ),
             worst_trade=min(
-                [min(r.daily_returns) if r.daily_returns else 0 for r in period_results]
+                [min(r.daily_returns) if r.daily_returns else 0 for r in period_results],
             ),
             average_holding_period=1.0,  # 簡略化
         )
 
     def _calculate_stability_metrics(
-        self, period_results: List[BacktestResult]
+        self, period_results: List[BacktestResult],
     ) -> Dict[str, float]:
         """安定性メトリクス計算"""
         if not period_results:
@@ -485,7 +473,7 @@ class BacktestEngine:
         }
 
     def _analyze_performance_degradation(
-        self, period_results: List[BacktestResult]
+        self, period_results: List[BacktestResult],
     ) -> Dict[str, float]:
         """パフォーマンス劣化分析"""
         if len(period_results) < 2:

@@ -1,15 +1,14 @@
-"""
-統合されたClStock予測システムインターフェース
+"""統合されたClStock予測システムインターフェース
 全ての予測モデルが準拠すべき標準インターフェース定義
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime
-from typing import Dict, List, Optional, Union, Any, Protocol
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional, Protocol, Union
+
 import pandas as pd
-import numpy as np
 
 
 class PredictionMode(Enum):
@@ -139,27 +138,22 @@ class StockPredictor(ABC):
     @abstractmethod
     def predict(self, symbol: str) -> PredictionResult:
         """単一銘柄の予測実行"""
-        pass
 
     @abstractmethod
     def predict_batch(self, symbols: List[str]) -> List[PredictionResult]:
         """バッチ予測実行"""
-        pass
 
     @abstractmethod
     def train(self, data: pd.DataFrame) -> bool:
         """モデル訓練"""
-        pass
 
     @abstractmethod
     def get_confidence(self, symbol: str) -> float:
         """信頼度取得"""
-        pass
 
     @abstractmethod
     def get_model_info(self) -> Dict[str, Any]:
         """モデル情報取得"""
-        pass
 
     # オプショナルメソッド（デフォルト実装）
 

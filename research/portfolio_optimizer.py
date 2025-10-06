@@ -1,25 +1,23 @@
 #!/usr/bin/env python3
-"""
-ポートフォリオ最適化システム
+"""ポートフォリオ最適化システム
 84.6%予測精度を活用した最適ポートフォリオ構築
 モダンポートフォリオ理論とシャープレシオ最適化を統合
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
 
 warnings.filterwarnings("ignore")
 
+from scipy.optimize import minimize
+
 from data.stock_data import StockDataProvider
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from scipy.optimize import minimize
-import logging
 from utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
-from datetime import datetime, timedelta
 
 
 class PortfolioOptimizer:
@@ -89,7 +87,7 @@ class PortfolioOptimizer:
         return correlation_matrix
 
     def optimize_portfolio_weights(
-        self, expected_returns, covariance_matrix, risk_free_rate=0.001
+        self, expected_returns, covariance_matrix, risk_free_rate=0.001,
     ):
         """シャープレシオ最大化によるポートフォリオ最適化"""
         n_assets = len(expected_returns)
@@ -98,7 +96,7 @@ class PortfolioOptimizer:
         def negative_sharpe_ratio(weights):
             portfolio_return = np.sum(expected_returns * weights)
             portfolio_volatility = np.sqrt(
-                np.dot(weights.T, np.dot(covariance_matrix, weights))
+                np.dot(weights.T, np.dot(covariance_matrix, weights)),
             )
             sharpe = (portfolio_return - risk_free_rate) / portfolio_volatility
             return -sharpe
@@ -145,16 +143,16 @@ class PortfolioOptimizer:
                 stocks_data[symbol] = data
 
                 print(
-                    f"\n{symbol}: {self.data_provider.jp_stock_codes.get(symbol, symbol)}"
+                    f"\n{symbol}: {self.data_provider.jp_stock_codes.get(symbol, symbol)}",
                 )
-                print(f"  年率リターン: {performance['annual_return']*100:.1f}%")
+                print(f"  年率リターン: {performance['annual_return'] * 100:.1f}%")
                 print(
-                    f"  年率ボラティリティ: {performance['annual_volatility']*100:.1f}%"
+                    f"  年率ボラティリティ: {performance['annual_volatility'] * 100:.1f}%",
                 )
                 print(f"  シャープレシオ: {performance['sharpe_ratio']:.2f}")
-                print(f"  予測スコア: {performance['prediction_score']*100:.1f}%")
+                print(f"  予測スコア: {performance['prediction_score'] * 100:.1f}%")
 
-            except Exception as e:
+            except Exception:
                 print(f"  {symbol}: データ取得エラー")
                 continue
 
@@ -176,7 +174,7 @@ class PortfolioOptimizer:
 
         # ポートフォリオ最適化
         optimal_weights = self.optimize_portfolio_weights(
-            expected_returns, covariance_matrix.values
+            expected_returns, covariance_matrix.values,
         )
 
         # 最適ポートフォリオの詳細
@@ -195,20 +193,22 @@ class PortfolioOptimizer:
                 }
                 total_investment += investment
 
-                print(f"{symbol}: {weight*100:.1f}% ({investment:,.0f}円)")
+                print(f"{symbol}: {weight * 100:.1f}% ({investment:,.0f}円)")
 
         # ポートフォリオ全体のパフォーマンス計算
         portfolio_return = np.sum(expected_returns * optimal_weights)
         portfolio_volatility = np.sqrt(
-            np.dot(optimal_weights.T, np.dot(covariance_matrix.values, optimal_weights))
+            np.dot(optimal_weights.T, np.dot(covariance_matrix.values, optimal_weights)),
         )
         portfolio_sharpe = portfolio_return / portfolio_volatility
 
-        print(f"\n=== ポートフォリオパフォーマンス予測 ===")
-        print(f"期待年率リターン: {portfolio_return*100:.1f}%")
-        print(f"予想年率ボラティリティ: {portfolio_volatility*100:.1f}%")
+        print("\n=== ポートフォリオパフォーマンス予測 ===")
+        print(f"期待年率リターン: {portfolio_return * 100:.1f}%")
+        print(f"予想年率ボラティリティ: {portfolio_volatility * 100:.1f}%")
         print(f"シャープレシオ: {portfolio_sharpe:.2f}")
-        print(f"84.6%予測精度適用後の期待リターン: {portfolio_return*0.846*100:.1f}%")
+        print(
+            f"84.6%予測精度適用後の期待リターン: {portfolio_return * 0.846 * 100:.1f}%",
+        )
 
         return {
             "portfolio": portfolio,
@@ -252,8 +252,8 @@ class PortfolioOptimizer:
             print(f"初期資産: {portfolio_value:,.0f}円")
             print(f"最終資産: {final_value:,.0f}円")
             print(f"収益: {profit:,.0f}円")
-            print(f"収益率: {cumulative_return*100:.1f}%")
-            print(f"年率換算: {cumulative_return*2*100:.1f}%")
+            print(f"収益率: {cumulative_return * 100:.1f}%")
+            print(f"年率換算: {cumulative_return * 2 * 100:.1f}%")
 
             return {
                 "initial_value": portfolio_value,
@@ -281,20 +281,22 @@ def main():
     portfolio_result = optimizer.create_optimal_portfolio(symbols)
 
     if portfolio_result:
-        print(f"\n=== 投資推奨 ===")
-        print(f"100万円を投資した場合の期待値:")
+        print("\n=== 投資推奨 ===")
+        print("100万円を投資した場合の期待値:")
 
         expected_profit = 1000000 * portfolio_result["adjusted_return"]
         print(f"年間期待収益: {expected_profit:,.0f}円")
-        print(f"月間期待収益: {expected_profit/12:,.0f}円")
+        print(f"月間期待収益: {expected_profit / 12:,.0f}円")
 
         # バックテスト実行
         backtest_result = optimizer.backtest_portfolio(portfolio_result)
 
         if backtest_result:
-            print(f"\n実績ベース年率: {backtest_result['annualized_return']*100:.1f}%")
             print(
-                f"実績ベース年間収益予測: {1000000 * backtest_result['annualized_return']:,.0f}円"
+                f"\n実績ベース年率: {backtest_result['annualized_return'] * 100:.1f}%",
+            )
+            print(
+                f"実績ベース年間収益予測: {1000000 * backtest_result['annualized_return']:,.0f}円",
             )
 
 

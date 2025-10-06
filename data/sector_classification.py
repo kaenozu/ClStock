@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-セクター分類の一元管理
+"""セクター分類の一元管理
 Single Source of Truth for sector classification
 """
 

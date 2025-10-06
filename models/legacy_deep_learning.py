@@ -14,6 +14,7 @@ from .ml_stock_predictor import MLStockPredictor
 
 logger = logging.getLogger(__name__)
 
+
 class DeepLearningPredictor:
     """LSTM/Transformer深層学習予測器"""
 
@@ -26,7 +27,7 @@ class DeepLearningPredictor:
         self.feature_columns = []
 
     def prepare_sequences(
-        self, data: pd.DataFrame, target_col: str = "Close"
+        self, data: pd.DataFrame, target_col: str = "Close",
     ) -> Tuple[np.ndarray, np.ndarray]:
         """時系列データをシーケンスに変換"""
         # 特徴量とターゲット分離
@@ -42,9 +43,8 @@ class DeepLearningPredictor:
 
     def build_lstm_model(self, input_shape):
         """LSTM モデル構築"""
-        import tensorflow as tf
+        from tensorflow.keras.layers import LSTM, BatchNormalization, Dense, Dropout
         from tensorflow.keras.models import Sequential
-        from tensorflow.keras.layers import LSTM, Dense, Dropout, BatchNormalization
         from tensorflow.keras.optimizers import Adam
 
         model = Sequential(
@@ -61,7 +61,7 @@ class DeepLearningPredictor:
                 Dense(32, activation="relu"),
                 Dropout(0.2),
                 Dense(1, activation="linear"),
-            ]
+            ],
         )
         model.compile(optimizer=Adam(learning_rate=0.001), loss="mse", metrics=["mae"])
         return model
@@ -74,7 +74,7 @@ class DeepLearningPredictor:
         def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0):
             # Multi-head self-attention
             x = layers.MultiHeadAttention(
-                key_dim=head_size, num_heads=num_heads, dropout=dropout
+                key_dim=head_size, num_heads=num_heads, dropout=dropout,
             )(inputs, inputs)
             x = layers.Dropout(dropout)(x)
             x = layers.LayerNormalization(epsilon=1e-6)(x)
@@ -91,7 +91,7 @@ class DeepLearningPredictor:
         # Multi-layer transformer
         for _ in range(3):
             x = transformer_encoder(
-                x, head_size=64, num_heads=4, ff_dim=128, dropout=0.3
+                x, head_size=64, num_heads=4, ff_dim=128, dropout=0.3,
             )
         x = layers.GlobalAveragePooling1D(data_format="channels_first")(x)
         x = layers.Dropout(0.3)(x)
@@ -179,7 +179,7 @@ class DeepLearningPredictor:
             score = 50 + (pred - current_price) / current_price * 100
             return max(0, min(100, score))
         except Exception as e:
-            logger.error(f"Deep learning prediction error for {symbol}: {str(e)}")
+            logger.error(f"Deep learning prediction error for {symbol}: {e!s}")
             return 50.0
 
     def save_deep_model(self):
@@ -188,11 +188,12 @@ class DeepLearningPredictor:
             model_path = Path("models/saved_models")
             self.model.save(model_path / f"deep_{self.model_type}_model.h5")
             joblib.dump(
-                self.scaler, model_path / f"deep_{self.model_type}_scaler.joblib"
+                self.scaler, model_path / f"deep_{self.model_type}_scaler.joblib",
             )
             logger.info(f"Deep {self.model_type} model saved")
         except Exception as e:
-            logger.error(f"Error saving deep model: {str(e)}")
+            logger.error(f"Error saving deep model: {e!s}")
+
 
 class DQNReinforcementLearner:
     """DQN強化学習システム - 市場環境への動的適応"""
@@ -229,7 +230,7 @@ class DQNReinforcementLearner:
         }
 
     def extract_market_state(
-        self, symbol: str, historical_data: pd.DataFrame
+        self, symbol: str, historical_data: pd.DataFrame,
     ) -> np.ndarray:
         """市場状態特徴量抽出"""
         try:
@@ -274,7 +275,7 @@ class DQNReinforcementLearner:
                     / data["Close"].iloc[-1],
                     data["Close"].iloc[-1] / data["Close"].iloc[-5] - 1,
                     len(data),
-                ]
+                ],
             )
             # NaN値処理
             state = np.nan_to_num(state, 0.0)
@@ -311,7 +312,7 @@ class DQNReinforcementLearner:
         return np.argmax(q_values)
 
     def get_trading_signal(
-        self, symbol: str, historical_data: pd.DataFrame
+        self, symbol: str, historical_data: pd.DataFrame,
     ) -> Dict[str, Any]:
         """取引シグナル生成 - 87%精度向上版"""
         try:
@@ -339,12 +340,12 @@ class DQNReinforcementLearner:
             # DQN信頼度の強化計算
             base_confidence = float(q_max)
             volatility_adjustment = min(
-                market_volatility * 2, 0.2
+                market_volatility * 2, 0.2,
             )  # ボラティリティボーナス
             trend_adjustment = min(trend_strength * 0.3, 0.15)  # トレンド強度ボーナス
 
             enhanced_confidence = min(
-                base_confidence + volatility_adjustment + trend_adjustment, 0.95
+                base_confidence + volatility_adjustment + trend_adjustment, 0.95,
             )
 
             # アクション別の追加調整

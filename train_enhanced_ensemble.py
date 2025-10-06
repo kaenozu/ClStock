@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-拡張アンサンブルモデル訓練スクリプト
+"""拡張アンサンブルモデル訓練スクリプト
 Phase 1機能を使った実際のモデル訓練と評価
 """
 
-import sys
-import os
-import time
 import logging
-from datetime import datetime
-import numpy as np
-import pandas as pd
-from typing import List, Dict, Any
+import os
+import sys
+import time
 import traceback
+from datetime import datetime
+from typing import Any, Dict, List
+
+import numpy as np
 
 # ロギング設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -48,7 +46,7 @@ def main():
                 display_final_results(training_results, evaluation_results)
             else:
                 print(
-                    f"\n❌ モデル評価失敗: {evaluation_results.get('error', 'Unknown error')}"
+                    f"\n❌ モデル評価失敗: {evaluation_results.get('error', 'Unknown error')}",
                 )
         else:
             print(f"\n❌ 訓練失敗: {training_results.get('error', 'Unknown error')}")
@@ -56,15 +54,15 @@ def main():
     except KeyboardInterrupt:
         print("\n\n訓練が中断されました")
     except Exception as e:
-        print(f"\n❌ 予期しないエラー: {str(e)}")
+        print(f"\n❌ 予期しないエラー: {e!s}")
         traceback.print_exc()
 
 
 def run_enhanced_ensemble_training() -> Dict[str, Any]:
     """拡張アンサンブルモデルの訓練実行"""
     try:
-        from models.ensemble.ensemble_predictor import EnsembleStockPredictor
         from data.stock_data import StockDataProvider
+        from models.ensemble.ensemble_predictor import EnsembleStockPredictor
 
         print("1. データプロバイダー初期化")
         data_provider = StockDataProvider()
@@ -91,7 +89,7 @@ def run_enhanced_ensemble_training() -> Dict[str, Any]:
 
         try:
             predictor.train_ensemble(
-                training_symbols, target_column="recommendation_score"
+                training_symbols, target_column="recommendation_score",
             )
             training_time = time.time() - start_time
 
@@ -107,12 +105,12 @@ def run_enhanced_ensemble_training() -> Dict[str, Any]:
             }
 
         except Exception as e:
-            return {"success": False, "error": f"訓練実行エラー: {str(e)}"}
+            return {"success": False, "error": f"訓練実行エラー: {e!s}"}
 
     except ImportError as e:
-        return {"success": False, "error": f"モジュールインポートエラー: {str(e)}"}
+        return {"success": False, "error": f"モジュールインポートエラー: {e!s}"}
     except Exception as e:
-        return {"success": False, "error": f"初期化エラー: {str(e)}"}
+        return {"success": False, "error": f"初期化エラー: {e!s}"}
 
 
 def select_training_symbols(data_provider) -> List[str]:
@@ -153,7 +151,7 @@ def select_training_symbols(data_provider) -> List[str]:
                 break
 
         except Exception as e:
-            logger.debug(f"Symbol {symbol} data fetch failed: {str(e)}")
+            logger.debug(f"Symbol {symbol} data fetch failed: {e!s}")
             continue
 
     return valid_symbols
@@ -162,8 +160,8 @@ def select_training_symbols(data_provider) -> List[str]:
 def evaluate_trained_model() -> Dict[str, Any]:
     """訓練済みモデルの評価"""
     try:
-        from models.ensemble.ensemble_predictor import EnsembleStockPredictor
         from data.stock_data import StockDataProvider
+        from models.ensemble.ensemble_predictor import EnsembleStockPredictor
 
         print("5. 訓練済みモデルの読み込み")
         data_provider = StockDataProvider()
@@ -206,17 +204,17 @@ def evaluate_trained_model() -> Dict[str, Any]:
                         "accuracy": result.accuracy,
                         "prediction_time": prediction_time,
                         "metadata": result.metadata,
-                    }
+                    },
                 )
 
                 print(
                     f"     予測値: {result.prediction:.1f}, "
                     f"信頼度: {result.confidence:.2f}, "
-                    f"時間: {prediction_time:.3f}秒"
+                    f"時間: {prediction_time:.3f}秒",
                 )
 
             except Exception as e:
-                logger.error(f"Evaluation failed for {symbol}: {str(e)}")
+                logger.error(f"Evaluation failed for {symbol}: {e!s}")
 
         if not evaluation_results:
             return {"success": False, "error": "すべてのテスト銘柄で評価が失敗しました"}
@@ -225,7 +223,7 @@ def evaluate_trained_model() -> Dict[str, Any]:
         avg_prediction_time = np.mean(prediction_times)
         avg_confidence = np.mean([r["confidence"] for r in evaluation_results])
 
-        print(f"   ✅ 評価完了")
+        print("   ✅ 評価完了")
         print(f"   平均予測時間: {avg_prediction_time:.3f}秒")
         print(f"   平均信頼度: {avg_confidence:.2f}")
 
@@ -238,11 +236,11 @@ def evaluate_trained_model() -> Dict[str, Any]:
         }
 
     except Exception as e:
-        return {"success": False, "error": f"評価実行エラー: {str(e)}"}
+        return {"success": False, "error": f"評価実行エラー: {e!s}"}
 
 
 def display_final_results(
-    training_results: Dict[str, Any], evaluation_results: Dict[str, Any]
+    training_results: Dict[str, Any], evaluation_results: Dict[str, Any],
 ):
     """最終結果の表示"""
     print("\n" + "=" * 80)
@@ -270,7 +268,7 @@ def display_final_results(
     for result in evaluation_results["evaluation_results"]:
         print(
             f"   {result['symbol']}  {result['prediction']:6.1f}  "
-            f"{result['confidence']:6.2f}  {result['prediction_time']:6.3f}秒"
+            f"{result['confidence']:6.2f}  {result['prediction_time']:6.3f}秒",
         )
 
     # パフォーマンス改善効果

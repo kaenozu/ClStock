@@ -2,24 +2,39 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
+
+import numpy as np
 
 
 def test_legacy_shim_matches_new_modules():
-    from models import AdvancedPrecisionBreakthrough87System
-    from models import Precision87BreakthroughSystem
-    from models import UltraHighPerformanceSystem
-    from models.advanced_precision import AdvancedPrecisionBreakthrough87System as AdvancedPrecisionModule
-    from models.ml_models import AdvancedPrecisionBreakthrough87System as AdvancedPrecisionShim
+    from models import (
+        AdvancedPrecisionBreakthrough87System,
+        Precision87BreakthroughSystem,
+        UltraHighPerformanceSystem,
+    )
+    from models.advanced_precision import (
+        AdvancedPrecisionBreakthrough87System as AdvancedPrecisionModule,
+    )
+    from models.ml_models import (
+        AdvancedPrecisionBreakthrough87System as AdvancedPrecisionShim,
+    )
     from models.ml_models import Precision87BreakthroughSystem as PrecisionShim
-    from models.ml_models import UltraHighPerformancePredictor as UltraHighPerformanceShim
-    from models.precision_breakthrough import Precision87BreakthroughSystem as PrecisionModule
+    from models.ml_models import (
+        UltraHighPerformancePredictor as UltraHighPerformanceShim,
+    )
+    from models.precision_breakthrough import (
+        Precision87BreakthroughSystem as PrecisionModule,
+    )
     from models.ultra_high_performance import (
         UltraHighPerformancePredictor as UltraHighPerformanceModule,
     )
 
-    assert AdvancedPrecisionModule is AdvancedPrecisionShim is AdvancedPrecisionBreakthrough87System
+    assert (
+        AdvancedPrecisionModule
+        is AdvancedPrecisionShim
+        is AdvancedPrecisionBreakthrough87System
+    )
     assert PrecisionModule is PrecisionShim is Precision87BreakthroughSystem
     assert UltraHighPerformanceModule is UltraHighPerformanceShim
     assert UltraHighPerformanceSystem is UltraHighPerformanceModule
@@ -58,19 +73,21 @@ def test_advanced_precision_prediction_uses_factories(monkeypatch):
             return {"prediction_score": 61.0, "confidence": 0.65}
 
     monkeypatch.setattr(
-        "models.advanced_precision.create_dqn_agent", lambda logger: DummyDQN()
+        "models.advanced_precision.create_dqn_agent", lambda logger: DummyDQN(),
     )
     monkeypatch.setattr(
-        "models.advanced_precision.create_multimodal_analyzer", lambda logger: DummyMultiModal()
+        "models.advanced_precision.create_multimodal_analyzer",
+        lambda logger: DummyMultiModal(),
     )
     monkeypatch.setattr(
-        "models.advanced_precision.create_meta_learning_optimizer", lambda: DummyMeta()
+        "models.advanced_precision.create_meta_learning_optimizer", lambda: DummyMeta(),
     )
     monkeypatch.setattr(
-        "models.advanced_precision.create_advanced_ensemble", lambda: DummyEnsemble()
+        "models.advanced_precision.create_advanced_ensemble", lambda: DummyEnsemble(),
     )
     monkeypatch.setattr(
-        "models.advanced_precision.create_market_transformer", lambda: DummyTransformer()
+        "models.advanced_precision.create_market_transformer",
+        lambda: DummyTransformer(),
     )
 
     def fake_create_market_state(price_data, volume_data):
@@ -81,8 +98,13 @@ def test_advanced_precision_prediction_uses_factories(monkeypatch):
         recorded_calls["convert_action_to_score"] = action
         return 77.0
 
-    monkeypatch.setattr("models.advanced_precision.create_market_state", fake_create_market_state)
-    monkeypatch.setattr("models.advanced_precision.convert_action_to_score", fake_convert_action_to_score)
+    monkeypatch.setattr(
+        "models.advanced_precision.create_market_state", fake_create_market_state,
+    )
+    monkeypatch.setattr(
+        "models.advanced_precision.convert_action_to_score",
+        fake_convert_action_to_score,
+    )
 
     system = AdvancedPrecisionBreakthrough87System()
 

@@ -1,14 +1,9 @@
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Tuple
-from datetime import datetime, timedelta
 import logging
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import StandardScaler
+from typing import Dict, Tuple
 
-from data.stock_data import StockDataProvider
-from models.recommendation import StockRecommendation
+import pandas as pd
 from config.settings import get_settings
+from data.stock_data import StockDataProvider
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +18,12 @@ class StockPredictor:
         use_ultra_mode: bool = False,
         prediction_days: int = 5,
     ):
-        """
-        Args:
-            use_ml_model: 機械学習モデルを使用するか
-            ml_model_type: 使用する機械学習モデル ("xgboost", "lightgbm", "randomforest")
-            use_ultra_mode: 超高性能モード（深層学習+アンサンブル）
-            prediction_days: 予測期間（日数、デフォルト5日）
+        """Args:
+        use_ml_model: 機械学習モデルを使用するか
+        ml_model_type: 使用する機械学習モデル ("xgboost", "lightgbm", "randomforest")
+        use_ultra_mode: 超高性能モード（深層学習+アンサンブル）
+        prediction_days: 予測期間（日数、デフォルト5日）
+
         """
         self.settings = get_settings()
         self.data_provider = StockDataProvider()
@@ -66,7 +61,7 @@ class StockPredictor:
                 return self.ultra_predictor.ultra_predict(symbol)
             except Exception as e:
                 logger.warning(
-                    f"Ultra prediction failed for {symbol}, falling back: {str(e)}"
+                    f"Ultra prediction failed for {symbol}, falling back: {e!s}",
                 )
 
         # 機械学習モデルが利用可能で訓練済みの場合は使用
@@ -75,13 +70,13 @@ class StockPredictor:
                 return self.ml_predictor.predict_score(symbol)
             except Exception as e:
                 logger.warning(
-                    f"ML model prediction failed for {symbol}, falling back to rule-based: {str(e)}"
+                    f"ML model prediction failed for {symbol}, falling back to rule-based: {e!s}",
                 )
 
         # ルールベースのスコア計算（フォールバック）
         try:
             data = self.data_provider.get_stock_data(
-                symbol, self.settings.trading.recommendation_data_period
+                symbol, self.settings.trading.recommendation_data_period,
             )
             if data.empty:
                 return 0
@@ -203,7 +198,7 @@ class StockPredictor:
             )
 
         except Exception as e:
-            logger.error(f"Error calculating score for {symbol}: {str(e)}")
+            logger.error(f"Error calculating score for {symbol}: {e!s}")
             return 0
 
     def predict_return_rate(self, symbol: str) -> float:
@@ -211,7 +206,7 @@ class StockPredictor:
         try:
             # 短期予測に最適化されたデータ取得
             data = self.data_provider.get_stock_data(
-                symbol, self.settings.trading.recommendation_data_period
+                symbol, self.settings.trading.recommendation_data_period,
             )  # より長期データで精度向上
             if data.empty or len(data) < 50:
                 return 0.0
@@ -362,7 +357,7 @@ class StockPredictor:
             return predicted_return
 
         except Exception as e:
-            logger.error(f"Error predicting return rate for {symbol}: {str(e)}")
+            logger.error(f"Error predicting return rate for {symbol}: {e!s}")
             return 0.0
 
     def predict_price_target(self, symbol: str) -> Tuple[float, float]:
@@ -379,12 +374,11 @@ class StockPredictor:
             return current_price, target_price
 
         except Exception as e:
-            logger.error(f"Error predicting price target for {symbol}: {str(e)}")
+            logger.error(f"Error predicting price target for {symbol}: {e!s}")
             return 0.0, 0.0
 
     def predict_direction(self, symbol: str) -> Dict[str, float]:
-        """
-        方向性予測（84.6%の精度を達成した手法）
+        """方向性予測（84.6%の精度を達成した手法）
         強いトレンド期間での上昇・下降予測
 
         Returns:
@@ -393,6 +387,7 @@ class StockPredictor:
             - confidence: 予測信頼度 (0-1)
             - accuracy_expected: 期待精度
             - trend_strength: トレンド強度
+
         """
         try:
             # データ取得（2年分で強いトレンド検出）
@@ -427,7 +422,7 @@ class StockPredictor:
             return direction_prediction
 
         except Exception as e:
-            logger.error(f"Error predicting direction for {symbol}: {str(e)}")
+            logger.error(f"Error predicting direction for {symbol}: {e!s}")
             return {
                 "direction": 0.5,
                 "confidence": 0.0,
@@ -437,7 +432,7 @@ class StockPredictor:
             }
 
     def _identify_strong_trend_period(
-        self, data: pd.DataFrame
+        self, data: pd.DataFrame,
     ) -> Tuple[bool, pd.DataFrame]:
         """強いトレンド期間の特定（インデックス修正版）"""
         close = data["Close"]
@@ -548,10 +543,10 @@ class StockPredictor:
         sma_20 = close.rolling(20).mean()
 
         features["ma_bullish"] = float(
-            (sma_5.iloc[-1] > sma_10.iloc[-1]) and (sma_10.iloc[-1] > sma_20.iloc[-1])
+            (sma_5.iloc[-1] > sma_10.iloc[-1]) and (sma_10.iloc[-1] > sma_20.iloc[-1]),
         )
         features["ma_bearish"] = float(
-            (sma_5.iloc[-1] < sma_10.iloc[-1]) and (sma_10.iloc[-1] < sma_20.iloc[-1])
+            (sma_5.iloc[-1] < sma_10.iloc[-1]) and (sma_10.iloc[-1] < sma_20.iloc[-1]),
         )
 
         # 価格と移動平均の関係
@@ -567,7 +562,7 @@ class StockPredictor:
 
         # 2. トレンド強度
         features["trend_strength"] = float(
-            abs((sma_5.iloc[-1] - sma_20.iloc[-1]) / sma_20.iloc[-1])
+            abs((sma_5.iloc[-1] - sma_20.iloc[-1]) / sma_20.iloc[-1]),
         )
 
         # 3. 価格のモメンタム
@@ -612,7 +607,7 @@ class StockPredictor:
             return 50.0
 
     def _calculate_trend_direction(
-        self, features: Dict[str, float], data: pd.DataFrame
+        self, features: Dict[str, float], data: pd.DataFrame,
     ) -> Dict[str, float]:
         """方向性予測計算（84.6%精度の手法）"""
         if not features or data.empty:
@@ -705,8 +700,7 @@ class StockPredictor:
         }
 
     def enhanced_predict_with_direction(self, symbol: str) -> Dict[str, float]:
-        """
-        方向性予測と価格予測を統合した強化予測
+        """方向性予測と価格予測を統合した強化予測
         84.6%の方向性予測 + 既存の価格予測を組み合わせ
         """
         try:
@@ -778,7 +772,7 @@ class StockPredictor:
             }
 
         except Exception as e:
-            logger.error(f"Error in enhanced prediction for {symbol}: {str(e)}")
+            logger.error(f"Error in enhanced prediction for {symbol}: {e!s}")
             return {
                 "current_price": 0,
                 "target_price": 0,

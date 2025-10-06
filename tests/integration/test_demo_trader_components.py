@@ -28,7 +28,6 @@ def stub_stock_data_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     we only need an importable ``StockDataProvider`` class that exposes the
     ``jp_stock_codes`` attribute used in a few convenience helpers.
     """
-
     stub_module = types.ModuleType("data.stock_data")
 
     class _StubStockDataProvider:  # pragma: no cover - behaviour verified indirectly
@@ -46,7 +45,7 @@ def stub_stock_data_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
 
     models_new_precision_package = types.ModuleType("models_new.precision")
     precision_spec = ModuleSpec(
-        name="models_new.precision", loader=None, is_package=True
+        name="models_new.precision", loader=None, is_package=True,
     )
     precision_spec.submodule_search_locations = []
     models_new_precision_package.__spec__ = precision_spec
@@ -67,9 +66,11 @@ def stub_stock_data_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     precision_module.Precision87BreakthroughSystem = _StubPrecision87BreakthroughSystem
 
     monkeypatch.setitem(sys.modules, "models_new", models_new_module)
-    monkeypatch.setitem(sys.modules, "models_new.precision", models_new_precision_package)
     monkeypatch.setitem(
-        sys.modules, "models_new.precision.precision_87_system", precision_module
+        sys.modules, "models_new.precision", models_new_precision_package,
+    )
+    monkeypatch.setitem(
+        sys.modules, "models_new.precision.precision_87_system", precision_module,
     )
 
     models_new_module.precision = models_new_precision_package
@@ -82,11 +83,15 @@ def stub_stock_data_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     scipy_module = types.ModuleType("scipy")
     scipy_sparse_module = types.ModuleType("scipy.sparse")
 
-    def _identity(*args: object, **kwargs: object) -> None:  # pragma: no cover - trivial stub
+    def _identity(
+        *args: object, **kwargs: object,
+    ) -> None:  # pragma: no cover - trivial stub
         return None
 
     scipy_sparse_module.csr_matrix = _identity
-    scipy_sparse_module.issparse = lambda *args, **kwargs: False  # pragma: no cover - trivial stub
+    scipy_sparse_module.issparse = (
+        lambda *args, **kwargs: False
+    )  # pragma: no cover - trivial stub
     scipy_module.sparse = scipy_sparse_module
 
     monkeypatch.setitem(sys.modules, "scipy", scipy_module)
@@ -114,7 +119,6 @@ def test_demo_trader_initializes_core_components(
     stub_stock_data_module: types.ModuleType,
 ) -> None:
     """``DemoTrader`` should respect risk/precision thresholds on init."""
-
     # ``trading.demo_trader`` imports ``data.stock_data`` at module import time,
     # so we reload it after injecting the stub to make sure the lightweight
     # provider is used during object construction.

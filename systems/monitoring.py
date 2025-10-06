@@ -8,13 +8,11 @@ from typing import Optional
 
 import psutil
 
-
 from ClStock.config.settings import get_settings
-from ClStock.utils.logger_config import get_logger
 from ClStock.systems.resource_monitor import ResourceMonitor
+from ClStock.utils.logger_config import get_logger
 
 from .service_registry import ProcessInfo, ProcessStatus, ServiceRegistry
-
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -80,33 +78,47 @@ class MonitoringLoop:
 
             # 高負荷の場合、低優先度プロセスの制限を検討
             if system_cpu_percent > 80 or system_memory_percent > 80:
-                logger.info(f"高負荷検出: CPU {system_cpu_percent:.1f}%, メモリ {system_memory_percent:.1f}%")
-                
+                logger.info(
+                    f"高負荷検出: CPU {system_cpu_percent:.1f}%, メモリ {system_memory_percent:.1f}%",
+                )
+
                 # 優先度の低いプロセスを一時停止またはリソース制限を強化
                 low_priority_processes = [
-                    p for p in self.service_registry.processes.values() 
+                    p
+                    for p in self.service_registry.processes.values()
                     if p.status == ProcessStatus.RUNNING and p.priority < 5
                 ]
-                
+
                 for proc_info in low_priority_processes:
-                    logger.info(f"低優先度プロセス {proc_info.name} にリソース制限を強化: CPU {proc_info.max_cpu_percent*0.7:.1f}%, メモリ {proc_info.max_memory_mb*0.7:.0f}MB")
+                    logger.info(
+                        f"低優先度プロセス {proc_info.name} にリソース制限を強化: CPU {proc_info.max_cpu_percent * 0.7:.1f}%, メモリ {proc_info.max_memory_mb * 0.7:.0f}MB",
+                    )
                     # 実際にはプロセスの制限を変更するにはより高度な制御が必要ですが、ここではログのみ
                     proc_info.max_cpu_percent *= 0.7  # CPU制限を70%に縮小
-                    proc_info.max_memory_mb *= 0.7    # メモリ制限を70%に縮小
+                    proc_info.max_memory_mb *= 0.7  # メモリ制限を70%に縮小
 
             elif system_cpu_percent < 30 and system_memory_percent < 50:
                 # 負荷が低い場合は制限を元に戻す
                 normal_priority_processes = [
-                    p for p in self.service_registry.processes.values() 
+                    p
+                    for p in self.service_registry.processes.values()
                     if p.status == ProcessStatus.RUNNING and p.priority < 5
                 ]
-                
+
                 for proc_info in normal_priority_processes:
                     # 制限を元の設定に戻す
                     original_settings = settings.process  # 設定から元の値を取得
-                    proc_info.max_cpu_percent = original_settings.max_cpu_percent_per_process if hasattr(original_settings, 'max_cpu_percent_per_process') else 50
-                    proc_info.max_memory_mb = original_settings.max_memory_per_process_mb if hasattr(original_settings, 'max_memory_per_process_mb') else 1000
-                    
+                    proc_info.max_cpu_percent = (
+                        original_settings.max_cpu_percent_per_process
+                        if hasattr(original_settings, "max_cpu_percent_per_process")
+                        else 50
+                    )
+                    proc_info.max_memory_mb = (
+                        original_settings.max_memory_per_process_mb
+                        if hasattr(original_settings, "max_memory_per_process_mb")
+                        else 1000
+                    )
+
         except Exception as e:
             logger.error(f"プロセス優先度調整エラー: {e}")
 
@@ -130,8 +142,7 @@ class MonitoringLoop:
 
                 if (
                     process_info.auto_restart
-                    and process_info.restart_count
-                    < process_info.max_restart_attempts
+                    and process_info.restart_count < process_info.max_restart_attempts
                 ):
                     logger.info(
                         "自動再起動実行: %s (試行 %s)",
@@ -167,7 +178,7 @@ class MonitoringLoop:
                                 memory_mb,
                             )
                             self.service_registry.stop_service(
-                                process_info.name, force=True
+                                process_info.name, force=True,
                             )
 
                     if cpu_percent > process_info.max_cpu_percent:
@@ -182,9 +193,7 @@ class MonitoringLoop:
                     logger.warning("プロセス消失: %s", process_info.name)
                     process_info.status = ProcessStatus.FAILED
                 except psutil.AccessDenied:
-                    logger.warning(
-                        "プロセス情報アクセス不可: %s", process_info.name
-                    )
+                    logger.warning("プロセス情報アクセス不可: %s", process_info.name)
         except Exception as exc:  # pragma: no cover - defensive logging
             logger.error("ヘルスチェックエラー %s: %s", process_info.name, exc)
 

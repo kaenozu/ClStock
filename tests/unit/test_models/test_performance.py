@@ -1,5 +1,5 @@
-﻿from pathlib import Path
 import sys
+from pathlib import Path
 
 # Resolve the project root and add it to the system path
 project_root = Path(__file__).resolve().parents[3]
@@ -7,16 +7,20 @@ sys.path.insert(0, str(project_root))
 
 """Test performance optimization models."""
 
-import pytest
-import pandas as pd
-import numpy as np
-from unittest.mock import MagicMock, patch
 from datetime import datetime
-from concurrent.futures import Future
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+import pandas as pd
 
 # 菫ｮ豁｣縺輔ｌ縺溘う繝ｳ繝昴・繝・
 Mock = MagicMock
-from ClStock.models.performance import AdvancedCacheManager, ParallelStockPredictor, UltraHighPerformancePredictor
+from ClStock.models.performance import (
+    AdvancedCacheManager,
+    ParallelStockPredictor,
+    UltraHighPerformancePredictor,
+)
 from models.core import PredictionResult
 from models.ensemble.ensemble_predictor import (
     EnsemblePredictor as EnsembleStockPredictor,
@@ -46,7 +50,7 @@ def sample_stock_data():
             "low": [99, 100, 101],
             "close": [101, 102, 103],
             "volume": [1000, 1100, 1200],
-        }
+        },
     )
 
 
@@ -98,7 +102,7 @@ class TestParallelStockPredictor:
 
     @patch("models.performance.ThreadPoolExecutor")
     def test_predict_multiple_stocks_parallel_uncached(
-        self, mock_executor, mock_ensemble_predictor
+        self, mock_executor, mock_ensemble_predictor,
     ):
         """Test parallel prediction with uncached results."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor, n_jobs=2)
@@ -136,7 +140,7 @@ class TestParallelStockPredictor:
 
     @patch("data.stock_data.StockDataProvider")
     def test_get_stock_data_safe_success(
-        self, mock_provider_class, mock_ensemble_predictor, sample_stock_data
+        self, mock_provider_class, mock_ensemble_predictor, sample_stock_data,
     ):
         """Test _get_stock_data_safe with successful data retrieval."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor)
@@ -152,7 +156,7 @@ class TestParallelStockPredictor:
 
     @patch("data.stock_data.StockDataProvider")
     def test_get_stock_data_safe_failure(
-        self, mock_provider_class, mock_ensemble_predictor
+        self, mock_provider_class, mock_ensemble_predictor,
     ):
         """Test _get_stock_data_safe with data retrieval failure."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor)

@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""
-精度最適化システム
+"""精度最適化システム
 統合された予測システムで90%以上の精度を目指す
 """
 
-import pandas as pd
+from typing import Dict, List
+
 import numpy as np
-from typing import Dict, List, Tuple
-import logging
-from utils.logger_config import setup_logger
-from models.predictor import StockPredictor
+import pandas as pd
 from data.stock_data import StockDataProvider
+from models.predictor import StockPredictor
+from utils.logger_config import setup_logger
 
 # ログ設定
 logger = setup_logger(__name__)
@@ -43,7 +42,7 @@ class PrecisionOptimizationSystem:
 
                 # 過去データでの検証
                 validation_result = self._validate_prediction_accuracy(
-                    symbol, prediction
+                    symbol, prediction,
                 )
 
                 if validation_result is None:
@@ -77,7 +76,7 @@ class PrecisionOptimizationSystem:
                     print("  ○ 80%以上")
 
             except Exception as e:
-                print(f"  エラー: {str(e)}")
+                print(f"  エラー: {e!s}")
                 continue
 
         return self._analyze_precision_results(all_results)
@@ -93,15 +92,14 @@ class PrecisionOptimizationSystem:
             # 方向性予測の過去検証
             if prediction["is_strong_trend"]:
                 return self._validate_trend_following_accuracy(data, symbol)
-            else:
-                return self._validate_general_accuracy(data, symbol)
+            return self._validate_general_accuracy(data, symbol)
 
         except Exception as e:
-            logger.error(f"Error validating {symbol}: {str(e)}")
+            logger.error(f"Error validating {symbol}: {e!s}")
             return None
 
     def _validate_trend_following_accuracy(
-        self, data: pd.DataFrame, symbol: str
+        self, data: pd.DataFrame, symbol: str,
     ) -> Dict:
         """トレンドフォロー予測の検証"""
         close = data["Close"]
@@ -121,10 +119,10 @@ class PrecisionOptimizationSystem:
             # 予測実行（過去時点）
             try:
                 features = self.predictor._create_trend_direction_features(
-                    historical_data.iloc[-30:]
+                    historical_data.iloc[-30:],
                 )
                 direction_pred = self.predictor._calculate_trend_direction(
-                    features, historical_data
+                    features, historical_data,
                 )
 
                 if direction_pred["confidence"] < 0.5:
@@ -197,7 +195,7 @@ class PrecisionOptimizationSystem:
         strong_trend_results = [r for r in results if r["is_strong_trend"]]
         general_results = [r for r in results if not r["is_strong_trend"]]
 
-        print(f"\n" + "=" * 60)
+        print("\n" + "=" * 60)
         print("統合システム精度分析")
         print("=" * 60)
 
@@ -220,7 +218,7 @@ class PrecisionOptimizationSystem:
                     r["validation_accuracy"] for r in high_conf_results
                 ]
                 print(
-                    f"  高信頼度(>70%)精度: {np.mean(high_conf_accuracies):.1%} ({len(high_conf_results)}銘柄)"
+                    f"  高信頼度(>70%)精度: {np.mean(high_conf_accuracies):.1%} ({len(high_conf_results)}銘柄)",
                 )
 
             # 90%以上達成
@@ -237,7 +235,7 @@ class PrecisionOptimizationSystem:
 
         # 全体統計
         all_accuracies = [r["validation_accuracy"] for r in results]
-        print(f"\n全体統計:")
+        print("\n全体統計:")
         print(f"  総銘柄数: {len(results)}")
         print(f"  最高精度: {np.max(all_accuracies):.1%}")
         print(f"  平均精度: {np.mean(all_accuracies):.1%}")
@@ -245,14 +243,14 @@ class PrecisionOptimizationSystem:
         # エリート銘柄の詳細
         elite_all = [r for r in results if r["validation_accuracy"] >= 0.85]
         if elite_all:
-            print(f"\nエリート銘柄 (85%以上):")
+            print("\nエリート銘柄 (85%以上):")
             for r in sorted(
-                elite_all, key=lambda x: x["validation_accuracy"], reverse=True
+                elite_all, key=lambda x: x["validation_accuracy"], reverse=True,
             ):
                 trend_mark = "🔥" if r["is_strong_trend"] else "📈"
                 print(
                     f"  {r['symbol']}: {r['validation_accuracy']:.1%} {trend_mark} "
-                    f"(信頼度: {r['confidence']:.1%})"
+                    f"(信頼度: {r['confidence']:.1%})",
                 )
 
         # 90%達成判定
@@ -293,7 +291,7 @@ class PrecisionOptimizationSystem:
             for conf_th in confidence_thresholds:
                 for cons_days in consistency_days:
                     accuracy = self._test_parameter_combination(
-                        test_symbols, trend_th, conf_th, cons_days
+                        test_symbols, trend_th, conf_th, cons_days,
                     )
 
                     if accuracy > best_accuracy:
@@ -304,7 +302,7 @@ class PrecisionOptimizationSystem:
                             "consistency_days": cons_days,
                         }
 
-        print(f"最適パラメータ:")
+        print("最適パラメータ:")
         print(f"  トレンド閾値: {best_params['trend_threshold']}")
         print(f"  信頼度閾値: {best_params['confidence_threshold']}")
         print(f"  一貫性日数: {best_params['consistency_days']}")
@@ -313,7 +311,7 @@ class PrecisionOptimizationSystem:
         return best_params
 
     def _test_parameter_combination(
-        self, symbols: List[str], trend_th: float, conf_th: float, cons_days: int
+        self, symbols: List[str], trend_th: float, conf_th: float, cons_days: int,
     ) -> float:
         """パラメータ組み合わせのテスト"""
         total_correct = 0
@@ -370,9 +368,9 @@ def main():
     if "error" not in results:
         best_params = optimizer.optimize_prediction_parameters(symbols)
 
-        print(f"\n最終評価:")
+        print("\n最終評価:")
         if results["max_accuracy"] >= 0.9:
-            print(f"🎉 90%以上の精度を達成！")
+            print("🎉 90%以上の精度を達成！")
         else:
             print(f"現在最高精度: {results['max_accuracy']:.1%}")
             print("さらなる改善を継続...")

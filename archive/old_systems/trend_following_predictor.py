@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
-"""
-トレンドフォロー特化の方向性予測システム
+"""トレンドフォロー特化の方向性予測システム
 明確なトレンド中のみの予測で80%以上を目指す
 """
 
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Tuple, Any
-import logging
-from utils.logger_config import setup_logger
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score
 import warnings
+from typing import Any, Dict, List
+
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import StandardScaler
+from utils.logger_config import setup_logger
 
 warnings.filterwarnings("ignore")
 
@@ -64,9 +62,7 @@ class TrendFollowingPredictor:
                 recent_up = strong_uptrend.iloc[i - 10 : i].sum()
                 recent_down = strong_downtrend.iloc[i - 10 : i].sum()
 
-                if recent_up >= 7:  # 10日中7日以上上昇トレンド
-                    trend_duration.iloc[i] = 1
-                elif recent_down >= 7:  # 10日中7日以上下降トレンド
+                if recent_up >= 7 or recent_down >= 7:  # 10日中7日以上上昇トレンド
                     trend_duration.iloc[i] = 1
 
         return trend_duration.astype(bool)
@@ -122,7 +118,7 @@ class TrendFollowingPredictor:
         return 100 - (100 / (1 + rs))
 
     def create_trend_target(
-        self, data: pd.DataFrame, prediction_days: int = 3
+        self, data: pd.DataFrame, prediction_days: int = 3,
     ) -> pd.Series:
         """トレンド継続予測ターゲット"""
         close = data["Close"]
@@ -156,7 +152,7 @@ class TrendFollowingPredictor:
 
                 if strong_trend_mask.sum() < 30:
                     print(
-                        f"  スキップ: 強いトレンド期間不足 ({strong_trend_mask.sum()})"
+                        f"  スキップ: 強いトレンド期間不足 ({strong_trend_mask.sum()})",
                     )
                     continue
 
@@ -237,7 +233,7 @@ class TrendFollowingPredictor:
 
                 print(f"  全体精度: {test_accuracy:.1%}")
                 print(
-                    f"  高信頼度精度: {high_conf_accuracy:.1%} ({high_confidence_mask.sum()}サンプル)"
+                    f"  高信頼度精度: {high_conf_accuracy:.1%} ({high_confidence_mask.sum()}サンプル)",
                 )
 
                 if test_accuracy >= 0.8:
@@ -248,7 +244,7 @@ class TrendFollowingPredictor:
                     print("  *** 70%以上")
 
             except Exception as e:
-                print(f"  エラー: {str(e)}")
+                print(f"  エラー: {e!s}")
                 continue
 
         return self._analyze_trend_results(all_results)
@@ -266,7 +262,7 @@ class TrendFollowingPredictor:
         max_accuracy = np.max(accuracies)
         avg_accuracy = np.mean(accuracies)
 
-        print(f"\n" + "=" * 60)
+        print("\n" + "=" * 60)
         print("トレンドフォロー予測結果")
         print("=" * 60)
         print(f"テスト銘柄数: {len(results)}")
@@ -288,11 +284,11 @@ class TrendFollowingPredictor:
 
         # トップ結果
         top_results = sorted(results, key=lambda x: x["accuracy"], reverse=True)[:5]
-        print(f"\nトップ5結果:")
+        print("\nトップ5結果:")
         for i, result in enumerate(top_results, 1):
             print(
                 f"  {i}. {result['symbol']}: {result['accuracy']:.1%} "
-                f"(高信頼度: {result['high_conf_accuracy']:.1%})"
+                f"(高信頼度: {result['high_conf_accuracy']:.1%})",
             )
 
         if max_accuracy >= 0.8:
@@ -314,7 +310,7 @@ class TrendFollowingPredictor:
                 # データ取得
                 stock_data = self.data_provider.get_stock_data(symbol, period="1y")
                 stock_data = self.data_provider.calculate_technical_indicators(
-                    stock_data
+                    stock_data,
                 )
             else:
                 stock_data = data
@@ -398,7 +394,7 @@ def main():
 
     if "error" not in results:
         if results["max_accuracy"] >= 0.8:
-            print(f"*** 80%以上の方向性予測を達成！")
+            print("*** 80%以上の方向性予測を達成！")
 
 
 if __name__ == "__main__":

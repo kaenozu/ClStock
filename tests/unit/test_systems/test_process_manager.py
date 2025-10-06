@@ -1,14 +1,11 @@
-"Tests for the process manager system."
+"""Tests for the process manager system."""
 
 from pathlib import Path
-import pytest
-import threading
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
+from unittest.mock import MagicMock, Mock, patch
 
 from ClStock.systems.process_manager import (
-    ProcessManager,
     ProcessInfo,
+    ProcessManager,
     ProcessStatus,
     settings,
 )
@@ -119,11 +116,8 @@ class TestProcessManager:
         mock_popen.assert_called_once()  # Only called once
 
     @patch("ClStock.systems.process_manager.subprocess.Popen")
-    def test_start_service_inherits_streams_when_logging_disabled(
-        self, mock_popen
-    ):
+    def test_start_service_inherits_streams_when_logging_disabled(self, mock_popen):
         """Processes should inherit stdout/stderr when logging is disabled."""
-
         mock_process = Mock(pid=12345)
         mock_popen.return_value = mock_process
 
@@ -205,7 +199,7 @@ class TestProcessManager:
 
         # Register a new service
         service_info = ProcessInfo(
-            name="test_service", command="python test_service.py"
+            name="test_service", command="python test_service.py",
         )
 
         pm.register_service(service_info)
@@ -220,7 +214,7 @@ class TestProcessManager:
         pm = ProcessManager()
         service_info = ProcessInfo(
             name="quoted_service",
-            command='python -c "print(\'hello world\')"',
+            command="python -c \"print('hello world')\"",
         )
         pm.register_service(service_info)
 
@@ -262,9 +256,9 @@ class TestProcessManager:
 
         for service in pm.list_services():
             command_parts = shlex.split(service.command)
-            assert (
-                len(command_parts) >= 2
-            ), f"Command for {service.name} must include script path"
+            assert len(command_parts) >= 2, (
+                f"Command for {service.name} must include script path"
+            )
 
             script_path = Path(service.working_dir) / command_parts[1]
             assert script_path.exists(), (

@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-予測可視化ダッシュボード
+"""予測可視化ダッシュボード
 リアルタイム予測結果を美しく可視化するWebダッシュボード
 """
 
-import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
-import pandas as pd
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import numpy as np
-from dataclasses import dataclass, asdict
+import pandas as pd
 
 try:
-    import plotly.graph_objects as go
     import plotly.express as px
-    from plotly.subplots import make_subplots
+    import plotly.graph_objects as go
     import plotly.io as pio
+    from plotly.subplots import make_subplots
 
     PLOTLY_AVAILABLE = True
 except ImportError:
@@ -25,8 +23,8 @@ except ImportError:
 
 try:
     import dash
-    from dash import dcc, html, Input, Output, State
     import dash_bootstrap_components as dbc
+    from dash import Input, Output, State, dcc, html
 
     DASH_AVAILABLE = True
 except ImportError:
@@ -201,8 +199,8 @@ class ChartGenerator:
             return fig.to_html(include_plotlyjs="cdn")
 
         except Exception as e:
-            self.logger.error(f"Chart creation failed: {str(e)}")
-            return f"<div>チャート生成エラー: {str(e)}</div>"
+            self.logger.error(f"Chart creation failed: {e!s}")
+            return f"<div>チャート生成エラー: {e!s}</div>"
 
     def create_sentiment_chart(self, sentiment_data: Dict[str, Any]) -> str:
         """センチメントチャート作成"""
@@ -311,14 +309,14 @@ class ChartGenerator:
             )
 
             fig.update_layout(
-                title="センチメント分析ダッシュボード", height=600, showlegend=False
+                title="センチメント分析ダッシュボード", height=600, showlegend=False,
             )
 
             return fig.to_html(include_plotlyjs="cdn")
 
         except Exception as e:
-            self.logger.error(f"Sentiment chart creation failed: {str(e)}")
-            return f"<div>センチメントチャート生成エラー: {str(e)}</div>"
+            self.logger.error(f"Sentiment chart creation failed: {e!s}")
+            return f"<div>センチメントチャート生成エラー: {e!s}</div>"
 
     def create_performance_chart(self, performance_metrics: Dict[str, float]) -> str:
         """パフォーマンスチャート作成"""
@@ -345,8 +343,8 @@ class ChartGenerator:
             return metrics_html
 
         except Exception as e:
-            self.logger.error(f"Performance chart creation failed: {str(e)}")
-            return f"<div>パフォーマンスチャート生成エラー: {str(e)}</div>"
+            self.logger.error(f"Performance chart creation failed: {e!s}")
+            return f"<div>パフォーマンスチャート生成エラー: {e!s}</div>"
 
 
 class DashboardGenerator:
@@ -370,12 +368,12 @@ class DashboardGenerator:
             sentiment_chart = ""
             if visualization_data.sentiment_data:
                 sentiment_chart = self.chart_generator.create_sentiment_chart(
-                    visualization_data.sentiment_data
+                    visualization_data.sentiment_data,
                 )
 
             # パフォーマンスチャート
             performance_chart = self.chart_generator.create_performance_chart(
-                visualization_data.performance_metrics
+                visualization_data.performance_metrics,
             )
 
             # HTMLテンプレート
@@ -423,7 +421,7 @@ class DashboardGenerator:
             <body>
                 <div class="header">
                     <h1>{visualization_data.symbol} 予測ダッシュボード</h1>
-                    <p>最終更新: {visualization_data.timestamp.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                    <p>最終更新: {visualization_data.timestamp.strftime("%Y-%m-%d %H:%M:%S")}</p>
                 </div>
 
                 <div class="grid">
@@ -433,7 +431,7 @@ class DashboardGenerator:
                             {prediction_chart}
                         </div>
 
-                        {f'<div class="section"><h2>センチメント分析</h2>{sentiment_chart}</div>' if sentiment_chart else ''}
+                        {f'<div class="section"><h2>センチメント分析</h2>{sentiment_chart}</div>' if sentiment_chart else ""}
                     </div>
 
                     <div>
@@ -462,9 +460,9 @@ class DashboardGenerator:
             return html_template
 
         except Exception as e:
-            self.logger.error(f"Dashboard generation failed: {str(e)}")
+            self.logger.error(f"Dashboard generation failed: {e!s}")
             return (
-                f"<html><body><h1>ダッシュボード生成エラー: {str(e)}</h1></body></html>"
+                f"<html><body><h1>ダッシュボード生成エラー: {e!s}</h1></body></html>"
             )
 
     def _generate_prediction_summary(self, data: VisualizationData) -> str:
@@ -480,13 +478,13 @@ class DashboardGenerator:
         summary_html = f"""
         <div style='padding: 15px;'>
             <h4>最新予測</h4>
-            <p><strong>予測価格:</strong> ¥{latest_prediction.get('prediction', 0):.2f}</p>
-            <p><strong>信頼度:</strong> {latest_prediction.get('confidence', 0)*100:.1f}%</p>
-            <p><strong>精度:</strong> {latest_prediction.get('accuracy', 0):.1f}%</p>
+            <p><strong>予測価格:</strong> ¥{latest_prediction.get("prediction", 0):.2f}</p>
+            <p><strong>信頼度:</strong> {latest_prediction.get("confidence", 0) * 100:.1f}%</p>
+            <p><strong>精度:</strong> {latest_prediction.get("accuracy", 0):.1f}%</p>
 
             <h4>システム情報</h4>
-            <p><strong>予測モード:</strong> {latest_prediction.get('mode', 'Unknown')}</p>
-            <p><strong>処理時間:</strong> {latest_prediction.get('prediction_time', 0)*1000:.1f}ms</p>
+            <p><strong>予測モード:</strong> {latest_prediction.get("mode", "Unknown")}</p>
+            <p><strong>処理時間:</strong> {latest_prediction.get("prediction_time", 0) * 1000:.1f}ms</p>
 
             <h4>パフォーマンス</h4>
         """
@@ -500,8 +498,7 @@ class DashboardGenerator:
 
 
 class PredictionDashboard:
-    """
-    予測可視化ダッシュボード
+    """予測可視化ダッシュボード
 
     特徴:
     - リアルタイム予測可視化
@@ -530,7 +527,7 @@ class PredictionDashboard:
             self._setup_callbacks()
             self.logger.info("Web server initialized")
         except Exception as e:
-            self.logger.error(f"Web server initialization failed: {str(e)}")
+            self.logger.error(f"Web server initialization failed: {e!s}")
             self.app = None
 
     def _setup_layout(self):
@@ -549,9 +546,9 @@ class PredictionDashboard:
                                     className="text-center mb-4",
                                 ),
                                 html.Hr(),
-                            ]
-                        )
-                    ]
+                            ],
+                        ),
+                    ],
                 ),
                 dbc.Row(
                     [
@@ -574,7 +571,7 @@ class PredictionDashboard:
                                         },
                                     ],
                                     value="6758.T",
-                                )
+                                ),
                             ],
                             width=4,
                         ),
@@ -589,10 +586,10 @@ class PredictionDashboard:
                     [
                         dbc.Col([dcc.Graph(id="prediction-chart")], width=8),
                         dbc.Col([dcc.Graph(id="sentiment-chart")], width=4),
-                    ]
+                    ],
                 ),
                 dbc.Row(
-                    [dbc.Col([html.Div(id="performance-metrics")])], className="mt-4"
+                    [dbc.Col([html.Div(id="performance-metrics")])], className="mt-4",
                 ),
                 # 自動更新用
                 dcc.Interval(
@@ -632,7 +629,7 @@ class PredictionDashboard:
                     x=pd.date_range(start="2024-01-01", periods=30, freq="D"),
                     y=np.random.randn(30).cumsum() + 1000,
                     name="予測価格",
-                )
+                ),
             )
             prediction_fig.update_layout(title=f"{symbol} 予測チャート")
 
@@ -644,7 +641,7 @@ class PredictionDashboard:
                     value=np.random.uniform(-1, 1),
                     title={"text": "センチメント"},
                     gauge={"axis": {"range": [-1, 1]}},
-                )
+                ),
             )
 
             # パフォーマンス指標
@@ -658,13 +655,13 @@ class PredictionDashboard:
                                     html.P(f"精度: {np.random.uniform(80, 95):.1f}%"),
                                     html.P(f"信頼度: {np.random.uniform(70, 90):.1f}%"),
                                     html.P(
-                                        f"処理時間: {np.random.uniform(0.1, 1.0):.3f}秒"
+                                        f"処理時間: {np.random.uniform(0.1, 1.0):.3f}秒",
                                     ),
-                                ]
-                            )
-                        ]
-                    )
-                ]
+                                ],
+                            ),
+                        ],
+                    ),
+                ],
             )
 
             return prediction_fig, sentiment_fig, metrics
@@ -674,7 +671,7 @@ class PredictionDashboard:
         return self.dashboard_generator.generate_static_dashboard(visualization_data)
 
     def save_dashboard(
-        self, visualization_data: VisualizationData, output_path: str = "dashboard.html"
+        self, visualization_data: VisualizationData, output_path: str = "dashboard.html",
     ):
         """ダッシュボード保存"""
         try:
@@ -687,11 +684,11 @@ class PredictionDashboard:
             return True
 
         except Exception as e:
-            self.logger.error(f"Dashboard save failed: {str(e)}")
+            self.logger.error(f"Dashboard save failed: {e!s}")
             return False
 
     def run_web_server(
-        self, host: str = "127.0.0.1", port: int = 8050, debug: bool = False
+        self, host: str = "127.0.0.1", port: int = 8050, debug: bool = False,
     ):
         """Webサーバー起動"""
         if not self.app:
@@ -702,7 +699,7 @@ class PredictionDashboard:
             self.logger.info(f"Starting web server at http://{host}:{port}")
             self.app.run_server(host=host, port=port, debug=debug)
         except Exception as e:
-            self.logger.error(f"Web server failed to start: {str(e)}")
+            self.logger.error(f"Web server failed to start: {e!s}")
 
     def get_dashboard_status(self) -> Dict[str, Any]:
         """ダッシュボード状況取得"""

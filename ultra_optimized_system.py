@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""
-ウルトラ最適化投資システム - 超高利益追求モデル
+"""ウルトラ最適化投資システム - 超高利益追求モデル
 成長株 + 高ボラティリティ銘柄に特化した積極運用
 """
 
+import warnings
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-import warnings
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Any, Tuple
 
 warnings.filterwarnings("ignore")
 
-from data.stock_data import StockDataProvider
-from sklearn.preprocessing import StandardScaler
-from super_selective_system import BaseInvestmentSystem, BACKTEST_PERIOD
 import logging
+
+from super_selective_system import BACKTEST_PERIOD, BaseInvestmentSystem
+
 from utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -47,7 +47,7 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
         super().__init__()
         self.ultra_performance_symbols = self._initialize_ultra_symbols()
 
-        print(f"ウルトラ最適化投資システム初期化完了")
+        print("ウルトラ最適化投資システム初期化完了")
         print(f"ウルトラ銘柄数: {len(self.ultra_performance_symbols)}銘柄")
         print(f"最小利益閾値: {self.min_profit_threshold}%")
         print(f"最大損失閾値: {self.max_loss_threshold}%")
@@ -93,11 +93,11 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
             return None
 
         except Exception as e:
-            logging.error(f"ウルトラ分析エラー {symbol}: {str(e)}")
+            logging.exception(f"ウルトラ分析エラー {symbol}: {e!s}")
             return None
 
     def _perform_ultra_analysis(
-        self, symbol: str, stock_data: pd.DataFrame
+        self, symbol: str, stock_data: pd.DataFrame,
     ) -> Dict[str, Any]:
         """ウルトラ級分析実行"""
         close = stock_data["Close"]
@@ -107,7 +107,7 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
 
         # 高度技術分析
         technical_indicators = self._calculate_technical_indicators(
-            close, high, low, volume
+            close, high, low, volume,
         )
 
         # マルチタイムフレーム分析
@@ -124,7 +124,7 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
 
         # 統合スコア計算
         ultra_score = self._calculate_ultra_score(
-            technical_indicators, momentum_analysis, volume_profile, volatility_analysis
+            technical_indicators, momentum_analysis, volume_profile, volatility_analysis,
         )
 
         return {
@@ -142,7 +142,7 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
         }
 
     def _calculate_technical_indicators(
-        self, close: pd.Series, high: pd.Series, low: pd.Series, volume: pd.Series
+        self, close: pd.Series, high: pd.Series, low: pd.Series, volume: pd.Series,
     ) -> Dict[str, Any]:
         """技術指標の計算"""
         # 移動平均
@@ -167,22 +167,22 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
 
         # エントリーシグナル判定
         entry_signal = self._determine_entry_signal(
-            close, sma_20, sma_50, bb_upper, bb_lower, macd_line, macd_signal, rsi
+            close, sma_20, sma_50, bb_upper, bb_lower, macd_line, macd_signal, rsi,
         )
 
         # 複合スコア
         composite_score = self._calculate_technical_composite_score(
-            sma_20, sma_50, rsi, macd_line, macd_signal, stoch_k, adx
+            sma_20, sma_50, rsi, macd_line, macd_signal, stoch_k, adx,
         )
 
         return {
             "sma_20": sma_20.iloc[-1] if not sma_20.empty else 0,
             "sma_50": sma_50.iloc[-1] if not sma_50.empty else 0,
             "bb_position": self._calculate_bb_position(
-                close.iloc[-1], bb_upper.iloc[-1], bb_lower.iloc[-1]
+                close.iloc[-1], bb_upper.iloc[-1], bb_lower.iloc[-1],
             ),
             "macd_signal_strength": self._calculate_macd_strength(
-                macd_line, macd_signal
+                macd_line, macd_signal,
             ),
             "rsi": rsi.iloc[-1] if not rsi.empty else 50,
             "stoch_momentum": (
@@ -194,7 +194,7 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
         }
 
     def _calculate_bollinger_bands(
-        self, close: pd.Series
+        self, close: pd.Series,
     ) -> Tuple[pd.Series, pd.Series]:
         """ボリンジャーバンド計算"""
         sma = close.rolling(BOLLINGER_PERIOD).mean()
@@ -204,7 +204,7 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
         return upper, lower
 
     def _calculate_macd(
-        self, close: pd.Series
+        self, close: pd.Series,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """MACD計算"""
         ema_fast = close.ewm(span=MACD_FAST).mean()
@@ -234,20 +234,20 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
         return k_percent, d_percent
 
     def _calculate_adx(
-        self, high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14
+        self, high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14,
     ) -> pd.Series:
         """ADX（平均方向性指数）計算"""
         # 簡略化したADX計算
         tr = pd.concat(
-            [high - low, abs(high - close.shift(1)), abs(low - close.shift(1))], axis=1
+            [high - low, abs(high - close.shift(1)), abs(low - close.shift(1))], axis=1,
         ).max(axis=1)
 
         atr = tr.rolling(period).mean()
         plus_dm = (high - high.shift(1)).where(
-            (high - high.shift(1)) > (low.shift(1) - low), 0
+            (high - high.shift(1)) > (low.shift(1) - low), 0,
         )
         minus_dm = (low.shift(1) - low).where(
-            (low.shift(1) - low) > (high - high.shift(1)), 0
+            (low.shift(1) - low) > (high - high.shift(1)), 0,
         )
 
         plus_di = 100 * (plus_dm.rolling(period).mean() / atr)
@@ -311,7 +311,7 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
         return recent_momentum - past_momentum
 
     def _analyze_volume_profile(
-        self, close: pd.Series, volume: pd.Series
+        self, close: pd.Series, volume: pd.Series,
     ) -> Dict[str, float]:
         """出来高プロファイル分析"""
         if len(volume) < 20:
@@ -386,7 +386,7 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
         }
 
     def _calculate_ultra_score(
-        self, technical: Dict, momentum: Dict, volume: Dict, volatility: Dict
+        self, technical: Dict, momentum: Dict, volume: Dict, volatility: Dict,
     ) -> float:
         """ウルトラスコア計算"""
         tech_score = technical["composite_score"]
@@ -416,12 +416,11 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
         vol = volatility_analysis["current_volatility"]
         if vol < 15:
             return "低リスク"
-        elif vol < 25:
+        if vol < 25:
             return "中リスク"
-        elif vol < 40:
+        if vol < 40:
             return "高リスク"
-        else:
-            return "超高リスク"
+        return "超高リスク"
 
     def _print_ultra_opportunity_details(self, opportunity: Dict[str, Any]):
         """ウルトラ機会詳細の表示"""
@@ -437,7 +436,7 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
     def calculate_ultra_position_size(self, opportunity: Dict[str, Any]) -> int:
         """ウルトラポジションサイズ計算"""
         base_amount = self._calculate_position_size(
-            self.current_capital, opportunity["confidence"]
+            self.current_capital, opportunity["confidence"],
         )
 
         # リスク調整
@@ -481,15 +480,14 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
                     print(f"  リスクレベル: {opportunity['risk_level']}")
 
                     return True
-                else:
-                    print(f"[エラー] 資金不足: {symbol}")
+                print(f"[エラー] 資金不足: {symbol}")
             else:
                 print(f"[警告] 取引条件未達成: {symbol}")
 
             return False
 
         except Exception as e:
-            logging.error(f"ウルトラ取引実行エラー {symbol}: {str(e)}")
+            logging.exception(f"ウルトラ取引実行エラー {symbol}: {e!s}")
             return False
 
     def run_ultra_backtest(self) -> Dict[str, Any]:
@@ -529,14 +527,14 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
 
         # ウルトラ結果表示
         self._display_ultra_backtest_results(
-            results, ultra_opportunities, successful_ultra_trades, risk_distribution
+            results, ultra_opportunities, successful_ultra_trades, risk_distribution,
         )
 
         return results
 
     def _simulate_ultra_position_management(self):
         """ウルトラポジション管理シミュレーション"""
-        print(f"\n[分析] ウルトラポジション管理シミュレーション")
+        print("\n[分析] ウルトラポジション管理シミュレーション")
 
         for symbol in list(self.positions.keys()):
             try:
@@ -549,14 +547,14 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
 
                 # 段階的利確戦略
                 self._execute_staged_profit_taking(
-                    symbol, stock_data, base_holding_days
+                    symbol, stock_data, base_holding_days,
                 )
 
             except Exception as e:
-                logging.warning(f"ウルトラポジション管理エラー {symbol}: {str(e)}")
+                logging.warning(f"ウルトラポジション管理エラー {symbol}: {e!s}")
 
     def _execute_staged_profit_taking(
-        self, symbol: str, stock_data: pd.DataFrame, holding_days: int
+        self, symbol: str, stock_data: pd.DataFrame, holding_days: int,
     ):
         """段階的利確実行"""
         if symbol not in self.positions:
@@ -590,8 +588,8 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
                         self.current_capital += sell_shares * current_price
 
                         print(
-                            f"  [上昇] {symbol} 段階利確{i+1}: {profit_rate*100:+.1f}% "
-                            f"({sell_shares:,}株, {profit:+,.0f}円)"
+                            f"  [上昇] {symbol} 段階利確{i + 1}: {profit_rate * 100:+.1f}% "
+                            f"({sell_shares:,}株, {profit:+,.0f}円)",
                         )
 
         # 残り株式の処理
@@ -608,13 +606,13 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
         risk_distribution: Dict[str, int],
     ):
         """ウルトラバックテスト結果表示"""
-        print(f"\n" + "=" * 70)
+        print("\n" + "=" * 70)
         print("ウルトラバックテスト結果")
         print("=" * 70)
 
         print(f"ウルトラ機会発見数: {opportunities}")
         print(f"成功取引数: {successful_trades}")
-        print(f"成功率: {(successful_trades/max(opportunities,1)*100):.1f}%")
+        print(f"成功率: {(successful_trades / max(opportunities, 1) * 100):.1f}%")
         print()
 
         print("リスク分布:")
@@ -657,7 +655,7 @@ class UltraOptimizedInvestmentSystem(BaseInvestmentSystem):
         return ((price - lower) / (upper - lower)) * 100
 
     def _calculate_macd_strength(
-        self, macd_line: pd.Series, macd_signal: pd.Series
+        self, macd_line: pd.Series, macd_signal: pd.Series,
     ) -> float:
         """MACDシグナル強度計算"""
         if macd_line.empty or macd_signal.empty:

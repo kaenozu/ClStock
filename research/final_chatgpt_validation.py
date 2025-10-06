@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-"""
-ChatGPT理論の最終検証：月単位予測 + 移動平均クロス手法
+"""ChatGPT理論の最終検証：月単位予測 + 移動平均クロス手法
 仮説：ChatGPTは月単位のトレンド予測について言及していた
 """
 
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Tuple
-import logging
-from utils.logger_config import setup_logger
-from sklearn.linear_model import LinearRegression
 import warnings
+from typing import Dict, List, Tuple
+
+import numpy as np
+import pandas as pd
+from utils.logger_config import setup_logger
 
 warnings.filterwarnings("ignore")
 
@@ -27,7 +25,7 @@ class FinalChatGPTValidation:
         self.data_provider = StockDataProvider()
 
     def create_monthly_predictions(
-        self, data: pd.DataFrame
+        self, data: pd.DataFrame,
     ) -> Tuple[pd.Series, pd.Series]:
         """月単位の予測（ChatGPTの想定する期間）"""
         close = data["Close"]
@@ -87,14 +85,14 @@ class FinalChatGPTValidation:
                 elif mape <= 30:
                     print(" △ 良好")
                 else:
-                    print("")
+                    print()
 
                 all_results.append(
-                    {"symbol": symbol, "mape": mape, "samples": len(signal)}
+                    {"symbol": symbol, "mape": mape, "samples": len(signal)},
                 )
 
             except Exception as e:
-                print(f"エラー: {str(e)}")
+                print(f"エラー: {e!s}")
                 continue
 
         return self._analyze_results(all_results)
@@ -195,7 +193,7 @@ class FinalChatGPTValidation:
             median_mape = np.median(mapes)
             success_count = sum(1 for m in mapes if m <= 20)
 
-            print(f"\n" + "=" * 60)
+            print("\n" + "=" * 60)
             print("月単位予測結果")
             print("=" * 60)
             print(f"最小MAPE: {min_mape:.1f}%")
@@ -225,7 +223,7 @@ def main():
     # 2. 方向性精度テスト
     direction_results = validator.test_direction_accuracy(symbols)
 
-    print(f"\n" + "=" * 60)
+    print("\n" + "=" * 60)
     print("最終総合評価")
     print("=" * 60)
 

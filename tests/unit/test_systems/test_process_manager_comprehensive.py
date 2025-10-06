@@ -1,14 +1,12 @@
 """Comprehensive tests for the process manager functionality."""
 
+from unittest.mock import Mock, patch
+
 import pytest
-import threading
-import time
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
 
 from ClStock.systems.process_manager import (
-    ProcessManager,
     ProcessInfo,
+    ProcessManager,
     ProcessStatus,
     get_process_manager,
 )
@@ -89,7 +87,7 @@ class TestProcessManagerComprehensive:
 
         # Register a new service
         service_info = ProcessInfo(
-            name="lifecycle_test", command="python lifecycle_test.py"
+            name="lifecycle_test", command="python lifecycle_test.py",
         )
         assert pm.register_service(service_info) is True
 

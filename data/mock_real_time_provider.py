@@ -1,5 +1,4 @@
-"""
-テスト用のモックリアルタイムデータプロバイダー
+"""テスト用のモックリアルタイムデータプロバイダー
 
 このモジュールは、テストや開発環境でリアルタイムデータの
 動作を模擬するためのモックプロバイダーを提供します。
@@ -7,17 +6,17 @@
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
 import random
-import pandas as pd
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
+import pandas as pd
 from models.base.interfaces import (
-    RealTimeDataProvider,
-    TickData,
-    OrderBookData,
     IndexData,
     NewsData,
+    OrderBookData,
+    RealTimeDataProvider,
+    TickData,
 )
 
 logger = logging.getLogger(__name__)
@@ -265,7 +264,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
                         id=f"news_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                         timestamp=datetime.now(),
                         title=random.choice(news_templates).format(  # nosec B311
-                            company=company_name
+                            company=company_name,
                         ),
                         content=f"{company_name}に関する重要なニュースが発表されました。",
                         symbols=[symbol],
@@ -323,7 +322,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
             asks.append((price, volume))
 
         return OrderBookData(
-            symbol=symbol, timestamp=datetime.now(), bids=bids, asks=asks
+            symbol=symbol, timestamp=datetime.now(), bids=bids, asks=asks,
         )
 
     def _create_mock_index_data(self, index: str) -> IndexData:
@@ -368,7 +367,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
         """モック過去データ取得"""
         # シンプルなモックデータを生成
         dates = pd.date_range(
-            start=datetime.now() - timedelta(days=30), end=datetime.now(), freq="D"
+            start=datetime.now() - timedelta(days=30), end=datetime.now(), freq="D",
         )
 
         base_price = self.symbol_prices.get(symbol, 1000.0)
@@ -384,7 +383,7 @@ class MockRealTimeProvider(RealTimeDataProvider):
                     "Low": price * (1 + random.uniform(-0.03, 0.0)),  # nosec B311
                     "Close": price,
                     "Volume": random.randint(100000, 1000000),  # nosec B311
-                }
+                },
             )
 
         df = pd.DataFrame(data)

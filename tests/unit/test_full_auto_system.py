@@ -1,11 +1,13 @@
 import sys
+import types
 from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock
-import types
+
+import pytest
 
 import pandas as pd
-import pytest
+
 
 def _stub_module(module_path: str, class_name: str) -> None:
     parts = module_path.split(".")
@@ -59,7 +61,7 @@ class _DummyStandardScaler:
 
 sklearn_preprocessing.StandardScaler = _DummyStandardScaler
 sys.modules["sklearn.preprocessing"] = sklearn_preprocessing
-setattr(sklearn_module, "preprocessing", sklearn_preprocessing)
+sklearn_module.preprocessing = sklearn_preprocessing
 
 sklearn_metrics = types.ModuleType("sklearn.metrics")
 
@@ -81,20 +83,20 @@ def _metrics_getattr(name):
 
 sklearn_metrics.__getattr__ = _metrics_getattr
 sys.modules["sklearn.metrics"] = sklearn_metrics
-setattr(sklearn_module, "metrics", sklearn_metrics)
+sklearn_module.metrics = sklearn_metrics
 
 sklearn_model_selection = types.ModuleType("sklearn.model_selection")
 
 
 class _DummyTimeSeriesSplit:
     def split(self, X, y=None, groups=None):
-        indices = list(range(len(X))) if hasattr(X, '__len__') else [0]
+        indices = list(range(len(X))) if hasattr(X, "__len__") else [0]
         yield indices, indices
 
 
 sklearn_model_selection.TimeSeriesSplit = _DummyTimeSeriesSplit
 sys.modules["sklearn.model_selection"] = sklearn_model_selection
-setattr(sklearn_module, "model_selection", sklearn_model_selection)
+sklearn_module.model_selection = sklearn_model_selection
 
 if "scipy" not in sys.modules:
     scipy_module = types.ModuleType("scipy")
@@ -112,7 +114,7 @@ def _dummy_csr_matrix(*args, **kwargs):
 scipy_sparse.csr_matrix = _dummy_csr_matrix
 scipy_sparse.issparse = lambda matrix: False
 sys.modules["scipy.sparse"] = scipy_sparse
-setattr(scipy_module, "sparse", scipy_sparse)
+scipy_module.sparse = scipy_sparse
 
 if "torch" not in sys.modules:
     torch_module = types.ModuleType("torch")
@@ -120,20 +122,22 @@ if "torch" not in sys.modules:
 else:
     torch_module = sys.modules["torch"]
 
-if not hasattr(torch_module, 'tensor'):
+if not hasattr(torch_module, "tensor"):
     torch_module.tensor = lambda *args, **kwargs: None
-    torch_module.no_grad = types.SimpleNamespace(__enter__=lambda self: None, __exit__=lambda self, exc_type, exc, tb: False)
+    torch_module.no_grad = types.SimpleNamespace(
+        __enter__=lambda self: None, __exit__=lambda self, exc_type, exc, tb: False,
+    )
 
 torch_cuda = types.ModuleType("torch.cuda")
 torch_cuda.is_available = lambda: False
 sys.modules["torch.cuda"] = torch_cuda
-setattr(torch_module, 'cuda', torch_cuda)
+torch_module.cuda = torch_cuda
 
 torch_nn = types.ModuleType("torch.nn")
 torch_module.nn = torch_nn
 sys.modules["torch.nn"] = torch_nn
 
-torch_module.device = lambda *args, **kwargs: 'cpu'
+torch_module.device = lambda *args, **kwargs: "cpu"
 
 import full_auto_system
 from full_auto_system import (
@@ -141,11 +145,11 @@ from full_auto_system import (
     FullAutoInvestmentSystem,
     RiskManagerAdapter,
 )
-from models.base.interfaces import PredictionResult
 from models.advanced.risk_management_framework import (
     PortfolioRisk,
     RiskLevel,
 )
+from models.base.interfaces import PredictionResult
 
 
 @pytest.mark.asyncio
@@ -187,7 +191,9 @@ async def test_analyze_single_stock_uses_new_components(monkeypatch):
 
     sentiment_analyzer = SimpleNamespace()
     sentiment_payload = {"sentiment_score": 0.25}
-    sentiment_analyzer.analyze_news_sentiment = MagicMock(return_value=sentiment_payload)  # type: ignore[attr-defined]
+    sentiment_analyzer.analyze_news_sentiment = MagicMock(
+        return_value=sentiment_payload,
+    )  # type: ignore[attr-defined]
     sentiment_analyzer.analyze_sentiment = MagicMock(return_value=sentiment_payload)  # type: ignore[attr-defined]
     system.sentiment_analyzer = sentiment_analyzer  # type: ignore[assignment]
 
@@ -222,12 +228,14 @@ async def test_analyze_single_stock_uses_new_components(monkeypatch):
     assert isinstance(recommendation, AutoRecommendation)
     assert recommendation.entry_price == pytest.approx(data["Close"].iloc[-1])
     assert recommendation.target_price == pytest.approx(
-        recommendation.entry_price * (1 + strategy_payload["expected_return"])
+        recommendation.entry_price * (1 + strategy_payload["expected_return"]),
     )
     assert recommendation.stop_loss == pytest.approx(
-        recommendation.entry_price * (1 - strategy_payload["stop_loss_pct"])
+        recommendation.entry_price * (1 - strategy_payload["stop_loss_pct"]),
     )
-    assert recommendation.expected_return == pytest.approx(strategy_payload["expected_return"])
+    assert recommendation.expected_return == pytest.approx(
+        strategy_payload["expected_return"],
+    )
     assert recommendation.risk_level == portfolio_risk.risk_level.value
 
     # Risk-adjusted confidence combines strategy win rate and risk score
@@ -246,8 +254,9 @@ async def test_analyze_single_stock_uses_new_components(monkeypatch):
 
     system.sentiment_analyzer.analyze_sentiment.assert_called_once_with("TEST")  # type: ignore[attr-defined]
     assert strategy_calls == [
-        ("TEST", data, prediction_payload, portfolio_risk, sentiment_payload)
+        ("TEST", data, prediction_payload, portfolio_risk, sentiment_payload),
     ]
+
 
 @pytest.mark.asyncio
 async def test_analyze_single_stock_with_empty_strategy_returns_none(monkeypatch):
@@ -288,7 +297,9 @@ async def test_analyze_single_stock_with_empty_strategy_returns_none(monkeypatch
 
     sentiment_analyzer = SimpleNamespace()
     sentiment_payload = {"sentiment_score": 0.25}
-    sentiment_analyzer.analyze_news_sentiment = MagicMock(return_value=sentiment_payload)  # type: ignore[attr-defined]
+    sentiment_analyzer.analyze_news_sentiment = MagicMock(
+        return_value=sentiment_payload,
+    )  # type: ignore[attr-defined]
     sentiment_analyzer.analyze_sentiment = MagicMock(return_value=sentiment_payload)  # type: ignore[attr-defined]
     system.sentiment_analyzer = sentiment_analyzer  # type: ignore[assignment]
 
@@ -324,12 +335,15 @@ async def test_analyze_single_stock_with_empty_strategy_returns_none(monkeypatch
 @pytest.mark.asyncio
 async def test_run_full_auto_analysis_prefers_highest_return_portfolio(monkeypatch):
     """Regression test ensuring we keep the best performing portfolio."""
-
     system = FullAutoInvestmentSystem()
     system.settings.target_stocks = {"AAA": "AAA Corp", "BBB": "BBB Corp"}
 
     base_data = pd.DataFrame(
-        {"Close": [100.0, 101.0, 102.0], "High": [101.0, 102.0, 103.0], "Low": [99.0, 100.0, 101.0]},
+        {
+            "Close": [100.0, 101.0, 102.0],
+            "High": [101.0, 102.0, 103.0],
+            "Low": [99.0, 100.0, 101.0],
+        },
         index=pd.date_range("2024-01-01", periods=3),
     )
 
@@ -393,6 +407,7 @@ async def test_run_full_auto_analysis_prefers_highest_return_portfolio(monkeypat
 
     assert {rec.symbol for rec in recommendations} == {"AAA", "BBB"}
     assert all(rec.company_name.endswith("Corp") for rec in recommendations)
+
 
 def test_perform_portfolio_risk_analysis_delegates_to_adapter():
     system = FullAutoInvestmentSystem()

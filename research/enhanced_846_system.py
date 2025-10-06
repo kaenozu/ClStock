@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
-"""
-Enhanced 84.6% System - 実証済み84.6%手法の段階的改良
+"""Enhanced 84.6% System - 実証済み84.6%手法の段階的改良
 確実に84.6%を再現し、そこから段階的に精度向上を目指す
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
 
 warnings.filterwarnings("ignore")
 
 from data.stock_data import StockDataProvider
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
-import logging
+from sklearn.preprocessing import StandardScaler
 from utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -98,7 +97,7 @@ class Enhanced846System:
         features["trend_persistence"] = (
             features["ma_bullish"] & (features["sma10_slope"] > 0)
         ).astype(int) + (features["ma_bearish"] & (features["sma10_slope"] < 0)).astype(
-            int
+            int,
         )
 
         # 2. 価格-ボリューム調和
@@ -228,7 +227,7 @@ class Enhanced846System:
                 high_conf_mask = np.max(y_proba, axis=1) > 0.75
                 if high_conf_mask.sum() > 0:
                     high_conf_acc = accuracy_score(
-                        y_test[high_conf_mask], y_pred[high_conf_mask]
+                        y_test[high_conf_mask], y_pred[high_conf_mask],
                     )
                 else:
                     high_conf_acc = 0
@@ -255,11 +254,11 @@ class Enhanced846System:
 
                 if high_conf_acc > 0:
                     print(
-                        f"  高信頼度: {high_conf_acc:.1%} ({high_conf_mask.sum()}サンプル)"
+                        f"  高信頼度: {high_conf_acc:.1%} ({high_conf_mask.sum()}サンプル)",
                     )
 
             except Exception as e:
-                print(f"  エラー: {str(e)}")
+                print(f"  エラー: {e!s}")
                 continue
 
         return self._analyze_results(results, success_846_count, breakthrough_count)
@@ -273,7 +272,7 @@ class Enhanced846System:
         max_accuracy = max(accuracies)
         avg_accuracy = np.mean(accuracies)
 
-        print(f"\n" + "=" * 60)
+        print("\n" + "=" * 60)
         print("Enhanced 84.6% System 結果")
         print("=" * 60)
         print(f"テスト銘柄数: {len(results)}")
@@ -284,23 +283,25 @@ class Enhanced846System:
 
         # トップ結果
         sorted_results = sorted(
-            results.items(), key=lambda x: x[1]["accuracy"], reverse=True
+            results.items(), key=lambda x: x[1]["accuracy"], reverse=True,
         )
-        print(f"\nトップ5結果:")
+        print("\nトップ5結果:")
         for i, (symbol, result) in enumerate(sorted_results[:5], 1):
             status = (
                 "🚀 BREAKTHROUGH"
                 if result["accuracy"] > 0.846
-                else "⭐ TARGET" if result["accuracy"] >= 0.846 else "○ GOOD"
+                else "⭐ TARGET"
+                if result["accuracy"] >= 0.846
+                else "○ GOOD"
             )
             print(f"  {i}. {symbol}: {result['accuracy']:.1%} {status}")
 
         if breakthrough_count > 0:
             print(f"\n🎉 84.6%の壁を突破！新記録: {max_accuracy:.1%}")
         elif success_846_count > 0:
-            print(f"\n⭐ 84.6%達成継続！安定した高精度を実現")
+            print("\n⭐ 84.6%達成継続！安定した高精度を実現")
         else:
-            print(f"\n💪 継続改良でさらなる向上を目指す")
+            print("\n💪 継続改良でさらなる向上を目指す")
 
         return {
             "max_accuracy": max_accuracy,
@@ -320,7 +321,7 @@ def main():
     results = system.test_enhanced_846(symbols)
 
     if "error" not in results:
-        print(f"\n=== 最終評価 ===")
+        print("\n=== 最終評価 ===")
         if results["breakthrough_count"] > 0:
             print("84.6%突破達成！新たな高みへ")
         elif results["success_846_count"] > 0:

@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
-"""
-パフォーマンス監視モジュール
+"""パフォーマンス監視モジュール
 モデル性能の監視・評価・アラートシステム
 """
 
-import logging
-import numpy as np
-import pandas as pd
-from typing import Dict, List, Any, Optional
-from pathlib import Path
 import json
+import logging
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import numpy as np
 from sklearn.metrics import (
-    mean_squared_error,
-    mean_absolute_error,
-    r2_score,
     accuracy_score,
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score,
 )
 
 from ..core.interfaces import PredictionResult
@@ -31,7 +30,7 @@ class ModelPerformanceMonitor:
         self.alerts = []
         self.prediction_records = []
         self.data_file = Path(
-            data_file or "models/saved_models/performance_history.json"
+            data_file or "models/saved_models/performance_history.json",
         )
         self.data_file.parent.mkdir(exist_ok=True)
 
@@ -104,14 +103,14 @@ class ModelPerformanceMonitor:
             "mae": np.mean([p["mae"] for p in recent_performance]),
             "r2_score": np.mean([p["r2_score"] for p in recent_performance]),
             "direction_accuracy": np.mean(
-                [p["direction_accuracy"] for p in recent_performance]
+                [p["direction_accuracy"] for p in recent_performance],
             ),
         }
 
         # トレンド分析
         rmse_trend = self._calculate_trend([p["rmse"] for p in recent_performance])
         accuracy_trend = self._calculate_trend(
-            [p["direction_accuracy"] for p in recent_performance]
+            [p["direction_accuracy"] for p in recent_performance],
         )
 
         # 全体的なパフォーマンス評価
@@ -119,7 +118,7 @@ class ModelPerformanceMonitor:
 
         # 推奨事項生成
         recommendations = self._generate_recommendations(
-            avg_metrics, rmse_trend, accuracy_trend
+            avg_metrics, rmse_trend, accuracy_trend,
         )
 
         return {
@@ -131,7 +130,7 @@ class ModelPerformanceMonitor:
                 "accuracy_trend": accuracy_trend,
                 "performance_grade": performance_grade,
                 "active_alerts": len(
-                    [a for a in self.alerts if self._is_recent_alert(a)]
+                    [a for a in self.alerts if self._is_recent_alert(a)],
                 ),
             },
             "recent_performance": recent_performance[-5:],  # 最新5件の詳細
@@ -169,7 +168,7 @@ class ModelPerformanceMonitor:
 
             if mask.sum() > 0:
                 quantile_mse = mean_squared_error(y_test[mask], predictions[mask])
-                quantile_performance[f"Q{i+1}"] = quantile_mse
+                quantile_performance[f"Q{i + 1}"] = quantile_mse
 
         # 性能記録
         performance_record = {
@@ -203,12 +202,12 @@ class ModelPerformanceMonitor:
 
         if performance_record["rmse"] > self.thresholds["rmse"]:
             alerts.append(
-                f"High RMSE: {performance_record['rmse']:.4f} > {self.thresholds['rmse']}"
+                f"High RMSE: {performance_record['rmse']:.4f} > {self.thresholds['rmse']}",
             )
 
         if performance_record["r2_score"] < self.thresholds["r2"]:
             alerts.append(
-                f"Low R²: {performance_record['r2_score']:.4f} < {self.thresholds['r2']}"
+                f"Low R²: {performance_record['r2_score']:.4f} < {self.thresholds['r2']}",
             )
 
         if (
@@ -216,12 +215,12 @@ class ModelPerformanceMonitor:
             < self.thresholds["direction_accuracy"]
         ):
             alerts.append(
-                f"Low Direction Accuracy: {performance_record['direction_accuracy']:.4f} < {self.thresholds['direction_accuracy']}"
+                f"Low Direction Accuracy: {performance_record['direction_accuracy']:.4f} < {self.thresholds['direction_accuracy']}",
             )
 
         if performance_record["mae"] > self.thresholds["mae"]:
             alerts.append(
-                f"High MAE: {performance_record['mae']:.4f} > {self.thresholds['mae']}"
+                f"High MAE: {performance_record['mae']:.4f} > {self.thresholds['mae']}",
             )
 
         if alerts:
@@ -234,7 +233,7 @@ class ModelPerformanceMonitor:
             self.alerts.append(alert_record)
 
             logger.warning(
-                f"Performance alerts for {performance_record['model_name']}: {alerts}"
+                f"Performance alerts for {performance_record['model_name']}: {alerts}",
             )
 
     def _calculate_trend(self, values: List[float]) -> str:
@@ -249,10 +248,9 @@ class ModelPerformanceMonitor:
 
         if change_ratio > 0.05:
             return "improving"
-        elif change_ratio < -0.05:
+        if change_ratio < -0.05:
             return "declining"
-        else:
-            return "stable"
+        return "stable"
 
     def _calculate_performance_grade(self, metrics: Dict[str, float]) -> str:
         """性能グレード計算"""
@@ -285,17 +283,16 @@ class ModelPerformanceMonitor:
         # グレード判定
         if score >= 8:
             return "A+"
-        elif score >= 6:
+        if score >= 6:
             return "A"
-        elif score >= 4:
+        if score >= 4:
             return "B"
-        elif score >= 2:
+        if score >= 2:
             return "C"
-        else:
-            return "D"
+        return "D"
 
     def _generate_recommendations(
-        self, metrics: Dict[str, float], rmse_trend: str, accuracy_trend: str
+        self, metrics: Dict[str, float], rmse_trend: str, accuracy_trend: str,
     ) -> List[str]:
         """推奨事項生成"""
         recommendations = []
@@ -317,7 +314,7 @@ class ModelPerformanceMonitor:
 
         if not recommendations:
             recommendations.append(
-                "現在の性能は良好です。定期的な監視を継続してください"
+                "現在の性能は良好です。定期的な監視を継続してください",
             )
 
         return recommendations
@@ -326,10 +323,9 @@ class ModelPerformanceMonitor:
         """アラート重要度計算"""
         if len(alerts) >= 3:
             return "critical"
-        elif len(alerts) == 2:
+        if len(alerts) == 2:
             return "high"
-        else:
-            return "medium"
+        return "medium"
 
     def _is_recent_alert(self, alert: Dict, hours: int = 24) -> bool:
         """最近のアラートかチェック"""
@@ -356,13 +352,13 @@ class ModelPerformanceMonitor:
             logger.info(f"Performance data saved to {self.data_file}")
 
         except Exception as e:
-            logger.error(f"Error saving performance data: {str(e)}")
+            logger.error(f"Error saving performance data: {e!s}")
 
     def load_performance_data(self):
         """性能データを読み込み"""
         try:
             if self.data_file.exists():
-                with open(self.data_file, "r", encoding="utf-8") as f:
+                with open(self.data_file, encoding="utf-8") as f:
                     data = json.load(f)
 
                 self.performance_history = data.get("performance_history", [])
@@ -376,7 +372,7 @@ class ModelPerformanceMonitor:
             return False
 
         except Exception as e:
-            logger.error(f"Error loading performance data: {str(e)}")
+            logger.error(f"Error loading performance data: {e!s}")
             return False
 
     def get_performance_summary(self, last_n_records=10):

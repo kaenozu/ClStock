@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""
-logging.basicConfig問題の一括修正スクリプト
+"""logging.basicConfig問題の一括修正スクリプト
 """
 
-import os
 import re
 from pathlib import Path
 
@@ -11,7 +9,7 @@ from pathlib import Path
 def fix_logging_in_file(file_path: Path):
     """単一ファイルのログ設定を修正"""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         # logging.basicConfig の行を探す
@@ -30,7 +28,7 @@ def fix_logging_in_file(file_path: Path):
             # logger = setup_logger(__name__) を置換／追加
             if "logger = setup_logger(__name__)" in content:
                 content = content.replace(
-                    "logger = setup_logger(__name__)", "logger = setup_logger(__name__)"
+                    "logger = setup_logger(__name__)", "logger = setup_logger(__name__)",
                 )
             else:
                 # logger が定義されていない場合は追加
@@ -53,7 +51,7 @@ def fix_logging_in_file(file_path: Path):
 
 def main():
     """メイン実行"""
-    root_dir = Path(".")
+    root_dir = Path()
     files_fixed = 0
 
     # Python ファイルを検索

@@ -1,12 +1,11 @@
-"""
-モデル管理システム - 予測器のライフサイクル管理
+"""モデル管理システム - 予測器のライフサイクル管理
 """
 
 import logging
-from typing import Dict, List, Optional, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from .interfaces import StockPredictor, ModelType, PerformanceMetrics
+from .interfaces import StockPredictor
 
 
 class ModelManager:

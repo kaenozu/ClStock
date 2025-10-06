@@ -1,5 +1,4 @@
-"""
-リアルタイムデータフィードシステム使用例
+"""リアルタイムデータフィードシステム使用例
 
 このサンプルコードは、リアルタイムデータプロバイダーの
 基本的な使用方法を示します。
@@ -7,21 +6,19 @@
 
 import asyncio
 import logging
-from utils.logger_config import setup_logger
-from datetime import datetime
-from typing import List
 
+from config.settings import get_settings
 from data.real_time_factory import (
-    get_real_time_system_manager,
     MockRealTimeFactory,
+    get_real_time_system_manager,
     reset_real_time_system_manager,
 )
-from models.base.interfaces import TickData, OrderBookData, IndexData, NewsData
-from config.settings import get_settings
+from models.base.interfaces import IndexData, NewsData, OrderBookData, TickData
+from utils.logger_config import setup_logger
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -40,7 +37,7 @@ class RealTimeDataMonitor:
         self.received_ticks.append(tick)
         logger.info(
             f"📈 ティック: {tick.symbol} - 価格: ¥{tick.price:,.0f}, "
-            f"出来高: {tick.volume:,}, タイプ: {tick.trade_type}"
+            f"出来高: {tick.volume:,}, タイプ: {tick.trade_type}",
         )
 
         # 価格アラート例
@@ -58,7 +55,7 @@ class RealTimeDataMonitor:
         logger.info(
             f"📊 板情報: {order_book.symbol} - "
             f"最良買い: ¥{best_bid:,.0f}, 最良売り: ¥{best_ask:,.0f}, "
-            f"スプレッド: ¥{spread:.0f}"
+            f"スプレッド: ¥{spread:.0f}",
         )
 
     def on_index_received(self, index: IndexData) -> None:
@@ -69,7 +66,7 @@ class RealTimeDataMonitor:
         logger.info(
             f"{change_sign} 指数: {index.symbol} - "
             f"値: {index.value:,.2f}, 変化: {index.change:+.2f} "
-            f"({index.change_percent:+.2f}%)"
+            f"({index.change_percent:+.2f}%)",
         )
 
     def on_news_received(self, news: NewsData) -> None:
@@ -77,17 +74,19 @@ class RealTimeDataMonitor:
         self.received_news.append(news)
 
         sentiment_emoji = {"positive": "😊", "negative": "😟", "neutral": "😐"}.get(
-            news.sentiment, "❓"
+            news.sentiment, "❓",
         )
         impact_level = (
             "高"
             if news.impact_score and news.impact_score > 0.7
-            else "中" if news.impact_score and news.impact_score > 0.4 else "低"
+            else "中"
+            if news.impact_score and news.impact_score > 0.4
+            else "低"
         )
 
         logger.info(f"📰 ニュース {sentiment_emoji}: {news.title}")
         logger.info(
-            f"   関連銘柄: {', '.join(news.symbols)}, インパクト: {impact_level}"
+            f"   関連銘柄: {', '.join(news.symbols)}, インパクト: {impact_level}",
         )
 
     def get_statistics(self) -> dict:
@@ -123,7 +122,7 @@ async def basic_usage_example():
 
         for symbol in target_symbols:
             await manager.subscribe_to_symbol(
-                symbol, include_ticks=True, include_order_book=True
+                symbol, include_ticks=True, include_order_book=True,
             )
             logger.info(f"銘柄 {symbol} をサブスクリプションしました")
 
@@ -191,10 +190,10 @@ async def market_analysis_example():
                 logger.info(f"  現在価格: ¥{metrics.get('current_price', 0):,.0f}")
                 logger.info(f"  平均価格: ¥{metrics.get('average_price', 0):,.0f}")
                 logger.info(
-                    f"  ボラティリティ: {metrics.get('price_volatility', 0):.2f}%"
+                    f"  ボラティリティ: {metrics.get('price_volatility', 0):.2f}%",
                 )
                 logger.info(
-                    f"  価格変化: {metrics.get('price_change_percent', 0):+.2f}%"
+                    f"  価格変化: {metrics.get('price_change_percent', 0):+.2f}%",
                 )
                 logger.info(f"  総出来高: {metrics.get('total_volume', 0):,}")
                 logger.info(f"  ティック数: {metrics.get('tick_count', 0)}")
@@ -224,19 +223,19 @@ async def alert_system_example():
                 if tick.price > thresholds["upper"]:
                     logger.warning(
                         f"🚨 価格上限アラート: {symbol} が ¥{tick.price:,.0f} "
-                        f"(上限: ¥{thresholds['upper']:,.0f})"
+                        f"(上限: ¥{thresholds['upper']:,.0f})",
                     )
                 elif tick.price < thresholds["lower"]:
                     logger.warning(
                         f"🚨 価格下限アラート: {symbol} が ¥{tick.price:,.0f} "
-                        f"(下限: ¥{thresholds['lower']:,.0f})"
+                        f"(下限: ¥{thresholds['lower']:,.0f})",
                     )
 
             # 出来高アラート
             if tick.volume > self.volume_threshold:
                 logger.warning(
                     f"📊 大口取引アラート: {symbol} 出来高 {tick.volume:,} "
-                    f"(閾値: {self.volume_threshold:,})"
+                    f"(閾値: {self.volume_threshold:,})",
                 )
 
     reset_real_time_system_manager()
@@ -289,7 +288,7 @@ if __name__ == "__main__":
     settings = get_settings()
     logger.info(f"設定確認 - データソース: {settings.real_time.data_source}")
     logger.info(
-        f"設定確認 - 監視有効: {settings.real_time.enable_performance_monitoring}"
+        f"設定確認 - 監視有効: {settings.real_time.enable_performance_monitoring}",
     )
 
     # サンプル実行

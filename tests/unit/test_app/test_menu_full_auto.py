@@ -3,14 +3,11 @@ import sys
 import types
 from types import SimpleNamespace
 
-import pytest
-
 from menu import run_full_auto
 
 
 def _patch_dependencies(monkeypatch, fake_class):
     """Inject stub dependencies for the full auto system."""
-
     fake_module = types.ModuleType("full_auto_system")
     fake_module.FullAutoInvestmentSystem = fake_class
     monkeypatch.setitem(sys.modules, "full_auto_system", fake_module)
@@ -93,4 +90,3 @@ def test_run_full_auto_reports_runtime_error(monkeypatch, capsys):
 
     captured = capsys.readouterr().out
     assert "フルオート実行中にエラーが発生しました" in captured
-

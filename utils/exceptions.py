@@ -1,5 +1,4 @@
-"""
-ClStock カスタム例外クラス
+"""ClStock カスタム例外クラス
 より具体的なエラーハンドリングのために定義
 """
 
@@ -57,7 +56,7 @@ class InsufficientDataError(ClStockException):
         self.available = available
         self.required = required
         super().__init__(
-            f"Insufficient data for {symbol}: {available} available, {required} required"
+            f"Insufficient data for {symbol}: {available} available, {required} required",
         )
 
 

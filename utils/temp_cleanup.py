@@ -1,15 +1,14 @@
-"""
-Temporary file cleanup utilities
+"""Temporary file cleanup utilities
 """
 
 import glob
-import logging
 import os
 import shutil
 import tempfile
 from typing import Callable, Iterable, List, Set
-from utils.logger_config import get_logger
+
 from utils.context_managers import get_shutdown_manager
+from utils.logger_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -49,7 +48,7 @@ class TempFileCleanup:
         return temp_dir
 
     def _cleanup_path(
-        self, path: str, remove_func: Callable[[str], None], description: str
+        self, path: str, remove_func: Callable[[str], None], description: str,
     ) -> bool:
         """Clean up a path using the provided removal function"""
         try:
@@ -94,7 +93,7 @@ class TempFileCleanup:
 
         if failed_files or failed_dirs:
             logger.warning(
-                f"Failed to clean up {len(failed_files)} files and {len(failed_dirs)} directories"
+                f"Failed to clean up {len(failed_files)} files and {len(failed_dirs)} directories",
             )
         else:
             logger.info("All temporary files and directories cleaned up successfully")
@@ -118,25 +117,23 @@ class TempFileCleanup:
                         logger.debug(f"Cleaned up old temp file: {file_path}")
                 except Exception as e:
                     logger.warning(
-                        f"Error checking/cleaning old temp file {file_path}: {e}"
+                        f"Error checking/cleaning old temp file {file_path}: {e}",
                     )
 
             if cleaned_count > 0:
                 logger.info(
-                    f"Cleaned up {cleaned_count} old temporary files matching pattern: {pattern}"
+                    f"Cleaned up {cleaned_count} old temporary files matching pattern: {pattern}",
                 )
 
         except Exception as e:
             logger.error(f"Error during old files cleanup: {e}")
 
     def cleanup_unnecessary_files(
-        self, base_dir: str, required_entries: Iterable[str]
+        self, base_dir: str, required_entries: Iterable[str],
     ) -> List[str]:
         """Remove files or directories in base_dir that are not required."""
         if not os.path.isdir(base_dir):
-            logger.debug(
-                "Skipped cleanup for non-existent directory: %s", base_dir
-            )
+            logger.debug("Skipped cleanup for non-existent directory: %s", base_dir)
             return []
 
         required_set: Set[str] = set(required_entries)
@@ -151,24 +148,21 @@ class TempFileCleanup:
             if os.path.isdir(full_path):
                 if self.cleanup_dir(full_path):
                     removed.append(full_path)
-            else:
-                if self.cleanup_file(full_path):
-                    removed.append(full_path)
+            elif self.cleanup_file(full_path):
+                removed.append(full_path)
 
         removed.sort()
         if removed:
             logger.info(
-                "Removed %d unnecessary entries from %s", len(removed), base_dir
+                "Removed %d unnecessary entries from %s", len(removed), base_dir,
             )
         else:
             logger.debug("No unnecessary entries found in %s", base_dir)
 
         return removed
 
-
     def cleanup_by_pattern(self, pattern: str) -> int:
         """Remove files or directories that match the provided glob pattern."""
-
         removed_count = 0
         paths = glob.glob(pattern)
 
@@ -183,7 +177,9 @@ class TempFileCleanup:
             except FileNotFoundError:
                 logger.debug(f"Path already removed before pattern cleanup: {path}")
             except Exception as exc:
-                logger.warning(f"Failed to remove path {path} during pattern cleanup: {exc}")
+                logger.warning(
+                    f"Failed to remove path {path} during pattern cleanup: {exc}",
+                )
 
         if removed_count > 0:
             logger.info(

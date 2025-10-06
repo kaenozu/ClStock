@@ -5,7 +5,6 @@ import pytest
 
 from utils.validators import sanitize_string, validate_email, validate_stock_symbol
 
-
 pytest.importorskip("pytest_benchmark")
 
 

@@ -1,23 +1,22 @@
-"""
-個別銘柄特化予測モデル
+"""個別銘柄特化予測モデル
 84.6%汎用パターンを各銘柄に最適化
 """
 
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Optional, Tuple, Any, Union
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import accuracy_score
 import logging
-from datetime import datetime, timedelta
-import joblib
 import os
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from data.stock_data import StockDataProvider
+import joblib
+import numpy as np
+import pandas as pd
 from config.settings import get_settings
-from utils.exceptions import ModelTrainingError, PredictionError, InsufficientDataError
+from data.stock_data import StockDataProvider
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import TimeSeriesSplit
+from utils.exceptions import InsufficientDataError, ModelTrainingError, PredictionError
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ class StockSpecificPredictor:
         self.symbol_performance: Dict[str, Dict[str, float]] = {}
 
     def analyze_symbol_characteristics(
-        self, symbol: str, data: pd.DataFrame
+        self, symbol: str, data: pd.DataFrame,
     ) -> Dict[str, Any]:
         """銘柄固有の特性を分析"""
         try:
@@ -56,7 +55,7 @@ class StockSpecificPredictor:
             }
 
             logger.info(
-                f"分析完了: {symbol} - ボラティリティ: {characteristics['volatility']:.3f}"
+                f"分析完了: {symbol} - ボラティリティ: {characteristics['volatility']:.3f}",
             )
             return characteristics
 
@@ -119,14 +118,13 @@ class StockSpecificPredictor:
 
         if symbol in tech_symbols:
             return "technology"
-        elif symbol in auto_symbols:
+        if symbol in auto_symbols:
             return "automotive"
-        elif symbol in finance_symbols:
+        if symbol in finance_symbols:
             return "finance"
-        elif symbol in trading_symbols:
+        if symbol in trading_symbols:
             return "trading"
-        else:
-            return "general"
+        return "general"
 
     def create_symbol_features(self, symbol: str, data: pd.DataFrame) -> pd.DataFrame:
         """銘柄特化特徴量を作成"""
@@ -266,7 +264,7 @@ class StockSpecificPredictor:
         return df
 
     def _calculate_atr(
-        self, high: pd.Series, low: pd.Series, close: pd.Series, window: int
+        self, high: pd.Series, low: pd.Series, close: pd.Series, window: int,
     ) -> pd.Series:
         """ATR計算"""
         tr1 = high - low
@@ -284,7 +282,7 @@ class StockSpecificPredictor:
         return 100 - (100 / (1 + rs))
 
     def train_symbol_model(
-        self, symbol: str, lookback_period: str = "2y"
+        self, symbol: str, lookback_period: str = "2y",
     ) -> Dict[str, Any]:
         """個別銘柄モデルを訓練"""
         try:
@@ -326,7 +324,7 @@ class StockSpecificPredictor:
             models_to_try = {
                 "logistic": LogisticRegression(random_state=42, max_iter=1000),
                 "random_forest": RandomForestClassifier(
-                    n_estimators=100, random_state=42, max_depth=10
+                    n_estimators=100, random_state=42, max_depth=10,
                 ),
             }
 
@@ -367,7 +365,7 @@ class StockSpecificPredictor:
                 "accuracy": best_score,
                 "trained_date": datetime.now(),
                 "symbol_characteristics": self.analyze_symbol_characteristics(
-                    symbol, data
+                    symbol, data,
                 ),
             }
 
@@ -379,7 +377,7 @@ class StockSpecificPredictor:
             }
 
             logger.info(
-                f"✅ {symbol} モデル訓練完了: {best_model_name} {best_score:.3f}"
+                f"✅ {symbol} モデル訓練完了: {best_model_name} {best_score:.3f}",
             )
             return model_info
 
@@ -388,7 +386,7 @@ class StockSpecificPredictor:
             raise ModelTrainingError(f"StockSpecific_{symbol}", str(e))
 
     def predict_symbol(
-        self, symbol: str, current_data: Optional[pd.DataFrame] = None
+        self, symbol: str, current_data: Optional[pd.DataFrame] = None,
     ) -> Dict[str, Any]:
         """個別銘柄予測実行"""
         try:
@@ -437,7 +435,7 @@ class StockSpecificPredictor:
             raise PredictionError(symbol, "StockSpecific", str(e))
 
     def batch_train_all_symbols(
-        self, symbols: Optional[List[str]] = None
+        self, symbols: Optional[List[str]] = None,
     ) -> Dict[str, Dict[str, Any]]:
         """全銘柄の一括訓練"""
         if symbols is None:

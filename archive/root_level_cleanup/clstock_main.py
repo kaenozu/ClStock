@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-ClStock - 84.6%精度達成 統合投資システム
+"""ClStock - 84.6%精度達成 統合投資システム
 メインエントリーポイント
 
 高度機能:
@@ -11,9 +10,9 @@ ClStock - 84.6%精度達成 統合投資システム
 """
 
 import argparse
-import sys
-from typing import Dict, Any, Union
 import logging
+import sys
+from typing import Any, Dict
 
 # ログ設定
 from utils.logger_config import setup_logger
@@ -25,12 +24,13 @@ def run_basic_prediction(symbol: str) -> Dict[str, Any]:
     """基本84.6%精度予測システム実行"""
     try:
         from trend_following_predictor import TrendFollowingPredictor
-        from utils.exceptions import PredictionError, InvalidSymbolError
+
+        from utils.exceptions import InvalidSymbolError, PredictionError
 
         predictor = TrendFollowingPredictor()
         result = predictor.predict_stock(symbol)
 
-        print(f"\n=== 基本予測システム結果 (84.6%精度) ===")
+        print("\n=== 基本予測システム結果 (84.6%精度) ===")
         print(f"銘柄: {symbol}")
         print(f"予測方向: {'上昇' if result['direction'] == 1 else '下降'}")
         print(f"信頼度: {result['confidence']:.1%}")
@@ -43,7 +43,7 @@ def run_basic_prediction(symbol: str) -> Dict[str, Any]:
         return {"error": str(e)}
     except Exception as e:
         logger.error(f"予期しない基本予測エラー: {e}", exc_info=True)
-        return {"error": f"予期しないエラー: {str(e)}"}
+        return {"error": f"予期しないエラー: {e!s}"}
 
 
 def run_advanced_prediction(symbol: str) -> Dict[str, Any]:
@@ -51,17 +51,17 @@ def run_advanced_prediction(symbol: str) -> Dict[str, Any]:
     try:
         from models.stock_specific_predictor import StockSpecificPredictor
         from utils.exceptions import (
+            InvalidSymbolError,
             ModelTrainingError,
             PredictionError,
-            InvalidSymbolError,
         )
 
         predictor = StockSpecificPredictor()
         result = predictor.predict_symbol(symbol)
 
-        print(f"\n=== 個別銘柄特化予測結果 ===")
+        print("\n=== 個別銘柄特化予測結果 ===")
         print(f"銘柄: {symbol}")
-        print(f"セクター最適化済み精度向上期待")
+        print("セクター最適化済み精度向上期待")
         print(f"予測結果: {result}")
 
         return result
@@ -71,7 +71,7 @@ def run_advanced_prediction(symbol: str) -> Dict[str, Any]:
         return {"error": str(e)}
     except Exception as e:
         logger.error(f"予期しない個別銘柄特化予測エラー: {e}", exc_info=True)
-        return {"error": f"予期しないエラー: {str(e)}"}
+        return {"error": f"予期しないエラー: {e!s}"}
 
 
 def run_sentiment_analysis(symbol: str) -> Dict[str, Any]:
@@ -83,7 +83,7 @@ def run_sentiment_analysis(symbol: str) -> Dict[str, Any]:
         analyzer = MarketSentimentAnalyzer()
         sentiment = analyzer.analyze_news_sentiment(symbol)
 
-        print(f"\n=== ニュースセンチメント分析結果 ===")
+        print("\n=== ニュースセンチメント分析結果 ===")
         print(f"銘柄: {symbol}")
         print(f"センチメントスコア: {sentiment}")
 
@@ -94,15 +94,16 @@ def run_sentiment_analysis(symbol: str) -> Dict[str, Any]:
         return {"error": str(e)}
     except Exception as e:
         logger.error(f"予期しないセンチメント分析エラー: {e}", exc_info=True)
-        return {"error": f"予期しないエラー: {str(e)}"}
+        return {"error": f"予期しないエラー: {e!s}"}
 
 
 def run_integrated_analysis(symbol: str) -> Dict[str, Any]:
     """統合分析 (技術分析 + センチメント)"""
     try:
         from trend_following_predictor import TrendFollowingPredictor
+
         from analysis.sentiment_analyzer import MarketSentimentAnalyzer
-        from utils.exceptions import PredictionError, DataFetchError
+        from utils.exceptions import DataFetchError, PredictionError
 
         # 技術分析
         tech_predictor = TrendFollowingPredictor()
@@ -114,10 +115,10 @@ def run_integrated_analysis(symbol: str) -> Dict[str, Any]:
 
         # 統合分析
         integrated = sentiment_analyzer.integrate_with_technical_analysis(
-            symbol, tech_result, sentiment
+            symbol, tech_result, sentiment,
         )
 
-        print(f"\n=== 統合分析結果 (技術分析 + センチメント) ===")
+        print("\n=== 統合分析結果 (技術分析 + センチメント) ===")
         print(f"銘柄: {symbol}")
         print(f"技術分析信頼度: {tech_result['confidence']:.1%}")
         print(f"センチメント統合後: {integrated}")
@@ -133,16 +134,17 @@ def run_integrated_analysis(symbol: str) -> Dict[str, Any]:
         return {"error": str(e)}
     except Exception as e:
         logger.error(f"予期しない統合分析エラー: {e}", exc_info=True)
-        return {"error": f"予期しないエラー: {str(e)}"}
+        return {"error": f"予期しないエラー: {e!s}"}
 
 
 def run_portfolio_backtest() -> Dict[str, Any]:
     """ポートフォリオバックテスト実行"""
     try:
         from investment_system import main as run_investment_system
+
         from utils.exceptions import BacktestError
 
-        print(f"\n=== ポートフォリオバックテスト実行 ===")
+        print("\n=== ポートフォリオバックテスト実行 ===")
         print("50銘柄投資システム (3.3%リターン実績)")
 
         result = run_investment_system()
@@ -153,7 +155,7 @@ def run_portfolio_backtest() -> Dict[str, Any]:
         return {"error": str(e)}
     except Exception as e:
         logger.error(f"予期しないバックテストエラー: {e}", exc_info=True)
-        return {"error": f"予期しないエラー: {str(e)}"}
+        return {"error": f"予期しないエラー: {e!s}"}
 
 
 def run_auto_retraining_status() -> Dict[str, Any]:
@@ -165,7 +167,7 @@ def run_auto_retraining_status() -> Dict[str, Any]:
         orchestrator = RetrainingOrchestrator()
         status = orchestrator.get_comprehensive_status()
 
-        print(f"\n=== 自動再学習システム状態 ===")
+        print("\n=== 自動再学習システム状態 ===")
         print(f"システム状態: {status}")
 
         return status
@@ -175,7 +177,7 @@ def run_auto_retraining_status() -> Dict[str, Any]:
         return {"error": str(e)}
     except Exception as e:
         logger.error(f"予期しない自動再学習状態確認エラー: {e}", exc_info=True)
-        return {"error": f"予期しないエラー: {str(e)}"}
+        return {"error": f"予期しないエラー: {e!s}"}
 
 
 def main():
@@ -198,14 +200,14 @@ def main():
     parser.add_argument("--basic", type=str, help="基本84.6%精度予測 (銘柄コード)")
     parser.add_argument("--advanced", type=str, help="個別銘柄特化予測 (銘柄コード)")
     parser.add_argument(
-        "--sentiment", type=str, help="ニュースセンチメント分析 (銘柄コード)"
+        "--sentiment", type=str, help="ニュースセンチメント分析 (銘柄コード)",
     )
     parser.add_argument("--integrated", type=str, help="統合分析 (銘柄コード)")
     parser.add_argument(
-        "--backtest", action="store_true", help="ポートフォリオバックテスト"
+        "--backtest", action="store_true", help="ポートフォリオバックテスト",
     )
     parser.add_argument(
-        "--retraining-status", action="store_true", help="自動再学習システム状態"
+        "--retraining-status", action="store_true", help="自動再学習システム状態",
     )
 
     # システム管理
@@ -241,7 +243,7 @@ def main():
             return 1
 
         # 結果表示
-        print(f"\n=== 実行完了 ===")
+        print("\n=== 実行完了 ===")
         for i, result in enumerate(results, 1):
             if "error" in result:
                 print(f"エラー {i}: {result['error']}")

@@ -1,12 +1,10 @@
 """Model optimization and hyperparameter tuning."""
 
 import logging
-import numpy as np
-import pandas as pd
-from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
+from typing import Any, Dict, List
 
-from .base import StockPredictor, PredictionResult
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +55,7 @@ class HyperparameterOptimizer:
                             model.fit(X_train, y_train)
                             y_pred = model.predict(X_val)
                             score = -mean_squared_error(
-                                y_val, y_pred
+                                y_val, y_pred,
                             )  # Negative MSE for maximization
 
                             self.optimization_history.append(
@@ -65,7 +63,7 @@ class HyperparameterOptimizer:
                                     "params": params.copy(),
                                     "score": score,
                                     "timestamp": datetime.now(),
-                                }
+                                },
                             )
 
                             if score > best_score:
@@ -132,7 +130,7 @@ class HyperparameterOptimizer:
                                     "params": params.copy(),
                                     "score": score,
                                     "timestamp": datetime.now(),
-                                }
+                                },
                             )
 
                             if score > best_score:
@@ -247,7 +245,7 @@ class MetaLearningOptimizer:
         return [model_name for model_name, _ in sorted_models[:top_k]]
 
     def optimize_ensemble_weights(
-        self, model_predictions: Dict[str, List[float]], true_values: List[float]
+        self, model_predictions: Dict[str, List[float]], true_values: List[float],
     ) -> Dict[str, float]:
         """アンサンブル重みの最適化"""
         from sklearn.linear_model import LinearRegression
@@ -302,7 +300,7 @@ class MetaLearningOptimizer:
                 "combination": combination.copy(),
                 "performance": performance,
                 "timestamp": datetime.now(),
-            }
+            },
         )
 
         # パフォーマンス順にソート

@@ -6,9 +6,10 @@ from datetime import UTC, datetime
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
+import pytest
+
 import numpy as np
 import pandas as pd
-import pytest
 
 # ``tests/conftest.py`` injects a lightweight stub for ``data.stock_data`` to
 # accelerate legacy unit tests.  These integration checks exercise the real
@@ -41,13 +42,14 @@ def stub_yfinance(monkeypatch):
         return frame, f"{symbol}.T"
 
     monkeypatch.setattr(StockDataProvider, "_download_via_yfinance", _fake_download)
-    monkeypatch.setattr(StockDataProvider, "_should_use_local_first", lambda self, symbol: False)
+    monkeypatch.setattr(
+        StockDataProvider, "_should_use_local_first", lambda self, symbol: False,
+    )
 
 
 @pytest.mark.integration
 def test_stock_data_provider_returns_data_frame() -> None:
     """Fetching data for a known symbol should return a populated frame."""
-
     provider = StockDataProvider()
     frame = provider.get_stock_data("6758", period="1mo")
 
@@ -61,7 +63,6 @@ def test_stock_data_provider_returns_data_frame() -> None:
 @pytest.mark.integration
 def test_multiple_symbols_fetch_uses_cache_for_consistency() -> None:
     """Repeated calls should rely on cached data and keep metadata stable."""
-
     provider = StockDataProvider()
     symbols = ["7203", "8306"]
 
@@ -84,7 +85,6 @@ def test_multiple_symbols_fetch_uses_cache_for_consistency() -> None:
 @pytest.mark.integration
 def test_provider_generates_deterministic_history() -> None:
     """The pseudo-random fallback should produce deterministic results."""
-
     provider = StockDataProvider()
     history_a = provider.get_stock_data("8031", period="1mo")
     history_b = provider.get_stock_data("8031", period="1mo")

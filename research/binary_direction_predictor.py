@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""
-バイナリ方向性予測システム（上昇・下降のみ）
+"""バイナリ方向性予測システム（上昇・下降のみ）
 シンプルな2クラス分類で80%以上の精度を目指す
 """
 
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Tuple
-import logging
-from utils.logger_config import setup_logger
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import accuracy_score
 import warnings
+from typing import Dict, List, Tuple
+
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.preprocessing import StandardScaler
+from utils.logger_config import setup_logger
 
 warnings.filterwarnings("ignore")
 
@@ -93,7 +92,7 @@ class BinaryDirectionPredictor:
         return 100 - (100 / (1 + rs))
 
     def create_binary_target(
-        self, data: pd.DataFrame, prediction_days: int = 5
+        self, data: pd.DataFrame, prediction_days: int = 5,
     ) -> pd.Series:
         """バイナリターゲット（上昇=1, 下降=0）"""
         close = data["Close"]
@@ -107,7 +106,7 @@ class BinaryDirectionPredictor:
         return target
 
     def filter_significant_periods(
-        self, features: pd.DataFrame, target: pd.Series, data: pd.DataFrame
+        self, features: pd.DataFrame, target: pd.Series, data: pd.DataFrame,
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """有意な期間のみをフィルタリング"""
         close = data["Close"]
@@ -128,10 +127,9 @@ class BinaryDirectionPredictor:
         return features[valid_periods], target[valid_periods]
 
     def train_binary_classifier(
-        self, X: pd.DataFrame, y: pd.Series
+        self, X: pd.DataFrame, y: pd.Series,
     ) -> Tuple[Dict, Dict]:
         """バイナリ分類器の訓練"""
-
         models = {
             "random_forest": RandomForestClassifier(
                 n_estimators=100,
@@ -142,10 +140,10 @@ class BinaryDirectionPredictor:
                 class_weight="balanced",
             ),
             "gradient_boosting": GradientBoostingClassifier(
-                n_estimators=100, max_depth=5, learning_rate=0.1, random_state=42
+                n_estimators=100, max_depth=5, learning_rate=0.1, random_state=42,
             ),
             "logistic": LogisticRegression(
-                random_state=42, max_iter=200, class_weight="balanced"
+                random_state=42, max_iter=200, class_weight="balanced",
             ),
         }
 
@@ -209,7 +207,7 @@ class BinaryDirectionPredictor:
 
                 # 有意期間のフィルタリング
                 X_filtered, y_filtered = self.filter_significant_periods(
-                    features, target, data
+                    features, target, data,
                 )
 
                 # クリーニング
@@ -232,7 +230,7 @@ class BinaryDirectionPredictor:
                 minority_ratio = min(class_values) / sum(class_values)
                 if minority_ratio < 0.3:
                     print(
-                        f"  スキップ: クラス不均衡 (少数クラス: {minority_ratio:.1%})"
+                        f"  スキップ: クラス不均衡 (少数クラス: {minority_ratio:.1%})",
                     )
                     continue
 
@@ -246,12 +244,12 @@ class BinaryDirectionPredictor:
 
                 # モデル訓練
                 model_scores, trained_models = self.train_binary_classifier(
-                    X_train, y_train
+                    X_train, y_train,
                 )
 
                 # ベストモデル選択
                 best_model_name = max(
-                    model_scores.keys(), key=lambda x: model_scores[x]["accuracy"]
+                    model_scores.keys(), key=lambda x: model_scores[x]["accuracy"],
                 )
                 best_model = trained_models[best_model_name]
 
@@ -284,7 +282,7 @@ class BinaryDirectionPredictor:
                     print("  ○ 70%以上")
 
             except Exception as e:
-                print(f"  エラー: {str(e)}")
+                print(f"  エラー: {e!s}")
                 continue
 
         return self._analyze_binary_results(all_results)
@@ -305,7 +303,7 @@ class BinaryDirectionPredictor:
         good_count = sum(1 for acc in accuracies if acc >= 0.75)
         decent_count = sum(1 for acc in accuracies if acc >= 0.7)
 
-        print(f"\n" + "=" * 60)
+        print("\n" + "=" * 60)
         print("バイナリ方向性予測結果")
         print("=" * 60)
         print(f"テスト銘柄数: {len(results)}")
@@ -318,10 +316,10 @@ class BinaryDirectionPredictor:
 
         # トップ3結果
         top_results = sorted(results, key=lambda x: x["accuracy"], reverse=True)[:3]
-        print(f"\nトップ3結果:")
+        print("\nトップ3結果:")
         for i, result in enumerate(top_results, 1):
             print(
-                f"  {i}. {result['symbol']}: {result['accuracy']:.1%} ({result['best_model']})"
+                f"  {i}. {result['symbol']}: {result['accuracy']:.1%} ({result['best_model']})",
             )
 
         if max_accuracy >= 0.8:

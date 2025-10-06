@@ -1,15 +1,15 @@
-"""
-Data Providers のテスト
+"""Data Providers のテスト
 """
 
-import pytest
-import pandas as pd
 import importlib.util
 import sys
 import types
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
+import pytest
+
+import pandas as pd
 from config.settings import AppSettings, DatabaseConfig
 
 
@@ -19,7 +19,7 @@ def _load_real_stock_data_module():
         return sys.modules[module_name]
 
     spec = importlib.util.spec_from_file_location(
-        module_name, Path(__file__).resolve().parent.parent / "data" / "stock_data.py"
+        module_name, Path(__file__).resolve().parent.parent / "data" / "stock_data.py",
     )
     module = importlib.util.module_from_spec(spec)
     loader = spec.loader
@@ -65,7 +65,7 @@ class TestStockDataProvider:
         )
 
         dummy_ticker = types.SimpleNamespace(
-            history=lambda period=None, start=None, end=None: mock_data
+            history=lambda period=None, start=None, end=None: mock_data,
         )
         dummy_yf = types.SimpleNamespace(Ticker=lambda symbol: dummy_ticker)
         monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", True)
@@ -93,7 +93,7 @@ class TestStockDataProvider:
         )
 
         dummy_ticker = types.SimpleNamespace(
-            history=lambda period=None, start=None, end=None: mock_data
+            history=lambda period=None, start=None, end=None: mock_data,
         )
         dummy_yf = types.SimpleNamespace(Ticker=lambda symbol: dummy_ticker)
         monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", True)
@@ -187,7 +187,7 @@ class TestStockDataProvider:
         )
 
         dummy_ticker = types.SimpleNamespace(
-            history=lambda period=None, start=None, end=None: mock_data
+            history=lambda period=None, start=None, end=None: mock_data,
         )
         dummy_yf = types.SimpleNamespace(Ticker=lambda symbol: dummy_ticker)
         monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", True)
@@ -197,12 +197,14 @@ class TestStockDataProvider:
         result = self.provider.get_stock_data("7203", "1mo")
         assert result is not None
 
-
-    def test_trusted_market_data_used_when_yfinance_unavailable(self, tmp_path, monkeypatch):
+    def test_trusted_market_data_used_when_yfinance_unavailable(
+        self, tmp_path, monkeypatch,
+    ):
         """設定された信頼できるデータソースが利用されることを検証する"""
-
         if MarketDataConfig is None:
-            pytest.skip("MarketDataConfig not available in current settings implementation")
+            pytest.skip(
+                "MarketDataConfig not available in current settings implementation",
+            )
 
         csv_dir = tmp_path / "historical"
         csv_dir.mkdir()
@@ -221,7 +223,9 @@ class TestStockDataProvider:
 
         settings = AppSettings()
         settings.target_stocks = {"REALTEST": "Real Test Corp"}
-        settings.database = DatabaseConfig(personal_portfolio_db=tmp_path / "portfolio.db")
+        settings.database = DatabaseConfig(
+            personal_portfolio_db=tmp_path / "portfolio.db",
+        )
         settings.market_data = MarketDataConfig(
             provider="local_csv",
             local_cache_dir=csv_dir,
@@ -246,21 +250,30 @@ class TestStockDataProvider:
 
     def test_get_multiple_stocks_reports_missing_symbols(self, tmp_path, monkeypatch):
         """複数銘柄取得時に欠損があれば明確なエラーが返ることを検証"""
-
         if MarketDataConfig is None:
-            pytest.skip("MarketDataConfig not available in current settings implementation")
+            pytest.skip(
+                "MarketDataConfig not available in current settings implementation",
+            )
 
         csv_dir = tmp_path / "historical"
         csv_dir.mkdir()
         available_df = pd.DataFrame(
-            {"Open": [1.0], "High": [1.0], "Low": [1.0], "Close": [1.0], "Volume": [100]},
+            {
+                "Open": [1.0],
+                "High": [1.0],
+                "Low": [1.0],
+                "Close": [1.0],
+                "Volume": [100],
+            },
             index=pd.date_range("2024-01-01", periods=1),
         )
         available_df.to_csv(csv_dir / "ONLYONE.T.csv")
 
         settings = AppSettings()
         settings.target_stocks = {"ONLYONE": "Only One Corp", "MISSING": "Missing Corp"}
-        settings.database = DatabaseConfig(personal_portfolio_db=tmp_path / "portfolio.db")
+        settings.database = DatabaseConfig(
+            personal_portfolio_db=tmp_path / "portfolio.db",
+        )
         settings.market_data = MarketDataConfig(
             provider="local_csv",
             local_cache_dir=csv_dir,

@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""
-高精度方向性予測システム（80%以上の精度を目指す）
+"""高精度方向性予測システム（80%以上の精度を目指す）
 上昇・下降の予測に特化した最適化アプローチ
 """
 
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Tuple
-import logging
-from utils.logger_config import setup_logger
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import TimeSeriesSplit
-from sklearn.metrics import accuracy_score
 import warnings
+from typing import Dict, List, Tuple
+
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.preprocessing import StandardScaler
+from utils.logger_config import setup_logger
 
 warnings.filterwarnings("ignore")
 
@@ -122,8 +121,8 @@ class AdvancedDirectionalPredictor:
 
         # 7. ギャップ検出
         prev_close = close.shift(1)
-        features["gap_up"] = ((close > prev_close * 1.02)).astype(int)
-        features["gap_down"] = ((close < prev_close * 0.98)).astype(int)
+        features["gap_up"] = (close > prev_close * 1.02).astype(int)
+        features["gap_down"] = (close < prev_close * 0.98).astype(int)
 
         return features
 
@@ -136,7 +135,7 @@ class AdvancedDirectionalPredictor:
         return 100 - (100 / (1 + rs))
 
     def create_directional_target(
-        self, data: pd.DataFrame, prediction_days: int = 5, threshold: float = 0.01
+        self, data: pd.DataFrame, prediction_days: int = 5, threshold: float = 0.01,
     ) -> pd.Series:
         """方向性ターゲット（上昇/下降/中立）"""
         close = data["Close"]
@@ -152,10 +151,9 @@ class AdvancedDirectionalPredictor:
         return target
 
     def train_ensemble_classifier(
-        self, X: pd.DataFrame, y: pd.Series
+        self, X: pd.DataFrame, y: pd.Series,
     ) -> Tuple[Dict, Dict]:
         """アンサンブル分類器の訓練"""
-
         models = {
             "random_forest": RandomForestClassifier(
                 n_estimators=200,
@@ -166,10 +164,10 @@ class AdvancedDirectionalPredictor:
                 class_weight="balanced",
             ),
             "gradient_boosting": GradientBoostingClassifier(
-                n_estimators=150, max_depth=6, learning_rate=0.1, random_state=42
+                n_estimators=150, max_depth=6, learning_rate=0.1, random_state=42,
             ),
             "logistic": LogisticRegression(
-                random_state=42, max_iter=300, class_weight="balanced"
+                random_state=42, max_iter=300, class_weight="balanced",
             ),
         }
 
@@ -246,7 +244,7 @@ class AdvancedDirectionalPredictor:
                 # 特徴量とターゲット
                 features = self.create_directional_features(data)
                 target = self.create_directional_target(
-                    data, prediction_days=5, threshold=0.015
+                    data, prediction_days=5, threshold=0.015,
                 )
 
                 # クリーニング
@@ -274,12 +272,12 @@ class AdvancedDirectionalPredictor:
 
                 # モデル訓練
                 model_scores, trained_models = self.train_ensemble_classifier(
-                    X_train, y_train
+                    X_train, y_train,
                 )
 
                 # ベストモデル選択
                 best_model_name = max(
-                    model_scores.keys(), key=lambda x: model_scores[x]["accuracy"]
+                    model_scores.keys(), key=lambda x: model_scores[x]["accuracy"],
                 )
                 best_model = trained_models[best_model_name]
 
@@ -313,7 +311,7 @@ class AdvancedDirectionalPredictor:
                     print("  △ 75%以上")
 
             except Exception as e:
-                print(f"  エラー: {str(e)}")
+                print(f"  エラー: {e!s}")
                 continue
 
         return self._analyze_directional_results(all_results)
@@ -333,7 +331,7 @@ class AdvancedDirectionalPredictor:
         high_accuracy_count = sum(1 for acc in accuracies if acc >= 0.8)
         good_accuracy_count = sum(1 for acc in accuracies if acc >= 0.75)
 
-        print(f"\n" + "=" * 60)
+        print("\n" + "=" * 60)
         print("方向性予測結果分析")
         print("=" * 60)
         print(f"テスト銘柄数: {len(results)}")
@@ -345,7 +343,7 @@ class AdvancedDirectionalPredictor:
 
         # 最優秀銘柄
         best_result = max(results, key=lambda x: x["accuracy"])
-        print(f"\n最優秀結果:")
+        print("\n最優秀結果:")
         print(f"  銘柄: {best_result['symbol']}")
         print(f"  精度: {best_result['accuracy']:.1%}")
         print(f"  モデル: {best_result['best_model']}")

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-87%精度突破システム検証テスト
+"""87%精度突破システム検証テスト
 5つのブレークスルー技術統合検証
 
 実装技術:
@@ -11,21 +10,20 @@
 5. 時系列Transformer最適化
 """
 
-import sys
-import os
 import logging
-from utils.logger_config import setup_logger
-import numpy as np
-import pandas as pd
-from datetime import datetime
-from typing import Dict, List, Any
+import sys
 import warnings
+from datetime import datetime
+from typing import Any, Dict, List
+
+import numpy as np
+from utils.logger_config import setup_logger
 
 warnings.filterwarnings("ignore")
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -83,7 +81,7 @@ class Test87PercentSystem:
                 try:
                     sample_state = np.random.random(50)
                     dqn_result = self.breakthrough_system.dqn_agent.predict_with_dqn(
-                        sample_state
+                        sample_state,
                     )
                     component_results["dqn"] = {
                         "status": "success",
@@ -91,7 +89,7 @@ class Test87PercentSystem:
                         "confidence": dqn_result["confidence"],
                     }
                     logger.info(
-                        f"DQN: アクション={dqn_result['action']}, 信頼度={dqn_result['confidence']:.3f}"
+                        f"DQN: アクション={dqn_result['action']}, 信頼度={dqn_result['confidence']:.3f}",
                     )
                 except Exception as e:
                     component_results["dqn"] = {"status": "error", "error": str(e)}
@@ -106,7 +104,7 @@ class Test87PercentSystem:
                     sample_prices = np.random.random(100) * 1000 + 2000
                     multimodal_result = (
                         self.breakthrough_system.multimodal_analyzer.predict_multimodal(
-                            sample_prices
+                            sample_prices,
                         )
                     )
                     component_results["multimodal"] = {
@@ -115,7 +113,7 @@ class Test87PercentSystem:
                         "confidence": multimodal_result["confidence"],
                     }
                     logger.info(
-                        f"マルチモーダル: スコア={multimodal_result['prediction_score']:.1f}, 信頼度={multimodal_result['confidence']:.3f}"
+                        f"マルチモーダル: スコア={multimodal_result['prediction_score']:.1f}, 信頼度={multimodal_result['confidence']:.3f}",
                     )
                 except Exception as e:
                     component_results["multimodal"] = {
@@ -132,7 +130,7 @@ class Test87PercentSystem:
                 try:
                     base_prediction = 70.0
                     meta_result = self.breakthrough_system.meta_optimizer.meta_predict(
-                        sample_symbol, base_prediction
+                        sample_symbol, base_prediction,
                     )
                     component_results["meta_learning"] = {
                         "status": "success",
@@ -141,7 +139,7 @@ class Test87PercentSystem:
                         "adaptation_applied": meta_result["adaptation_applied"],
                     }
                     logger.info(
-                        f"メタ学習: 調整予測={meta_result['adjusted_prediction']:.1f}, 適応={meta_result['adaptation_applied']}"
+                        f"メタ学習: 調整予測={meta_result['adjusted_prediction']:.1f}, 適応={meta_result['adaptation_applied']}",
                     )
                 except Exception as e:
                     component_results["meta_learning"] = {
@@ -173,7 +171,7 @@ class Test87PercentSystem:
 
                     ensemble_result = (
                         self.breakthrough_system.advanced_ensemble.ensemble_predict(
-                            sample_predictions, sample_confidences
+                            sample_predictions, sample_confidences,
                         )
                     )
                     component_results["advanced_ensemble"] = {
@@ -183,7 +181,7 @@ class Test87PercentSystem:
                         "total_weight": ensemble_result["total_weight"],
                     }
                     logger.info(
-                        f"アンサンブル: 予測={ensemble_result['ensemble_prediction']:.1f}, 信頼度={ensemble_result['ensemble_confidence']:.3f}"
+                        f"アンサンブル: 予測={ensemble_result['ensemble_prediction']:.1f}, 信頼度={ensemble_result['ensemble_confidence']:.3f}",
                     )
                 except Exception as e:
                     component_results["advanced_ensemble"] = {
@@ -201,7 +199,7 @@ class Test87PercentSystem:
                     sample_prices = np.random.random(100) * 1000 + 2000
                     transformer_result = (
                         self.breakthrough_system.market_transformer.transformer_predict(
-                            sample_prices
+                            sample_prices,
                         )
                     )
                     component_results["market_transformer"] = {
@@ -210,7 +208,7 @@ class Test87PercentSystem:
                         "confidence": transformer_result["confidence"],
                     }
                     logger.info(
-                        f"Transformer: スコア={transformer_result['prediction_score']:.1f}, 信頼度={transformer_result['confidence']:.3f}"
+                        f"Transformer: スコア={transformer_result['prediction_score']:.1f}, 信頼度={transformer_result['confidence']:.3f}",
                     )
                 except Exception as e:
                     component_results["market_transformer"] = {
@@ -233,7 +231,7 @@ class Test87PercentSystem:
             )
 
             logger.info(
-                f"コンポーネント成功率: {success_rate:.1f}% ({successful_components}/{total_components})"
+                f"コンポーネント成功率: {success_rate:.1f}% ({successful_components}/{total_components})",
             )
 
             return {
@@ -265,7 +263,7 @@ class Test87PercentSystem:
                         "final_prediction": result["final_prediction"],
                         "final_confidence": result["final_confidence"],
                         "individual_predictions": result.get(
-                            "individual_predictions", {}
+                            "individual_predictions", {},
                         ),
                         "accuracy_improvement": result.get("accuracy_improvement", 0),
                         "model_contributions": result.get("model_contributions", {}),
@@ -280,11 +278,11 @@ class Test87PercentSystem:
                     logger.info(
                         f"{symbol}: 予測={result['final_prediction']:.1f}, "
                         f"信頼度={result['final_confidence']:.3f}, "
-                        f"推定精度={estimated_accuracy:.1f}%"
+                        f"推定精度={estimated_accuracy:.1f}%",
                     )
                 else:
                     prediction_results[symbol] = {
-                        "error": result.get("error", "Unknown error")
+                        "error": result.get("error", "Unknown error"),
                     }
                     logger.error(f"{symbol}: 予測エラー")
 
@@ -306,7 +304,7 @@ class Test87PercentSystem:
             "prediction_results": prediction_results,
             "tested_symbols": self.test_symbols[:5],
             "successful_predictions": len(
-                [r for r in prediction_results.values() if "error" not in r]
+                [r for r in prediction_results.values() if "error" not in r],
             ),
             "average_estimated_accuracy": avg_estimated_accuracy,
             "max_estimated_accuracy": max_estimated_accuracy,
@@ -323,7 +321,7 @@ class Test87PercentSystem:
 
             start_time = datetime.now()
             batch_result = self.breakthrough_system.batch_predict_87_percent(
-                batch_symbols
+                batch_symbols,
             )
             end_time = datetime.now()
 
@@ -346,9 +344,8 @@ class Test87PercentSystem:
                     "target_achieved": target_achieved,
                     "throughput": len(batch_symbols) / processing_time,
                 }
-            else:
-                logger.error(f"バッチ処理エラー: {batch_result.get('error')}")
-                return {"error": batch_result.get("error")}
+            logger.error(f"バッチ処理エラー: {batch_result.get('error')}")
+            return {"error": batch_result.get("error")}
 
         except Exception as e:
             logger.error(f"バッチ性能テストエラー: {e}")
@@ -389,7 +386,7 @@ class Test87PercentSystem:
         return test_results
 
     def _assess_overall_performance(
-        self, test_results: Dict[str, Any]
+        self, test_results: Dict[str, Any],
     ) -> Dict[str, Any]:
         """総合性能評価"""
         logger.info("\n--- 総合性能評価 ---")
@@ -405,7 +402,7 @@ class Test87PercentSystem:
             # 予測精度評価
             prediction_test = test_results.get("prediction_test", {})
             avg_estimated_accuracy = prediction_test.get(
-                "average_estimated_accuracy", 84.6
+                "average_estimated_accuracy", 84.6,
             )
             accuracy_score = (
                 (avg_estimated_accuracy - 84.6) / 2.4 * 100
@@ -452,16 +449,16 @@ class Test87PercentSystem:
                 "estimated_final_accuracy": avg_estimated_accuracy,
                 "accuracy_improvement": avg_estimated_accuracy - 84.6,
                 "recommendations": self._generate_recommendations(
-                    scores, avg_estimated_accuracy
+                    scores, avg_estimated_accuracy,
                 ),
             }
 
             # 結果表示
-            logger.info(f"個別スコア:")
+            logger.info("個別スコア:")
             for key, score in scores.items():
                 logger.info(f"  {key}: {score:.1f}")
 
-            logger.info(f"\n総合評価:")
+            logger.info("\n総合評価:")
             logger.info(f"  総合スコア: {overall_score:.1f}/100")
             logger.info(f"  評価グレード: {grade}")
             logger.info(f"  推定最終精度: {avg_estimated_accuracy:.1f}%")
@@ -474,7 +471,7 @@ class Test87PercentSystem:
             return {"error": str(e)}
 
     def _generate_recommendations(
-        self, scores: Dict[str, float], estimated_accuracy: float
+        self, scores: Dict[str, float], estimated_accuracy: float,
     ) -> List[str]:
         """改善推奨生成"""
         recommendations = []
@@ -543,10 +540,10 @@ def main():
         estimated_accuracy = assessment.get("estimated_final_accuracy", 84.6)
 
         if target_achieved:
-            print(f"\n🎉 87%精度目標達成！")
+            print("\n🎉 87%精度目標達成！")
             print(f"推定最終精度: {estimated_accuracy:.1f}%")
         else:
-            print(f"\n📈 継続改善が必要")
+            print("\n📈 継続改善が必要")
             print(f"現在推定精度: {estimated_accuracy:.1f}%")
             print("推奨改善事項:")
             for rec in assessment.get("recommendations", []):

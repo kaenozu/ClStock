@@ -5,7 +5,6 @@ from datetime import datetime
 
 import pandas as pd
 
-
 if "numpy" not in sys.modules:
     numpy_stub = types.ModuleType("numpy")
     numpy_stub.__dict__.update(
@@ -13,7 +12,7 @@ if "numpy" not in sys.modules:
             "__version__": "0",
             "array": lambda *args, **kwargs: args[0] if args else None,
             "ndarray": object,
-        }
+        },
     )
     sys.modules["numpy"] = numpy_stub
 
@@ -84,7 +83,7 @@ class _StubStockDataProvider:
 
 stock_data_stub.StockDataProvider = _StubStockDataProvider
 sys.modules["data.stock_data"] = stock_data_stub
-setattr(data_module, "stock_data", stock_data_stub)
+data_module.stock_data = stock_data_stub
 
 
 if "models" not in sys.modules:
@@ -134,4 +133,4 @@ class _StubStockRecommendation:
 
 recommendation_stub.StockRecommendation = _StubStockRecommendation
 sys.modules["models.recommendation"] = recommendation_stub
-setattr(models_module, "recommendation", recommendation_stub)
+models_module.recommendation = recommendation_stub

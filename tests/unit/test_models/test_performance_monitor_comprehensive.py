@@ -1,16 +1,14 @@
 """Comprehensive tests for the performance monitor components."""
 
-import pytest
-import numpy as np
-import pandas as pd
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime, timedelta
 import json
-import tempfile
 import os
+import tempfile
+from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
 
-from models.monitoring.performance_monitor import ModelPerformanceMonitor
+import numpy as np
 from models.core.interfaces import PredictionResult
+from models.monitoring.performance_monitor import ModelPerformanceMonitor
 
 
 class TestModelPerformanceMonitor:
@@ -175,15 +173,14 @@ class TestModelPerformanceMonitor:
 
         # Evaluate performance
         with patch(
-            "models.monitoring.performance_monitor.mean_squared_error"
+            "models.monitoring.performance_monitor.mean_squared_error",
         ) as mock_mse, patch(
-            "models.monitoring.performance_monitor.mean_absolute_error"
+            "models.monitoring.performance_monitor.mean_absolute_error",
         ) as mock_mae, patch(
-            "models.monitoring.performance_monitor.r2_score"
+            "models.monitoring.performance_monitor.r2_score",
         ) as mock_r2, patch(
-            "models.monitoring.performance_monitor.accuracy_score"
+            "models.monitoring.performance_monitor.accuracy_score",
         ) as mock_accuracy:
-
             # Mock the sklearn functions to return specific values
             mock_mse.return_value = 1.0
             mock_mae.return_value = 0.67
@@ -191,7 +188,7 @@ class TestModelPerformanceMonitor:
             mock_accuracy.return_value = 0.67
 
             result = monitor.evaluate_model_performance(
-                mock_model, X_test, y_test, model_name="TestModel"
+                mock_model, X_test, y_test, model_name="TestModel",
             )
 
         # Check that performance was recorded
@@ -221,15 +218,14 @@ class TestModelPerformanceMonitor:
 
         # Evaluate performance with poor results that will trigger alerts
         with patch(
-            "models.monitoring.performance_monitor.mean_squared_error"
+            "models.monitoring.performance_monitor.mean_squared_error",
         ) as mock_mse, patch(
-            "models.monitoring.performance_monitor.mean_absolute_error"
+            "models.monitoring.performance_monitor.mean_absolute_error",
         ) as mock_mae, patch(
-            "models.monitoring.performance_monitor.r2_score"
+            "models.monitoring.performance_monitor.r2_score",
         ) as mock_r2, patch(
-            "models.monitoring.performance_monitor.accuracy_score"
+            "models.monitoring.performance_monitor.accuracy_score",
         ) as mock_accuracy:
-
             # Mock the sklearn functions to return poor values that will trigger alerts
             mock_mse.return_value = 25.0  # High MSE
             mock_mae.return_value = 15.0  # High MAE
@@ -237,7 +233,7 @@ class TestModelPerformanceMonitor:
             mock_accuracy.return_value = 0.33  # Low accuracy
 
             result = monitor.evaluate_model_performance(
-                mock_model, X_test, y_test, model_name="PoorModel"
+                mock_model, X_test, y_test, model_name="PoorModel",
             )
 
         # Check that alerts were generated
@@ -305,7 +301,7 @@ class TestModelPerformanceMonitor:
         }
 
         recommendations = monitor._generate_recommendations(
-            poor_metrics, "declining", "declining"
+            poor_metrics, "declining", "declining",
         )
 
         # Should have multiple recommendations
@@ -332,7 +328,7 @@ class TestModelPerformanceMonitor:
 
         # Create a temporary file for testing
         with tempfile.NamedTemporaryFile(
-            mode="w+", delete=False, suffix=".json"
+            mode="w+", delete=False, suffix=".json",
         ) as tmp_file:
             temp_path = tmp_file.name
 
@@ -347,7 +343,7 @@ class TestModelPerformanceMonitor:
             assert os.path.exists(temp_path)
 
             # Check that data was saved correctly
-            with open(temp_path, "r") as f:
+            with open(temp_path) as f:
                 saved_data = json.load(f)
 
             assert "performance_history" in saved_data
@@ -376,7 +372,7 @@ class TestModelPerformanceMonitor:
 
         # Create a temporary file for testing
         with tempfile.NamedTemporaryFile(
-            mode="w+", delete=False, suffix=".json"
+            mode="w+", delete=False, suffix=".json",
         ) as tmp_file:
             temp_path = tmp_file.name
             json.dump(test_data, tmp_file)

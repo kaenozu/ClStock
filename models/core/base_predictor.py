@@ -1,30 +1,27 @@
-"""
-統合ベース予測クラス - 全ての予測器の共通実装
+"""統合ベース予測クラス - 全ての予測器の共通実装
 重複コードを排除し、統一されたベース機能を提供
 """
 
 import logging
 import time
 from datetime import datetime
-from typing import Dict, List, Optional, Any
-import pandas as pd
+from typing import Any, Dict, List, Optional
+
 import numpy as np
+import pandas as pd
 
 from .interfaces import (
-    StockPredictor,
-    PredictionResult,
-    ModelConfiguration,
-    ModelType,
-    PredictionMode,
-    PerformanceMetrics,
-    DataProvider,
     CacheProvider,
+    DataProvider,
+    ModelConfiguration,
+    PerformanceMetrics,
+    PredictionResult,
+    StockPredictor,
 )
 
 
 class BaseStockPredictor(StockPredictor):
-    """
-    統合ベース予測クラス
+    """統合ベース予測クラス
     全てのPredictorクラスで共通する機能を実装
     """
 
@@ -50,7 +47,7 @@ class BaseStockPredictor(StockPredictor):
         self.model_data: Dict[str, Any] = {}
 
         self.logger.info(
-            f"Initialized {self.__class__.__name__} with config: {config.model_type.value}"
+            f"Initialized {self.__class__.__name__} with config: {config.model_type.value}",
         )
 
     def predict(self, symbol: str) -> PredictionResult:
@@ -104,7 +101,7 @@ class BaseStockPredictor(StockPredictor):
 
         except Exception as e:
             execution_time = time.time() - start_time
-            self.logger.error(f"Prediction failed for {symbol}: {str(e)}")
+            self.logger.error(f"Prediction failed for {symbol}: {e!s}")
 
             # フォールバック結果
             return self._create_fallback_result(symbol, execution_time, str(e))
@@ -239,7 +236,7 @@ class BaseStockPredictor(StockPredictor):
         }
 
     def _create_fallback_result(
-        self, symbol: str, execution_time: float, error: str
+        self, symbol: str, execution_time: float, error: str,
     ) -> PredictionResult:
         """フォールバック結果作成"""
         return PredictionResult(

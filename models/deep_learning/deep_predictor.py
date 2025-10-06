@@ -1,13 +1,11 @@
-"""
-ディープラーニング予測器 - 統合リファクタリング版
+"""ディープラーニング予測器 - 統合リファクタリング版
 （プレースホルダー - 今後実装予定）
 """
 
 import pandas as pd
-from typing import List
 
-from ..core.interfaces import ModelConfiguration, DataProvider, CacheProvider
 from ..core.base_predictor import BaseStockPredictor
+from ..core.interfaces import CacheProvider, DataProvider, ModelConfiguration
 
 
 class RefactoredDeepLearningPredictor(BaseStockPredictor):

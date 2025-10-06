@@ -1,16 +1,17 @@
 import os
-import pandas as pd
-from datetime import datetime
-from zoneinfo import ZoneInfo
 import sys
 import types
 from dataclasses import dataclass, field
+from datetime import datetime
 from datetime import datetime as dt_datetime
-import pytest
+from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch
+from zoneinfo import ZoneInfo
+
+import pandas as pd
 
 os.environ.setdefault("CLSTOCK_DEV_KEY", "test-key")
 os.environ.setdefault("CLSTOCK_ADMIN_KEY", "admin-key")
@@ -61,18 +62,14 @@ _models_pkg = sys.modules.setdefault("models", types.ModuleType("models"))
 sys.modules.setdefault("models.core", types.ModuleType("models.core"))
 sys.modules.setdefault("models.legacy_core", types.ModuleType("models.legacy_core"))
 sys.modules.setdefault(
-    "models.recommendation", types.ModuleType("models.recommendation")
+    "models.recommendation", types.ModuleType("models.recommendation"),
 )
-setattr(sys.modules["models.core"], "MLStockPredictor", _StubMLStockPredictor)
-setattr(sys.modules["models.legacy_core"], "MLStockPredictor", _StubMLStockPredictor)
-setattr(_models_pkg, "core", sys.modules["models.core"])
-setattr(_models_pkg, "legacy_core", sys.modules["models.legacy_core"])
-setattr(
-    sys.modules["models.recommendation"],
-    "StockRecommendation",
-    _StubStockRecommendation,
-)
-setattr(_models_pkg, "recommendation", sys.modules["models.recommendation"])
+sys.modules["models.core"].MLStockPredictor = _StubMLStockPredictor
+sys.modules["models.legacy_core"].MLStockPredictor = _StubMLStockPredictor
+_models_pkg.core = sys.modules["models.core"]
+_models_pkg.legacy_core = sys.modules["models.legacy_core"]
+sys.modules["models.recommendation"].StockRecommendation = _StubStockRecommendation
+_models_pkg.recommendation = sys.modules["models.recommendation"]
 
 from api.endpoints import router
 from models.recommendation import StockRecommendation
@@ -359,7 +356,7 @@ def test_health_endpoint_includes_security_headers():
 @patch("api.endpoints.MLStockPredictor")
 @patch("api.endpoints.StockDataProvider")
 def test_get_single_recommendation_accepts_suffix(
-    mock_provider_cls, mock_predictor_cls, mock_verify_token
+    mock_provider_cls, mock_predictor_cls, mock_verify_token,
 ):
     app = FastAPI()
     app.include_router(router)
@@ -407,7 +404,7 @@ def test_get_single_recommendation_accepts_suffix(
 @patch("api.endpoints.MLStockPredictor")
 @patch("api.endpoints.StockDataProvider")
 def test_get_single_recommendation_entry_price_centered_on_current_price(
-    mock_provider_cls, mock_predictor_cls, mock_verify_token
+    mock_provider_cls, mock_predictor_cls, mock_verify_token,
 ):
     app = FastAPI()
     app.include_router(router)

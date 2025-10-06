@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""
-TDD Refactor フェーズ: 最適30銘柄予測システムの本格実装
+"""TDD Refactor フェーズ: 最適30銘柄予測システムの本格実装
 実際のデータプロバイダーと予測システムとの統合
 """
 
-import pandas as pd
-import numpy as np
-from datetime import datetime
-from typing import List, Dict, Optional, Any
 import logging
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+import pandas as pd
 from utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -48,18 +47,18 @@ class Optimal30PredictionTDD:
     """TDD: 最適30銘柄予測システム"""
 
     def __init__(self, data_provider=None, predictor=None):
-        """
-        依存性注入パターンでテスタブルな設計
+        """依存性注入パターンでテスタブルな設計
 
         Args:
             data_provider: 株価データプロバイダー（テスト時はMockを注入可能）
             predictor: 予測システム（テスト時はMockを注入可能）
+
         """
         self._initialize_dependencies(data_provider, predictor)
         self._optimal_symbols = self._get_optimal_symbols_list()
 
         logging.info(
-            f"最適30銘柄予測システム初期化完了 (PRODUCTION_MODE: {PRODUCTION_MODE})"
+            f"最適30銘柄予測システム初期化完了 (PRODUCTION_MODE: {PRODUCTION_MODE})",
         )
 
     def _initialize_dependencies(self, data_provider, predictor):
@@ -126,7 +125,7 @@ class Optimal30PredictionTDD:
             return self._calculate_fallback_score(symbol)
 
         except Exception as e:
-            logging.warning(f"予測スコア計算エラー {symbol}: {str(e)}")
+            logging.warning(f"予測スコア計算エラー {symbol}: {e!s}")
             return self._calculate_fallback_score(symbol)
 
     def _validate_symbol(self, symbol: str):
@@ -155,7 +154,7 @@ class Optimal30PredictionTDD:
     def calculate_confidence(self, score: float) -> float:
         """信頼度を計算"""
         confidence = min(
-            MAX_CONFIDENCE, abs(score - NEUTRAL_SCORE) * CONFIDENCE_MULTIPLIER
+            MAX_CONFIDENCE, abs(score - NEUTRAL_SCORE) * CONFIDENCE_MULTIPLIER,
         )
         return confidence
 
@@ -171,11 +170,11 @@ class Optimal30PredictionTDD:
             return self._create_prediction_result(symbol, stock_data)
 
         except Exception as e:
-            logging.error(f"予測エラー {symbol}: {str(e)}")
+            logging.exception(f"予測エラー {symbol}: {e!s}")
             return None
 
     def _create_prediction_result(
-        self, symbol: str, stock_data: pd.DataFrame
+        self, symbol: str, stock_data: pd.DataFrame,
     ) -> Dict[str, Any]:
         """予測結果の作成"""
         prediction_score = self.predict_score(symbol)
@@ -195,7 +194,7 @@ class Optimal30PredictionTDD:
         }
 
         logging.info(
-            f"予測完了 {symbol}: {change_rate:+.2f}% (スコア: {prediction_score:.1f})"
+            f"予測完了 {symbol}: {change_rate:+.2f}% (スコア: {prediction_score:.1f})",
         )
         return result
 
@@ -203,9 +202,8 @@ class Optimal30PredictionTDD:
         """現在価格の取得"""
         if PRODUCTION_MODE and "Close" in stock_data.columns and len(stock_data) > 0:
             return float(stock_data["Close"].iloc[-1])
-        else:
-            # テスト環境では模擬価格
-            return MOCK_PRICE_BASE + (abs(hash(symbol)) % MOCK_PRICE_RANGE)
+        # テスト環境では模擬価格
+        return MOCK_PRICE_BASE + (abs(hash(symbol)) % MOCK_PRICE_RANGE)
 
     def predict_all_optimal_stocks(self) -> List[Dict[str, Any]]:
         """全最適銘柄の一括予測"""
@@ -239,7 +237,7 @@ class Optimal30PredictionTDD:
                 return production_data
             return self._get_mock_data(symbol)
         except Exception as e:
-            logging.warning(f"データ取得エラー {symbol}: {str(e)}")
+            logging.warning(f"データ取得エラー {symbol}: {e!s}")
             return pd.DataFrame()
 
     def _get_production_data(self, symbol: str) -> Optional[pd.DataFrame]:
@@ -247,12 +245,12 @@ class Optimal30PredictionTDD:
         if PRODUCTION_MODE and self.data_provider:
             try:
                 stock_data = self.data_provider.get_stock_data(
-                    symbol, DEFAULT_DATA_PERIOD
+                    symbol, DEFAULT_DATA_PERIOD,
                 )
                 if stock_data is not None and not stock_data.empty:
                     return stock_data
             except Exception as e:
-                logging.warning(f"プロダクションデータ取得エラー {symbol}: {str(e)}")
+                logging.warning(f"プロダクションデータ取得エラー {symbol}: {e!s}")
         return None
 
     def _get_mock_data(self, symbol: str) -> pd.DataFrame:

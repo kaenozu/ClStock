@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 import argparse
 import asyncio
 import sys
 from datetime import datetime
+
+from data.stock_data import StockDataProvider
 from models.predictor import StockPredictor
 from models.recommendation import StockRecommendation
-from data.stock_data import StockDataProvider
 
 # Windows環境でのUnicode出力設定
 if sys.platform == "win32":
@@ -60,10 +60,10 @@ def print_footer():
 
 async def main():
     parser = argparse.ArgumentParser(
-        description="ClStock - 中期的な推奨銘柄予想システム"
+        description="ClStock - 中期的な推奨銘柄予想システム",
     )
     parser.add_argument(
-        "--top", type=int, default=5, help="表示する推奨銘柄の上位N件 (デフォルト: 5)"
+        "--top", type=int, default=5, help="表示する推奨銘柄の上位N件 (デフォルト: 5)",
     )
     parser.add_argument("--symbol", type=str, help="特定の銘柄コードの推奨情報を表示")
     parser.add_argument("--list", action="store_true", help="利用可能な銘柄一覧を表示")
@@ -98,7 +98,7 @@ async def main():
                     print_footer()
             except Exception as e:
                 error_msg = (
-                    f"銘柄 {args.symbol} の推奨情報を取得できませんでした: {str(e)}"
+                    f"銘柄 {args.symbol} の推奨情報を取得できませんでした: {e!s}"
                 )
                 print(f"[ERROR] エラー: {error_msg}")
                 return
@@ -128,7 +128,7 @@ async def main():
     except KeyboardInterrupt:
         print("\n[WARN] 処理が中断されました。")
     except Exception as e:
-        print(f"[ERROR] エラーが発生しました: {str(e)}")
+        print(f"[ERROR] エラーが発生しました: {e!s}")
 
 
 if __name__ == "__main__":

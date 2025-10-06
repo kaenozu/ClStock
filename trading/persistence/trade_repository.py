@@ -54,7 +54,7 @@ class TradeRepository:
                         execution_details_json TEXT,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP
                     )
-                    """
+                    """,
                 )
                 conn.commit()
         except Exception as exc:
@@ -110,11 +110,13 @@ class TradeRepository:
         end_date: Optional[datetime] = None,
     ) -> List[TradeRecord]:
         """保存済み取引を取得"""
-        query = ["SELECT trade_id, session_id, symbol, action, quantity, price, timestamp,",
-                 "signal_type, confidence, precision_val, precision_87_achieved,",
-                 "expected_return, actual_return, profit_loss, trading_costs_json,",
-                 "position_size, market_value, reasoning, stop_loss_price,",
-                 "take_profit_price, execution_details_json FROM trade_records WHERE 1=1"]
+        query = [
+            "SELECT trade_id, session_id, symbol, action, quantity, price, timestamp,",
+            "signal_type, confidence, precision_val, precision_87_achieved,",
+            "expected_return, actual_return, profit_loss, trading_costs_json,",
+            "position_size, market_value, reasoning, stop_loss_price,",
+            "take_profit_price, execution_details_json FROM trade_records WHERE 1=1",
+        ]
         params: List[object] = []
 
         if session_id:
@@ -191,7 +193,7 @@ class TradeRepository:
                             stop_loss_price=stop_loss_price,
                             take_profit_price=take_profit_price,
                             execution_details=execution_details,
-                        )
+                        ),
                     )
         except Exception as exc:
             self.logger.error("取引取得エラー: %s", exc)

@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
-"""
-最適30銘柄予測システム
+"""最適30銘柄予測システム
 TSE 4000最適化で発見した30銘柄での統合予測
 """
 
-import sys
 import os
+import sys
 
 # アーカイブファイルからメインプロジェクトへのパスを追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
+import warnings
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-import warnings
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Any
-import logging
 from utils.logger_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -24,7 +23,6 @@ warnings.filterwarnings("ignore")
 
 from data.stock_data import StockDataProvider
 from models.ml_models import UltraHighPerformancePredictor
-
 
 # 予測システム定数
 NEUTRAL_SCORE = 50.0
@@ -95,7 +93,7 @@ class Optimal30PredictionSystem:
 
     def _print_initialization_info(self):
         """初期化情報を表示"""
-        print(f"最適30銘柄予測システム初期化完了")
+        print("最適30銘柄予測システム初期化完了")
         print(f"対象銘柄数: {len(self.optimal_30_symbols)}銘柄")
 
     def run_comprehensive_prediction(self):
@@ -131,18 +129,18 @@ class Optimal30PredictionSystem:
         try:
             stock_data = self._get_stock_data(symbol)
             if stock_data.empty:
-                print(f"  ❌ データ取得失敗")
+                print("  ❌ データ取得失敗")
                 return None
 
             prediction_score = self._get_prediction_score(symbol)
             if prediction_score is None or prediction_score <= 0:
-                print(f"  [失敗] 予測失敗")
+                print("  [失敗] 予測失敗")
                 return None
 
             return self._create_prediction_result(symbol, stock_data, prediction_score)
 
         except Exception as e:
-            print(f"  [エラー] エラー: {str(e)}")
+            print(f"  [エラー] エラー: {e!s}")
             return None
 
     def _get_stock_data(self, symbol: str) -> pd.DataFrame:
@@ -154,7 +152,7 @@ class Optimal30PredictionSystem:
         return self.predictor.ultra_predict(symbol)
 
     def _create_prediction_result(
-        self, symbol: str, stock_data: pd.DataFrame, prediction_score: float
+        self, symbol: str, stock_data: pd.DataFrame, prediction_score: float,
     ) -> Dict[str, Any]:
         """予測結果の作成"""
         current_price = stock_data["Close"].iloc[-1]
@@ -184,10 +182,10 @@ class Optimal30PredictionSystem:
         trend = "[上昇]" if result["change_rate"] > 0 else "[下降]"
         print(
             f"  [成功] {trend} {result['change_rate']:+.2f}% "
-            f"(スコア: {result['prediction_score']:.1f}, 信頼度: {result['confidence']:.1f}%)"
+            f"(スコア: {result['prediction_score']:.1f}, 信頼度: {result['confidence']:.1f}%)",
         )
         print(
-            f"     現在価格: ¥{result['current_price']:.0f} → 予測価格: ¥{result['predicted_price']:.0f}"
+            f"     現在価格: ¥{result['current_price']:.0f} → 予測価格: ¥{result['predicted_price']:.0f}",
         )
 
     def analyze_prediction_results(self, predictions):
@@ -207,7 +205,7 @@ class Optimal30PredictionSystem:
         print("\n" + SEPARATOR_LINE)
         print("最適30銘柄 予測結果分析")
         print(SEPARATOR_LINE)
-        print(f"予測成功率: {len(predictions)}/30 ({len(predictions)/30*100:.1f}%)")
+        print(f"予測成功率: {len(predictions)}/30 ({len(predictions) / 30 * 100:.1f}%)")
 
     def _display_bullish_predictions(self, predictions):
         """上昇予測銘柄の表示"""
@@ -219,12 +217,12 @@ class Optimal30PredictionSystem:
         print(SUBSECTION_LINE)
 
         bullish_sorted = sorted(
-            bullish_predictions, key=lambda x: x["change_rate"], reverse=True
+            bullish_predictions, key=lambda x: x["change_rate"], reverse=True,
         )
         for i, pred in enumerate(bullish_sorted[:10], 1):
             print(
                 f"{i:2d}.  {pred['symbol']}  ¥{pred['current_price']:6.0f}  ¥{pred['predicted_price']:6.0f}  "
-                f"{pred['change_rate']:+6.2f}%  {pred['confidence']:5.1f}%"
+                f"{pred['change_rate']:+6.2f}%  {pred['confidence']:5.1f}%",
             )
 
     def _display_bearish_predictions(self, predictions):
@@ -238,7 +236,7 @@ class Optimal30PredictionSystem:
             for i, pred in enumerate(bearish_sorted[:5], 1):
                 print(
                     f"{i:2d}.  {pred['symbol']}  ¥{pred['current_price']:6.0f}  ¥{pred['predicted_price']:6.0f}  "
-                    f"{pred['change_rate']:+6.2f}%  {pred['confidence']:5.1f}%"
+                    f"{pred['change_rate']:+6.2f}%  {pred['confidence']:5.1f}%",
                 )
 
     def _display_statistics(self, predictions):
@@ -251,7 +249,7 @@ class Optimal30PredictionSystem:
         max_gain = max(p["change_rate"] for p in predictions)
         min_gain = min(p["change_rate"] for p in predictions)
 
-        print(f"\n[統計サマリー]")
+        print("\n[統計サマリー]")
         print("-" * 40)
         print(f"平均変化率: {avg_change:+.2f}%")
         print(f"平均信頼度: {avg_confidence:.1f}%")
@@ -260,17 +258,17 @@ class Optimal30PredictionSystem:
 
     def _display_investment_recommendations(self, predictions):
         """投資推奨の表示"""
-        print(f"\n[投資推奨] トップ5")
+        print("\n[投資推奨] トップ5")
         print("-" * 40)
 
         top_5 = sorted(
-            predictions, key=lambda x: x["change_rate"] * x["confidence"], reverse=True
+            predictions, key=lambda x: x["change_rate"] * x["confidence"], reverse=True,
         )[:5]
         for i, pred in enumerate(top_5, 1):
             score = pred["change_rate"] * pred["confidence"] / 100
             print(
                 f"{i}. {pred['symbol']} - 変化率:{pred['change_rate']:+.2f}% "
-                f"信頼度:{pred['confidence']:.1f}% (スコア:{score:+.1f})"
+                f"信頼度:{pred['confidence']:.1f}% (スコア:{score:+.1f})",
             )
 
     def run_single_prediction(self, symbol):
@@ -291,11 +289,11 @@ class Optimal30PredictionSystem:
             return self._run_multi_period_prediction(symbol, stock_data)
 
         except Exception as e:
-            print(f"[エラー] 予測エラー: {str(e)}")
+            print(f"[エラー] 予測エラー: {e!s}")
             return None
 
     def _run_multi_period_prediction(
-        self, symbol: str, stock_data: pd.DataFrame
+        self, symbol: str, stock_data: pd.DataFrame,
     ) -> Dict:
         """複数期間での予測"""
         periods = [1, 3, 5, 10]
@@ -318,7 +316,7 @@ class Optimal30PredictionSystem:
 
                 print(
                     f"{days:2d}日後予測: ¥{predicted_price:6.0f} ({change_rate:+6.2f}%) "
-                    f"スコア:{prediction_score:5.1f} 信頼度:{confidence:5.1f}%"
+                    f"スコア:{prediction_score:5.1f} 信頼度:{confidence:5.1f}%",
                 )
 
         return results
@@ -353,7 +351,7 @@ def main():
         elif choice == "3":
             # トップ10銘柄のクイック予測
             top_10 = system.optimal_30_symbols[:10]
-            print(f"\n[クイック予測] トップ10銘柄")
+            print("\n[クイック予測] トップ10銘柄")
 
             for symbol in top_10:
                 try:
@@ -365,7 +363,7 @@ def main():
                             change_rate = (prediction_score - 50) * 0.1
                             predicted_price = current_price * (1 + change_rate / 100)
                             print(
-                                f"{symbol}: {change_rate:+.2f}% (¥{current_price:.0f}→¥{predicted_price:.0f}) スコア:{prediction_score:.1f}"
+                                f"{symbol}: {change_rate:+.2f}% (¥{current_price:.0f}→¥{predicted_price:.0f}) スコア:{prediction_score:.1f}",
                             )
                 except:
                     pass
@@ -375,7 +373,7 @@ def main():
     except KeyboardInterrupt:
         print("\n\n予測システムを終了します")
     except Exception as e:
-        print(f"\n[エラー] エラー: {str(e)}")
+        print(f"\n[エラー] エラー: {e!s}")
 
 
 if __name__ == "__main__":

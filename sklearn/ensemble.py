@@ -1,4 +1,5 @@
 """Minimal sklearn.ensemble stub for test environment."""
+
 from __future__ import annotations
 
 

@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-市場センチメント分析システム
+"""市場センチメント分析システム
 ニュース、SNS、市場データから総合的なセンチメントを分析
 """
 
 import logging
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
-from collections import defaultdict, Counter
-from dataclasses import dataclass
-import re
-import json
 
 
 @dataclass
@@ -121,7 +118,7 @@ class SocialMediaAnalyzer:
         self.bearish_expressions = ["📉", "sell", "売り", "short", "損切り", "暴落"]
 
     def analyze_social_sentiment(
-        self, social_posts: List[Dict[str, Any]]
+        self, social_posts: List[Dict[str, Any]],
     ) -> Tuple[float, float]:
         """ソーシャルメディアセンチメント分析"""
         if not social_posts:
@@ -159,7 +156,7 @@ class SocialMediaAnalyzer:
         # 重み付き平均
         if sum(engagement_weights) > 0:
             weighted_sentiment = np.average(
-                sentiment_scores, weights=engagement_weights
+                sentiment_scores, weights=engagement_weights,
             )
             # エンゲージメントボリューム指標
             volume_indicator = np.log1p(sum(engagement_weights)) / 10
@@ -190,7 +187,6 @@ class TechnicalSentimentAnalyzer:
             # トレンドセンチメント（移動平均）
             ma_short = price_data["Close"].rolling(window=5).mean().iloc[-1]
             ma_long = price_data["Close"].rolling(window=20).mean().iloc[-1]
-            current_price = price_data["Close"].iloc[-1]
 
             trend_sentiment = 0.0
             if ma_long > 0:
@@ -212,7 +208,7 @@ class TechnicalSentimentAnalyzer:
             # ボラティリティセンチメント（低ボラティリティ = ポジティブ）
             volatility = price_data["Close"].pct_change().std()
             volatility_sentiment = 1.0 - min(
-                volatility * 10, 1.0
+                volatility * 10, 1.0,
             )  # 高ボラティリティはネガティブ
 
             # 出来高センチメント
@@ -223,7 +219,7 @@ class TechnicalSentimentAnalyzer:
                 if historical_volume > 0:
                     volume_ratio = recent_volume / historical_volume
                     volume_sentiment = np.tanh(
-                        (volume_ratio - 1) * 2
+                        (volume_ratio - 1) * 2,
                     )  # -1 to 1に正規化
                 else:
                     volume_sentiment = 0.0
@@ -238,7 +234,7 @@ class TechnicalSentimentAnalyzer:
             }
 
         except Exception as e:
-            self.logger.error(f"Technical sentiment analysis failed: {str(e)}")
+            self.logger.error(f"Technical sentiment analysis failed: {e!s}")
             return {
                 "trend_sentiment": 0.0,
                 "momentum_sentiment": 0.0,
@@ -248,8 +244,7 @@ class TechnicalSentimentAnalyzer:
 
 
 class MarketSentimentAnalyzer:
-    """
-    市場センチメント総合分析システム
+    """市場センチメント総合分析システム
 
     特徴:
     - マルチソース分析（ニュース、SNS、技術指標）
@@ -283,7 +278,6 @@ class MarketSentimentAnalyzer:
         price_data: Optional[pd.DataFrame] = None,
     ) -> SentimentData:
         """包括的センチメント分析"""
-
         sentiment_sources = {}
 
         # ニュースセンチメント
@@ -306,10 +300,10 @@ class MarketSentimentAnalyzer:
         # 技術的センチメント
         if price_data is not None and not price_data.empty:
             technical_sentiments = self.technical_analyzer.analyze_technical_sentiment(
-                price_data
+                price_data,
             )
             sentiment_sources["technical"] = np.mean(
-                list(technical_sentiments.values())
+                list(technical_sentiments.values()),
             )
             sentiment_sources.update(technical_sentiments)
         else:
@@ -347,7 +341,7 @@ class MarketSentimentAnalyzer:
                     "news": news_data is not None,
                     "social": social_data is not None,
                     "technical": price_data is not None,
-                }
+                },
             },
         )
 
@@ -357,7 +351,7 @@ class MarketSentimentAnalyzer:
         return sentiment_data
 
     def _calculate_sentiment_momentum(
-        self, symbol: str, current_sentiment: float
+        self, symbol: str, current_sentiment: float,
     ) -> float:
         """センチメントモメンタム計算"""
         if (
@@ -508,7 +502,7 @@ class MarketSentimentAnalyzer:
         valid_symbols = 0
 
         for symbol in symbols:
-            if symbol in self.sentiment_history and self.sentiment_history[symbol]:
+            if self.sentiment_history.get(symbol):
                 latest = self.sentiment_history[symbol][-1]
                 total_sentiment += latest.sentiment_score
                 valid_symbols += 1
@@ -559,7 +553,7 @@ class MarketSentimentAnalyzer:
         return report
 
     def _generate_recommendation(
-        self, latest: SentimentData, trend: Dict[str, Any], anomaly: Dict[str, Any]
+        self, latest: SentimentData, trend: Dict[str, Any], anomaly: Dict[str, Any],
     ) -> str:
         """推奨事項生成"""
         score = latest.sentiment_score
@@ -570,19 +564,17 @@ class MarketSentimentAnalyzer:
         if anomaly.get("anomaly_detected"):
             if anomaly["direction"] == "positive":
                 return "異常な楽観傾向検出 - 慎重な判断を推奨"
-            else:
-                return "異常な悲観傾向検出 - 逆張りの機会の可能性"
+            return "異常な悲観傾向検出 - 逆張りの機会の可能性"
 
         # 通常時
         if score > 0.5 and confidence > 0.7 and momentum > 0:
             return "強い買いシグナル - ポジティブセンチメント継続"
-        elif score > 0.3 and trend["trend"] == "bullish":
+        if score > 0.3 and trend["trend"] == "bullish":
             return "買い推奨 - 上昇トレンド確認"
-        elif score < -0.5 and confidence > 0.7:
+        if score < -0.5 and confidence > 0.7:
             return "売りシグナル - ネガティブセンチメント強い"
-        elif score < -0.3 and trend["trend"] == "bearish":
+        if score < -0.3 and trend["trend"] == "bearish":
             return "売り推奨 - 下降トレンド継続"
-        elif abs(score) < 0.2:
+        if abs(score) < 0.2:
             return "中立 - 明確な方向性なし"
-        else:
-            return "様子見推奨 - センチメント不安定"
+        return "様子見推奨 - センチメント不安定"

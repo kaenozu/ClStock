@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
+"""即座に実行可能な次ステップ - リスク管理システム強化
 """
-即座に実行可能な次ステップ - リスク管理システム強化
-"""
+
+import warnings
+
+from scipy import stats
 
 import numpy as np
 import pandas as pd
-from scipy import stats
-import warnings
 
 warnings.filterwarnings("ignore")
 
@@ -48,7 +49,7 @@ class VaRRiskManager:
         }
 
     def monte_carlo_var(
-        self, returns: np.ndarray, portfolio_value: float, simulations: int = 10000
+        self, returns: np.ndarray, portfolio_value: float, simulations: int = 10000,
     ) -> dict:
         """モンテカルロVaR計算"""
         mean_return = np.mean(returns)
@@ -86,7 +87,7 @@ class DynamicPositionSizer:
         self.max_portfolio_risk = max_portfolio_risk
 
     def kelly_criterion(
-        self, win_rate: float, avg_win: float, avg_loss: float
+        self, win_rate: float, avg_win: float, avg_loss: float,
     ) -> float:
         """ケリー基準によるポジションサイズ計算"""
         if avg_loss == 0:
@@ -99,7 +100,7 @@ class DynamicPositionSizer:
         return max(0, min(kelly_fraction * 0.25, 0.2))
 
     def volatility_adjusted_size(
-        self, target_vol: float, stock_vol: float, base_position: float
+        self, target_vol: float, stock_vol: float, base_position: float,
     ) -> float:
         """ボラティリティ調整ポジションサイズ"""
         if stock_vol == 0:
@@ -156,7 +157,7 @@ class EnhancedStopLoss:
         return stop_loss
 
     def trailing_stop(
-        self, current_price: float, highest_price: float, trail_percent: float = 0.05
+        self, current_price: float, highest_price: float, trail_percent: float = 0.05,
     ) -> float:
         """トレーリングストップ"""
         return highest_price * (1 - trail_percent)
@@ -176,7 +177,6 @@ class EnhancedStopLoss:
 
 def demonstrate_risk_management():
     """リスク管理システムのデモンストレーション"""
-
     print("=" * 60)
     print("次世代リスク管理システム デモンストレーション")
     print("=" * 60)
@@ -196,15 +196,15 @@ def demonstrate_risk_management():
     historical_var = var_manager.historical_var(returns, portfolio_value)
     mc_var = var_manager.monte_carlo_var(returns, portfolio_value)
 
-    print(f"パラメトリックVaR:")
+    print("パラメトリックVaR:")
     print(f"  1日: {parametric_var['VaR_1day']:,.0f}円")
     print(f"  10日: {parametric_var['VaR_10day']:,.0f}円")
 
-    print(f"\nヒストリカルVaR:")
+    print("\nヒストリカルVaR:")
     print(f"  1日: {historical_var['VaR_1day']:,.0f}円")
     print(f"  10日: {historical_var['VaR_10day']:,.0f}円")
 
-    print(f"\nモンテカルロVaR:")
+    print("\nモンテカルロVaR:")
     print(f"  1日: {mc_var['VaR_1day']:,.0f}円")
     print(f"  10日: {mc_var['VaR_10day']:,.0f}円")
 
@@ -231,7 +231,7 @@ def demonstrate_risk_management():
     base_position = 0.1
 
     vol_adjusted = position_sizer.volatility_adjusted_size(
-        target_vol, stock_vol, base_position
+        target_vol, stock_vol, base_position,
     )
     print(f"ボラティリティ調整後: {vol_adjusted:.2%}")
 
@@ -259,7 +259,7 @@ def demonstrate_risk_management():
     stop_loss_price = 950
     fib_targets = stop_loss_manager.fibonacci_targets(entry_price, stop_loss_price)
 
-    print(f"\nフィボナッチ利確レベル:")
+    print("\nフィボナッチ利確レベル:")
     print(f"  ターゲット1: {fib_targets['target_1']:.2f}円")
     print(f"  ターゲット2: {fib_targets['target_2']:.2f}円")
     print(f"  ターゲット3: {fib_targets['target_3']:.2f}円")

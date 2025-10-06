@@ -2,10 +2,11 @@ import os
 import sys
 from datetime import datetime, timedelta
 from types import ModuleType
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
+
+import pytest
 
 import pandas as pd
-import pytest
 
 # プロジェクトルートをパスに追加し、旧スタブをクリア
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,18 +28,17 @@ if "data.stock_data" not in sys.modules:
 
     dummy_stock_data.StockDataProvider = _ConftestStockDataProvider
     sys.modules["data.stock_data"] = dummy_stock_data
-    setattr(data, "stock_data", dummy_stock_data)
+    data.stock_data = dummy_stock_data
 
 # APIセキュリティ関連の環境変数とモジュールをモック
 os.environ.setdefault("CLSTOCK_DEV_KEY", "test_dev_key")
 os.environ.setdefault("CLSTOCK_ADMIN_KEY", "test_admin_key")
 
+
 # config.secrets モジュールが存在しない場合のモック
 class MockConfigSecrets:
-    API_KEYS = {
-        "test_dev_key": "developer",
-        "test_admin_key": "administrator"
-    }
+    API_KEYS = {"test_dev_key": "developer", "test_admin_key": "administrator"}
+
 
 sys.modules["config.secrets"] = MockConfigSecrets()
 
@@ -61,6 +61,7 @@ def generate_mock_stock_data(period="1y", symbol="7203", company_name="トヨタ
 
     Returns:
         pd.DataFrame: Stock price data
+
     """
     if pd is None:
         pytest.skip("pandas is required for mock stock data fixtures")
@@ -105,7 +106,6 @@ def generate_mock_stock_data(period="1y", symbol="7203", company_name="トヨタ
 @pytest.fixture
 def sample_recommendation() -> StockRecommendation:
     """Provide a representative stock recommendation object for API tests."""
-
     return StockRecommendation(
         rank=1,
         symbol="7203",
@@ -136,7 +136,7 @@ def mock_yfinance():
                 "Low": [98, 99, 100],
                 "Close": [101, 102, 103],
                 "Volume": [1000000, 1100000, 1200000],
-            }
+            },
         )
         mock_ticker_instance.info = {
             "marketCap": 1000000000,

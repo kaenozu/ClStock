@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-
 from trading.models import PerformanceMetrics, TradeRecord
 
 
@@ -23,7 +22,9 @@ class PerformanceMetricsService:
             return self._empty_metrics()
 
         completed_trades = [
-            trade for trade in trades if trade.action == "CLOSE" and trade.profit_loss is not None
+            trade
+            for trade in trades
+            if trade.action == "CLOSE" and trade.profit_loss is not None
         ]
 
         if not completed_trades:
@@ -32,7 +33,9 @@ class PerformanceMetricsService:
         total_trades = len(completed_trades)
         profits = [trade.profit_loss for trade in completed_trades]
         returns = [
-            trade.actual_return for trade in completed_trades if trade.actual_return is not None
+            trade.actual_return
+            for trade in completed_trades
+            if trade.actual_return is not None
         ]
 
         winning_trades = len([p for p in profits if p > 0])
@@ -65,23 +68,33 @@ class PerformanceMetricsService:
         )
 
         max_drawdown = self._calculate_max_drawdown(completed_trades)
-        max_consecutive_wins, max_consecutive_losses = self._calculate_consecutive_streaks(
-            profits
+        max_consecutive_wins, max_consecutive_losses = (
+            self._calculate_consecutive_streaks(profits)
         )
 
-        precision_87_trades = len([trade for trade in completed_trades if trade.precision_87_achieved])
+        precision_87_trades = len(
+            [trade for trade in completed_trades if trade.precision_87_achieved],
+        )
         precision_87_success_rate = 0.0
         if precision_87_trades:
             precision_87_wins = len(
-                [trade for trade in completed_trades if trade.precision_87_achieved and trade.profit_loss > 0]
+                [
+                    trade
+                    for trade in completed_trades
+                    if trade.precision_87_achieved and trade.profit_loss > 0
+                ],
             )
             precision_87_success_rate = precision_87_wins / precision_87_trades * 100
 
         best_trade = max(profits) if profits else 0.0
         worst_trade = min(profits) if profits else 0.0
 
-        average_holding_period = self._calculate_average_holding_period(completed_trades)
-        total_return_pct = total_return / self.initial_capital * 100 if self.initial_capital else 0.0
+        average_holding_period = self._calculate_average_holding_period(
+            completed_trades,
+        )
+        total_return_pct = (
+            total_return / self.initial_capital * 100 if self.initial_capital else 0.0
+        )
 
         return PerformanceMetrics(
             total_trades=total_trades,
@@ -108,14 +121,20 @@ class PerformanceMetricsService:
 
     def get_precision_87_analysis(self, trades: List[TradeRecord]) -> Dict[str, Any]:
         completed_trades = [
-            trade for trade in trades if trade.action == "CLOSE" and trade.profit_loss is not None
+            trade
+            for trade in trades
+            if trade.action == "CLOSE" and trade.profit_loss is not None
         ]
 
         if not completed_trades:
             return {}
 
-        precision_87_trades = [trade for trade in completed_trades if trade.precision_87_achieved]
-        regular_trades = [trade for trade in completed_trades if not trade.precision_87_achieved]
+        precision_87_trades = [
+            trade for trade in completed_trades if trade.precision_87_achieved
+        ]
+        regular_trades = [
+            trade for trade in completed_trades if not trade.precision_87_achieved
+        ]
 
         precision_87_stats = self._calculate_trade_stats(precision_87_trades)
         regular_stats = self._calculate_trade_stats(regular_trades)
@@ -123,12 +142,16 @@ class PerformanceMetricsService:
         return {
             "total_trades": len(completed_trades),
             "precision_87_trades": len(precision_87_trades),
-            "precision_87_ratio": len(precision_87_trades) / len(completed_trades) * 100,
+            "precision_87_ratio": len(precision_87_trades)
+            / len(completed_trades)
+            * 100,
             "precision_87_performance": precision_87_stats,
             "regular_performance": regular_stats,
             "performance_comparison": {
-                "win_rate_difference": precision_87_stats["win_rate"] - regular_stats["win_rate"],
-                "avg_return_difference": precision_87_stats["avg_return"] - regular_stats["avg_return"],
+                "win_rate_difference": precision_87_stats["win_rate"]
+                - regular_stats["win_rate"],
+                "avg_return_difference": precision_87_stats["avg_return"]
+                - regular_stats["avg_return"],
                 "profit_factor_ratio": (
                     precision_87_stats["profit_factor"] / regular_stats["profit_factor"]
                     if regular_stats["profit_factor"] > 0
@@ -155,14 +178,15 @@ class PerformanceMetricsService:
         max_drawdown = 0.0
 
         for value in cumulative_returns:
-            if value > peak:
-                peak = value
+            peak = max(peak, value)
             drawdown = (peak - value) / abs(peak) if peak else 0
             max_drawdown = max(max_drawdown, drawdown)
 
         return float(max_drawdown * 100)
 
-    def _calculate_consecutive_streaks(self, profits: List[Optional[float]]) -> Tuple[int, int]:
+    def _calculate_consecutive_streaks(
+        self, profits: List[Optional[float]],
+    ) -> Tuple[int, int]:
         if not profits:
             return 0, 0
 
@@ -204,7 +228,9 @@ class PerformanceMetricsService:
                 "worst_trade": 0.0,
             }
 
-        profits = [trade.profit_loss for trade in trades if trade.profit_loss is not None]
+        profits = [
+            trade.profit_loss for trade in trades if trade.profit_loss is not None
+        ]
         if not profits:
             return {
                 "total_trades": len(trades),
