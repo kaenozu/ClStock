@@ -7,6 +7,7 @@ ClStock デモ運用 簡単スタート
 
 import sys
 import os
+import pandas as pd  # 追加
 from datetime import datetime, timedelta
 import io
 
