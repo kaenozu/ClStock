@@ -43,6 +43,8 @@ def mock_ensemble_predictor():
         confidence=0.8,
         timestamp=datetime.now(),
         metadata={"test": True},
+        accuracy=0.9,
+        symbol="TEST",
     )
     return predictor
 
