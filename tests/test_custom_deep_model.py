@@ -2,27 +2,27 @@
 
 import os
 import sys
+import types
 import unittest
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
-<<<<<<< HEAD
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-import sys
-import os
-import types
-=======
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
 
 # ClStockプロジェクトのルートディレクトリをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-<<<<<<< HEAD
-from models.custom_deep_predictor import CustomDeepPredictor
+from analysis.model_interpretability import ModelInterpretability
 from analysis.multimodal_integration import MultimodalIntegrator
-from models.attention_mechanism import TemporalAttention, MultiHeadTemporalAttention, AdaptiveTemporalAttention
+from models.attention_mechanism import (
+    AdaptiveTemporalAttention,
+    MultiHeadTemporalAttention,
+    TemporalAttention,
+)
+from models.custom_deep_predictor import CustomDeepPredictor
+
+
 def _install_reinforcement_learning_stubs() -> None:
     if "gym" not in sys.modules:
         gym_stub = types.ModuleType("gym")
@@ -93,18 +93,6 @@ def _install_reinforcement_learning_stubs() -> None:
 
 _install_reinforcement_learning_stubs()
 
-from systems.reinforcement_trading_system import ReinforcementTradingSystem
-from models.self_supervised_learning import SelfSupervisedModel, TemporalSelfSupervisedModel
-=======
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
-from analysis.model_interpretability import ModelInterpretability
-from analysis.multimodal_integration import MultimodalIntegrator
-from models.attention_mechanism import (
-    AdaptiveTemporalAttention,
-    MultiHeadTemporalAttention,
-    TemporalAttention,
-)
-from models.custom_deep_predictor import CustomDeepPredictor
 from models.self_supervised_learning import (
     SelfSupervisedModel,
     TemporalSelfSupervisedModel,
@@ -231,36 +219,31 @@ class TestCustomDeepModel(unittest.TestCase):
         # 出力形状の検証
         self.assertEqual(output_adaptive.shape[1], 48)
         print(f"Adaptive Temporal Attention - Output Shape: {output_adaptive.shape}")
-<<<<<<< HEAD
-        
+
     class _StubMarketDataProvider:
         """強化学習システム用の市場データスタブ。"""
 
         def __init__(self):
-            dates = pd.date_range(start='2023-01-01', periods=30, freq='B')
-            self.data = pd.DataFrame({
-                'Open': np.linspace(100, 105, len(dates)),
-                'High': np.linspace(101, 106, len(dates)),
-                'Low': np.linspace(99, 104, len(dates)),
-                'Close': np.linspace(100.5, 105.5, len(dates)),
-                'Volume': np.linspace(1_000, 2_000, len(dates)),
-            }, index=dates)
+            dates = pd.date_range(start="2023-01-01", periods=30, freq="B")
+            self.data = pd.DataFrame(
+                {
+                    "Open": np.linspace(100, 105, len(dates)),
+                    "High": np.linspace(101, 106, len(dates)),
+                    "Low": np.linspace(99, 104, len(dates)),
+                    "Close": np.linspace(100.5, 105.5, len(dates)),
+                    "Volume": np.linspace(1_000, 2_000, len(dates)),
+                },
+                index=dates,
+            )
 
         def get_stock_data(self, symbol: str, period: str) -> pd.DataFrame:
             return self.data.copy()
 
     def test_reinforcement_trading_system(self):
         """強化学習取引システムのテスト（最小限のテスト）"""
-        trading_system = ReinforcementTradingSystem(data_provider=self._StubMarketDataProvider())
-        
-=======
-
-    def test_reinforcement_trading_system(self):
-        """強化学習取引システムのテスト（最小限のテスト）"""
-        # テスト用のデータプロバイダーを設定（Noneの場合のデフォルト動作）
-        trading_system = ReinforcementTradingSystem(data_provider=None)
-
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
+        trading_system = ReinforcementTradingSystem(
+            data_provider=self._StubMarketDataProvider(),
+        )
         # 訓練（短い期間でテスト）
         trading_system.train_model("TEST_SYMBOL", period="10D", timesteps=100)
 
