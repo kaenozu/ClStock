@@ -33,7 +33,11 @@ except ImportError:
 @pytest.fixture
 def mock_ensemble_predictor():
     """Create a mock ensemble predictor."""
-    predictor = Mock(spec=EnsembleStockPredictor)
+    # Use a generic Mock if EnsembleStockPredictor is not available
+    if EnsembleStockPredictor is object:
+        predictor = Mock()
+    else:
+        predictor = Mock(spec=EnsembleStockPredictor)
     predictor.predict.return_value = PredictionResult(
         prediction=75.0,
         confidence=0.8,
