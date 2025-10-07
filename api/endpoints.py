@@ -94,7 +94,7 @@ def stock_recommendation_to_schema(
     return StockRecommendationSchema(
         rank=stock_rec.rank,
         symbol=stock_rec.symbol,
-        name=stock_rec.company_name,  # company_name -> name
+        company_name=stock_rec.company_name,
         sector=None,  # デフォルト
         score=stock_rec.score,
         action=action,
@@ -275,13 +275,21 @@ async def get_stock_data(
                 if previous_close != 0:
                     price_change_percent = float(price_change / previous_close * 100)
 
+        volume_value = technical_data["Volume"].iloc[-1]
+        volume = None
+        if not pd.isna(volume_value):
+            try:
+                volume = int(float(volume_value))
+            except (TypeError, ValueError):
+                volume = None
+
         return {
             "symbol": validated_symbol,
             "company_name": company_name,
             "current_price": current_price,
             "price_change": price_change,
             "price_change_percent": price_change_percent,
-            "volume": int(technical_data["Volume"].iloc[-1]),
+            "volume": volume,
             "technical_indicators": {
                 "sma_20": (
                     float(technical_data["SMA_20"].iloc[-1])

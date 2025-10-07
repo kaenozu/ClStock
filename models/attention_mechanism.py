@@ -1,143 +1,100 @@
-"""カスタムアテンション機構（Temporal Attention）"""
+"""アテンション機構の軽量な NumPy ベース実装。"""
+
+from __future__ import annotations
 
 import logging
+from typing import List
 
-import tensorflow as tf
-from tensorflow.keras.layers import Dense, Layer
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
 
-class TemporalAttention(Layer):
-    """時系列データ用カスタムアテンション機構"""
+class TemporalAttention:
+    """時系列データ用カスタムアテンション機構 (NumPy 版)。"""
 
-    def __init__(self, attention_units, **kwargs):
-        super(TemporalAttention, self).__init__(**kwargs)
+    def __init__(self, attention_units: int):
         self.attention_units = attention_units
-        self.W_query = Dense(attention_units, activation="tanh")
-        self.W_key = Dense(attention_units, activation="tanh")
-        self.W_value = Dense(attention_units, activation="tanh")
-        self.V = Dense(1)
+        self._projection = None
 
-    def build(self, input_shape):
-        super().build(input_shape)
+    def __call__(self, inputs: np.ndarray) -> np.ndarray:
+        data = np.asarray(inputs, dtype=float)
+        if data.ndim != 3:
+            raise ValueError("inputs は (batch, time, features) 形式である必要があります。")
 
-    def call(self, inputs):
-        """Args:
-            inputs: 時系列データ (batch_size, time_steps, features)
+        batch, time_steps, features = data.shape
+        if time_steps == 0:
+            return np.zeros((batch, self.attention_units))
 
-        Returns:
-            attended_output: アテンション適用後の出力 (batch_size, features)
+        time_weights = np.linspace(1.0, 2.0, time_steps, dtype=float)
+        time_weights = time_weights / time_weights.sum()
+        aggregated = np.tensordot(time_weights, data, axes=(0, 1))
 
-        """
-        # Query, Key, Valueの計算
-        query = self.W_query(inputs)  # (batch_size, time_steps, attention_units)
-        key = self.W_key(inputs)  # (batch_size, time_steps, attention_units)
-        value = self.W_value(inputs)  # (batch_size, time_steps, attention_units)
+        if self._projection is None:
+            scale = 1.0 / max(features, 1)
+            self._projection = np.full((features, self.attention_units), scale)
 
-        # アテンションスコアの計算
-        scores = self.V(tf.nn.tanh(query + key))  # (batch_size, time_steps, 1)
-        attention_weights = tf.nn.softmax(scores, axis=1)  # (batch_size, time_steps, 1)
-
-        # アテンション重みを用いた加重平均
-        attended_output = tf.reduce_sum(
-            attention_weights * value, axis=1,
-        )  # (batch_size, attention_units)
-
-        return attended_output
+        output = aggregated @ self._projection
+        return np.asarray(output, dtype=float)
 
 
-class MultiHeadTemporalAttention(Layer):
-    """Multi-Head Temporal Attention"""
+class MultiHeadTemporalAttention:
+    """Multi-Head Temporal Attention (NumPy 版)。"""
 
-    def __init__(self, num_heads, attention_units_per_head, **kwargs):
-        super(MultiHeadTemporalAttention, self).__init__(**kwargs)
+    def __init__(self, num_heads: int, attention_units_per_head: int):
         self.num_heads = num_heads
         self.attention_units_per_head = attention_units_per_head
         self.total_units = num_heads * attention_units_per_head
-
-        self.attention_layers = [
+        self.attention_layers: List[TemporalAttention] = [
             TemporalAttention(attention_units_per_head) for _ in range(num_heads)
         ]
-        self.output_projection = Dense(self.total_units)
-
-    def call(self, inputs):
-        """Args:
-            inputs: 時系列データ (batch_size, time_steps, features)
-
-        Returns:
-            multi_head_output: Multi-Headアテンション適用後の出力 (batch_size, total_units)
-
-        """
-        head_outputs = []
-        for attention_layer in self.attention_layers:
-            head_output = attention_layer(inputs)
-            head_outputs.append(head_output)
-
-        # 複数のヘッドの出力を連結
-        concatenated_heads = tf.concat(head_outputs, axis=-1)
-
-        # 出力プロジェクション
-        multi_head_output = self.output_projection(concatenated_heads)
-
-        return multi_head_output
+    def __call__(self, inputs: np.ndarray) -> np.ndarray:
+        head_outputs = [layer(inputs) for layer in self.attention_layers]
+        return np.concatenate(head_outputs, axis=-1)
 
 
-class AdaptiveTemporalAttention(Layer):
-    """適応的時系列アテンション（短期・中期・長期の重み調整可能）"""
+class AdaptiveTemporalAttention:
+    """適応的時系列アテンション（短期・中期・長期の重み調整可能）。"""
 
-    def __init__(self, attention_units, **kwargs):
-        super(AdaptiveTemporalAttention, self).__init__(**kwargs)
+    def __init__(self, attention_units: int):
+        if attention_units % 3 != 0:
+            raise ValueError("attention_units は 3 で割り切れる必要があります。")
+
         self.attention_units = attention_units
-        self.short_term_attention = TemporalAttention(attention_units // 3)
-        self.medium_term_attention = TemporalAttention(attention_units // 3)
-        self.long_term_attention = TemporalAttention(attention_units // 3)
-        self.adaptive_weights = Dense(3, activation="softmax")  # 短期・中期・長期の重み
-        self.output_projection = Dense(attention_units)
+        per_segment = attention_units // 3
+        self.short_term_attention = TemporalAttention(per_segment)
+        self.medium_term_attention = TemporalAttention(per_segment)
+        self.long_term_attention = TemporalAttention(per_segment)
+        self._projection = None
 
-    def call(self, inputs):
-        """Args:
-            inputs: 時系列データ (batch_size, time_steps, features)
+    def __call__(self, inputs: np.ndarray) -> np.ndarray:
+        data = np.asarray(inputs, dtype=float)
+        batch, time_steps, _ = data.shape
+        segment = max(time_steps // 3, 1)
 
-        Returns:
-            adaptive_output: 適応的アテンション適用後の出力 (batch_size, attention_units)
+        short_inputs = data[:, -segment:, :]
+        mid_start = max((time_steps - segment) // 2, 0)
+        mid_inputs = data[:, mid_start : mid_start + segment, :]
+        long_inputs = data[:, :segment, :]
 
-        """
-        seq_len = tf.shape(inputs)[1]
-
-        # 短期アテンション（最近のデータ）
-        short_inputs = inputs[:, -seq_len // 3 :, :]
         short_attention = self.short_term_attention(short_inputs)
-
-        # 中期アテンション（中間のデータ）
-        mid_start = seq_len // 3
-        mid_end = 2 * seq_len // 3
-        mid_inputs = inputs[:, mid_start:mid_end, :]
         mid_attention = self.medium_term_attention(mid_inputs)
-
-        # 長期アテンション（古いデータ）
-        long_inputs = inputs[:, : seq_len // 3, :]
         long_attention = self.long_term_attention(long_inputs)
 
-        # 全アテンションの連結
-        all_attentions = tf.stack(
-            [short_attention, mid_attention, long_attention], axis=1,
-        )
+        stacked = np.stack([short_attention, mid_attention, long_attention], axis=1)
+        weights = np.mean(stacked, axis=2, keepdims=False)
+        weights = np.exp(weights - weights.max(axis=1, keepdims=True))
+        weights = weights / np.sum(weights, axis=1, keepdims=True)
 
-        # 適応的重みの計算
-        weights = self.adaptive_weights(
-            tf.reduce_mean(all_attentions, axis=1, keepdims=True),
-        )
-        weights = tf.squeeze(weights, axis=1)
-
-        # 重み付き平均
-        adaptive_output = (
+        combined = (
             weights[:, 0:1] * short_attention
             + weights[:, 1:2] * mid_attention
             + weights[:, 2:3] * long_attention
         )
 
-        # 出力プロジェクション
-        adaptive_output = self.output_projection(adaptive_output)
+        if self._projection is None:
+            scale = 1.0 / max(combined.shape[-1], 1)
+            self._projection = np.full((combined.shape[-1], self.attention_units), scale)
 
-        return adaptive_output
+        return combined @ self._projection
+

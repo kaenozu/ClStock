@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class EntryPriceSchema(BaseModel):
@@ -35,7 +35,10 @@ class StockRecommendationSchema(BaseModel):
 
     rank: int
     symbol: str
-    name: str  # company_name -> name に変更
+    company_name: str = Field(
+        ...,
+        validation_alias=AliasChoices("company_name", "name"),
+    )
     sector: Optional[str] = None  # 追加
     score: float
     action: str  # 追加
@@ -56,7 +59,7 @@ class StockRecommendationSchema(BaseModel):
     # current_price は一旦維持
     current_price: Optional[float] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class RecommendationResponse(BaseModel):

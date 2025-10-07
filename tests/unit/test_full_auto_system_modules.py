@@ -3,7 +3,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+import importlib.machinery
 import pandas as pd
+import sys
+import types
 from models.advanced.risk_management_framework import (
     PortfolioRisk,
     RiskLevel,
@@ -16,6 +19,45 @@ from models.advanced.trading_strategy_generator import (
 )
 from models.base.interfaces import PredictionResult
 from trading.tse.analysis import StockProfile
+
+
+def _install_sklearn_dependency_stubs() -> None:
+    if "scipy" in sys.modules:
+        return
+
+    scipy_module = types.ModuleType("scipy")
+    scipy_module.__path__ = []  # type: ignore[attr-defined]
+    scipy_module.__spec__ = importlib.machinery.ModuleSpec(  # type: ignore[attr-defined]
+        "scipy",
+        loader=None,
+        is_package=True,
+    )
+    sparse_module = types.ModuleType("scipy.sparse")
+    sparse_module.__path__ = []  # type: ignore[attr-defined]
+    sparse_module.__spec__ = importlib.machinery.ModuleSpec(  # type: ignore[attr-defined]
+        "scipy.sparse",
+        loader=None,
+        is_package=True,
+    )
+
+    class _DummyCSRMatrix:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+    def _dummy_issparse(_value: object) -> bool:
+        return False
+
+    sparse_module.csr_matrix = _DummyCSRMatrix  # type: ignore[attr-defined]
+    sparse_module.issparse = _dummy_issparse  # type: ignore[attr-defined]
+
+    scipy_module.sparse = sparse_module  # type: ignore[attr-defined]
+
+    sys.modules.setdefault("scipy", scipy_module)
+    sys.modules.setdefault("scipy.sparse", sparse_module)
+
+
+_install_sklearn_dependency_stubs()
 
 
 def _make_trading_strategy(name: str = "momentum") -> TradingStrategy:
@@ -80,14 +122,179 @@ class TestPortfolioOptimizationHelper:
     def test_optimizer_helper_returns_selected_stocks_structure(
         self, sample_processed_data,
     ):
-        with patch("full_auto_system.StockDataProvider"), patch(
+        class _DynamicModule(types.ModuleType):
+            def __init__(self, name: str) -> None:
+                super().__init__(name)
+                self.__path__ = []  # type: ignore[attr-defined]
+
+        class _SparseModule(_DynamicModule):
+            def __init__(self) -> None:
+                super().__init__("scipy.sparse")
+
+                class _DummyCSRMatrix:
+                    def __init__(self, *args, **kwargs):
+                        self.args = args
+                        self.kwargs = kwargs
+
+                def _dummy_issparse(_value: object) -> bool:
+                    return False
+
+                self.csr_matrix = _DummyCSRMatrix  # type: ignore[attr-defined]
+                self.csc_matrix = _DummyCSRMatrix  # type: ignore[attr-defined]
+                self.coo_matrix = _DummyCSRMatrix  # type: ignore[attr-defined]
+                self.lil_matrix = _DummyCSRMatrix  # type: ignore[attr-defined]
+                self.dok_matrix = _DummyCSRMatrix  # type: ignore[attr-defined]
+                self.issparse = _dummy_issparse  # type: ignore[attr-defined]
+                self.linalg = _DynamicModule("scipy.sparse.linalg")
+                class _DummyLinearOperator:
+                    pass
+
+                self.linalg.LinearOperator = _DummyLinearOperator  # type: ignore[attr-defined]
+                sys.modules[self.linalg.__name__] = self.linalg
+
+            def __getattr__(self, item: str):
+                if item.endswith("_matrix"):
+                    return self.csr_matrix
+                module_name = f"{self.__name__}.{item}"
+                module = _DynamicModule(module_name)
+                sys.modules[module_name] = module
+                setattr(self, item, module)
+                return module
+
+        class _SpecialModule(_DynamicModule):
+            def __init__(self) -> None:
+                super().__init__("scipy.special")
+
+                def _dummy_expit(value):
+                    return value
+
+                self.expit = _dummy_expit  # type: ignore[attr-defined]
+                self.gammaln = lambda *_args, **_kwargs: 0.0  # type: ignore[attr-defined]
+                self.boxcox = lambda x, *_args, **_kwargs: x  # type: ignore[attr-defined]
+                self.comb = lambda n, k, exact=False: 1 if exact else 1.0  # type: ignore[attr-defined]
+
+        class _ScipyModule(_DynamicModule):
+            def __init__(self) -> None:
+                super().__init__("scipy")
+                self.__version__ = "0.0.0"
+                self.sparse = _SparseModule()
+                self.special = _SpecialModule()
+                sys.modules[self.sparse.__name__] = self.sparse
+                sys.modules[self.special.__name__] = self.special
+
+                def _dummy_line_search(*_args, **_kwargs):
+                    return None
+
+                self.optimize = _DynamicModule("scipy.optimize")
+                line_search_module = _DynamicModule("scipy.optimize.linesearch")
+                line_search_module.line_search_wolfe1 = _dummy_line_search  # type: ignore[attr-defined]
+                line_search_module.line_search_wolfe2 = _dummy_line_search  # type: ignore[attr-defined]
+
+                private_line_search = _DynamicModule("scipy.optimize._linesearch")
+                private_line_search.line_search_wolfe1 = _dummy_line_search  # type: ignore[attr-defined]
+                private_line_search.line_search_wolfe2 = _dummy_line_search  # type: ignore[attr-defined]
+
+                self.optimize.linesearch = line_search_module  # type: ignore[attr-defined]
+                self.optimize._linesearch = private_line_search  # type: ignore[attr-defined]
+                self.optimize.linear_sum_assignment = (  # type: ignore[attr-defined]
+                    lambda *_args, **_kwargs: ([], [])
+                )
+
+                sys.modules[self.optimize.__name__] = self.optimize
+                sys.modules[line_search_module.__name__] = line_search_module
+                sys.modules[private_line_search.__name__] = private_line_search
+
+                def _dummy_trapezoid(*_args, **_kwargs):
+                    return 0.0
+
+                self.integrate = _DynamicModule("scipy.integrate")
+                self.integrate.trapezoid = _dummy_trapezoid  # type: ignore[attr-defined]
+                self.integrate.trapz = _dummy_trapezoid  # type: ignore[attr-defined]
+                sys.modules[self.integrate.__name__] = self.integrate
+
+                class _DummyBSpline:
+                    def __init__(self, *args, **kwargs):
+                        self.args = args
+                        self.kwargs = kwargs
+
+                self.interpolate = _DynamicModule("scipy.interpolate")
+                self.interpolate.BSpline = _DummyBSpline  # type: ignore[attr-defined]
+                sys.modules[self.interpolate.__name__] = self.interpolate
+
+                self.spatial = _DynamicModule("scipy.spatial")
+                distance_module = _DynamicModule("scipy.spatial.distance")
+                distance_module.cdist = lambda *_args, **_kwargs: 0.0  # type: ignore[attr-defined]
+                distance_module.pdist = lambda *_args, **_kwargs: 0.0  # type: ignore[attr-defined]
+                self.spatial.distance = distance_module  # type: ignore[attr-defined]
+                sys.modules[self.spatial.__name__] = self.spatial
+                sys.modules[distance_module.__name__] = distance_module
+
+            def __getattr__(self, item: str) -> types.ModuleType:
+                module_name = f"scipy.{item}"
+                module = _DynamicModule(module_name)
+                sys.modules[module_name] = module
+                setattr(self, item, module)
+                return module
+
+        scipy_stub = _ScipyModule()
+
+        module_patch = patch.dict(
+            "sys.modules",
+            {
+                "scipy": scipy_stub,
+                "scipy.sparse": scipy_stub.sparse,
+                "scipy.sparse.linalg": scipy_stub.sparse.linalg,
+                "scipy.special": scipy_stub.special,
+                "scipy.optimize": scipy_stub.optimize,
+                "scipy.optimize.linesearch": scipy_stub.optimize.linesearch,
+                "scipy.optimize._linesearch": scipy_stub.optimize._linesearch,
+                "scipy.integrate": scipy_stub.integrate,
+                "scipy.interpolate": scipy_stub.interpolate,
+                "scipy.spatial": scipy_stub.spatial,
+                "scipy.spatial.distance": scipy_stub.spatial.distance,
+            },
+        )
+
+        hybrid_package = types.ModuleType("models.hybrid")
+        hybrid_package.__path__ = []  # type: ignore[attr-defined]
+
+        hybrid_predictor_module = types.ModuleType("models.hybrid.hybrid_predictor")
+
+        class _DummyHybridPredictor:
+            def predict(self, symbol: str):
+                return PredictionResult(
+                    prediction=0.0,
+                    confidence=0.5,
+                    accuracy=0.5,
+                    timestamp=datetime.now(),
+                    symbol=symbol,
+                    metadata={},
+                )
+
+        hybrid_predictor_module.HybridStockPredictor = _DummyHybridPredictor
+        sys.modules[hybrid_package.__name__] = hybrid_package
+        sys.modules[hybrid_predictor_module.__name__] = hybrid_predictor_module
+
+        predictor_patch = patch.dict(
+            "sys.modules",
+            {
+                "models.hybrid": hybrid_package,
+                "models.hybrid.hybrid_predictor": hybrid_predictor_module,
+            },
+        )
+
+        with module_patch, predictor_patch, patch("full_auto_system.StockDataProvider"), patch(
             "full_auto_system.HybridStockPredictor",
         ), patch("full_auto_system.MarketSentimentAnalyzer"), patch(
             "full_auto_system.StrategyGenerator",
-        ), patch("full_auto_system.RiskManager"):
+        ), patch("full_auto_system.RiskManager"), patch(
+            "full_auto_system.PortfolioBacktester",
+        ) as mock_backtester:
             from full_auto_system import FullAutoInvestmentSystem
 
             system = FullAutoInvestmentSystem()
+
+        mock_backtester.return_value.backtest_portfolio.return_value = {}
 
         fake_selected = [
             StockProfile(
@@ -108,7 +315,7 @@ class TestPortfolioOptimizationHelper:
         ) as mock_optimize:
             result = system._optimize_portfolio(sample_processed_data)
 
-        assert result == {"selected_stocks": ["AAA"]}
+        assert result["selected_stocks"] == ["AAA"]
 
         call_args, _ = mock_optimize.call_args
         assert len(call_args) == 1

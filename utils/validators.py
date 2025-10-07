@@ -4,7 +4,8 @@
 
 import logging
 import re
-from typing import List, Optional, Union
+from collections.abc import Mapping
+from typing import Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -237,6 +238,65 @@ def validate_symbols_list(symbols: List[str], max_count: int = 100) -> List[str]
     unique_symbols = list(dict.fromkeys(validated_symbols))
 
     return unique_symbols
+
+
+def validate_portfolio_allocations(
+    allocations: Mapping[str, Union[int, float]],
+    *,
+    tolerance: float = 1e-6,
+) -> Dict[str, float]:
+    """ポートフォリオ配分の検証
+
+    Args:
+        allocations: 銘柄コードと配分値のマッピング
+        tolerance: 合計が1となるために許容される誤差
+
+    Returns:
+        Dict[str, float]: 検証済みで正規化された配分
+
+    Raises:
+        ValidationError: 入力が無効な場合
+    """
+
+    if not isinstance(allocations, Mapping):
+        raise ValidationError("Allocations must be a mapping of symbols to weights")
+
+    if not allocations:
+        raise ValidationError("Allocations cannot be empty")
+
+    normalized_allocations: Dict[str, float] = {}
+    total_weight = 0.0
+
+    for symbol, weight in allocations.items():
+        validated_symbol = validate_stock_symbol(symbol)
+
+        try:
+            weight_value = float(weight)
+        except (TypeError, ValueError):
+            raise ValidationError(
+                f"Allocation for {validated_symbol} must be a number"
+            ) from None
+
+        if weight_value < 0:
+            raise ValidationError(
+                f"Allocation for {validated_symbol} must be non-negative"
+            )
+
+        normalized_allocations[validated_symbol] = weight_value
+        total_weight += weight_value
+
+    if total_weight <= 0:
+        raise ValidationError("Total allocation must be greater than zero")
+
+    if abs(total_weight - 1.0) > tolerance:
+        raise ValidationError(
+            "Total allocation must sum to 1.0 within tolerance "
+            f"{tolerance}, got {total_weight:.6f}"
+        )
+
+    return {
+        symbol: weight / total_weight for symbol, weight in normalized_allocations.items()
+    }
 
 
 def validate_date_range(

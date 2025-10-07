@@ -1,13 +1,8 @@
 """強化学習による取引戦略の最適化"""
-<<<<<<< HEAD
 from __future__ import annotations
 
 import logging
 from typing import Optional, Protocol, runtime_checkable
-=======
-
-import logging
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
 
 import gym
 from gym import spaces
@@ -16,12 +11,6 @@ import pandas as pd
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
-<<<<<<< HEAD
-=======
-
-import numpy as np
-import pandas as pd
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +132,6 @@ class TradingCallback(BaseCallback):
         # 各ステップで実行する処理
         return True
 
-<<<<<<< HEAD
 @runtime_checkable
 class MarketDataProviderProtocol(Protocol):
     """強化学習システムが利用する市場データプロバイダーのプロトコル。"""
@@ -216,45 +204,7 @@ class ReinforcementTradingSystem:
 
         return stock_data
         
-    def train_model(self, symbol: str, period: str = '1y', timesteps: int = 10000) -> None:
-=======
-
-class ReinforcementTradingSystem:
-    """強化学習による取引戦略最適化システム"""
-
-    def __init__(self, data_provider=None):
-        self.data_provider = data_provider
-        self.model = None
-        self.env = None
-
-    def prepare_data(self, symbol, period="1y"):
-        """取引環境用データの準備"""
-        if self.data_provider:
-            stock_data = self.data_provider.get_stock_data(symbol, period)
-        else:
-            # ダミーデータの作成（デバッグ用）
-            dates = pd.date_range(
-                start="2023-01-01", periods=252, freq="D",
-            )  # 1年分のデータ
-            close_prices = np.random.normal(100, 10, size=len(dates))  # ダミー株価
-            stock_data = pd.DataFrame(
-                {
-                    "Date": dates,
-                    "Close": close_prices,
-                    "Open": close_prices
-                    * np.random.uniform(0.99, 1.01, size=len(dates)),
-                    "High": close_prices
-                    * np.random.uniform(1.0, 1.05, size=len(dates)),
-                    "Low": close_prices * np.random.uniform(0.95, 1.0, size=len(dates)),
-                    "Volume": np.random.randint(100000, 1000000, size=len(dates)),
-                },
-            )
-            stock_data.set_index("Date", inplace=True)
-
-        return stock_data
-
-    def train_model(self, symbol, period="1y", timesteps=10000):
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
+    def train_model(self, symbol: str, period: str = "1y", timesteps: int = 10000) -> None:
         """モデルの訓練"""
         # 取引環境の作成
         stock_data = self.prepare_data(symbol, period)
@@ -271,11 +221,7 @@ class ReinforcementTradingSystem:
 
         logger.info(f"強化学習モデルの訓練完了: {symbol}")
 
-<<<<<<< HEAD
     def predict_action(self, observation) -> int:
-=======
-    def predict_action(self, observation):
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
         """行動の予測"""
         if self.model is None:
             raise ValueError("モデルが訓練されていません")
@@ -283,11 +229,7 @@ class ReinforcementTradingSystem:
         action, _states = self.model.predict(observation)
         return action
 
-<<<<<<< HEAD
-    def evaluate_strategy(self, symbol: str, period: str = '6m') -> float:
-=======
-    def evaluate_strategy(self, symbol, period="6m"):
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
+    def evaluate_strategy(self, symbol: str, period: str = "6m") -> float:
         """取引戦略の評価"""
         stock_data = self.prepare_data(symbol, period)
         test_env = TradingEnv(stock_data)

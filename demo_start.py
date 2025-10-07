@@ -1,14 +1,14 @@
+
 #!/usr/bin/env python3
 """ClStock デモ運用 簡単スタート
 1週間のデモ取引を開始するための簡単なスクリプト
 """
 
-import io
-import os
 import sys
-from datetime import datetime, timedelta
-
+import os
 import pandas as pd
+from datetime import datetime, timedelta
+import io
 
 # 標準出力をUTF-8に設定
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -91,7 +91,7 @@ def start_demo_trading():
                     accuracy = result["final_accuracy"]
                     achieved_87 = result["precision_87_achieved"]
 
-                    print("  [提案] 予測結果:")
+                    print("  💡 予測結果:")
                     print(f"    価格予測: {prediction:.1f}")
                     print(f"    信頼度: {confidence:.1%}")
                     print(f"    推定精度: {accuracy:.1f}%")
@@ -270,7 +270,7 @@ def show_help():
     print("🚀 簡単スタート:")
     print("  python demo_start.py")
     print()
-    print("[提案] このスクリプトは:")
+    print("💡 このスクリプトは:")
     print("  1. 100万円の仮想資金でスタート")
     print("  2. 主要日本株5銘柄を分析")
     print("  3. 87%精度システムで予測")
@@ -300,7 +300,8 @@ if __name__ == "__main__":
 
         if portfolio:
             print("\n🎉 デモ運用シミュレーション完了！")
-            print("[提案] 実際の1週間運用を開始したい場合は、")
+            print("💡 実際の1週間運用を開始したい場合は、")
             print("   trading/demo_trader.py を使用してください。")
         else:
             print("\n🔧 システムの設定を確認してから再実行してください。")
+
