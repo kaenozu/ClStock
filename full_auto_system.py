@@ -1,11 +1,12 @@
 import argparse
 import asyncio
+import json
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 from analysis.sentiment_analyzer import MarketSentimentAnalyzer
@@ -26,6 +27,9 @@ from models.advanced.trading_strategy_generator import (
 from models.base.interfaces import PredictionResult
 from models.hybrid.hybrid_predictor import HybridStockPredictor
 from trading.tse import PortfolioBacktester
+from trading.backtest import BacktestRunner
+from trading.backtest_engine import BacktestConfig
+from trading.trading_strategy import TradingStrategy
 from trading.tse.analysis import StockProfile
 from trading.tse.optimizer import PortfolioOptimizer
 
@@ -75,6 +79,22 @@ class RiskAssessment:
     max_safe_position_size: float
     recommendations: List[str]
     raw: Optional[PortfolioRisk] = None
+
+
+@dataclass
+class DiagnosticSummary:
+    """Quick evaluation bundle for automated diagnostics."""
+
+    symbol: str
+    accuracy: Optional[float]
+    sample_size: int
+    avg_positive_return: float
+    avg_negative_return: float
+    backtest_total_return: Optional[float]
+    backtest_sharpe: Optional[float]
+    backtest_max_drawdown: Optional[float]
+    parameter_sweep: List[Dict[str, float]]
+    generated_at: datetime
 
 
 class HybridPredictorAdapter:
@@ -328,6 +348,8 @@ class FullAutoInvestmentSystem:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.max_symbols = self._resolve_max_symbols(max_symbols)
         self.settings = get_settings()
+        self.diagnostic_sample_limit = self._resolve_diagnostic_sample_limit()
+        self.diagnostic_history: List[DiagnosticSummary] = []
 
     def _resolve_max_symbols(self, max_symbols: Optional[int]) -> Optional[int]:
         if max_symbols is not None:
@@ -354,6 +376,29 @@ class FullAutoInvestmentSystem:
                 env_value,
             )
             return None
+
+    def _resolve_diagnostic_sample_limit(self) -> int:
+        env_value = os.getenv("CLSTOCK_DIAGNOSTIC_SAMPLE")
+        if env_value:
+            try:
+                parsed = int(env_value)
+                if parsed > 0:
+                    return parsed
+                self.logger.warning(
+                    "CLSTOCK_DIAGNOSTIC_SAMPLE must be positive; ignoring value '%s'.",
+                    env_value,
+                )
+            except ValueError:
+                self.logger.warning(
+                    "CLSTOCK_DIAGNOSTIC_SAMPLE is not an integer ('%s'); ignoring.",
+                    env_value,
+                )
+        auto_cfg = getattr(self.settings, "auto", None)
+        candidate = getattr(auto_cfg, "diagnostic_sample", None) if auto_cfg else None
+        if isinstance(candidate, int) and candidate > 0:
+            return candidate
+        return 5
+
 
     def _build_stock_profiles(
         self, processed_data: Dict[str, pd.DataFrame],
@@ -611,6 +656,10 @@ class FullAutoInvestmentSystem:
             )
 
             # 3. ポートフォリオ最適化
+            print(f"[進捗] 処理済み銘柄: {len(processed_data)}件, 失敗: {failed_count}件")
+
+            diagnostics = self._run_automated_diagnostics(processed_data)
+
             print("[ステップ 3/4] (75%) - ポートフォリオ最適化を実行中...")
             print("=" * 60)
             try:
@@ -832,6 +881,158 @@ class FullAutoInvestmentSystem:
         except Exception as e:
             logger.error(f"{symbol} 分析中にエラー発生: {e}")
             return None
+
+    def _run_automated_diagnostics(self, processed_data: Dict[str, pd.DataFrame]) -> List[DiagnosticSummary]:
+        available_symbols = [
+            symbol for symbol, data in processed_data.items() if data is not None and not data.empty
+        ]
+        if not available_symbols:
+            return []
+
+        sample_size = min(self.diagnostic_sample_limit, len(available_symbols))
+        symbols = available_symbols[:sample_size]
+        print("[診断] 自動バックテスト & シグナル検証を実行します...")
+        diagnostics: List[DiagnosticSummary] = []
+
+        for symbol in symbols:
+            try:
+                diag = self._diagnose_symbol(symbol, processed_data.get(symbol))
+                if diag:
+                    diagnostics.append(diag)
+            except Exception:
+                self.logger.exception("診断処理でエラーが発生しました: %s", symbol)
+
+        if diagnostics:
+            self._persist_diagnostics(diagnostics)
+            self._print_diagnostics_summary(diagnostics)
+            self.diagnostic_history.extend(diagnostics)
+        else:
+            print("[診断] 有効な診断結果が得られませんでした。")
+
+        return diagnostics
+
+    def _diagnose_symbol(self, symbol: str, price_data: Optional[pd.DataFrame]) -> Optional[DiagnosticSummary]:
+        if price_data is None or price_data.empty:
+            return None
+
+        accuracy = None
+        sample_size = 0
+        avg_up = 0.0
+        avg_down = 0.0
+        try:
+            prediction_payload = self.predictor.predict(symbol, price_data)
+        except Exception:
+            prediction_payload = {}
+            self.logger.debug("Predictor failed during diagnostics for %s", symbol, exc_info=True)
+
+        if isinstance(prediction_payload, dict):
+            accuracy = prediction_payload.get("accuracy")
+            metadata = prediction_payload.get("metadata", {})
+            if accuracy is None and isinstance(metadata, dict):
+                accuracy = metadata.get("final_accuracy")
+            evaluation = metadata.get("evaluation", {}) if isinstance(metadata, dict) else {}
+            sample_size = int(evaluation.get("sample_size", 0) or evaluation.get("samples", 0) or 0)
+            avg_up = float(evaluation.get("avg_positive_return", 0.0))
+            avg_down = float(evaluation.get("avg_negative_return", 0.0))
+        else:
+            evaluation = {}
+
+        backtest_summary, sweeps = self._run_quick_backtest(symbol)
+
+        return DiagnosticSummary(
+            symbol=symbol,
+            accuracy=accuracy,
+            sample_size=sample_size,
+            avg_positive_return=avg_up,
+            avg_negative_return=avg_down,
+            backtest_total_return=backtest_summary.get("total_return") if backtest_summary else None,
+            backtest_sharpe=backtest_summary.get("sharpe_ratio") if backtest_summary else None,
+            backtest_max_drawdown=backtest_summary.get("max_drawdown") if backtest_summary else None,
+            parameter_sweep=sweeps,
+            generated_at=datetime.now(),
+        )
+
+    def _run_quick_backtest(self, symbol: str) -> Tuple[Optional[Dict[str, float]], List[Dict[str, float]]]:
+        try:
+            end_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
+            start_date = end_date - timedelta(days=90)
+            sweeps: List[Dict[str, float]] = []
+            best_summary: Optional[Dict[str, float]] = None
+
+            for threshold in (80.0, 85.0, 90.0):
+                config = BacktestConfig(
+                    start_date=start_date,
+                    end_date=end_date,
+                    initial_capital=1_000_000,
+                    precision_threshold=threshold,
+                    target_symbols=[symbol],
+                )
+                strategy = TradingStrategy(
+                    initial_capital=config.initial_capital,
+                    precision_threshold=threshold,
+                )
+                strategy.confidence_threshold = max(0.5, getattr(strategy, "confidence_threshold", 0.7))
+                runner = BacktestRunner(config, strategy, self.data_provider)
+                result = runner.run_backtest([symbol])
+                sweep_entry = {
+                    "precision_threshold": threshold,
+                    "total_return": float(result.total_return),
+                    "sharpe_ratio": float(result.sharpe_ratio),
+                    "max_drawdown": float(result.max_drawdown),
+                }
+                sweeps.append(sweep_entry)
+                if best_summary is None or sweep_entry["total_return"] > best_summary.get("total_return", -float("inf")):
+                    best_summary = sweep_entry.copy()
+
+            return best_summary, sweeps
+        except Exception:
+            self.logger.debug("Quick backtest failed for %s", symbol, exc_info=True)
+            return None, []
+
+    def _persist_diagnostics(self, diagnostics: List[DiagnosticSummary]) -> None:
+        try:
+            diag_dir = Path("data") / "diagnostics"
+            diag_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            payload = []
+            for diag in diagnostics:
+                diag_dict = asdict(diag)
+                diag_dict["generated_at"] = diag.generated_at.isoformat()
+                payload.append(diag_dict)
+            file_path = diag_dir / f"auto_diagnostics_{timestamp}.json"
+            with open(file_path, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, ensure_ascii=False, indent=2)
+            self.logger.info("Saved diagnostics report to %s", file_path)
+        except Exception:
+            self.logger.exception("Failed to persist diagnostics report")
+
+    def _print_diagnostics_summary(self, diagnostics: List[DiagnosticSummary]) -> None:
+        print("
+[診断] サマリ")
+        for diag in diagnostics:
+            accuracy_str = f"{diag.accuracy:.1f}%" if diag.accuracy is not None else "N/A"
+            return_str = (
+                f"{diag.backtest_total_return:.1%}"
+                if diag.backtest_total_return is not None
+                else "N/A"
+            )
+            print(
+                f"  - {diag.symbol}: 命中率 {accuracy_str} (n={diag.sample_size}), バックテスト総リターン {return_str}"
+            )
+        valid_accuracies = [diag.accuracy for diag in diagnostics if diag.accuracy is not None]
+        if valid_accuracies:
+            avg_acc = sum(valid_accuracies) / len(valid_accuracies)
+            print(f"  平均命中率: {avg_acc:.1f}%")
+        valid_returns = [
+            diag.backtest_total_return
+            for diag in diagnostics
+            if diag.backtest_total_return is not None
+        ]
+        if valid_returns:
+            avg_ret = sum(valid_returns) / len(valid_returns)
+            print(f"  平均バックテスト総リターン: {avg_ret:.1%}")
+
+
 
     def _perform_portfolio_risk_analysis(
         self,
