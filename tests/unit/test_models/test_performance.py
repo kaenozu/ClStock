@@ -195,6 +195,8 @@ class TestParallelStockPredictor:
 
         result = predictor.predict("AAPL", sample_stock_data)
 
+        print(f"result type: {type(result)}")
+        print(f"result: {result}")
         assert isinstance(result, PredictionResult)
         assert result.prediction == 75.0
         assert result.metadata["model_type"] == "parallel"
@@ -432,6 +434,8 @@ class TestUltraHighPerformancePredictor:
             confidence=0.8,
             timestamp=datetime.now(),
             metadata={"base_model": True},
+            accuracy=0.9,
+            symbol="TEST",
         )
 
         cache_manager = AdvancedCacheManager()
@@ -493,6 +497,8 @@ class TestUltraHighPerformancePredictor:
                     confidence=0.8,
                     timestamp=datetime.now(),
                     metadata={"cache_hit": False},
+                    accuracy=0.9,
+                    symbol="TEST1",
                 ),
                 PredictionResult(
                     prediction=80.0,
