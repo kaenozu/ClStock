@@ -70,10 +70,10 @@ def run_comprehensive_comparison() -> Dict[str, Any]:
         # 拡張アンサンブルシステム初期化
         try:
             from data.stock_data import StockDataProvider
-            from models.ensemble.ensemble_predictor import EnsembleStockPredictor
+            from models.ensemble.ensemble_predictor import RefactoredEnsemblePredictor
 
             data_provider = StockDataProvider()
-            enhanced_system = EnsembleStockPredictor(data_provider=data_provider)
+            enhanced_system = RefactoredEnsemblePredictor(data_provider=data_provider)
             print("   [OK] 拡張アンサンブルシステム初期化完了")
         except Exception as e:
             logger.error(f"拡張システム初期化失敗: {e!s}")
@@ -284,13 +284,15 @@ def compare_system_performance(
 
         # 拡張システムのキャッシュ情報
         if enhanced_system:
-            cache_info = {
-                "feature_cache_size": enhanced_system.feature_cache.size(),
-                "prediction_cache_size": enhanced_system.prediction_cache.size(),
-                "parallel_workers": getattr(
+            cache_info = {}
+            if hasattr(enhanced_system, 'feature_cache'):
+                cache_info["feature_cache_size"] = enhanced_system.feature_cache.size()
+            if hasattr(enhanced_system, 'prediction_cache'):
+                cache_info["prediction_cache_size"] = enhanced_system.prediction_cache.size()
+            if hasattr(enhanced_system, 'parallel_calculator'):
+                cache_info["parallel_workers"] = getattr(
                     enhanced_system.parallel_calculator, "n_jobs", 1,
-                ),
-            }
+                )
             performance_data["memory_efficiency"]["enhanced"] = cache_info
 
         final_memory = process.memory_info().rss / 1024 / 1024  # MB
@@ -434,15 +436,15 @@ def display_comprehensive_results(results: Dict[str, Any]):
 
             print("   87%精度システムの強み:")
             for advantage in advantages.get("precision_87_advantages", []):
-                print(f"     • {advantage}")
+                print(f"     - {advantage}")
 
             print("   拡張システムの強み:")
             for advantage in advantages.get("enhanced_advantages", []):
-                print(f"     • {advantage}")
+                print(f"     - {advantage}")
 
             print("   統合可能性:")
             for potential in advantages.get("complementary_potential", []):
-                print(f"     • {potential}")
+                print(f"     - {potential}")
 
     print("\n" + "=" * 80)
     print("[統合テスト結果サマリー]")
