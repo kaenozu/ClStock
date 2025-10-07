@@ -633,7 +633,6 @@ class PredictionDashboard:
         def update_dashboard(symbol, n_clicks, n_intervals):
             return self.generate_live_components(symbol)
 
-<<<<<<< HEAD
     def _ensure_visualization_data(
         self, raw_data: Union[VisualizationData, Dict[str, Any]], symbol: str
     ) -> VisualizationData:
