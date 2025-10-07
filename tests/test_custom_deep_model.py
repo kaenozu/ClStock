@@ -8,13 +8,10 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
-<<<<<<< HEAD
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import sys
 import os
 import types
-=======
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
 
 # ClStockプロジェクトのルートディレクトリをパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))

@@ -4,19 +4,12 @@
 """
 
 import logging
-<<<<<<< HEAD
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple, Union
-import pandas as pd
 from dataclasses import dataclass, asdict
-=======
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
 
 try:
     import plotly.graph_objects as go
