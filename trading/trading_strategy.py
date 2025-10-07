@@ -6,7 +6,7 @@ Precision87BreakthroughSystemとの完全連携により、
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, Optional, Tuple
 
@@ -98,7 +98,11 @@ class TradingStrategy:
         self.logger = logging.getLogger(__name__)
 
     def generate_trading_signal(
-        self, symbol: str, current_capital: float,
+        self,
+        symbol: str,
+        current_capital: float,
+        *,
+        as_of: Optional[datetime] = None,
     ) -> Optional[TradingSignal]:
         """87%精度システムによる取引シグナル生成
 
@@ -112,7 +116,10 @@ class TradingStrategy:
         """
         try:
             # 87%精度システムで予測実行
-            prediction_result = self.precision_system.predict_with_87_precision(symbol)
+            prediction_kwargs = {}
+            if as_of is not None:
+                prediction_kwargs = {"end": as_of.strftime("%Y-%m-%d") }
+            prediction_result = self.precision_system.predict_with_87_precision(symbol, **prediction_kwargs)
 
             if "error" in prediction_result:
                 self.logger.warning(
@@ -147,7 +154,7 @@ class TradingStrategy:
                 return None
 
             # 市場環境分析
-            market_conditions = self._analyze_market_conditions(symbol)
+            market_conditions = self._analyze_market_conditions(symbol, as_of=as_of)
 
             # シグナルタイプ決定
             signal_type = self._determine_signal_type(
@@ -187,7 +194,7 @@ class TradingStrategy:
                 current_price=current_price,
                 expected_return=expected_return,
                 position_size=position_size,
-                timestamp=datetime.now(),
+                timestamp=as_of or datetime.now(),
                 reasoning=reasoning,
                 stop_loss_price=stop_loss_price,
                 take_profit_price=take_profit_price,
@@ -208,11 +215,16 @@ class TradingStrategy:
             self.logger.error(f"シグナル生成エラー {symbol}: {e}")
             return None
 
-    def _analyze_market_conditions(self, symbol: str) -> MarketConditions:
+    def _analyze_market_conditions(self, symbol: str, as_of: Optional[datetime] = None) -> MarketConditions:
         """市場環境分析"""
         try:
             # 履歴データ取得
-            historical_data = self.data_provider.get_stock_data(symbol, period="3mo")
+            if as_of is not None:
+                historical_data = self.data_provider.get_stock_data(
+                    symbol, start=(as_of - timedelta(days=120)).strftime("%Y-%m-%d"), end=as_of.strftime("%Y-%m-%d")
+                )
+            else:
+                historical_data = self.data_provider.get_stock_data(symbol, period="3mo")
 
             if len(historical_data) < 20:
                 # デフォルト値を返す

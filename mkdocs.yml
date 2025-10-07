@@ -47,6 +47,7 @@ nav:
     - Models: api/models.md
     - Analysis: api/analysis.md
     - Systems: api/systems.md
+    - Endpoints: api/endpoints.md
   - Contributing: contributing.md
 
 markdown_extensions:

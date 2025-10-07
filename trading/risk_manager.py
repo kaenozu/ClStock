@@ -105,6 +105,27 @@ class DemoRiskManager:
 
         self.logger = logging.getLogger(__name__)
 
+    def register_trade_open(self, symbol: str, quantity: int, price: float) -> None:
+        """現在資本と保有記録を更新する (新規ポジション約定時)."""
+        position_value = max(quantity * price, 0.0)
+        self.current_capital = max(self.current_capital - position_value, 0.0)
+        position = self.positions.setdefault(symbol, {"quantity": 0, "market_value": 0.0})
+        position["quantity"] += quantity
+        position["market_value"] += position_value
+
+    def register_trade_close(self, symbol: str, quantity: int, price: float) -> None:
+        """現在資本と保有記録を更新する (ポジションクローズ時)."""
+        position_value = max(quantity * price, 0.0)
+        self.current_capital += position_value
+        position = self.positions.get(symbol)
+        if position:
+            position["quantity"] -= quantity
+            position["market_value"] = max(position["market_value"] - position_value, 0.0)
+            if position["quantity"] <= 0:
+                self.positions.pop(symbol, None)
+        self.current_capital = max(self.current_capital, 0.0)
+
+
     def can_open_position(
         self,
         symbol: str,

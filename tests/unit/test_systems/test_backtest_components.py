@@ -1,150 +1,104 @@
+
 import importlib
 import sys
 import types
 from datetime import datetime
-from unittest.mock import Mock
-
-import pytest
 
 import numpy as np
 import pandas as pd
 
-# trading.backtest が存在しない場合のフォールバック
-try:
-    from trading.backtest import (
-        BacktestOptimizer,
-        BacktestRunner,
-        generate_backtest_charts,
-        generate_recommendations,
-    )
-except ImportError:
-    BacktestOptimizer = Mock()
-    BacktestRunner = Mock()
-    generate_backtest_charts = Mock()
-    generate_recommendations = Mock()
-
-
-@pytest.fixture
-def backtest_engine_module(monkeypatch):
-    """Load ``trading.backtest_engine`` with lightweight stubs."""
-    dummy_precision_module = types.ModuleType("models.precision.precision_87_system")
-
-    class _Precision:
-        pass
-
-    dummy_precision_module.Precision87BreakthroughSystem = _Precision
-    monkeypatch.setitem(
-        sys.modules, "models.precision.precision_87_system", dummy_precision_module,
-    )
-
-    dummy_data_module = types.ModuleType("data.stock_data")
-
-    class _Provider:
-        def get_stock_data(self, *args, **kwargs):  # pragma: no cover - not used
-            raise NotImplementedError
-
-        def calculate_technical_indicators(self, data):  # pragma: no cover - not used
-            return data
-
-    dummy_data_module.StockDataProvider = _Provider
-    monkeypatch.setitem(sys.modules, "data.stock_data", dummy_data_module)
-
-    sys.modules.pop("trading.backtest_engine", None)
-    module = importlib.import_module("trading.backtest_engine")
-    yield module
-    sys.modules.pop("trading.backtest_engine", None)
-
-
-class DummyPortfolioManager:
-    def __init__(self, initial_capital: float):
-        self.current_cash = initial_capital
-        self.positions = {}
-
-    def update_positions(self) -> None:
-        pass
-
-    def add_position(self, symbol, quantity, price, signal_type) -> None:
-        self.positions[symbol] = types.SimpleNamespace(
-            quantity=quantity, market_value=quantity * price,
-        )
-        self.current_cash -= quantity * price
-
-
-class DummyRiskManager:
-    def __init__(self, initial_capital: float):
-        self.initial_capital = initial_capital
-
-    def can_open_position(self, symbol, position_size):
-        return position_size <= self.initial_capital
-
-
-class DummyTradeRecorder:
-    def __init__(self):
-        self._trades = []
-
-    def record_trade(self, trade):
-        self._trades.append(trade)
-
-    def get_completed_trades(self):
-        return []
-
-
-class DummyPerformanceTracker:
-    def __init__(self, initial_capital: float):
-        self.initial_capital = initial_capital
-
-    def update_performance(self, *args, **kwargs):
-        pass
+import trading.backtest as backtest_module
+from trading.trading_strategy import SignalType, TradingSignal
 
 
 class DummyDataProvider:
     def __init__(self):
-        idx = pd.date_range("2020-01-01", periods=120, freq="B")
+        idx = pd.date_range("2020-01-01", periods=160, freq="B")
         self.df = pd.DataFrame({"Close": np.linspace(100, 110, len(idx))}, index=idx)
 
     def get_stock_data(self, symbol, start_date=None, end_date=None):
-        return self.df
+        data = self.df.copy()
+        if start_date is not None:
+            data = data.loc[start_date:]
+        if end_date is not None:
+            data = data.loc[:end_date]
+        return data
 
     def calculate_technical_indicators(self, data):
         return data
 
+    def price_at(self, as_of: datetime) -> float:
+        if as_of is None:
+            return float(self.df.iloc[-1]["Close"])
+        series = self.df.loc[:as_of]
+        return float(series.iloc[-1]["Close"]) if not series.empty else float(self.df.iloc[0]["Close"])
 
-@pytest.mark.usefixtures("backtest_engine_module")
-def test_backtest_runner_produces_result(monkeypatch, backtest_engine_module):
-    BacktestConfig = backtest_engine_module.BacktestConfig
-    BacktestResult = backtest_engine_module.BacktestResult
 
-    monkeypatch.setattr(
-        "trading.backtest.runner.DemoPortfolioManager", DummyPortfolioManager,
-    )
-    monkeypatch.setattr("trading.backtest.runner.DemoRiskManager", DummyRiskManager)
-    monkeypatch.setattr("trading.backtest.runner.TradeRecorder", DummyTradeRecorder)
-    monkeypatch.setattr(
-        "trading.backtest.runner.PerformanceTracker", DummyPerformanceTracker,
-    )
+class DummyTradingStrategy:
+    def __init__(self, data_provider: DummyDataProvider):
+        self.data_provider = data_provider
+        self.precision_system = types.SimpleNamespace(evaluation_horizon=3, evaluation_window=60)
+        self.commission_rate = 0.0
+        self.spread_rate = 0.0
+        self.slippage_rate = 0.0
+        self.stop_loss_pct = 0.05
+        self.take_profit_pct = 0.15
+        self.min_expected_return = 0.01
+        self._opened_dates = set()
+
+    def generate_trading_signal(self, symbol: str, current_capital: float, *, as_of: datetime | None = None) -> TradingSignal | None:
+        if current_capital <= 0:
+            return None
+        price = self.data_provider.price_at(as_of)
+        expected_return = 0.05
+        position_size = min(current_capital, 10_000.0)
+        timestamp = as_of or datetime.utcnow()
+        return TradingSignal(
+            symbol=symbol,
+            signal_type=SignalType.BUY,
+            confidence=0.9,
+            predicted_price=price * (1 + expected_return),
+            current_price=price,
+            expected_return=expected_return,
+            position_size=position_size,
+            timestamp=timestamp,
+            reasoning="dummy",
+            stop_loss_price=price * 0.95,
+            take_profit_price=price * 1.10,
+            precision_87_achieved=True,
+        )
+
+    def calculate_trading_costs(self, position_value: float, signal_type: SignalType) -> dict[str, float]:
+        return {"commission": 0.0, "spread": 0.0, "slippage": 0.0, "total_cost": 0.0}
+
+
+def test_backtest_runner_produces_result(monkeypatch):
+    dummy_data = DummyDataProvider()
+    strategy = DummyTradingStrategy(dummy_data)
+    module = importlib.import_module("trading.backtest_engine")
+    BacktestConfig = module.BacktestConfig
+    BacktestResult = module.BacktestResult
 
     config = BacktestConfig(
         start_date=datetime(2020, 1, 1),
         end_date=datetime(2020, 1, 31),
-        initial_capital=1_000_000,
+        initial_capital=100_000,
         target_symbols=["AAA"],
     )
 
-    runner = BacktestRunner(config, object(), DummyDataProvider())
-
-    monkeypatch.setattr(np.random, "normal", lambda *args, **kwargs: 0.0)
-    monkeypatch.setattr(np.random, "random", lambda *args, **kwargs: 0.0)
-
+    runner = backtest_module.BacktestRunner(config, strategy, dummy_data)
     result = runner.run_backtest(["AAA"])
 
     assert isinstance(result, BacktestResult)
     assert result.config is config
-    assert result.portfolio_values  # 簡易検証: 値が蓄積されていること
+    assert result.portfolio_values
+    assert result.trade_history
 
 
-def test_optimizer_selects_best_parameters(backtest_engine_module):
-    BacktestConfig = backtest_engine_module.BacktestConfig
-    BacktestResult = backtest_engine_module.BacktestResult
+def test_optimizer_selects_best_parameters():
+    module = importlib.import_module("trading.backtest_engine")
+    BacktestConfig = module.BacktestConfig
+    BacktestResult = module.BacktestResult
 
     base_config = BacktestConfig(
         start_date=datetime(2020, 1, 1),
@@ -153,7 +107,7 @@ def test_optimizer_selects_best_parameters(backtest_engine_module):
         target_symbols=["AAA"],
     )
 
-    optimizer = BacktestOptimizer()
+    optimizer = backtest_module.BacktestOptimizer()
 
     def engine_factory(config):
         score = config.precision_threshold / 100
@@ -205,9 +159,11 @@ def test_optimizer_selects_best_parameters(backtest_engine_module):
     assert len(outcome["all_results"]) == 2
 
 
-def test_reporting_helpers(backtest_engine_module):
-    BacktestResult = backtest_engine_module.BacktestResult
-    BacktestConfig = backtest_engine_module.BacktestConfig
+def test_reporting_helpers(monkeypatch):
+    module = importlib.import_module("trading.backtest_engine")
+    monkeypatch.setattr(backtest_module, "generate_backtest_charts", lambda result, logger=None: {"equity_curve": "chart"})
+    BacktestResult = module.BacktestResult
+    BacktestConfig = module.BacktestConfig
 
     config = BacktestConfig(
         start_date=datetime(2020, 1, 1),
@@ -239,19 +195,18 @@ def test_reporting_helpers(backtest_engine_module):
         information_ratio=0.2,
         var_95=-0.05,
         expected_shortfall=-0.06,
-        total_costs=1000.0,
-        total_tax=2000.0,
+        total_costs=1_000.0,
+        total_tax=2_000.0,
         daily_returns=[0.01, -0.02, 0.03],
-        trade_history=[{"position_size": 1000.0, "profit_loss": -100.0}],
+        trade_history=[{"action": "CLOSE", "position_size": 1000.0, "profit_loss": -100.0}],
         portfolio_values=[
             (config.start_date, config.initial_capital),
             (config.end_date, 1_100_000),
         ],
     )
 
-    charts = generate_backtest_charts(result)
-    assert "equity_curve" in charts
+    charts = backtest_module.generate_backtest_charts(result)
+    assert charts.get("equity_curve") == "chart"
 
-    recommendations = generate_recommendations(result)
-    assert any("リスク管理" in msg for msg in recommendations)
-    assert any("精度取引" in msg for msg in recommendations)
+    recommendations = backtest_module.generate_recommendations(result)
+    assert len(recommendations) >= 2

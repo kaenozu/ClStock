@@ -86,6 +86,21 @@ class DataCache:
 
         logger.info("DataCache shutdown completed")
 
+
+    @staticmethod
+    def _sanitize_cache_key(cache_key: str) -> str:
+        """Sanitize cache key for filesystem use (Windows-safe)."""
+        sanitized = []
+        for ch in cache_key:
+            if ch.isalnum() or ch in ("-", "_", ".", "="):
+                sanitized.append(ch)
+            else:
+                sanitized.append("_")
+        sanitized_key = "".join(sanitized)
+        if not sanitized_key:
+            sanitized_key = "cache_entry"
+        return sanitized_key
+
     def _get_cache_key(self, *args, **kwargs) -> str:
         """キャッシュキーを生成"""
         key_data = str(args) + str(sorted(kwargs.items()))
@@ -93,7 +108,8 @@ class DataCache:
 
     def _get_cache_path(self, cache_key: str) -> Path:
         """キャッシュファイルパスを取得"""
-        return self.cache_dir / f"{cache_key}.cache"
+        safe_key = self._sanitize_cache_key(cache_key)
+        return self.cache_dir / f"{safe_key}.cache"
 
     def _validate_cache_entry(self, cache_data: Dict[str, Any], cache_key: str) -> bool:
         """キャッシュエントリーの検証"""

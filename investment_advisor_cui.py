@@ -65,46 +65,39 @@ class InvestmentAdvisorCUI:
         self.symbol_names = self.target_universe.japanese_names
 
     def get_short_term_prediction(self, symbol: str) -> Dict[str, Any]:
-        """短期予測（1日、90.3%精度）"""
+        """短期予測 (1日 / ベースライン精度付き)"""
         try:
-            # 89%精度システムで短期予測
             precision_result = self.precision_system.predict_with_87_precision(symbol)
 
-            # 現在価格取得
             stock_data = self.data_provider.get_stock_data(symbol, "5d")
-            if stock_data.empty:
+            if stock_data is None or stock_data.empty:
                 return self._create_fallback_prediction(symbol, "short")
 
             current_price = float(stock_data["Close"].iloc[-1])
+            predicted_change_rate = precision_result.get("predicted_change_rate", 0.0)
+            final_prediction = current_price * (1 + predicted_change_rate)
 
-            # 短期調整（1日予測用）
-            base_prediction = precision_result.get("final_prediction", current_price)
-
-            # 短期ボラティリティ調整
             returns = stock_data["Close"].pct_change()
-            short_volatility = returns.std() * np.sqrt(252)  # 年率換算
+            short_volatility = returns.std() * np.sqrt(252)
 
-            # 短期予測は変動幅を小さく調整
-            prediction_change = (base_prediction - current_price) / current_price
-            adjusted_change = prediction_change * 0.3  # 1日予測なので変動を抑制
-
-            final_prediction = current_price * (1 + adjusted_change)
-
-            # 信頼度計算（短期予測モデルの信頼度をそのまま使用）
             short_confidence = precision_result.get("final_confidence", 0.85)
-
-            # 精度情報（別個のフィールドとして保持）
-            accuracy_estimate = 90.3  # 短期予測モデルの過去の精度（パーセンテージ）
+            accuracy_estimate = precision_result.get("final_accuracy", 0.0)
+            evaluation = precision_result.get("evaluation", {}) or {}
 
             return {
                 "symbol": symbol,
                 "period": "1日",
                 "current_price": current_price,
                 "predicted_price": final_prediction,
-                "price_change_percent": adjusted_change * 100,
+                "price_change_percent": predicted_change_rate * 100,
                 "confidence": short_confidence,
                 "accuracy_estimate": accuracy_estimate,
                 "volatility": short_volatility,
+                "evaluation": {
+                    "sample_size": evaluation.get("sample_size", 0),
+                    "avg_positive_return": evaluation.get("avg_positive_return", 0.0),
+                    "avg_negative_return": evaluation.get("avg_negative_return", 0.0),
+                },
                 "prediction_timestamp": datetime.now(),
             }
 
@@ -370,6 +363,7 @@ class InvestmentAdvisorCUI:
             "accuracy_estimate": 90.3 if period_type == "short" else 89.4,
             "volatility": 0.3,
             "prediction_timestamp": datetime.now(),
+            "evaluation": {},
             "error": error,
         }
 

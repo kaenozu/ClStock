@@ -49,6 +49,7 @@ python clstock_cli.py service stop all           # 全サービス停止
 
 # 予測実行
 python clstock_cli.py system predict -s 7203     # 特定銘柄の87%精度予測
+# 出力には過去サンプル件数・命中率・平均リターンが含まれ、モデルの統計的裏付けを確認できます。
 
 # データ取得
 python clstock_cli.py data fetch -s 7203 -p 1y   # 株価データ取得（1年分）

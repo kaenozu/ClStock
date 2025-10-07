@@ -119,6 +119,10 @@ class DemoPortfolioManager:
         """
         try:
             position_value = quantity * price
+            if position_value > self.current_cash:
+                self.logger.warning("現金残高不足のためポジション追加をキャンセル: %s", symbol)
+                return False
+
 
             # 既存ポジションがある場合は平均化
             if symbol in self.positions:
