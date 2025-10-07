@@ -1,5 +1,4 @@
 """強化学習による取引戦略の最適化"""
-<<<<<<< HEAD
 from __future__ import annotations
 
 import logging
