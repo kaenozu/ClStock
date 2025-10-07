@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 from data.stock_data import StockDataProvider
-from models.legacy_core import PredictionResult, StockPredictor
+from models.core import PredictionResult, StockPredictor
 
 DEFAULT_FALLBACK_SCORE = 50.0
 
