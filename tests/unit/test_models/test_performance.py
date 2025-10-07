@@ -505,6 +505,8 @@ class TestUltraHighPerformancePredictor:
                     confidence=0.9,
                     timestamp=datetime.now(),
                     metadata={"cache_hit": False},
+                    accuracy=0.9,
+                    symbol="TEST2",
                 ),
             ]
 

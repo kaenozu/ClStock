@@ -308,6 +308,7 @@ class ParallelStockPredictor(StockPredictor):
             "symbol": symbol,
             "parallel_enabled": True,
         }
+        from models.core import PredictionResult
         return PredictionResult(prediction_score, confidence, datetime.now(), metadata)
 
     def get_confidence(self) -> float:
