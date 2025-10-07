@@ -241,7 +241,7 @@ class TestClStockCLI:
             result = self.runner.invoke(cli, ["system", "predict", "--symbol", "7203"])
 
             assert result.exit_code == 0
-            assert "💡 予測結果:" in result.output
+            assert "[提案] 予測結果:" in result.output
             assert "価格予測: 75.5" in result.output
             assert "信頼度: 85.0%" in result.output
             assert "[成功] YES" in result.output

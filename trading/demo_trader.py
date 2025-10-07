@@ -371,9 +371,13 @@ class DemoTrader:
             self.current_capital -= total_cost
 
             # ポートフォリオ更新
-            self.portfolio_manager.add_position(
+            if not self.portfolio_manager.add_position(
                 signal.symbol, quantity, execution_price, signal.signal_type,
-            )
+            ):
+                self.logger.warning("ポートフォリオ制約により約定を取消: %s", signal.symbol)
+                self.current_capital += total_cost
+                return None
+            self.risk_manager.register_trade_open(signal.symbol, quantity, execution_price)
 
             # 取引記録
             self.trade_recorder.record_trade(
@@ -501,7 +505,11 @@ class DemoTrader:
             del self.active_trades[trade_id]
 
             # ポートフォリオ更新
-            self.portfolio_manager.remove_position(trade.symbol)
+            # ポートフォリオとリスク管理の更新
+            if not self.portfolio_manager.remove_position(trade.symbol):
+                self.logger.warning("ポートフォリオからのポジションクローズに失敗: %s", trade.symbol)
+            else:
+                self.risk_manager.register_trade_close(trade.symbol, trade.quantity, close_price)
 
             # 取引記録
             self.trade_recorder.record_trade(

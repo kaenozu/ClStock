@@ -212,7 +212,7 @@ def demo():
     """デモ取引の開始"""
     manager = get_process_manager()
 
-    click.echo("🎯 デモ取引開始...")
+    click.echo("[開始] デモ取引開始...")
     if manager.start_service("demo_trading"):
         return click.echo("[成功] デモ取引開始完了")
 
@@ -237,17 +237,18 @@ def predict(symbol: str):
     if is_numeric:
         symbol = symbol + ".T"
 
-    click.echo(f"🔮 予測システム実行: {symbol}")
+    click.echo(f"[予測] システム実行: {symbol}")
 
     try:
-        advisor = InvestmentAdvisorCUI()  # インスタンス生成
+        advisor = InvestmentAdvisorCUI()
+        click.echo("[結果] 投資診断:")
         analysis = advisor.get_comprehensive_analysis(symbol)  # 分析実行
         # analysisの内容を整形して出力 (display_recommendationsの一部を流用)
         integrated = analysis["integrated_recommendation"]
         short = analysis["short_term"]
         name = analysis["name"]
 
-        click.echo("💡 投資判断:")
+        click.echo("[提案] 投資判断:")
         click.echo(f"  銘柄: {name} ({symbol})")
         click.echo(f"  推奨: {integrated['action']}")
         click.echo(f"  タイミング: {integrated['timing']}")
@@ -256,6 +257,17 @@ def predict(symbol: str):
         click.echo(f"  中期見通し: {integrated['medium_term_outlook']} (1ヶ月)")
         click.echo(f"  信頼度: {integrated['confidence']:.1%}")
         click.echo(f"  リスク: {integrated['risk_level']}")
+        evaluation = short.get("evaluation", {})
+        sample_size = evaluation.get("sample_size", 0)
+        if sample_size:
+            avg_up = evaluation.get("avg_positive_return", 0.0)
+            avg_down = evaluation.get("avg_negative_return", 0.0)
+            click.echo(
+                f"  シグナル実績: 過去{sample_size}件で命中率 {short.get('accuracy_estimate', 0.0):.1f}%"
+            )
+            click.echo(
+                f"    平均上昇リターン: {avg_up:+.2%} / 平均下落: {avg_down:+.2%}",
+            )
         if integrated["action"] in ["強い買い", "買い"]:
             click.echo(f"  目標価格: {integrated['target_price']:,.0f}円")
             click.echo(f"  損切価格: {integrated['stop_loss']:,.0f}円")
@@ -286,7 +298,7 @@ def integration():
     """統合テストサービスの実行"""
     manager = get_process_manager()
 
-    click.echo("🔬 統合テストサービス起動...")
+    click.echo("[開始] 統合テストサービス起動...")
     if manager.start_service("integration_test"):
         return click.echo("[成功] 統合テストサービス起動完了")
 
