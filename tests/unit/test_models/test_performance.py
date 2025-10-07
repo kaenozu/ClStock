@@ -22,20 +22,30 @@ from ClStock.models.performance import (
     UltraHighPerformancePredictor,
 )
 from models.core import PredictionResult
-from models.ensemble.ensemble_predictor import (
-    EnsemblePredictor as EnsembleStockPredictor,
-)
+
+try:
+    from models.ensemble.ensemble_predictor import (
+        EnsemblePredictor as EnsembleStockPredictor,
+    )
+except ImportError:
+    EnsembleStockPredictor = object  # type: ignore[assignment,misc]
 
 
 @pytest.fixture
 def mock_ensemble_predictor():
     """Create a mock ensemble predictor."""
-    predictor = Mock(spec=EnsembleStockPredictor)
+    # Use a generic Mock if EnsembleStockPredictor is not available
+    if EnsembleStockPredictor is object:
+        predictor = Mock()
+    else:
+        predictor = Mock(spec=EnsembleStockPredictor)
     predictor.predict.return_value = PredictionResult(
         prediction=75.0,
         confidence=0.8,
         timestamp=datetime.now(),
         metadata={"test": True},
+        accuracy=0.9,
+        symbol="TEST",
     )
     return predictor
 
@@ -102,7 +112,9 @@ class TestParallelStockPredictor:
 
     @patch("models.performance.ThreadPoolExecutor")
     def test_predict_multiple_stocks_parallel_uncached(
-        self, mock_executor, mock_ensemble_predictor,
+        self,
+        mock_executor,
+        mock_ensemble_predictor,
     ):
         """Test parallel prediction with uncached results."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor, n_jobs=2)
@@ -140,7 +152,10 @@ class TestParallelStockPredictor:
 
     @patch("data.stock_data.StockDataProvider")
     def test_get_stock_data_safe_success(
-        self, mock_provider_class, mock_ensemble_predictor, sample_stock_data,
+        self,
+        mock_provider_class,
+        mock_ensemble_predictor,
+        sample_stock_data,
     ):
         """Test _get_stock_data_safe with successful data retrieval."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor)
@@ -156,7 +171,9 @@ class TestParallelStockPredictor:
 
     @patch("data.stock_data.StockDataProvider")
     def test_get_stock_data_safe_failure(
-        self, mock_provider_class, mock_ensemble_predictor,
+        self,
+        mock_provider_class,
+        mock_ensemble_predictor,
     ):
         """Test _get_stock_data_safe with data retrieval failure."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor)
@@ -186,6 +203,8 @@ class TestParallelStockPredictor:
 
         result = predictor.predict("AAPL", sample_stock_data)
 
+        print(f"result type: {type(result)}")
+        print(f"result: {result}")
         assert isinstance(result, PredictionResult)
         assert result.prediction == 75.0
         assert result.metadata["model_type"] == "parallel"
@@ -423,6 +442,8 @@ class TestUltraHighPerformancePredictor:
             confidence=0.8,
             timestamp=datetime.now(),
             metadata={"base_model": True},
+            accuracy=0.9,
+            symbol="TEST",
         )
 
         cache_manager = AdvancedCacheManager()
@@ -484,12 +505,16 @@ class TestUltraHighPerformancePredictor:
                     confidence=0.8,
                     timestamp=datetime.now(),
                     metadata={"cache_hit": False},
+                    accuracy=0.9,
+                    symbol="TEST1",
                 ),
                 PredictionResult(
                     prediction=80.0,
                     confidence=0.9,
                     timestamp=datetime.now(),
                     metadata={"cache_hit": False},
+                    accuracy=0.9,
+                    symbol="TEST2",
                 ),
             ]
 

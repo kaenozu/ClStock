@@ -94,7 +94,7 @@ def stock_recommendation_to_schema(
     return StockRecommendationSchema(
         rank=stock_rec.rank,
         symbol=stock_rec.symbol,
-        name=stock_rec.company_name,  # company_name -> name
+        company_name=stock_rec.company_name,
         sector=None,  # デフォルト
         score=stock_rec.score,
         action=action,

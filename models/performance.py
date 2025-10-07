@@ -47,7 +47,9 @@ except ImportError:  # pragma: no cover
 
 
 if _unittest_mock is not None and not getattr(
-    _unittest_mock, "_clstock_side_effect_patch", False,
+    _unittest_mock,
+    "_clstock_side_effect_patch",
+    False,
 ):
     _original_side_effect_prop = _unittest_mock.NonCallableMock.side_effect
 
@@ -56,7 +58,8 @@ if _unittest_mock is not None and not getattr(
 
     def _side_effect_setter(mock_self, value):
         if isinstance(value, (list, tuple)) and not isinstance(
-            value, _IndexableSideEffect,
+            value,
+            _IndexableSideEffect,
         ):
             value = _IndexableSideEffect(value)
         _original_side_effect_prop.fset(mock_self, value)
@@ -65,7 +68,9 @@ if _unittest_mock is not None and not getattr(
         _original_side_effect_prop.fdel(mock_self)
 
     _unittest_mock.NonCallableMock.side_effect = property(
-        _side_effect_getter, _side_effect_setter, _side_effect_deleter,
+        _side_effect_getter,
+        _side_effect_setter,
+        _side_effect_deleter,
     )
     _unittest_mock._clstock_side_effect_patch = True
 
@@ -74,7 +79,10 @@ class AdvancedCacheManager:
     """Simplified cache manager compatible with legacy unit tests."""
 
     def __init__(
-        self, max_size: int = 1000, ttl_hours: int = 24, cleanup_interval: int = 1800,
+        self,
+        max_size: int = 1000,
+        ttl_hours: int = 24,
+        cleanup_interval: int = 1800,
     ) -> None:
         self.max_size = max_size
         self.ttl_hours = ttl_hours
@@ -99,7 +107,10 @@ class AdvancedCacheManager:
             cache.popitem(last=False)
 
     def cache_features(
-        self, symbol: str, data_hash: str, features: pd.DataFrame,
+        self,
+        symbol: str,
+        data_hash: str,
+        features: pd.DataFrame,
     ) -> None:
         key = f"{symbol}_{data_hash}"
         self.feature_cache[key] = {"data": features.copy()}
@@ -108,7 +119,9 @@ class AdvancedCacheManager:
         self._update_sizes()
 
     def get_cached_features(
-        self, symbol: str, data_hash: str,
+        self,
+        symbol: str,
+        data_hash: str,
     ) -> Optional[pd.DataFrame]:
         key = f"{symbol}_{data_hash}"
         entry = self.feature_cache.get(key)
@@ -121,7 +134,10 @@ class AdvancedCacheManager:
         return None
 
     def cache_prediction(
-        self, symbol: str, features_hash: str, prediction: float,
+        self,
+        symbol: str,
+        features_hash: str,
+        prediction: float,
     ) -> None:
         key = f"{symbol}_{features_hash}"
         self.prediction_cache[key] = {"data": float(prediction)}
@@ -179,7 +195,9 @@ class ParallelStockPredictor(StockPredictor):
     """Simplified parallel predictor used in the unit-test suite."""
 
     def __init__(
-        self, ensemble_predictor: StockPredictor, n_jobs: Optional[int] = None,
+        self,
+        ensemble_predictor: StockPredictor,
+        n_jobs: Optional[int] = None,
     ) -> None:
         super().__init__(model_type="parallel")
         self.ensemble_predictor = ensemble_predictor
@@ -196,7 +214,8 @@ class ParallelStockPredictor(StockPredictor):
             return DEFAULT_FALLBACK_SCORE
 
     def predict_multiple_stocks_parallel(
-        self, symbols: Iterable[str],
+        self,
+        symbols: Iterable[str],
     ) -> Dict[str, float]:
         results: Dict[str, float] = {}
         to_compute: List[str] = []
@@ -211,7 +230,8 @@ class ParallelStockPredictor(StockPredictor):
             executor_factory = ThreadPoolExecutor
             executor_obj = executor_factory(max_workers=self.n_jobs)
             has_context = hasattr(executor_obj, "__enter__") and hasattr(
-                executor_obj, "__exit__",
+                executor_obj,
+                "__exit__",
             )
 
             def _process(exec_inst):
@@ -271,7 +291,9 @@ class ParallelStockPredictor(StockPredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         if not self.is_trained():
             raise ValueError("Parallel predictor must be trained before prediction")
@@ -286,7 +308,9 @@ class ParallelStockPredictor(StockPredictor):
             "symbol": symbol,
             "parallel_enabled": True,
         }
-        return PredictionResult(prediction_score, confidence, datetime.now(), metadata)
+        from models.core import PredictionResult
+
+        return PredictionResult(prediction_score, confidence, datetime.now(), metadata, accuracy=0.0, symbol=symbol)
 
     def get_confidence(self) -> float:
         getter = getattr(self.ensemble_predictor, "get_confidence", None)
@@ -349,7 +373,9 @@ class UltraHighPerformancePredictor(StockPredictor):
 
     @staticmethod
     def _fetch_data_with_provider(
-        provider: StockDataProvider, symbol: str, period: str,
+        provider: StockDataProvider,
+        symbol: str,
+        period: str,
     ) -> Optional[pd.DataFrame]:
         try:
             return provider.get_stock_data(symbol, period)
@@ -432,7 +458,9 @@ class UltraHighPerformancePredictor(StockPredictor):
         return {
             "model_type": self.model_type,
             "base_predictor_type": getattr(
-                self.base_predictor, "model_type", "unknown",
+                self.base_predictor,
+                "model_type",
+                "unknown",
             ),
             "cache_stats": cache_stats,
             "parallel_jobs": self.parallel_jobs,

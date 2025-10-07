@@ -7,6 +7,7 @@ from utils.validators import (
     ValidationError,
     sanitize_string,
     validate_api_key,
+    validate_portfolio_allocations,
     validate_date_range,
     validate_email,
     validate_numeric_range,
@@ -205,6 +206,52 @@ class TestSymbolsListValidation:
 
         with pytest.raises(ValidationError):
             validate_symbols_list(["VALID", "INVALID@"])  # 無効な銘柄含む
+
+
+class TestPortfolioAllocationsValidation:
+    """ポートフォリオ配分検証のテスト"""
+
+    def test_valid_allocations(self):
+        """合計が1となる正しい配分"""
+
+        allocations = {"AAPL": 0.6, "MSFT": 0.4}
+        result = validate_portfolio_allocations(allocations)
+
+        assert result == {"AAPL": 0.6, "MSFT": 0.4}
+        assert pytest.approx(1.0) == sum(result.values())
+
+    def test_allocations_with_tolerance(self):
+        """丸め誤差を許容する配分"""
+
+        allocations = {"AAA": 0.3333, "BBB": 0.3333, "CCC": 0.3334}
+        result = validate_portfolio_allocations(allocations, tolerance=1e-3)
+
+        assert set(result.keys()) == {"AAA", "BBB", "CCC"}
+        assert pytest.approx(1.0, rel=1e-6) == sum(result.values())
+
+    def test_invalid_total_allocation(self):
+        """合計が1にならない配分はエラー"""
+
+        with pytest.raises(ValidationError):
+            validate_portfolio_allocations({"AAPL": 0.7, "MSFT": 0.4})
+
+    def test_negative_allocation(self):
+        """負の配分はエラー"""
+
+        with pytest.raises(ValidationError):
+            validate_portfolio_allocations({"AAPL": -0.1, "MSFT": 1.1})
+
+    def test_invalid_allocations_type(self):
+        """辞書以外の入力はエラー"""
+
+        with pytest.raises(ValidationError):
+            validate_portfolio_allocations([("AAPL", 0.5)])
+
+    def test_empty_allocations(self):
+        """空の配分はエラー"""
+
+        with pytest.raises(ValidationError):
+            validate_portfolio_allocations({})
 
 
 class TestDateRangeValidation:
