@@ -33,7 +33,10 @@ class ModelInterpretability:
         elif method == "deep":
             self.explainer = shap.DeepExplainer(self.model, self.X_train)
         elif method == "kernel":
-            self.explainer = shap.KernelExplainer(self.model.predict, self.X_train)
+            predictor = getattr(self.model, "predict", None)
+            if predictor is None:
+                predictor = self.model
+            self.explainer = shap.KernelExplainer(predictor, self.X_train)
         else:
             raise ValueError(f"サポートされていないmethod: {method}")
 

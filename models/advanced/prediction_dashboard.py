@@ -8,7 +8,6 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import pandas as pd
 
 try:
@@ -633,7 +632,6 @@ class PredictionDashboard:
         def update_dashboard(symbol, n_clicks, n_intervals):
             return self.generate_live_components(symbol)
 
-<<<<<<< HEAD
     def _ensure_visualization_data(
         self, raw_data: Union[VisualizationData, Dict[str, Any]], symbol: str
     ) -> VisualizationData:
@@ -647,21 +645,10 @@ class PredictionDashboard:
                 sentiment_data=raw_data.get("sentiment_data"),
                 performance_metrics=raw_data.get("performance_metrics", {}),
                 timestamp=raw_data.get("timestamp", datetime.utcnow()),
-=======
-            # 予測チャート
-            prediction_fig = go.Figure()
-            prediction_fig.add_trace(
-                go.Scatter(
-                    x=pd.date_range(start="2024-01-01", periods=30, freq="D"),
-                    y=np.random.randn(30).cumsum() + 1000,
-                    name="予測価格",
-                ),
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
             )
         else:
             raise TypeError("Unsupported visualization data type")
 
-<<<<<<< HEAD
         if data.historical_data is None:
             data.historical_data = pd.DataFrame()
         elif not isinstance(data.historical_data, pd.DataFrame):
@@ -721,38 +708,6 @@ class PredictionDashboard:
                         name="実際価格",
                     )
                 )
-=======
-            # センチメントチャート
-            sentiment_fig = go.Figure()
-            sentiment_fig.add_trace(
-                go.Indicator(
-                    mode="gauge+number",
-                    value=np.random.uniform(-1, 1),
-                    title={"text": "センチメント"},
-                    gauge={"axis": {"range": [-1, 1]}},
-                ),
-            )
-
-            # パフォーマンス指標
-            metrics = html.Div(
-                [
-                    dbc.Card(
-                        [
-                            dbc.CardBody(
-                                [
-                                    html.H4("パフォーマンス指標"),
-                                    html.P(f"精度: {np.random.uniform(80, 95):.1f}%"),
-                                    html.P(f"信頼度: {np.random.uniform(70, 90):.1f}%"),
-                                    html.P(
-                                        f"処理時間: {np.random.uniform(0.1, 1.0):.3f}秒",
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
-            )
->>>>>>> 84b59d4 (feat(quality): Improve code quality and add documentation)
 
         if data.predictions:
             pred_times = []
