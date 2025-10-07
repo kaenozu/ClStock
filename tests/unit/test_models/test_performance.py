@@ -22,6 +22,7 @@ from ClStock.models.performance import (
     UltraHighPerformancePredictor,
 )
 from models.core import PredictionResult
+
 try:
     from models.ensemble.ensemble_predictor import (
         EnsemblePredictor as EnsembleStockPredictor,
@@ -111,7 +112,9 @@ class TestParallelStockPredictor:
 
     @patch("models.performance.ThreadPoolExecutor")
     def test_predict_multiple_stocks_parallel_uncached(
-        self, mock_executor, mock_ensemble_predictor,
+        self,
+        mock_executor,
+        mock_ensemble_predictor,
     ):
         """Test parallel prediction with uncached results."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor, n_jobs=2)
@@ -149,7 +152,10 @@ class TestParallelStockPredictor:
 
     @patch("data.stock_data.StockDataProvider")
     def test_get_stock_data_safe_success(
-        self, mock_provider_class, mock_ensemble_predictor, sample_stock_data,
+        self,
+        mock_provider_class,
+        mock_ensemble_predictor,
+        sample_stock_data,
     ):
         """Test _get_stock_data_safe with successful data retrieval."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor)
@@ -165,7 +171,9 @@ class TestParallelStockPredictor:
 
     @patch("data.stock_data.StockDataProvider")
     def test_get_stock_data_safe_failure(
-        self, mock_provider_class, mock_ensemble_predictor,
+        self,
+        mock_provider_class,
+        mock_ensemble_predictor,
     ):
         """Test _get_stock_data_safe with data retrieval failure."""
         predictor = ParallelStockPredictor(mock_ensemble_predictor)
