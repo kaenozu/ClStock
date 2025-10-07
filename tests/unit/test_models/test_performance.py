@@ -22,9 +22,12 @@ from ClStock.models.performance import (
     UltraHighPerformancePredictor,
 )
 from models.core import PredictionResult
-from models.ensemble.ensemble_predictor import (
-    EnsemblePredictor as EnsembleStockPredictor,
-)
+try:
+    from models.ensemble.ensemble_predictor import (
+        EnsemblePredictor as EnsembleStockPredictor,
+    )
+except ImportError:
+    EnsembleStockPredictor = object  # type: ignore[assignment,misc]
 
 
 @pytest.fixture
