@@ -9,8 +9,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 from data.stock_data import StockDataProvider
-from models.core import StockPredictor
-from models.core import PredictionResult
+from models.core import ModelConfiguration, PredictionResult, StockPredictor
+from models.core.interfaces import ModelType
 
 DEFAULT_FALLBACK_SCORE = 50.0
 
@@ -74,6 +74,25 @@ if _unittest_mock is not None and not getattr(
         _side_effect_deleter,
     )
     _unittest_mock._clstock_side_effect_patch = True
+
+
+class _CallableTrainingFlag:
+    """Bool-like proxy that remains callable for legacy checks."""
+
+    __slots__ = ("_owner", "_getter")
+
+    def __init__(self, owner: Any, getter) -> None:
+        self._owner = owner
+        self._getter = getter
+
+    def __call__(self) -> bool:
+        return bool(self._getter())
+
+    def __bool__(self) -> bool:  # pragma: no cover - trivial forwarding
+        return bool(self._getter())
+
+    def __repr__(self) -> str:  # pragma: no cover - debug helper
+        return f"{self._owner.__class__.__name__}TrainingFlag({self._getter()!r})"
 
 
 class AdvancedCacheManager:
@@ -199,12 +218,23 @@ class ParallelStockPredictor(StockPredictor):
         self,
         ensemble_predictor: StockPredictor,
         n_jobs: Optional[int] = None,
+        config: Optional[ModelConfiguration] = None,
     ) -> None:
-        super().__init__(model_type="parallel")
+        self.model_type = "parallel"
         self.ensemble_predictor = ensemble_predictor
         self.n_jobs = n_jobs or max(os.cpu_count() or 1, 1)
+        base_config = config or ModelConfiguration(
+            model_type=ModelType.PARALLEL,
+            parallel_enabled=True,
+            max_workers=self.n_jobs,
+        )
+        base_config.max_workers = self.n_jobs
+        super().__init__(base_config)
         self.batch_cache: Dict[str, float] = {}
         self._is_trained = False
+        self._legacy_training_flag = False
+        self._training_proxy = _CallableTrainingFlag(self, self._compute_training_state)
+        object.__setattr__(self, "is_trained", self._training_proxy)
 
     # ------------------------------------------------------------------
     def _safe_predict_score(self, symbol: str) -> float:
@@ -287,51 +317,161 @@ class ParallelStockPredictor(StockPredictor):
 
         return pd.DataFrame()
 
-    def train(self, data: pd.DataFrame, target: Iterable[float]) -> None:
-        self.ensemble_predictor.train(data, target)
+    def train(
+        self,
+        data: pd.DataFrame,
+        target: Optional[Iterable[float]] = None,
+    ) -> bool:
+        trainer = getattr(self.ensemble_predictor, "train", None)
+        if not callable(trainer):
+            self._is_trained = False
+            self._legacy_training_flag = False
+            return False
+
+        called = False
+        if target is not None:
+            try:
+                trainer(data, target)
+                called = True
+            except TypeError:
+                called = False
+        if not called:
+            try:
+                trainer(data)
+                called = True
+            except TypeError:
+                if target is not None:
+                    trainer(data, target)
+                    called = True
+                else:
+                    raise
+
         self._is_trained = True
+        self._legacy_training_flag = True
+        return self.is_ready()
 
     def predict(
         self,
         symbol: str,
         data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
-        if not self.is_trained():
+        if not self.is_ready():
             raise ValueError("Parallel predictor must be trained before prediction")
 
         if data is None or data.empty:
             data = self._get_stock_data_safe(symbol)
 
         prediction_score = self._safe_predict_score(symbol)
-        confidence = self.ensemble_predictor.get_confidence()
+        confidence = self.get_confidence(symbol)
         metadata = {
             "model_type": self.model_type,
             "symbol": symbol,
             "parallel_enabled": True,
         }
-        from models.core import PredictionResult
+        return PredictionResult(
+            prediction=prediction_score,
+            confidence=confidence,
+            accuracy=0.0,
+            timestamp=datetime.now(),
+            symbol=symbol,
+            model_type=self.config.model_type,
+            metadata=metadata,
+        )
 
-        return PredictionResult(prediction_score, confidence, datetime.now(), metadata, accuracy=0.0, symbol=symbol)
+    def predict_batch(self, symbols: List[str]) -> List[PredictionResult]:
+        results: List[PredictionResult] = []
+        for symbol in symbols:
+            try:
+                results.append(self.predict(symbol))
+            except Exception:
+                metadata = {
+                    "model_type": self.model_type,
+                    "symbol": symbol,
+                    "parallel_enabled": True,
+                    "error": "prediction_failed",
+                }
+                results.append(
+                    PredictionResult(
+                        prediction=DEFAULT_FALLBACK_SCORE,
+                        confidence=0.0,
+                        accuracy=0.0,
+                        timestamp=datetime.now(),
+                        symbol=symbol,
+                        model_type=self.config.model_type,
+                        metadata=metadata,
+                    )
+                )
+        return results
 
-    def get_confidence(self) -> float:
+    def get_confidence(self, symbol: str) -> float:
         getter = getattr(self.ensemble_predictor, "get_confidence", None)
         if callable(getter):
             try:
-                value = getter()
-                return float(value)
+                return float(getter(symbol))
+            except TypeError:
+                try:
+                    return float(getter())
+                except Exception:
+                    return 0.5
             except Exception:
                 return 0.5
+        confidence_attr = getattr(self.ensemble_predictor, "confidence", None)
+        if isinstance(confidence_attr, (int, float)):
+            return float(confidence_attr)
         return 0.5
 
-    def is_trained(self) -> bool:
+    def _check_ensemble_trained(self) -> bool:
         checker = getattr(self.ensemble_predictor, "is_trained", None)
-        other_trained = True
         if callable(checker):
             try:
-                other_trained = bool(checker())
+                return bool(checker())
+            except TypeError:
+                try:
+                    return bool(checker)
+                except Exception:
+                    return False
             except Exception:
-                other_trained = False
-        return bool(self._is_trained and other_trained)
+                return False
+        trained_attr = getattr(self.ensemble_predictor, "is_trained", None)
+        if isinstance(trained_attr, bool):
+            return trained_attr
+        return True
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "is_trained" and hasattr(self, "_training_proxy"):
+            self._legacy_training_flag = bool(value)
+            return
+        object.__setattr__(self, name, value)
+
+    def _compute_training_state(self) -> bool:
+        return bool(self._is_trained and self._legacy_training_flag and self._check_ensemble_trained())
+
+    def get_model_info(self) -> Dict[str, Any]:
+        base_info = {
+            "name": self.__class__.__name__,
+            "type": self.model_type,
+            "parallel_jobs": self.n_jobs,
+            "config": {
+                "model_type": self.config.model_type.value,
+                "parallel_enabled": self.config.parallel_enabled,
+                "max_workers": self.config.max_workers,
+            },
+            "is_trained": self._compute_training_state(),
+        }
+
+        info_getter = getattr(self.ensemble_predictor, "get_model_info", None)
+        if callable(info_getter):
+            try:
+                base_info["ensemble"] = info_getter()
+            except Exception:
+                base_info["ensemble"] = {"error": "unavailable"}
+        else:
+            base_info["ensemble"] = {"model_type": getattr(self.ensemble_predictor, "model_type", "unknown")}
+
+        return base_info
+
+    def is_ready(self) -> bool:
+        return self._compute_training_state()
 
 
 class UltraHighPerformancePredictor(StockPredictor):
@@ -343,16 +483,27 @@ class UltraHighPerformancePredictor(StockPredictor):
         cache_manager,
         data_provider: Optional[StockDataProvider] = None,
         parallel_jobs: Optional[int] = None,
+        config: Optional[ModelConfiguration] = None,
     ) -> None:
-        super().__init__(model_type="ultra_performance")
+        self.model_type = "ultra_performance"
         self.base_predictor = base_predictor
         self.cache_manager = cache_manager
+        self.parallel_jobs = parallel_jobs or max(os.cpu_count() or 1, 1)
+        base_config = config or ModelConfiguration(
+            model_type=ModelType.PARALLEL,
+            parallel_enabled=True,
+            max_workers=self.parallel_jobs,
+        )
+        base_config.max_workers = self.parallel_jobs
+        super().__init__(base_config)
         if data_provider is not None:
             self.data_provider = data_provider
         else:
             self.data_provider = self._create_data_provider()
-        self.parallel_jobs = parallel_jobs or max(os.cpu_count() or 1, 1)
         self._is_trained = False
+        self._legacy_training_flag = False
+        self._training_proxy = _CallableTrainingFlag(self, self._compute_training_state)
+        object.__setattr__(self, "is_trained", self._training_proxy)
 
     def _create_data_provider(self) -> StockDataProvider:
         from data import stock_data as stock_data_module
@@ -383,9 +534,38 @@ class UltraHighPerformancePredictor(StockPredictor):
         except Exception:
             return None
 
-    def train(self, data: pd.DataFrame, target: Iterable[float]) -> None:
-        self.base_predictor.train(data, target)
+    def train(
+        self,
+        data: pd.DataFrame,
+        target: Optional[Iterable[float]] = None,
+    ) -> bool:
+        trainer = getattr(self.base_predictor, "train", None)
+        if not callable(trainer):
+            self._is_trained = False
+            self._legacy_training_flag = False
+            return False
+
+        called = False
+        if target is not None:
+            try:
+                trainer(data, target)
+                called = True
+            except TypeError:
+                called = False
+        if not called:
+            try:
+                trainer(data)
+                called = True
+            except TypeError:
+                if target is not None:
+                    trainer(data, target)
+                    called = True
+                else:
+                    raise
+
         self._is_trained = True
+        self._legacy_training_flag = True
+        return self.is_ready()
 
     def _get_data(self, symbol: str) -> pd.DataFrame:
         provider = self._ensure_data_provider()
@@ -401,7 +581,7 @@ class UltraHighPerformancePredictor(StockPredictor):
         return pd.DataFrame()
 
     def predict(self, symbol: str) -> PredictionResult:
-        if not self.is_trained():
+        if not self.is_ready():
             raise ValueError(
                 "UltraHighPerformancePredictor must be trained before prediction",
             )
@@ -416,13 +596,21 @@ class UltraHighPerformancePredictor(StockPredictor):
                 "model_type": self.model_type,
                 "symbol": symbol,
             }
-            return PredictionResult(cached_score, 0.8, datetime.now(), metadata)
+            return PredictionResult(
+                prediction=float(cached_score),
+                confidence=0.8,
+                accuracy=0.0,
+                timestamp=datetime.now(),
+                symbol=symbol,
+                model_type=self.config.model_type,
+                metadata=metadata,
+            )
 
         result = self.base_predictor.predict(symbol, raw_data)
         score = float(result.prediction)
         self.cache_manager.cache_prediction(symbol, data_hash, score)
 
-        metadata = dict(result.metadata)
+        metadata = dict(getattr(result, "metadata", {}) or {})
         metadata.update(
             {
                 "cache_hit": False,
@@ -431,7 +619,16 @@ class UltraHighPerformancePredictor(StockPredictor):
             },
         )
 
-        return PredictionResult(score, result.confidence, datetime.now(), metadata)
+        return PredictionResult(
+            prediction=score,
+            confidence=float(getattr(result, "confidence", 0.5)),
+            accuracy=float(getattr(result, "accuracy", 0.0)),
+            timestamp=getattr(result, "timestamp", datetime.now()),
+            symbol=symbol,
+            model_type=self.config.model_type,
+            execution_time=float(getattr(result, "execution_time", 0.0)),
+            metadata=metadata,
+        )
 
     def predict_multiple(self, symbols: Iterable[str]) -> Dict[str, PredictionResult]:
         results: Dict[str, PredictionResult] = {}
@@ -454,6 +651,9 @@ class UltraHighPerformancePredictor(StockPredictor):
                 results[symbol] = future.result()
         return results
 
+    def predict_batch(self, symbols: List[str]) -> List[PredictionResult]:
+        return [self.predict(symbol) for symbol in symbols]
+
     def get_performance_stats(self) -> Dict[str, Any]:  # type: ignore[override]
         cache_stats = getattr(self.cache_manager, "get_cache_stats", dict)()
         return {
@@ -472,23 +672,74 @@ class UltraHighPerformancePredictor(StockPredictor):
         if callable(cleanup):
             cleanup()
 
-    def is_trained(self) -> bool:
-        if not self._is_trained:
-            return False
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "is_trained" and hasattr(self, "_training_proxy"):
+            self._legacy_training_flag = bool(value)
+            return
+        object.__setattr__(self, name, value)
 
+    def _compute_training_state(self) -> bool:
+        return bool(self._is_trained and self._legacy_training_flag and self._check_base_trained())
+
+    def _check_base_trained(self) -> bool:
         checker = getattr(self.base_predictor, "is_trained", None)
         if callable(checker):
             try:
                 return bool(checker())
+            except TypeError:
+                try:
+                    return bool(checker)
+                except Exception:
+                    return False
             except Exception:
                 return False
+        trained_attr = getattr(self.base_predictor, "is_trained", None)
+        if isinstance(trained_attr, bool):
+            return trained_attr
         return True
 
-    def get_confidence(self) -> float:
+    def get_model_info(self) -> Dict[str, Any]:
+        base_info = {
+            "name": self.__class__.__name__,
+            "type": self.model_type,
+            "parallel_jobs": self.parallel_jobs,
+            "config": {
+                "model_type": self.config.model_type.value,
+                "parallel_enabled": self.config.parallel_enabled,
+                "max_workers": self.config.max_workers,
+            },
+            "is_trained": self._compute_training_state(),
+        }
+
+        info_getter = getattr(self.base_predictor, "get_model_info", None)
+        if callable(info_getter):
+            try:
+                base_info["base_predictor"] = info_getter()
+            except Exception:
+                base_info["base_predictor"] = {"error": "unavailable"}
+        else:
+            base_info["base_predictor"] = {
+                "model_type": getattr(self.base_predictor, "model_type", "unknown")
+            }
+
+        return base_info
+
+    def get_confidence(self, symbol: str) -> float:
         getter = getattr(self.base_predictor, "get_confidence", None)
         if callable(getter):
             try:
-                return float(getter())
+                return float(getter(symbol))
+            except TypeError:
+                try:
+                    return float(getter())
+                except Exception:
+                    return 0.5
             except Exception:
                 return 0.5
+        confidence_attr = getattr(self.base_predictor, "confidence", None)
+        if isinstance(confidence_attr, (int, float)):
+            return float(confidence_attr)
         return 0.5
+
+    def is_ready(self) -> bool:
+        return self._compute_training_state()
