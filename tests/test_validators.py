@@ -12,6 +12,7 @@ from utils.validators import (
     validate_date_range,
     validate_email,
     validate_numeric_range,
+    validate_pagination_params,
     validate_period,
     validate_stock_symbol,
     validate_symbols_list,
@@ -316,3 +317,40 @@ class TestCurrencyCodeValidation:
 
         with pytest.raises(ValidationError):
             validate_currency_code("US-")  # 許可されていない文字
+
+
+class TestPaginationParamsValidation:
+    """ページネーションパラメータ検証のテスト"""
+
+    def test_valid_pagination_params(self):
+        """正の整数であれば検証を通る"""
+        page, per_page = validate_pagination_params(1, 20)
+        assert page == 1
+        assert per_page == 20
+
+    def test_string_inputs_are_converted(self):
+        """文字列の数値も許容される"""
+        page, per_page = validate_pagination_params("2", "50")
+        assert page == 2
+        assert per_page == 50
+
+    def test_invalid_page_number(self):
+        """無効なページ番号はエラー"""
+        with pytest.raises(ValidationError):
+            validate_pagination_params(0, 10)
+
+        with pytest.raises(ValidationError):
+            validate_pagination_params("invalid", 10)
+
+    def test_invalid_per_page_value(self):
+        """per_page の値が不正な場合"""
+        with pytest.raises(ValidationError):
+            validate_pagination_params(1, 0)
+
+        with pytest.raises(ValidationError):
+            validate_pagination_params(1, "invalid")
+
+    def test_per_page_exceeds_maximum(self):
+        """最大件数を超えた場合はエラー"""
+        with pytest.raises(ValidationError):
+            validate_pagination_params(1, 500, max_per_page=100)
