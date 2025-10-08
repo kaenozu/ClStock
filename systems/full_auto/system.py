@@ -1,331 +1,39 @@
-"""互換性維持のためのフルオートシステムラッパーモジュール。"""
+"""完全自動投資システムの中核実装。"""
 
 from __future__ import annotations
 
-import argparse
-import asyncio
 import logging
 import os
-from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
-from analysis.sentiment_analyzer import MarketSentimentAnalyzer
+import pandas as pd
 from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem
 from config.settings import get_settings
 from data.stock_data import StockDataProvider
-from models.advanced.risk_management_framework import (
-    PortfolioRisk,
-    RiskLevel,
-    RiskManager,
-)
-from models.advanced.trading_strategy_generator import (
-    ActionType,
-    SignalGenerator,
-    StrategyGenerator,
-)
-from models.base.interfaces import PredictionResult
-from models.hybrid.hybrid_predictor import HybridStockPredictor
+from data_retrieval_script_generator import generate_colab_data_retrieval_script
 from trading.tse import PortfolioBacktester
 from trading.tse.analysis import StockProfile
 from trading.tse.optimizer import PortfolioOptimizer
 
-from systems.full_auto import (
+from .adapters import (
     AutoRecommendation,
-    FullAutoInvestmentSystem,
     HybridPredictorAdapter,
     RiskAssessment,
     RiskManagerAdapter,
     SentimentAnalyzerAdapter,
     StrategyGeneratorAdapter,
-    build_cli_parser,
-    main,
-    run_full_auto,
 )
 
-<<<<<<< HEAD
-
-class AutoRecommendation:
-    """自動推奨結果クラス"""
-
-    def __init__(
-        self,
-        symbol: str,
-        company_name: str,
-        entry_price: float,
-        target_price: float,
-        stop_loss: float,
-        expected_return: float,
-        confidence: float,
-        risk_level: str,
-        buy_date: datetime,
-        sell_date: datetime,
-        reasoning: str,
-    ):
-        self.symbol = symbol
-        self.company_name = company_name
-        self.entry_price = entry_price
-        self.target_price = target_price
-        self.stop_loss = stop_loss
-        self.expected_return = expected_return
-        self.confidence = confidence
-        self.risk_level = risk_level
-        self.buy_date = buy_date
-        self.sell_date = sell_date
-        self.reasoning = reasoning
+__all__ = ["FullAutoInvestmentSystem", "run_full_auto"]
 
 
-@dataclass
-class RiskAssessment:
-    """Adapter friendly risk analysis result."""
-
-    risk_score: float
-    risk_level: RiskLevel
-    max_safe_position_size: float
-    recommendations: List[str]
-    raw: Optional[PortfolioRisk] = None
-
-
-class HybridPredictorAdapter:
-    """Wrap HybridStockPredictor to expose the legacy predict interface."""
-
-    def __init__(self, predictor: Optional[HybridStockPredictor] = None):
-        self._predictor = predictor or HybridStockPredictor()
-
-    def predict(self, symbol: str, data: Optional[pd.DataFrame]) -> Dict[str, Any]:
-        result = self._predictor.predict(symbol)
-
-        # 戻り値が PredictionResult であることを確認
-        if not isinstance(result, PredictionResult):
-            logger.warning(
-                f"{symbol}: HybridStockPredictor.predict が PredictionResult 以外の型を返しました: {type(result)}",
-            )
-            # フォールバックとして、空の辞書を返す
-            return {}
-
-        return {
-            "predicted_price": float(result.prediction),
-            "confidence": float(result.confidence),
-            "accuracy": float(result.accuracy),
-            "metadata": dict(result.metadata),
-            "symbol": result.symbol,
-            "timestamp": result.timestamp,
-        }
-
-
-class SentimentAnalyzerAdapter:
-    """Provide an analyze_sentiment shim for the news sentiment analyzer."""
-
-    def __init__(self, analyzer: Optional[MarketSentimentAnalyzer] = None):
-        self._analyzer = analyzer or MarketSentimentAnalyzer()
-
-    def analyze_sentiment(self, symbol: str) -> Dict[str, Any]:
-        try:
-            sentiment = self._analyzer.analyze_news_sentiment(symbol)
-        except AttributeError:
-            sentiment = self._analyzer.analyze_sentiment(symbol)  # type: ignore[attr-defined]
-        except Exception:
-            sentiment = {}
-
-        sentiment_score = 0.0
-        if isinstance(sentiment, dict):
-            sentiment_score = float(sentiment.get("sentiment_score", 0.0))
-        else:
-            sentiment = {}
-
-        sentiment.setdefault("sentiment_score", sentiment_score)
-        return sentiment
-
-
-class RiskManagerAdapter:
-    """Translate portfolio level risk outputs into the legacy structure."""
-
-    def __init__(self, manager: Optional[RiskManager] = None):
-        self._manager = manager or RiskManager()
-        self.logger = logging.getLogger(self.__class__.__name__)
-
-    def analyze_portfolio_risk(
-        self,
-        portfolio_data: Dict[str, Any],
-        price_map: Dict[str, pd.DataFrame],
-    ) -> Optional[RiskAssessment]:
-        try:
-            return self._manager.analyze_portfolio_risk(portfolio_data, price_map)
-        except AttributeError:
-            self.logger.debug(
-                "RiskManager missing analyze_portfolio_risk, falling back",
-                exc_info=True,
-            )
-            if not price_map:
-                return None
-
-            symbol, price_data = next(iter(price_map.items()))
-            return self.analyze_risk(symbol, price_data, {})
-
-        except Exception:
-            self.logger.exception("Portfolio risk analysis failed")
-            return None
-
-    def analyze_risk(
-        self,
-        symbol: str,
-        price_data: Optional[pd.DataFrame],
-        predictions: Dict[str, Any],
-    ) -> Optional[RiskAssessment]:
-        if price_data is None or price_data.empty:
-            return None
-
-        try:
-            portfolio_risk = self._manager.analyze_portfolio_risk(
-                {"positions": {symbol: float(price_data["Close"].iloc[-1])}},
-                {symbol: price_data},
-            )
-        except AttributeError:
-            self.logger.debug(
-                "RiskManager missing analyze_portfolio_risk, falling back",
-                exc_info=True,
-            )
-            portfolio_risk = self._manager.analyze_risk(price_data, predictions)  # type: ignore[attr-defined]
-        except Exception:
-            self.logger.exception("Risk analysis failed for %s", symbol)
-            return None
-
-        if portfolio_risk is None:
-            return None
-
-        if isinstance(portfolio_risk, RiskAssessment):
-            return portfolio_risk
-
-        total_score = getattr(portfolio_risk, "total_risk_score", 2.0)
-        # total_score は RiskManager により [MIN_RISK_SCORE, MAX_RISK_SCORE] の範囲を想定
-        # RiskLevel enum との対応関係:
-        # RiskLevel.LOW = 1.0, RiskLevel.MEDIUM = 2.0, RiskLevel.HIGH = 3.0, RiskLevel.VERY_HIGH = 4.0
-        MIN_RISK_SCORE = 1.0  # RiskLevel.LOW
-        MAX_RISK_SCORE = 4.0  # RiskLevel.VERY_HIGH
-        # total_score を [0.0, 1.0] に正規化
-        normalized_score = max(
-            0.0,
-            min(
-                (float(total_score) - MIN_RISK_SCORE)
-                / (MAX_RISK_SCORE - MIN_RISK_SCORE),
-                1.0,
-            ),
-        )
-        risk_level = getattr(portfolio_risk, "risk_level", RiskLevel.MEDIUM)
-        max_position = getattr(portfolio_risk, "max_safe_position_size", 0.05)
-        recommendations = getattr(portfolio_risk, "recommendations", [])
-
-        return RiskAssessment(
-            risk_score=float(normalized_score),
-            risk_level=risk_level,
-            max_safe_position_size=float(max_position),
-            recommendations=list(recommendations),
-            raw=portfolio_risk if isinstance(portfolio_risk, PortfolioRisk) else None,
-        )
-
-
-class StrategyGeneratorAdapter:
-    """Leverage the advanced generator to produce legacy-friendly strategies."""
-
-    def __init__(
-        self,
-        generator: Optional[StrategyGenerator] = None,
-        signal_generator: Optional[SignalGenerator] = None,
-    ):
-        self._generator = generator or StrategyGenerator()
-        self._signal_generator = signal_generator or SignalGenerator()
-        self.logger = logging.getLogger(self.__class__.__name__)
-
-    def generate_strategy(
-        self,
-        symbol: str,
-        price_data: Optional[pd.DataFrame],
-        predictions: Dict[str, Any],
-        risk_assessment: Optional[RiskAssessment],
-        sentiment: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        if price_data is None or price_data.empty:
-            return {}
-
-        sentiment_score = 0.0
-        if isinstance(sentiment, dict):
-            sentiment_score = float(sentiment.get("sentiment_score", 0.0))
-
-        sentiment_payload = {"current_sentiment": {"score": sentiment_score}}
-
-        best_signal = None
-        for strategy in self._collect_strategies(symbol, price_data):
-            try:
-                signals = self._signal_generator.generate_signals(
-                    symbol,
-                    price_data,
-                    strategy,
-                    sentiment_payload,
-                )
-            except Exception:
-                self.logger.debug(
-                    "Signal generation failed for %s strategy",
-                    strategy.name,
-                    exc_info=True,
-                )
-                continue
-
-            for signal in signals:
-                if signal.action != ActionType.BUY:
-                    continue
-                if best_signal is None or signal.confidence > best_signal.confidence:
-                    best_signal = signal
-
-        if best_signal is None:
-            return {}
-
-        entry_price = float(best_signal.entry_price)
-        target_price = float(best_signal.take_profit or entry_price)
-        stop_loss = float(best_signal.stop_loss or entry_price)
-        expected_return = 0.0
-        if entry_price:
-            expected_return = (target_price - entry_price) / entry_price
-
-        strategy_dict = {
-            "entry_price": entry_price,
-            "target_price": target_price,
-            "stop_loss": stop_loss,
-            "confidence_score": float(best_signal.confidence),
-            "expected_return": float(expected_return),
-            "reasoning": best_signal.reasoning,
-            "metadata": best_signal.metadata,
-        }
-
-        if risk_assessment:
-            strategy_dict["max_safe_position_size"] = (
-                risk_assessment.max_safe_position_size
-            )
-
-        return strategy_dict
-
-    def _collect_strategies(self, symbol: str, price_data: pd.DataFrame) -> List[Any]:
-        candidate_methods = [
-            getattr(self._generator, "generate_momentum_strategy", None),
-            getattr(self._generator, "generate_mean_reversion_strategy", None),
-            getattr(self._generator, "generate_breakout_strategy", None),
-        ]
-
-        strategies: List[Any] = []
-        for method in candidate_methods:
-            if not callable(method):
-                continue
-            try:
-                strategy = method(symbol, price_data)
-            except Exception:
-                self.logger.debug("Strategy generation failed", exc_info=True)
-                continue
-            if strategy:
-                strategies.append(strategy)
-
-        return strategies
-
-
-from systems.full_auto.script_service import DataRetrievalScriptService
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 class FullAutoInvestmentSystem:
@@ -334,23 +42,31 @@ class FullAutoInvestmentSystem:
     def __init__(
         self,
         max_symbols: Optional[int] = None,
-        script_service: Optional[DataRetrievalScriptService] = None,
-    ):
-        self.data_provider = StockDataProvider()
-        self.predictor = HybridPredictorAdapter()
-        self.optimizer = PortfolioOptimizer()
-        self.sentiment_analyzer = SentimentAnalyzerAdapter()
-        self.strategy_generator = StrategyGeneratorAdapter()
-        self.risk_manager = RiskManagerAdapter()
-        self.medium_system = MediumTermPredictionSystem()
-        self.failed_symbols = set()  # データ取得に失敗した銘柄を記録
+        *,
+        settings: Optional[Any] = None,
+        data_provider: Optional[StockDataProvider] = None,
+        predictor: Optional[HybridPredictorAdapter] = None,
+        optimizer: Optional[PortfolioOptimizer] = None,
+        sentiment_analyzer: Optional[SentimentAnalyzerAdapter] = None,
+        strategy_generator: Optional[StrategyGeneratorAdapter] = None,
+        risk_manager: Optional[RiskManagerAdapter] = None,
+        medium_system: Optional[MediumTermPredictionSystem] = None,
+        backtester: Optional[PortfolioBacktester] = None,
+        script_generator: Optional[Callable[..., str]] = None,
+    ) -> None:
+        self.data_provider = data_provider or StockDataProvider()
+        self.predictor = predictor or HybridPredictorAdapter()
+        self.optimizer = optimizer or PortfolioOptimizer()
+        self.sentiment_analyzer = sentiment_analyzer or SentimentAnalyzerAdapter()
+        self.strategy_generator = strategy_generator or StrategyGeneratorAdapter()
+        self.risk_manager = risk_manager or RiskManagerAdapter()
+        self.medium_system = medium_system or MediumTermPredictionSystem()
+        self.backtester = backtester or PortfolioBacktester(self.data_provider)
+        self.script_generator = script_generator or generate_colab_data_retrieval_script
+        self.failed_symbols: set[str] = set()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.max_symbols = self._resolve_max_symbols(max_symbols)
-        self.settings = get_settings()
-        self.script_service = script_service or DataRetrievalScriptService(
-            logger=self.logger,
-            printer=print,
-        )
+        self.settings = settings or get_settings()
 
     def _resolve_max_symbols(self, max_symbols: Optional[int]) -> Optional[int]:
         if max_symbols is not None:
@@ -479,7 +195,7 @@ class FullAutoInvestmentSystem:
         if not unique_sizes:
             unique_sizes = [max_available]
 
-        backtester = PortfolioBacktester(self.data_provider)
+        backtester = self.backtester
         optimization_results: Dict[int, Dict[str, Any]] = {}
 
         for size in unique_sizes:
@@ -968,97 +684,97 @@ class FullAutoInvestmentSystem:
     def _generate_data_retrieval_script(self):
         """Generate a Google Colab helper script for symbols that failed to download."""
         failed_symbols = list(self.failed_symbols or [])
-        self.script_service.generate(failed_symbols)
-
-
-def build_cli_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Run the full auto investment pipeline",
-    )
-    parser.add_argument(
-        "--max-tickers",
-        type=int,
-        default=None,
-        help="Limit the number of tickers processed (useful for quick smoke tests).",
-    )
-    parser.add_argument(
-        "--prefer-local-data",
-        action="store_true",
-        help="Prioritize local CSV data before calling yfinance.",
-    )
-    parser.add_argument(
-        "--skip-local-data",
-        action="store_true",
-        help="Force yfinance downloads even if local CSV data exists.",
-    )
-    return parser
-
-
-def main(argv: Optional[List[str]] = None) -> int:
-    parser = build_cli_parser()
-    args = parser.parse_args(argv)
-
-    if args.prefer_local_data and args.skip_local_data:
-        parser.error(
-            "--prefer-local-data and --skip-local-data cannot be used together.",
+        self.logger.info(
+            "Starting _generate_data_retrieval_script. failed_symbols: %s",
+            failed_symbols,
+        )
+        print(
+            f"[INFO] _generate_data_retrieval_script called. failed_symbols: {failed_symbols}",
         )
 
-    if args.max_tickers is not None and args.max_tickers <= 0:
-        parser.error("--max-tickers must be a positive integer.")
+        if not failed_symbols:
+            self.logger.info("No failed symbols detected; skipping script generation.")
+            print(
+                "[INFO] No failed symbols detected. Skipping Google Colab script generation.",
+            )
+            return
 
-    if args.prefer_local_data:
-        os.environ["CLSTOCK_PREFER_LOCAL_DATA"] = "1"
-    elif args.skip_local_data:
-        os.environ["CLSTOCK_PREFER_LOCAL_DATA"] = "0"
+        script_output_dir = Path("data") / "retrieval_scripts"
+        script_output_dir.mkdir(parents=True, exist_ok=True)
+        self.logger.info("Script output directory prepared: %s", script_output_dir)
+        print(f"[INFO] Script output directory: {script_output_dir}")
 
-    try:
-        asyncio.run(run_full_auto(max_symbols=args.max_tickers))
-    except KeyboardInterrupt:
-        print("[INFO] Full auto run interrupted by user.")
-        return 130
+        for index, symbol in enumerate(failed_symbols):
+            self.logger.debug("Failed symbol #%d: %s", index, symbol)
 
-    return 0
+        self.logger.info("Calling data retrieval script generator.")
+        try:
+            generated_script = self.script_generator(
+                missing_symbols=failed_symbols,
+                period="1y",
+                output_dir=".",
+            )
+        except Exception as exc:
+            self.logger.error(
+                "Data retrieval script generation failed",
+                exc_info=True,
+            )
+            print(
+                f"[ERROR] Failed to generate Google Colab data retrieval script: {exc}",
+            )
+            return
+
+        if not generated_script or not generated_script.strip():
+            self.logger.warning("Generated script is empty.")
+            print(
+                "[WARNING] Generated data retrieval script is empty. Nothing will be written.",
+            )
+            return
+
+        script_length = len(generated_script)
+        self.logger.info("Generated script length: %d characters", script_length)
+        if script_length <= 200:
+            self.logger.debug("Generated script contents: %s", generated_script)
+        else:
+            self.logger.debug("Generated script head: %s", generated_script[:200])
+            self.logger.debug("Generated script tail: %s", generated_script[-200:])
+
+        script_file_path = script_output_dir / "colab_data_fetcher.py"
+        try:
+            with open(
+                script_file_path,
+                "w",
+                encoding="utf-8-sig",
+                errors="strict",
+            ) as handle:
+                handle.write(generated_script)
+        except UnicodeEncodeError as exc:
+            self.logger.error(
+                "UnicodeEncodeError while writing %s",
+                script_file_path,
+                exc_info=True,
+            )
+            print(
+                f"[ERROR] Unicode encoding error while writing {script_file_path}: {exc}",
+            )
+            return
+        except Exception as exc:
+            self.logger.error(
+                "Unexpected error while writing %s",
+                script_file_path,
+                exc_info=True,
+            )
+            print(f"[ERROR] Unexpected error while writing {script_file_path}: {exc}")
+            return
+
+        self.logger.info(
+            "Saved Google Colab data retrieval script to %s",
+            script_file_path,
+        )
+        print(f"[INFO] Saved Google Colab data retrieval script to {script_file_path}")
 
 
 async def run_full_auto(max_symbols: Optional[int] = None) -> List[AutoRecommendation]:
     """Convenience coroutine to execute the full auto investment analysis."""
     system = FullAutoInvestmentSystem(max_symbols=max_symbols)
     return await system.run_full_auto_analysis()
-
-
-if __name__ == "__main__":
-=======
-__all__ = [
-    "AutoRecommendation",
-    "FullAutoInvestmentSystem",
-    "HybridPredictorAdapter",
-    "RiskAssessment",
-    "RiskManagerAdapter",
-    "SentimentAnalyzerAdapter",
-    "StrategyGeneratorAdapter",
-    "build_cli_parser",
-    "main",
-    "run_full_auto",
-    # 依存モジュール（既存コードとの互換性のため）
-    "MarketSentimentAnalyzer",
-    "MediumTermPredictionSystem",
-    "get_settings",
-    "StockDataProvider",
-    "generate_colab_data_retrieval_script",
-    "PortfolioRisk",
-    "RiskLevel",
-    "RiskManager",
-    "ActionType",
-    "SignalGenerator",
-    "StrategyGenerator",
-    "PredictionResult",
-    "HybridStockPredictor",
-    "PortfolioBacktester",
-    "StockProfile",
-    "PortfolioOptimizer",
-]
-
-
-if __name__ == "__main__":  # pragma: no cover - CLI エントリポイント
->>>>>>> origin/main
-    raise SystemExit(main())

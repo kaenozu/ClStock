@@ -34,7 +34,7 @@ class ResourceMonitor:
         return None
 
 
-def monitor_resources(func):
+def monitor_resources(func: Callable[..., Any]) -> Callable[..., Any]:
     """関数の実行時にリソース使用量を監視するデコレーター"""
 
     @functools.wraps(func)

@@ -261,7 +261,7 @@ def get_or_create_predictor(model_type: ModelType, **kwargs) -> StockPredictor:
     return _global_factory.get_or_create_predictor(model_type, **kwargs)
 
 
-def register_predictor(model_type: ModelType, predictor_class: Type[StockPredictor]):
+def register_predictor(model_type: ModelType, predictor_class: Type[StockPredictor]) -> None:
     """グローバルファクトリへの予測器登録"""
     return _global_factory.register_predictor(model_type, predictor_class)
 
@@ -271,6 +271,6 @@ def list_available_types() -> List[ModelType]:
     return _global_factory.list_available_types()
 
 
-def clear_instances():
+def clear_instances() -> None:
     """インスタンスキャッシュのクリア"""
     return _global_factory.clear_instances()
