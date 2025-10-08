@@ -378,7 +378,8 @@ def load_from_env(env: Optional[Mapping[str, str]] = None) -> AppSettings:
 
 
 def load_database_settings_from_env(
-    settings: "AppSettings", env: Mapping[str, str],
+    settings: "AppSettings",
+    env: Mapping[str, str],
 ) -> None:
     """Apply database overrides from the environment mapping."""
     _apply_env_value(
@@ -402,7 +403,8 @@ def load_database_settings_from_env(
 
 
 def load_market_data_settings_from_env(
-    settings: "AppSettings", env: Mapping[str, str],
+    settings: "AppSettings",
+    env: Mapping[str, str],
 ) -> None:
     """Apply market data overrides from the environment mapping."""
     _apply_env_value(
@@ -462,7 +464,8 @@ def load_market_data_settings_from_env(
 
 
 def load_prediction_settings_from_env(
-    settings: "AppSettings", env: Mapping[str, str],
+    settings: "AppSettings",
+    env: Mapping[str, str],
 ) -> None:
     """Apply prediction overrides from the environment mapping."""
     _apply_env_value(
@@ -504,7 +507,8 @@ def load_prediction_settings_from_env(
 
 
 def load_model_settings_from_env(
-    settings: "AppSettings", env: Mapping[str, str],
+    settings: "AppSettings",
+    env: Mapping[str, str],
 ) -> None:
     """Apply model overrides from the environment mapping."""
     _apply_env_value(
@@ -558,7 +562,8 @@ def load_model_settings_from_env(
 
 
 def load_backtest_settings_from_env(
-    settings: "AppSettings", env: Mapping[str, str],
+    settings: "AppSettings",
+    env: Mapping[str, str],
 ) -> None:
     """Apply backtest overrides from the environment mapping."""
     _apply_env_value(
@@ -612,7 +617,8 @@ def load_backtest_settings_from_env(
 
 
 def load_trading_settings_from_env(
-    settings: "AppSettings", env: Mapping[str, str],
+    settings: "AppSettings",
+    env: Mapping[str, str],
 ) -> None:
     """Apply trading overrides from the environment mapping."""
     _apply_env_value(
@@ -632,7 +638,10 @@ def load_trading_settings_from_env(
 def load_api_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) -> None:
     """Apply API overrides from the environment mapping."""
     _apply_env_value(
-        env, "CLSTOCK_API_TITLE", str, lambda x: setattr(settings.api, "title", x),
+        env,
+        "CLSTOCK_API_TITLE",
+        str,
+        lambda x: setattr(settings.api, "title", x),
     )
     _apply_env_value(
         env,
@@ -641,7 +650,10 @@ def load_api_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) 
         lambda x: setattr(settings.api, "description", x),
     )
     _apply_env_value(
-        env, "CLSTOCK_API_VERSION", str, lambda x: setattr(settings.api, "version", x),
+        env,
+        "CLSTOCK_API_VERSION",
+        str,
+        lambda x: setattr(settings.api, "version", x),
     )
     _apply_env_value(
         env,
@@ -664,22 +676,33 @@ def load_api_settings_from_env(settings: "AppSettings", env: Mapping[str, str]) 
 
 
 def load_logging_settings_from_env(
-    settings: "AppSettings", env: Mapping[str, str],
+    settings: "AppSettings",
+    env: Mapping[str, str],
 ) -> None:
     """Apply logging overrides from the environment mapping."""
     _apply_env_value(
-        env, "CLSTOCK_LOG_LEVEL", str, lambda x: setattr(settings.logging, "level", x),
+        env,
+        "CLSTOCK_LOG_LEVEL",
+        str,
+        lambda x: setattr(settings.logging, "level", x),
     )
     _apply_env_value(
-        env, "CLSTOCK_LOG_FORMAT", str, lambda x: setattr(settings.logging, "format", x),
+        env,
+        "CLSTOCK_LOG_FORMAT",
+        str,
+        lambda x: setattr(settings.logging, "format", x),
     )
     _apply_env_value(
-        env, "CLSTOCK_LOG_FILE", str, lambda x: setattr(settings.logging, "log_file", x),
+        env,
+        "CLSTOCK_LOG_FILE",
+        str,
+        lambda x: setattr(settings.logging, "log_file", x),
     )
 
 
 def load_realtime_settings_from_env(
-    settings: "AppSettings", env: Mapping[str, str],
+    settings: "AppSettings",
+    env: Mapping[str, str],
 ) -> None:
     """Apply realtime overrides from the environment mapping."""
     _apply_env_value(
@@ -745,7 +768,8 @@ def load_realtime_settings_from_env(
 
 
 def load_process_settings_from_env(
-    settings: "AppSettings", env: Mapping[str, str],
+    settings: "AppSettings",
+    env: Mapping[str, str],
 ) -> None:
     """Apply process overrides from the environment mapping."""
     _apply_env_value(

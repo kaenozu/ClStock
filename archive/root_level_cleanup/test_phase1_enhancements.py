@@ -15,7 +15,8 @@ import numpy as np
 
 # ロギング設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -96,25 +97,29 @@ def run_phase1_enhancement_tests() -> Dict[str, Any]:
         # キャッシュシステムテスト
         print("\n2. インテリジェントキャッシュテスト")
         test_results["cache_tests"] = test_intelligent_cache(
-            enhanced_hybrid, test_symbols,
+            enhanced_hybrid,
+            test_symbols,
         )
 
         # 次世代予測モードテスト
         print("\n3. 次世代予測モードテスト")
         test_results["next_gen_mode_tests"] = test_next_generation_modes(
-            enhanced_hybrid, test_symbols,
+            enhanced_hybrid,
+            test_symbols,
         )
 
         # 学習型最適化テスト
         print("\n4. 学習型最適化テスト")
         test_results["adaptive_optimization_tests"] = test_adaptive_optimization(
-            enhanced_hybrid, test_symbols,
+            enhanced_hybrid,
+            test_symbols,
         )
 
         # パフォーマンス比較テスト
         print("\n5. パフォーマンス比較テスト")
         test_results["performance_comparison"] = test_performance_improvements(
-            enhanced_hybrid, test_symbols,
+            enhanced_hybrid,
+            test_symbols,
         )
 
         test_results["success"] = True
@@ -178,7 +183,8 @@ def test_intelligent_cache(hybrid_system, test_symbols: List[str]) -> Dict[str, 
 
 
 def test_next_generation_modes(
-    hybrid_system, test_symbols: List[str],
+    hybrid_system,
+    test_symbols: List[str],
 ) -> Dict[str, Any]:
     """次世代予測モードテスト"""
     # 次世代モードリスト
@@ -245,7 +251,8 @@ def test_next_generation_modes(
 
 
 def test_adaptive_optimization(
-    hybrid_system, test_symbols: List[str],
+    hybrid_system,
+    test_symbols: List[str],
 ) -> Dict[str, Any]:
     """学習型最適化テスト"""
     optimization_results = {
@@ -302,7 +309,8 @@ def test_adaptive_optimization(
 
 
 def test_performance_improvements(
-    hybrid_system, test_symbols: List[str],
+    hybrid_system,
+    test_symbols: List[str],
 ) -> Dict[str, Any]:
     """パフォーマンス改善テスト"""
     # 従来システム（キャッシュ・最適化無効）との比較
@@ -324,7 +332,8 @@ def test_performance_improvements(
     from models.hybrid.hybrid_predictor import HybridStockPredictor
 
     basic_hybrid = HybridStockPredictor(
-        enable_cache=False, enable_adaptive_optimization=False,
+        enable_cache=False,
+        enable_adaptive_optimization=False,
     )
 
     basic_times = []

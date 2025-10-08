@@ -44,8 +44,7 @@ templates.env.filters["format_number"] = format_number
 
 
 class PersonalDashboard:
-    """個人投資用Webダッシュボードのクラス
-    """
+    """個人投資用Webダッシュボードのクラス"""
 
     def __init__(self):
         self.settings = get_settings()
@@ -182,7 +181,8 @@ class PersonalDashboard:
                     prediction_result.get("final_prediction", 0),
                     prediction_result.get("final_confidence", 0),
                     prediction_result.get(
-                        "final_accuracy", self.settings.prediction.achieved_accuracy,
+                        "final_accuracy",
+                        self.settings.prediction.achieved_accuracy,
                     ),
                     "Precision89BreakthroughSystem",
                 ),
@@ -195,10 +195,12 @@ class PersonalDashboard:
                 "prediction": prediction_result.get("final_prediction", 0),
                 "confidence": prediction_result.get("final_confidence", 0),
                 "accuracy": prediction_result.get(
-                    "final_accuracy", self.settings.prediction.achieved_accuracy,
+                    "final_accuracy",
+                    self.settings.prediction.achieved_accuracy,
                 ),
                 "precision_89_achieved": prediction_result.get(
-                    "precision_87_achieved", False,
+                    "precision_87_achieved",
+                    False,
                 ),
                 "component_breakdown": prediction_result.get("component_breakdown", {}),
                 "timestamp": datetime.now().isoformat(),
@@ -233,7 +235,8 @@ class PersonalDashboard:
                         "predicted_price": predicted_price,
                         "prediction_confidence": prediction.get("confidence", 0.5),
                         "prediction_accuracy": prediction.get(
-                            "accuracy", self.settings.prediction.achieved_accuracy,
+                            "accuracy",
+                            self.settings.prediction.achieved_accuracy,
                         ),
                         "price_change_forecast": (
                             ((predicted_price - current_price) / current_price * 100)
@@ -241,7 +244,8 @@ class PersonalDashboard:
                             else 0
                         ),
                         "precision_89_achieved": prediction.get(
-                            "precision_89_achieved", False,
+                            "precision_89_achieved",
+                            False,
                         ),
                     },
                 )
@@ -286,7 +290,8 @@ class PersonalDashboard:
                         "predicted_price": prediction.get("prediction", current_price),
                         "prediction_confidence": prediction.get("confidence", 0.5),
                         "prediction_accuracy": prediction.get(
-                            "accuracy", self.settings.prediction.achieved_accuracy,
+                            "accuracy",
+                            self.settings.prediction.achieved_accuracy,
                         ),
                         "price_change_forecast": (
                             (
@@ -301,17 +306,16 @@ class PersonalDashboard:
                             else 0
                         ),
                         "precision_89_achieved": prediction.get(
-                            "precision_89_achieved", False,
+                            "precision_89_achieved",
+                            False,
                         ),
                         "alert_triggered": abs(
-
-                                (
-                                    prediction.get("prediction", current_price)
-                                    - current_price
-                                )
-                                / current_price
-                                * 100,
-
+                            (
+                                prediction.get("prediction", current_price)
+                                - current_price
+                            )
+                            / current_price
+                            * 100,
                         )
                         > item.get("alert_threshold", 5.0),
                     },
@@ -365,10 +369,12 @@ async def predict_symbol(symbol: str):
             "prediction": prediction_result.get("prediction", 0),
             "confidence": prediction_result.get("confidence", 0),
             "accuracy": prediction_result.get(
-                "accuracy", dashboard.settings.prediction.achieved_accuracy,
+                "accuracy",
+                dashboard.settings.prediction.achieved_accuracy,
             ),
             "precision_89_achieved": prediction_result.get(
-                "precision_89_achieved", False,
+                "precision_89_achieved",
+                False,
             ),
             "system_performance": prediction_result.get(
                 "system_performance",
@@ -546,9 +552,7 @@ async def optimize_portfolio():
                     "recommendation": (
                         "HOLD"
                         if abs(optimization_score) < 0.02
-                        else "BUY"
-                        if optimization_score > 0.05
-                        else "SELL"
+                        else "BUY" if optimization_score > 0.05 else "SELL"
                     ),
                     "predicted_return": f"{optimization_score * 100:.1f}%",
                     "confidence": confidence,

@@ -95,8 +95,7 @@ class TestHybridPredictorIssue9:
             assert last_entry["error"] > 0
 
     def test_large_batch_does_not_use_random_uniform(self):
-        """大規模バッチがnp.random.uniform(800, 5000)を使用しないことを確認
-        """
+        """大規模バッチがnp.random.uniform(800, 5000)を使用しないことを確認"""
         import pandas as pd
 
         # モックデータ設定
@@ -122,8 +121,7 @@ class TestHybridPredictorIssue9:
             assert value == 50.0
 
     def test_learning_system_feedback_with_zero_error(self):
-        """実際の価格が利用可能な場合、エラーが正しく計算されることを確認
-        """
+        """実際の価格が利用可能な場合、エラーが正しく計算されることを確認"""
         import pandas as pd
 
         # 完全に一致する予測をシミュレート
@@ -153,8 +151,7 @@ class TestHybridPredictorIssue9:
                 assert last_entry["actual"] == exact_price
 
     def test_batch_processing_with_errors(self):
-        """バッチ処理中のエラーハンドリングが適切であることを確認
-        """
+        """バッチ処理中のエラーハンドリングが適切であることを確認"""
         import pandas as pd
 
         # 一部の銘柄でエラーを発生させる
@@ -180,8 +177,7 @@ class TestHybridPredictorIssue9:
         assert "ERROR002" in result.errors
 
     def test_learning_statistics(self):
-        """学習統計が正しく計算されることを確認
-        """
+        """学習統計が正しく計算されることを確認"""
         import pandas as pd
 
         # 複数の予測を実行してデータを蓄積
@@ -196,7 +192,8 @@ class TestHybridPredictorIssue9:
             self.mock_data_provider.get_stock_data.return_value = mock_data
 
             with patch.object(
-                self.predictor.ensemble_predictor, "predict",
+                self.predictor.ensemble_predictor,
+                "predict",
             ) as mock_predict:
                 mock_predict.return_value = PredictionResult(
                     prediction=predicted,

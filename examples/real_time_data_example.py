@@ -18,7 +18,8 @@ from utils.logger_config import setup_logger
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -74,14 +75,13 @@ class RealTimeDataMonitor:
         self.received_news.append(news)
 
         sentiment_emoji = {"positive": "😊", "negative": "😟", "neutral": "😐"}.get(
-            news.sentiment, "❓",
+            news.sentiment,
+            "❓",
         )
         impact_level = (
             "高"
             if news.impact_score and news.impact_score > 0.7
-            else "中"
-            if news.impact_score and news.impact_score > 0.4
-            else "低"
+            else "中" if news.impact_score and news.impact_score > 0.4 else "低"
         )
 
         logger.info(f"📰 ニュース {sentiment_emoji}: {news.title}")
@@ -122,7 +122,9 @@ async def basic_usage_example():
 
         for symbol in target_symbols:
             await manager.subscribe_to_symbol(
-                symbol, include_ticks=True, include_order_book=True,
+                symbol,
+                include_ticks=True,
+                include_order_book=True,
             )
             logger.info(f"銘柄 {symbol} をサブスクリプションしました")
 

@@ -130,7 +130,11 @@ class StockDataProvider:
 
         try:
             data, actual_ticker = self._fetch_trusted_source(
-                symbol, ticker_candidates, period, start, end,
+                symbol,
+                ticker_candidates,
+                period,
+                start,
+                end,
             )
         except DataFetchError:
             raise
@@ -140,7 +144,10 @@ class StockDataProvider:
         if (data is None or data.empty) and YFINANCE_AVAILABLE:
             if start is not None or end is not None:
                 data, actual_ticker = self._download_via_yfinance(
-                    symbol, period=None, start=start, end=end,
+                    symbol,
+                    period=None,
+                    start=start,
+                    end=end,
                 )
             else:
                 data, actual_ticker = self._download_via_yfinance(symbol, period)
@@ -165,7 +172,9 @@ class StockDataProvider:
         return prepared
 
     def get_multiple_stocks(
-        self, symbols: Iterable[str], period: str = "1y",
+        self,
+        symbols: Iterable[str],
+        period: str = "1y",
     ) -> Dict[str, pd.DataFrame]:
         """Fetch data for multiple symbols, raising on missing data."""
         results: Dict[str, pd.DataFrame] = {}
@@ -269,7 +278,9 @@ class StockDataProvider:
         return metrics
 
     def _fetch_financial_metrics_via_yfinance(
-        self, ticker: str, metrics: Dict[str, Optional[float]],
+        self,
+        ticker: str,
+        metrics: Dict[str, Optional[float]],
     ) -> bool:
         """Populate *metrics* using ``yfinance`` for the given *ticker*.
 
@@ -358,17 +369,32 @@ class StockDataProvider:
 
         if provider == "http_api":
             return self._fetch_from_http_api(
-                symbol, ticker_candidates, period, start, end, start_ts, end_ts,
+                symbol,
+                ticker_candidates,
+                period,
+                start,
+                end,
+                start_ts,
+                end_ts,
             )
 
         if provider == "hybrid":
             local_data, actual = self._fetch_from_local_csv(
-                symbol, period, start_ts, end_ts,
+                symbol,
+                period,
+                start_ts,
+                end_ts,
             )
             if not local_data.empty:
                 return local_data, actual
             return self._fetch_from_http_api(
-                symbol, ticker_candidates, period, start, end, start_ts, end_ts,
+                symbol,
+                ticker_candidates,
+                period,
+                start,
+                end,
+                start_ts,
+                end_ts,
             )
 
         if self._should_use_local_first(symbol):
@@ -549,7 +575,8 @@ class StockDataProvider:
         return existing
 
     def _should_use_local_first(
-        self, symbol: str,
+        self,
+        symbol: str,
     ) -> bool:  # pragma: no cover - logic is trivial
         prefer_local = os.getenv("CLSTOCK_PREFER_LOCAL_DATA", "auto").lower()
         if prefer_local in {"1", "true", "yes"}:
@@ -566,7 +593,8 @@ class StockDataProvider:
         return False
 
     def _load_first_available_csv(
-        self, symbol: str,
+        self,
+        symbol: str,
     ) -> Optional[Tuple[pd.DataFrame, str]]:
         for ticker in self._ticker_formats(symbol):
             filename = f"{ticker}.csv"
@@ -665,7 +693,10 @@ class StockDataProvider:
         )
 
     def _prepare_history_frame(
-        self, data: pd.DataFrame, symbol: str, actual_ticker: Optional[str],
+        self,
+        data: pd.DataFrame,
+        symbol: str,
+        actual_ticker: Optional[str],
     ) -> pd.DataFrame:
         df = data.copy()
         if not isinstance(df.index, pd.DatetimeIndex):
@@ -880,7 +911,8 @@ class StockDataProvider:
                                     # timestamp が秒単位かミリ秒単位か確認
                                     # Yahoo Finance は秒単位で返す模様
                                     processed_item["publish_time"] = pd.to_datetime(
-                                        processed_item["publish_time"], unit="s",
+                                        processed_item["publish_time"],
+                                        unit="s",
                                     )
                                 except Exception:
                                     # 変換失敗時は元の値を保持
@@ -927,8 +959,7 @@ def get_stock_data_provider() -> StockDataProvider:
     return _stock_data_provider
 
     def _generate_demo_data(self, symbol: str, period: str = "1y") -> pd.DataFrame:
-        """デモデータを生成する
-        """
+        """デモデータを生成する"""
         import numpy as np
         import pandas as pd
 

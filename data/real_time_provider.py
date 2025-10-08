@@ -137,7 +137,10 @@ class DataNormalizer:
                     asks.append((float(ask[0]), int(ask[1])))
 
             return OrderBookData(
-                symbol=symbol, timestamp=timestamp, bids=bids, asks=asks,
+                symbol=symbol,
+                timestamp=timestamp,
+                bids=bids,
+                asks=asks,
             )
 
         except (ValueError, KeyError, TypeError) as e:
@@ -366,7 +369,8 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
 
         # 依存性注入または新規作成
         self.cache_manager = cache_manager or AdvancedCacheManager(
-            max_cache_size=5000, ttl_hours=1,
+            max_cache_size=5000,
+            ttl_hours=1,
         )
         self.quality_monitor = quality_monitor or RealTimeDataQualityMonitor()
         self.data_normalizer = data_normalizer or DataNormalizer()
@@ -400,7 +404,10 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
             logger.info(f"Connecting to WebSocket: {ws_url}")
 
             self.websocket = await websockets.connect(
-                ws_url, timeout=10, ping_interval=30, ping_timeout=10,
+                ws_url,
+                timeout=10,
+                ping_interval=30,
+                ping_timeout=10,
             )
 
             self.is_running = True
@@ -673,7 +680,8 @@ class WebSocketRealTimeProvider(RealTimeDataProvider):
         self.tick_callbacks.append(callback)
 
     def add_order_book_callback(
-        self, callback: Callable[[OrderBookData], None],
+        self,
+        callback: Callable[[OrderBookData], None],
     ) -> None:
         """板情報コールバックを追加"""
         self.order_book_callbacks.append(callback)

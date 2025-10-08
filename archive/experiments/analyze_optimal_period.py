@@ -41,7 +41,8 @@ class OptimalPeriodAnalyzer:
 
             for period_name, days in self.periods.items():
                 accuracy, volatility, confidence = self.calculate_period_metrics(
-                    hist, days,
+                    hist,
+                    days,
                 )
                 symbol_results[period_name] = {
                     "accuracy": accuracy,
@@ -54,7 +55,9 @@ class OptimalPeriodAnalyzer:
         return results
 
     def calculate_period_metrics(
-        self, data: pd.DataFrame, days: int,
+        self,
+        data: pd.DataFrame,
+        days: int,
     ) -> Tuple[float, float, float]:
         """期間別メトリクス計算"""
         close = data["Close"]

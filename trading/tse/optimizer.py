@@ -23,7 +23,9 @@ class PortfolioOptimizer:
         pass
 
     def optimize_portfolio(
-        self, profiles: List[StockProfile], target_size: int = 10,
+        self,
+        profiles: List[StockProfile],
+        target_size: int = 10,
     ) -> List[StockProfile]:
         """Optimize portfolio with given stock profiles."""
         # 単純なポートフォリオ最適化ロジック（ダミー）
@@ -32,7 +34,8 @@ class PortfolioOptimizer:
         return sorted_profiles[:target_size]
 
     def calculate_optimal_weights(
-        self, selected_profiles: List[StockProfile],
+        self,
+        selected_profiles: List[StockProfile],
     ) -> List[float]:
         """Calculate optimal weights for selected stocks."""
         n = len(selected_profiles)

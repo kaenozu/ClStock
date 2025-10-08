@@ -66,7 +66,12 @@ class BaseInvestmentSystem:
         return base_size * confidence_multiplier
 
     def _execute_trade_order(
-        self, symbol: str, action: str, shares: int, price: float, date,
+        self,
+        symbol: str,
+        action: str,
+        shares: int,
+        price: float,
+        date,
     ):
         """取引実行の共通メソッド"""
         if action == "BUY":
@@ -212,7 +217,9 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
             return None
 
     def _analyze_opportunity(
-        self, symbol: str, stock_data: pd.DataFrame,
+        self,
+        symbol: str,
+        stock_data: pd.DataFrame,
     ) -> Dict[str, Any]:
         """機会分析"""
         close = stock_data["Close"]
@@ -277,7 +284,9 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
         return 40
 
     def _calculate_momentum_score(
-        self, momentum_5d: float, momentum_20d: float,
+        self,
+        momentum_5d: float,
+        momentum_20d: float,
     ) -> float:
         """モメンタムスコア計算"""
         combined_momentum = (momentum_5d + momentum_20d) / 2
@@ -314,7 +323,8 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
     def calculate_super_position_size(self, opportunity: Dict[str, Any]) -> int:
         """超ポジションサイズ計算"""
         base_amount = self._calculate_position_size(
-            self.current_capital, opportunity["confidence"],
+            self.current_capital,
+            opportunity["confidence"],
         )
         shares = int(base_amount / opportunity["current_price"])
 
@@ -421,7 +431,10 @@ class SuperSelectiveInvestmentSystem(BaseInvestmentSystem):
                 logging.warning(f"ポジション管理エラー {symbol}: {e!s}")
 
     def _display_backtest_results(
-        self, results: Dict[str, Any], opportunities: int, successful_trades: int,
+        self,
+        results: Dict[str, Any],
+        opportunities: int,
+        successful_trades: int,
     ):
         """バックテスト結果表示"""
         print("\n" + "=" * 60)

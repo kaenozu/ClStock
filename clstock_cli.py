@@ -32,9 +32,11 @@ def _raise_cli_error(message: str) -> None:
 def _bad_parameter(message: str, param_name: Optional[str] = None) -> None:
     """Raise a BadParameter error while preserving logging."""
     logger.error(
-        f"Bad parameter {param_name}: {message}"
-        if param_name
-        else f"Bad parameter: {message}",
+        (
+            f"Bad parameter {param_name}: {message}"
+            if param_name
+            else f"Bad parameter: {message}"
+        ),
     )
     if param_name:
         raise click.BadParameter(message, param_hint=param_name)
@@ -72,9 +74,7 @@ def start(name: Optional[str]):
     # 利用可能なサービス表示
     click.echo("利用可能なサービス:")
     for service_info in manager.list_services():
-        status_emoji = (
-            "🟢" if service_info.status == ProcessStatus.RUNNING else "🔴"
-        )
+        status_emoji = "🟢" if service_info.status == ProcessStatus.RUNNING else "🔴"
         click.echo(f"  {status_emoji} {service_info.name}: {service_info.command}")
 
 

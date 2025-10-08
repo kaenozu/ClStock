@@ -22,7 +22,8 @@ class NetworkConnectionManager:
         """Get or create HTTP connection pool"""
         if self._http_pool is None:
             self._http_pool = get_http_pool(
-                max_connections=10, connection_timeout=self.timeout,
+                max_connections=10,
+                connection_timeout=self.timeout,
             )
         return self._http_pool
 

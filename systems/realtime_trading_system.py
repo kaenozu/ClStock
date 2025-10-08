@@ -88,7 +88,9 @@ class RealTimeDataProvider:
         self.last_update = {}
 
     def get_realtime_data(
-        self, symbol: str, period: str = "1d",
+        self,
+        symbol: str,
+        period: str = "1d",
     ) -> Optional[pd.DataFrame]:
         """リアルタイムデータ取得"""
         try:
@@ -216,7 +218,11 @@ class RiskManager:
         self.last_reset_date = datetime.now().date()
 
     def calculate_position_size(
-        self, symbol: str, signal: int, confidence: float, current_price: float,
+        self,
+        symbol: str,
+        signal: int,
+        confidence: float,
+        current_price: float,
     ) -> Dict[str, Union[int, float, str]]:
         """ポジションサイズ計算（Kelly基準 + リスク管理）"""
         # 日次取引制限確認
@@ -241,7 +247,8 @@ class RiskManager:
         # 最終ポジションサイズ
         position_ratio = base_allocation * confidence_multiplier
         position_ratio = min(
-            position_ratio, self.settings.realtime.max_position_size_pct,
+            position_ratio,
+            self.settings.realtime.max_position_size_pct,
         )
 
         position_value = self.current_capital * position_ratio
@@ -264,7 +271,11 @@ class RiskManager:
         }
 
     def update_positions(
-        self, symbol: str, action: str, size: int, price: float,
+        self,
+        symbol: str,
+        action: str,
+        size: int,
+        price: float,
     ) -> None:
         """ポジション更新"""
         if action == "BUY":
@@ -327,7 +338,12 @@ class OrderExecutor:
         self.order_history: List[Dict[str, Union[str, int, float, datetime]]] = []
 
     def execute_order(
-        self, symbol: str, action: str, size: int, price: float, confidence: float,
+        self,
+        symbol: str,
+        action: str,
+        size: int,
+        price: float,
+        confidence: float,
     ) -> Dict[str, Union[str, int, float, datetime]]:
         """注文執行"""
         order: Dict[str, Union[str, int, float, datetime]] = {

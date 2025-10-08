@@ -98,7 +98,9 @@ class TradeRecorder:
             self.repository.save_trade(trade_record)
 
             self.logger.info(
-                "取引記録: %s %s", trade_record.symbol, trade_record.action,
+                "取引記録: %s %s",
+                trade_record.symbol,
+                trade_record.action,
             )
             return True
 

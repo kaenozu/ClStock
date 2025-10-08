@@ -87,7 +87,8 @@ class TestProcessManagerComprehensive:
 
         # Register a new service
         service_info = ProcessInfo(
-            name="lifecycle_test", command="python lifecycle_test.py",
+            name="lifecycle_test",
+            command="python lifecycle_test.py",
         )
         assert pm.register_service(service_info) is True
 

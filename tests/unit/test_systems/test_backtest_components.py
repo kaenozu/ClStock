@@ -1,4 +1,3 @@
-
 import importlib
 import sys
 import types
@@ -31,13 +30,19 @@ class DummyDataProvider:
         if as_of is None:
             return float(self.df.iloc[-1]["Close"])
         series = self.df.loc[:as_of]
-        return float(series.iloc[-1]["Close"]) if not series.empty else float(self.df.iloc[0]["Close"])
+        return (
+            float(series.iloc[-1]["Close"])
+            if not series.empty
+            else float(self.df.iloc[0]["Close"])
+        )
 
 
 class DummyTradingStrategy:
     def __init__(self, data_provider: DummyDataProvider):
         self.data_provider = data_provider
-        self.precision_system = types.SimpleNamespace(evaluation_horizon=3, evaluation_window=60)
+        self.precision_system = types.SimpleNamespace(
+            evaluation_horizon=3, evaluation_window=60
+        )
         self.commission_rate = 0.0
         self.spread_rate = 0.0
         self.slippage_rate = 0.0
@@ -46,7 +51,9 @@ class DummyTradingStrategy:
         self.min_expected_return = 0.01
         self._opened_dates = set()
 
-    def generate_trading_signal(self, symbol: str, current_capital: float, *, as_of: datetime | None = None) -> TradingSignal | None:
+    def generate_trading_signal(
+        self, symbol: str, current_capital: float, *, as_of: datetime | None = None
+    ) -> TradingSignal | None:
         if current_capital <= 0:
             return None
         price = self.data_provider.price_at(as_of)
@@ -68,7 +75,9 @@ class DummyTradingStrategy:
             precision_87_achieved=True,
         )
 
-    def calculate_trading_costs(self, position_value: float, signal_type: SignalType) -> dict[str, float]:
+    def calculate_trading_costs(
+        self, position_value: float, signal_type: SignalType
+    ) -> dict[str, float]:
         return {"commission": 0.0, "spread": 0.0, "slippage": 0.0, "total_cost": 0.0}
 
 
@@ -161,7 +170,11 @@ def test_optimizer_selects_best_parameters():
 
 def test_reporting_helpers(monkeypatch):
     module = importlib.import_module("trading.backtest_engine")
-    monkeypatch.setattr(backtest_module, "generate_backtest_charts", lambda result, logger=None: {"equity_curve": "chart"})
+    monkeypatch.setattr(
+        backtest_module,
+        "generate_backtest_charts",
+        lambda result, logger=None: {"equity_curve": "chart"},
+    )
     BacktestResult = module.BacktestResult
     BacktestConfig = module.BacktestConfig
 
@@ -198,7 +211,9 @@ def test_reporting_helpers(monkeypatch):
         total_costs=1_000.0,
         total_tax=2_000.0,
         daily_returns=[0.01, -0.02, 0.03],
-        trade_history=[{"action": "CLOSE", "position_size": 1000.0, "profit_loss": -100.0}],
+        trade_history=[
+            {"action": "CLOSE", "position_size": 1000.0, "profit_loss": -100.0}
+        ],
         portfolio_values=[
             (config.start_date, config.initial_capital),
             (config.end_date, 1_100_000),

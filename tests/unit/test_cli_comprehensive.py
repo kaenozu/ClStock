@@ -117,7 +117,8 @@ class TestClStockCLI:
             mock_get_pm.return_value = mock_pm
 
             result = self.runner.invoke(
-                cli, ["service", "stop", "--force", "test_service"],
+                cli,
+                ["service", "stop", "--force", "test_service"],
             )
 
             assert result.exit_code == 0
@@ -294,7 +295,8 @@ class TestClStockCLI:
             mock_provider_class.return_value = mock_provider
 
             result = self.runner.invoke(
-                cli, ["data", "fetch", "--symbol", "1234", "--symbol", "5678"],
+                cli,
+                ["data", "fetch", "--symbol", "1234", "--symbol", "5678"],
             )
 
             assert result.exit_code == 0

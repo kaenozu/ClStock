@@ -152,7 +152,9 @@ class BigDataDeepLearning:
         return (macd - signal) / prices
 
     def _calculate_bollinger_position(
-        self, prices: pd.Series, window: int = 20,
+        self,
+        prices: pd.Series,
+        window: int = 20,
     ) -> pd.Series:
         """ボリンジャーバンド位置"""
         sma = prices.rolling(window).mean()
@@ -162,7 +164,9 @@ class BigDataDeepLearning:
         return (prices - lower) / (upper - lower)
 
     def _calculate_stochastic_k(
-        self, data: pd.DataFrame, window: int = 14,
+        self,
+        data: pd.DataFrame,
+        window: int = 14,
     ) -> pd.Series:
         """ストキャスティクス%K"""
         low_min = data["Low"].rolling(window).min()
@@ -183,7 +187,10 @@ class BigDataDeepLearning:
         return (tp - sma_tp) / (0.015 * mad)
 
     def _create_sequences(
-        self, features: pd.DataFrame, target: pd.Series, sequence_length: int,
+        self,
+        features: pd.DataFrame,
+        target: pd.Series,
+        sequence_length: int,
     ) -> Tuple:
         """時系列シーケンス作成"""
         X, y = [], []
@@ -439,7 +446,9 @@ class BigDataDeepLearning:
         return self._analyze_big_data_results(all_results, breakthrough_results)
 
     def _analyze_big_data_results(
-        self, all_results: List[Dict], breakthrough_results: List[Dict],
+        self,
+        all_results: List[Dict],
+        breakthrough_results: List[Dict],
     ) -> Dict:
         """ビッグデータ結果の分析"""
         if not all_results:
@@ -473,7 +482,9 @@ class BigDataDeepLearning:
 
             print("\n*** 84.6%突破達成銘柄:")
             for r in sorted(
-                breakthrough_results, key=lambda x: x["best_accuracy"], reverse=True,
+                breakthrough_results,
+                key=lambda x: x["best_accuracy"],
+                reverse=True,
             ):
                 print(
                     f"  {r['symbol']}: {r['best_accuracy']:.1%} ({r['best_model']}) - {r['sequence_count']:,}シーケンス",
@@ -512,7 +523,9 @@ class BigDataDeepLearning:
 
         # トップ結果
         top_results = sorted(
-            all_results, key=lambda x: x["best_accuracy"], reverse=True,
+            all_results,
+            key=lambda x: x["best_accuracy"],
+            reverse=True,
         )[:10]
         print("\nビッグデータトップ10:")
         for i, result in enumerate(top_results, 1):

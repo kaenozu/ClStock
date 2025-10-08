@@ -25,7 +25,8 @@ class FinalChatGPTValidation:
         self.data_provider = StockDataProvider()
 
     def create_monthly_predictions(
-        self, data: pd.DataFrame,
+        self,
+        data: pd.DataFrame,
     ) -> Tuple[pd.Series, pd.Series]:
         """月単位の予測（ChatGPTの想定する期間）"""
         close = data["Close"]

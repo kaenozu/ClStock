@@ -211,7 +211,8 @@ class PracticalAccuracyPredictor:
         return results
 
     def _predict_range_with_data(
-        self, data: pd.DataFrame,
+        self,
+        data: pd.DataFrame,
     ) -> Tuple[float, float, float]:
         """過去データのみを使った範囲予測"""
         try:

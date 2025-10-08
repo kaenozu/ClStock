@@ -62,7 +62,8 @@ _models_pkg = sys.modules.setdefault("models", types.ModuleType("models"))
 sys.modules.setdefault("models.core", types.ModuleType("models.core"))
 sys.modules.setdefault("models.legacy_core", types.ModuleType("models.legacy_core"))
 sys.modules.setdefault(
-    "models.recommendation", types.ModuleType("models.recommendation"),
+    "models.recommendation",
+    types.ModuleType("models.recommendation"),
 )
 sys.modules["models.core"].MLStockPredictor = _StubMLStockPredictor
 sys.modules["models.legacy_core"].MLStockPredictor = _StubMLStockPredictor
@@ -390,7 +391,9 @@ def test_health_endpoint_includes_security_headers():
 @patch("api.endpoints.MLStockPredictor")
 @patch("api.endpoints.StockDataProvider")
 def test_get_single_recommendation_accepts_suffix(
-    mock_provider_cls, mock_predictor_cls, mock_verify_token,
+    mock_provider_cls,
+    mock_predictor_cls,
+    mock_verify_token,
 ):
     app = FastAPI()
     app.include_router(router)
@@ -438,7 +441,9 @@ def test_get_single_recommendation_accepts_suffix(
 @patch("api.endpoints.MLStockPredictor")
 @patch("api.endpoints.StockDataProvider")
 def test_get_single_recommendation_entry_price_centered_on_current_price(
-    mock_provider_cls, mock_predictor_cls, mock_verify_token,
+    mock_provider_cls,
+    mock_predictor_cls,
+    mock_verify_token,
 ):
     app = FastAPI()
     app.include_router(router)

@@ -106,7 +106,8 @@ def test_train_ensemble_uses_time_series_split_scores_for_weights():
     )
 
     with patch.object(predictor, "prepare_ensemble_models"), patch.object(
-        predictor, "save_ensemble",
+        predictor,
+        "save_ensemble",
     ), patch("config.settings.get_settings", return_value=mock_settings), patch(
         "models.ml_stock_predictor.MLStockPredictor",
     ) as mock_ml_predictor_cls, patch(

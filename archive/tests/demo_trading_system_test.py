@@ -29,7 +29,8 @@ from trading import (
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -41,7 +42,9 @@ def test_trading_strategy():
     try:
         # 戦略初期化
         strategy = TradingStrategy(
-            initial_capital=1000000, precision_threshold=85.0, confidence_threshold=0.7,
+            initial_capital=1000000,
+            precision_threshold=85.0,
+            confidence_threshold=0.7,
         )
 
         # テスト銘柄でシグナル生成
@@ -52,9 +55,9 @@ def test_trading_strategy():
                 signal = strategy.generate_trading_signal(symbol, 1000000)
 
                 # アサーション追加
-                assert signal is not None or signal is None, (
-                    f"シグナル生成結果が異常: {signal}"
-                )
+                assert (
+                    signal is not None or signal is None
+                ), f"シグナル生成結果が異常: {signal}"
 
                 if signal:
                     logger.info(f"取引シグナル生成成功: {symbol}")
@@ -64,21 +67,21 @@ def test_trading_strategy():
                     logger.info(f"  87%精度達成: {signal.precision_87_achieved}")
 
                     # シグナルの妥当性を検証
-                    assert hasattr(signal, "signal_type"), (
-                        "シグナルにsignal_typeが存在しません"
-                    )
-                    assert hasattr(signal, "confidence"), (
-                        "シグナルにconfidenceが存在しません"
-                    )
-                    assert 0 <= signal.confidence <= 1, (
-                        f"信頼度が範囲外: {signal.confidence}"
-                    )
-                    assert hasattr(signal, "expected_return"), (
-                        "シグナルにexpected_returnが存在しません"
-                    )
-                    assert isinstance(signal.precision_87_achieved, bool), (
-                        "precision_87_achievedがboolではありません"
-                    )
+                    assert hasattr(
+                        signal, "signal_type"
+                    ), "シグナルにsignal_typeが存在しません"
+                    assert hasattr(
+                        signal, "confidence"
+                    ), "シグナルにconfidenceが存在しません"
+                    assert (
+                        0 <= signal.confidence <= 1
+                    ), f"信頼度が範囲外: {signal.confidence}"
+                    assert hasattr(
+                        signal, "expected_return"
+                    ), "シグナルにexpected_returnが存在しません"
+                    assert isinstance(
+                        signal.precision_87_achieved, bool
+                    ), "precision_87_achievedがboolではありません"
                 else:
                     logger.info(f"シグナル生成なし: {symbol}")
                     # シグナルがNoneの場合も正常な状態
@@ -155,14 +158,20 @@ def test_risk_manager():
 
         # ポジション開設可能性テスト
         can_open = risk_manager.can_open_position(
-            symbol="6758.T", position_size=100000, confidence=0.8, precision=87.0,
+            symbol="6758.T",
+            position_size=100000,
+            confidence=0.8,
+            precision=87.0,
         )
 
         logger.info(f"ポジション開設可能: {can_open}")
 
         # 最適ポジションサイズ計算
         optimal_size = risk_manager.calculate_optimal_position_size(
-            symbol="6758.T", expected_return=0.05, confidence=0.8, precision=87.0,
+            symbol="6758.T",
+            expected_return=0.05,
+            confidence=0.8,
+            precision=87.0,
         )
 
         logger.info(f"最適ポジションサイズ: {optimal_size:,.0f}円")

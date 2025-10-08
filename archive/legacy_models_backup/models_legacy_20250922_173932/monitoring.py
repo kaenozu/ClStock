@@ -66,7 +66,10 @@ class ModelPerformanceMonitor:
             self._calculate_and_record_accuracy(model_name, prediction, actual)
 
     def _calculate_and_record_accuracy(
-        self, model_name: str, prediction: float, actual: float,
+        self,
+        model_name: str,
+        prediction: float,
+        actual: float,
     ):
         """精度を計算して記録"""
         # 方向精度（上昇/下降の予測精度）
@@ -220,7 +223,9 @@ class ModelPerformanceMonitor:
         return "stable"
 
     def detect_performance_anomalies(
-        self, model_name: str, window_size: int = 20,
+        self,
+        model_name: str,
+        window_size: int = 20,
     ) -> List[Dict[str, Any]]:
         """パフォーマンス異常を検出"""
         anomalies = []
@@ -254,7 +259,9 @@ class ModelPerformanceMonitor:
         return anomalies
 
     def get_model_comparison(
-        self, models: List[str], metric_type: str = "direction_accuracy",
+        self,
+        models: List[str],
+        metric_type: str = "direction_accuracy",
     ) -> Dict[str, Any]:
         """モデル間のパフォーマンス比較"""
         comparison = {"metric_type": metric_type, "models": {}}
@@ -275,7 +282,9 @@ class ModelPerformanceMonitor:
         # ランキング作成
         if comparison["models"]:
             ranking = sorted(
-                comparison["models"].items(), key=lambda x: x[1]["mean"], reverse=True,
+                comparison["models"].items(),
+                key=lambda x: x[1]["mean"],
+                reverse=True,
             )
             comparison["ranking"] = [model for model, _ in ranking]
 
@@ -350,7 +359,9 @@ class ModelPerformanceMonitor:
                 ),
             },
             "recent_alerts": sorted(
-                self.alerts[-10:], key=lambda x: x["timestamp"], reverse=True,
+                self.alerts[-10:],
+                key=lambda x: x["timestamp"],
+                reverse=True,
             ),
             "model_status": {},
         }

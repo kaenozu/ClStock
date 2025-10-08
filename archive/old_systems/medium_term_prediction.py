@@ -218,7 +218,8 @@ class MediumTermPredictionSystem:
         else:
             signals["recommendation"] = "HOLD"
             signals["hold_signal_strength"] = 100 - max(
-                signals["buy_signal_strength"], signals["sell_signal_strength"],
+                signals["buy_signal_strength"],
+                signals["sell_signal_strength"],
             )
             signals["reasoning"].append("シグナル不明確、様子見推奨")
 
@@ -239,7 +240,8 @@ class MediumTermPredictionSystem:
             # 1ヶ月予測価格計算（89%精度システム + 中期トレンド分析）
             current_price = analysis["current_price"]
             precision_prediction = precision_result.get(
-                "final_prediction", current_price,
+                "final_prediction",
+                current_price,
             )
 
             # 中期調整係数
@@ -333,7 +335,9 @@ class MediumTermPredictionSystem:
         return max(0.3, min(0.95, confidence))
 
     def _create_fallback_analysis(
-        self, symbol: str, error: str = None,
+        self,
+        symbol: str,
+        error: str = None,
     ) -> Dict[str, Any]:
         """フォールバック分析結果"""
         return {
@@ -353,7 +357,9 @@ class MediumTermPredictionSystem:
         }
 
     def _create_fallback_prediction(
-        self, symbol: str, error: str = None,
+        self,
+        symbol: str,
+        error: str = None,
     ) -> Dict[str, Any]:
         """フォールバック予測結果"""
         return {

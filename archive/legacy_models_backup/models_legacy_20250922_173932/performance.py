@@ -111,7 +111,9 @@ class ParallelStockPredictor(StockPredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Single prediction using ensemble predictor"""
         if not self.is_trained():
@@ -155,7 +157,9 @@ class AdvancedCacheManager:
         }
 
     def get_cached_features(
-        self, symbol: str, data_hash: str,
+        self,
+        symbol: str,
+        data_hash: str,
     ) -> Optional[pd.DataFrame]:
         """特徴量キャッシュから取得"""
         cache_key = f"{symbol}_{data_hash}"
@@ -299,7 +303,9 @@ class UltraHighPerformancePredictor(CacheablePredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Ultra-fast prediction with caching"""
         if not self.is_trained():
@@ -317,7 +323,8 @@ class UltraHighPerformancePredictor(CacheablePredictor):
 
             # キャッシュから予測結果を確認
             cached_prediction = self.cache_manager.get_cached_prediction(
-                symbol, data_hash,
+                symbol,
+                data_hash,
             )
             if cached_prediction is not None:
                 return PredictionResult(
@@ -369,7 +376,8 @@ class UltraHighPerformancePredictor(CacheablePredictor):
                 data_hash = self.cache_manager.get_data_hash(data)
 
                 cached_prediction = self.cache_manager.get_cached_prediction(
-                    symbol, data_hash,
+                    symbol,
+                    data_hash,
                 )
                 if cached_prediction is not None:
                     results[symbol] = PredictionResult(

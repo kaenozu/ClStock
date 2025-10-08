@@ -23,7 +23,9 @@ class PredictorInterface(ABC):
 
     @abstractmethod
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Predict stock performance for given symbol."""
 
@@ -70,7 +72,9 @@ class StockPredictor(PredictorInterface):
         raise NotImplementedError("Subclasses must implement train")
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Default prediction implementation."""
         if not self.is_trained():
@@ -140,14 +144,19 @@ class CacheablePredictor(StockPredictor):
         return str(hash(tuple(data.iloc[-1].values)))
 
     def get_cached_prediction(
-        self, symbol: str, data: pd.DataFrame,
+        self,
+        symbol: str,
+        data: pd.DataFrame,
     ) -> Optional[PredictionResult]:
         """Get cached prediction if available."""
         cache_key = self._get_cache_key(symbol, self._get_data_hash(data))
         return self._prediction_cache.get(cache_key)
 
     def cache_prediction(
-        self, symbol: str, data: pd.DataFrame, result: PredictionResult,
+        self,
+        symbol: str,
+        data: pd.DataFrame,
+        result: PredictionResult,
     ) -> None:
         """Cache prediction result."""
         if len(self._prediction_cache) >= self.cache_size:

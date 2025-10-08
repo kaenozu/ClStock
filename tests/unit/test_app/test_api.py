@@ -22,7 +22,9 @@ class TestAPI:
     def client(self):
         """テストクライアントのセットアップ"""
         with patch.dict(
-            os.environ, {"API_ADMIN_TOKEN": "admin_token_secure_2024"}, clear=False,
+            os.environ,
+            {"API_ADMIN_TOKEN": "admin_token_secure_2024"},
+            clear=False,
         ):
             client = TestClient(app)
             client.headers.update({"Authorization": "Bearer admin_token_secure_2024"})
@@ -92,7 +94,8 @@ class TestAPI:
             mock_predictor_class.return_value = mock_predictor
 
             response = client.get(
-                "/api/v1/recommendations?top_n=1", headers=AUTH_HEADER,
+                "/api/v1/recommendations?top_n=1",
+                headers=AUTH_HEADER,
             )
             assert response.status_code == 200
 
@@ -121,7 +124,8 @@ class TestAPI:
 
             # top_n=3でテスト
             response = client.get(
-                "/api/v1/recommendations?top_n=3", headers=AUTH_HEADER,
+                "/api/v1/recommendations?top_n=3",
+                headers=AUTH_HEADER,
             )
             assert response.status_code == 200
 
@@ -277,7 +281,8 @@ class TestAPI:
 
             # 実際の推奨取得（ネットワーク接続が必要）
             response = client.get(
-                "/api/v1/recommendations?top_n=1", headers=AUTH_HEADER,
+                "/api/v1/recommendations?top_n=1",
+                headers=AUTH_HEADER,
             )
             if response.status_code == 200:
                 data = response.json()

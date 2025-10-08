@@ -273,7 +273,8 @@ class DemoTrader:
 
                 # 87%精度システムでシグナル生成
                 signal = self.trading_strategy.generate_trading_signal(
-                    symbol, self.current_capital,
+                    symbol,
+                    self.current_capital,
                 )
 
                 if signal is None:
@@ -283,7 +284,8 @@ class DemoTrader:
 
                 # リスク管理チェック
                 if not self.risk_manager.can_open_position(
-                    symbol, signal.position_size,
+                    symbol,
+                    signal.position_size,
                 ):
                     self.logger.info(f"リスク管理により取引見送り: {symbol}")
                     continue
@@ -331,7 +333,8 @@ class DemoTrader:
 
             # 取引コスト計算
             trading_costs = self.trading_strategy.calculate_trading_costs(
-                actual_position_value, signal.signal_type,
+                actual_position_value,
+                signal.signal_type,
             )
 
             # 総コスト
@@ -372,12 +375,19 @@ class DemoTrader:
 
             # ポートフォリオ更新
             if not self.portfolio_manager.add_position(
-                signal.symbol, quantity, execution_price, signal.signal_type,
+                signal.symbol,
+                quantity,
+                execution_price,
+                signal.signal_type,
             ):
-                self.logger.warning("ポートフォリオ制約により約定を取消: %s", signal.symbol)
+                self.logger.warning(
+                    "ポートフォリオ制約により約定を取消: %s", signal.symbol
+                )
                 self.current_capital += total_cost
                 return None
-            self.risk_manager.register_trade_open(signal.symbol, quantity, execution_price)
+            self.risk_manager.register_trade_open(
+                signal.symbol, quantity, execution_price
+            )
 
             # 取引記録
             self.trade_recorder.record_trade(
@@ -407,7 +417,8 @@ class DemoTrader:
             try:
                 # 現在価格取得
                 current_data = self.data_provider.get_stock_data(
-                    trade.symbol, period="1d",
+                    trade.symbol,
+                    period="1d",
                 )
                 if current_data is None or len(current_data) == 0:
                     continue
@@ -436,14 +447,16 @@ class DemoTrader:
 
                 # ストップロス
                 if trade.stop_loss_price and self._check_stop_loss(
-                    trade, current_price,
+                    trade,
+                    current_price,
                 ):
                     should_close = True
                     close_reason = "ストップロス"
 
                 # 利確
                 elif trade.take_profit_price and self._check_take_profit(
-                    trade, current_price,
+                    trade,
+                    current_price,
                 ):
                     should_close = True
                     close_reason = "利確"
@@ -486,7 +499,8 @@ class DemoTrader:
 
             # クローズ時の追加コスト
             close_costs = self.trading_strategy.calculate_trading_costs(
-                trade.quantity * close_price, trade.signal_type,
+                trade.quantity * close_price,
+                trade.signal_type,
             )
             final_profit_loss -= close_costs["total_cost"]
 
@@ -507,9 +521,13 @@ class DemoTrader:
             # ポートフォリオ更新
             # ポートフォリオとリスク管理の更新
             if not self.portfolio_manager.remove_position(trade.symbol):
-                self.logger.warning("ポートフォリオからのポジションクローズに失敗: %s", trade.symbol)
+                self.logger.warning(
+                    "ポートフォリオからのポジションクローズに失敗: %s", trade.symbol
+                )
             else:
-                self.risk_manager.register_trade_close(trade.symbol, trade.quantity, close_price)
+                self.risk_manager.register_trade_close(
+                    trade.symbol, trade.quantity, close_price
+                )
 
             # 取引記録
             self.trade_recorder.record_trade(

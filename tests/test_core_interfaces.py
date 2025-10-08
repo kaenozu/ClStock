@@ -101,7 +101,9 @@ class TestBatchPredictionResult:
         metadata = {"processing_time": 2.5, "success_rate": 1.0}
 
         result = BatchPredictionResult(
-            predictions=predictions, errors=errors, metadata=metadata,
+            predictions=predictions,
+            errors=errors,
+            metadata=metadata,
         )
 
         assert result.predictions == predictions

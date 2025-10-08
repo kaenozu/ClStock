@@ -41,7 +41,9 @@ class MacroEconomicDataProvider:
             return pd.DataFrame()
 
     def _generate_dummy_economic_data(
-        self, start_date: str, end_date: str,
+        self,
+        start_date: str,
+        end_date: str,
     ) -> pd.DataFrame:
         """ダミーの経済データを生成"""
         dates = pd.date_range(start=start_date, end=end_date, freq="D")
@@ -222,7 +224,9 @@ class SentimentAnalyzer:
         return np.clip(avg_sentiment, -1.0, 1.0)
 
     def get_sentiment_summary(
-        self, symbol: str, timeframe: str = "1d",
+        self,
+        symbol: str,
+        timeframe: str = "1d",
     ) -> Dict[str, float]:
         """センチメントサマリーを取得"""
         # ダミーデータを生成
@@ -231,20 +235,28 @@ class SentimentAnalyzer:
         return {
             "overall_sentiment": np.clip(base_sentiment, -1.0, 1.0),
             "news_sentiment": np.clip(
-                base_sentiment + np.random.normal(0, 0.1), -1.0, 1.0,
+                base_sentiment + np.random.normal(0, 0.1),
+                -1.0,
+                1.0,
             ),
             "social_sentiment": np.clip(
-                base_sentiment + np.random.normal(0, 0.2), -1.0, 1.0,
+                base_sentiment + np.random.normal(0, 0.2),
+                -1.0,
+                1.0,
             ),
             "analyst_sentiment": np.clip(
-                base_sentiment + np.random.normal(0, 0.15), -1.0, 1.0,
+                base_sentiment + np.random.normal(0, 0.15),
+                -1.0,
+                1.0,
             ),
             "sentiment_momentum": np.random.normal(0, 0.1),
             "sentiment_volume": np.random.uniform(0.1, 1.0),
         }
 
     def calculate_sentiment_impact(
-        self, current_sentiment: float, historical_sentiment: List[float],
+        self,
+        current_sentiment: float,
+        historical_sentiment: List[float],
     ) -> float:
         """センチメントの影響度を計算"""
         if not historical_sentiment:

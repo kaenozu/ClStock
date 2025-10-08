@@ -55,7 +55,8 @@ class HyperparameterOptimizer:
                             model.fit(X_train, y_train)
                             y_pred = model.predict(X_val)
                             score = -mean_squared_error(
-                                y_val, y_pred,
+                                y_val,
+                                y_pred,
                             )  # Negative MSE for maximization
 
                             self.optimization_history.append(
@@ -245,7 +246,9 @@ class MetaLearningOptimizer:
         return [model_name for model_name, _ in sorted_models[:top_k]]
 
     def optimize_ensemble_weights(
-        self, model_predictions: Dict[str, List[float]], true_values: List[float],
+        self,
+        model_predictions: Dict[str, List[float]],
+        true_values: List[float],
     ) -> Dict[str, float]:
         """アンサンブル重みの最適化"""
         from sklearn.linear_model import LinearRegression

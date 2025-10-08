@@ -23,7 +23,8 @@ warnings.filterwarnings("ignore")
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -130,7 +131,8 @@ class Test87PercentSystem:
                 try:
                     base_prediction = 70.0
                     meta_result = self.breakthrough_system.meta_optimizer.meta_predict(
-                        sample_symbol, base_prediction,
+                        sample_symbol,
+                        base_prediction,
                     )
                     component_results["meta_learning"] = {
                         "status": "success",
@@ -171,7 +173,8 @@ class Test87PercentSystem:
 
                     ensemble_result = (
                         self.breakthrough_system.advanced_ensemble.ensemble_predict(
-                            sample_predictions, sample_confidences,
+                            sample_predictions,
+                            sample_confidences,
                         )
                     )
                     component_results["advanced_ensemble"] = {
@@ -263,7 +266,8 @@ class Test87PercentSystem:
                         "final_prediction": result["final_prediction"],
                         "final_confidence": result["final_confidence"],
                         "individual_predictions": result.get(
-                            "individual_predictions", {},
+                            "individual_predictions",
+                            {},
                         ),
                         "accuracy_improvement": result.get("accuracy_improvement", 0),
                         "model_contributions": result.get("model_contributions", {}),
@@ -386,7 +390,8 @@ class Test87PercentSystem:
         return test_results
 
     def _assess_overall_performance(
-        self, test_results: Dict[str, Any],
+        self,
+        test_results: Dict[str, Any],
     ) -> Dict[str, Any]:
         """総合性能評価"""
         logger.info("\n--- 総合性能評価 ---")
@@ -402,7 +407,8 @@ class Test87PercentSystem:
             # 予測精度評価
             prediction_test = test_results.get("prediction_test", {})
             avg_estimated_accuracy = prediction_test.get(
-                "average_estimated_accuracy", 84.6,
+                "average_estimated_accuracy",
+                84.6,
             )
             accuracy_score = (
                 (avg_estimated_accuracy - 84.6) / 2.4 * 100
@@ -449,7 +455,8 @@ class Test87PercentSystem:
                 "estimated_final_accuracy": avg_estimated_accuracy,
                 "accuracy_improvement": avg_estimated_accuracy - 84.6,
                 "recommendations": self._generate_recommendations(
-                    scores, avg_estimated_accuracy,
+                    scores,
+                    avg_estimated_accuracy,
                 ),
             }
 
@@ -471,7 +478,9 @@ class Test87PercentSystem:
             return {"error": str(e)}
 
     def _generate_recommendations(
-        self, scores: Dict[str, float], estimated_accuracy: float,
+        self,
+        scores: Dict[str, float],
+        estimated_accuracy: float,
     ) -> List[str]:
         """改善推奨生成"""
         recommendations = []

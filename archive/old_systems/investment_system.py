@@ -242,7 +242,9 @@ class InvestmentSystem:
 
                     if signal_value == 1:  # 買いシグナル
                         position_value = self.calculate_position_size(
-                            symbol, confidence, volatility,
+                            symbol,
+                            confidence,
+                            volatility,
                         )
                         quantity = int(position_value / current_price)
 

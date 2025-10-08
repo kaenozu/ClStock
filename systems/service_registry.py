@@ -214,10 +214,14 @@ class ServiceRegistry:
             return thread
 
         process_info.stdout_thread = _consume_stream(
-            process.stdout, logger.info, "stdout",
+            process.stdout,
+            logger.info,
+            "stdout",
         )
         process_info.stderr_thread = _consume_stream(
-            process.stderr, logger.warning, "stderr",
+            process.stderr,
+            logger.warning,
+            "stderr",
         )
 
     def start_service(self, name: str) -> bool:
@@ -400,7 +404,9 @@ class ServiceRegistry:
         return list(self.processes.values())
 
     def start_multiple_services(
-        self, names: Iterable[str], max_parallel: int = 3,
+        self,
+        names: Iterable[str],
+        max_parallel: int = 3,
     ) -> Dict[str, bool]:
         results: Dict[str, bool] = {}
         sorted_services = sorted(

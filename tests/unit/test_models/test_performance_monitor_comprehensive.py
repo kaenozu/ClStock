@@ -188,7 +188,10 @@ class TestModelPerformanceMonitor:
             mock_accuracy.return_value = 0.67
 
             result = monitor.evaluate_model_performance(
-                mock_model, X_test, y_test, model_name="TestModel",
+                mock_model,
+                X_test,
+                y_test,
+                model_name="TestModel",
             )
 
         # Check that performance was recorded
@@ -233,7 +236,10 @@ class TestModelPerformanceMonitor:
             mock_accuracy.return_value = 0.33  # Low accuracy
 
             result = monitor.evaluate_model_performance(
-                mock_model, X_test, y_test, model_name="PoorModel",
+                mock_model,
+                X_test,
+                y_test,
+                model_name="PoorModel",
             )
 
         # Check that alerts were generated
@@ -301,7 +307,9 @@ class TestModelPerformanceMonitor:
         }
 
         recommendations = monitor._generate_recommendations(
-            poor_metrics, "declining", "declining",
+            poor_metrics,
+            "declining",
+            "declining",
         )
 
         # Should have multiple recommendations
@@ -328,7 +336,9 @@ class TestModelPerformanceMonitor:
 
         # Create a temporary file for testing
         with tempfile.NamedTemporaryFile(
-            mode="w+", delete=False, suffix=".json",
+            mode="w+",
+            delete=False,
+            suffix=".json",
         ) as tmp_file:
             temp_path = tmp_file.name
 
@@ -372,7 +382,9 @@ class TestModelPerformanceMonitor:
 
         # Create a temporary file for testing
         with tempfile.NamedTemporaryFile(
-            mode="w+", delete=False, suffix=".json",
+            mode="w+",
+            delete=False,
+            suffix=".json",
         ) as tmp_file:
             temp_path = tmp_file.name
             json.dump(test_data, tmp_file)

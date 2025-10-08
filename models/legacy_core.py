@@ -67,7 +67,9 @@ class PredictorInterface(ABC):
 
     @abstractmethod
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult: ...
 
     @abstractmethod
@@ -100,7 +102,9 @@ class StockPredictor(PredictorInterface):
         self.data_provider = data_provider or self.data_provider_factory()
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         raise NotImplementedError
 
@@ -151,7 +155,9 @@ class EnsembleStockPredictor(StockPredictor):
         )
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         if not self.is_trained():
             raise ValueError("Ensemble must be trained before prediction")
@@ -232,7 +238,10 @@ class CacheablePredictor(StockPredictor):
         return hashlib.sha256(json_repr.encode("utf-8")).hexdigest()
 
     def cache_prediction(
-        self, symbol: str, data: Optional[pd.DataFrame], result: PredictionResult,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame],
+        result: PredictionResult,
     ) -> None:
         data_hash = self._get_data_hash(data)
         cache_key = self._get_cache_key(symbol, data_hash)
@@ -242,7 +251,9 @@ class CacheablePredictor(StockPredictor):
             self._prediction_cache.popitem(last=False)
 
     def get_cached_prediction(
-        self, symbol: str, data: Optional[pd.DataFrame],
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame],
     ) -> Optional[PredictionResult]:
         data_hash = self._get_data_hash(data)
         cache_key = self._get_cache_key(symbol, data_hash)
@@ -486,7 +497,9 @@ class MLStockPredictor(CacheablePredictor):
     # Prediction
     # ------------------------------------------------------------------
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         if not self.is_trained():
             raise ValueError("Model must be trained before prediction")
@@ -522,7 +535,10 @@ class MLStockPredictor(CacheablePredictor):
             "features_used": len(self.feature_names),
         }
         result = PredictionResult(
-            prediction_value, confidence, datetime.now(), metadata,
+            prediction_value,
+            confidence,
+            datetime.now(),
+            metadata,
         )
         self.cache_prediction(symbol, data, result)
         return result
@@ -558,7 +574,9 @@ class MLStockPredictor(CacheablePredictor):
             data = self.data_provider.calculate_technical_indicators(raw_data)
         except Exception as exc:  # pragma: no cover - defensive logging
             logger.warning(
-                "Failed to calculate technical indicators for %s: %s", symbol, exc,
+                "Failed to calculate technical indicators for %s: %s",
+                symbol,
+                exc,
             )
             data = raw_data
 
@@ -625,7 +643,8 @@ class MLStockPredictor(CacheablePredictor):
             raise ValueError(f"Unable to prepare technical indicators for {symbol}")
 
         close_col = next(
-            (c for c in technical_data.columns if c.lower() == "close"), None,
+            (c for c in technical_data.columns if c.lower() == "close"),
+            None,
         )
         if close_col is None:
             raise ValueError("Technical data must contain a Close column")

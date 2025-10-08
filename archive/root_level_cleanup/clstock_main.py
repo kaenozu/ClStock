@@ -115,7 +115,9 @@ def run_integrated_analysis(symbol: str) -> Dict[str, Any]:
 
         # 統合分析
         integrated = sentiment_analyzer.integrate_with_technical_analysis(
-            symbol, tech_result, sentiment,
+            symbol,
+            tech_result,
+            sentiment,
         )
 
         print("\n=== 統合分析結果 (技術分析 + センチメント) ===")
@@ -200,14 +202,20 @@ def main():
     parser.add_argument("--basic", type=str, help="基本84.6%精度予測 (銘柄コード)")
     parser.add_argument("--advanced", type=str, help="個別銘柄特化予測 (銘柄コード)")
     parser.add_argument(
-        "--sentiment", type=str, help="ニュースセンチメント分析 (銘柄コード)",
+        "--sentiment",
+        type=str,
+        help="ニュースセンチメント分析 (銘柄コード)",
     )
     parser.add_argument("--integrated", type=str, help="統合分析 (銘柄コード)")
     parser.add_argument(
-        "--backtest", action="store_true", help="ポートフォリオバックテスト",
+        "--backtest",
+        action="store_true",
+        help="ポートフォリオバックテスト",
     )
     parser.add_argument(
-        "--retraining-status", action="store_true", help="自動再学習システム状態",
+        "--retraining-status",
+        action="store_true",
+        help="自動再学習システム状態",
     )
 
     # システム管理

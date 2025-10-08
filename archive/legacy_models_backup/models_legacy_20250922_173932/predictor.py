@@ -76,7 +76,8 @@ class StockPredictor:
         # ルールベースのスコア計算（フォールバック）
         try:
             data = self.data_provider.get_stock_data(
-                symbol, self.settings.trading.recommendation_data_period,
+                symbol,
+                self.settings.trading.recommendation_data_period,
             )
             if data.empty:
                 return 0
@@ -206,7 +207,8 @@ class StockPredictor:
         try:
             # 短期予測に最適化されたデータ取得
             data = self.data_provider.get_stock_data(
-                symbol, self.settings.trading.recommendation_data_period,
+                symbol,
+                self.settings.trading.recommendation_data_period,
             )  # より長期データで精度向上
             if data.empty or len(data) < 50:
                 return 0.0
@@ -432,7 +434,8 @@ class StockPredictor:
             }
 
     def _identify_strong_trend_period(
-        self, data: pd.DataFrame,
+        self,
+        data: pd.DataFrame,
     ) -> Tuple[bool, pd.DataFrame]:
         """強いトレンド期間の特定（インデックス修正版）"""
         close = data["Close"]
@@ -607,7 +610,9 @@ class StockPredictor:
             return 50.0
 
     def _calculate_trend_direction(
-        self, features: Dict[str, float], data: pd.DataFrame,
+        self,
+        features: Dict[str, float],
+        data: pd.DataFrame,
     ) -> Dict[str, float]:
         """方向性予測計算（84.6%精度の手法）"""
         if not features or data.empty:

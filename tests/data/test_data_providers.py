@@ -24,7 +24,8 @@ def _load_stock_data_module():
         return sys.modules[module_name]
 
     spec = importlib.util.spec_from_file_location(
-        module_name, Path(__file__).resolve().parents[2] / "data" / "stock_data.py",
+        module_name,
+        Path(__file__).resolve().parents[2] / "data" / "stock_data.py",
     )
     module = importlib.util.module_from_spec(spec)
     loader = spec.loader
@@ -80,21 +81,27 @@ def test_real_local_source_used_when_yfinance_missing(local_csv_env: Path, monke
     provider = StockDataProvider()
 
     with patch.object(
-        stock_data_module, "get_cache", return_value=_NullCache(),
+        stock_data_module,
+        "get_cache",
+        return_value=_NullCache(),
     ), patch.object(provider, "_download_via_yfinance") as mocked_download:
         result = provider.get_stock_data("REAL1", period="1mo")
 
     assert not result.empty
     pd.testing.assert_index_equal(result.index, frame.index)
     pd.testing.assert_series_equal(
-        result["Close"], frame["Close"], check_names=False, check_freq=False,
+        result["Close"],
+        frame["Close"],
+        check_names=False,
+        check_freq=False,
     )
     assert (result["ActualTicker"] == "REAL1").all()
     mocked_download.assert_not_called()
 
 
 def test_missing_trusted_source_raises_without_fallback(
-    local_csv_env: Path, monkeypatch,
+    local_csv_env: Path,
+    monkeypatch,
 ):
     monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", False, raising=False)
     monkeypatch.setattr(stock_data_module, "yf", None, raising=False)
@@ -102,7 +109,9 @@ def test_missing_trusted_source_raises_without_fallback(
     provider = StockDataProvider()
 
     with patch.object(
-        stock_data_module, "get_cache", return_value=_NullCache(),
+        stock_data_module,
+        "get_cache",
+        return_value=_NullCache(),
     ), patch.object(provider, "_download_via_yfinance") as mocked_download:
         with pytest.raises(DataFetchError):
             provider.get_stock_data("UNKNOWN", period="1mo")

@@ -9,7 +9,8 @@ import pytest
 # Skip these integration checks when heavy numerical dependencies are missing.
 pytest.importorskip("scipy", reason="SciPy is required for the refactored hybrid stack")
 pytest.importorskip(
-    "sklearn", reason="scikit-learn is required for the refactored hybrid stack",
+    "sklearn",
+    reason="scikit-learn is required for the refactored hybrid stack",
 )
 
 from models_refactored.core.interfaces import (

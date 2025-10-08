@@ -66,7 +66,8 @@ def test_handle_signal_sets_event_and_starts_thread_once(monkeypatch, coordinato
         return thread
 
     monkeypatch.setattr(
-        "systems.shutdown_coordinator.threading.Thread", fake_thread_factory,
+        "systems.shutdown_coordinator.threading.Thread",
+        fake_thread_factory,
     )
 
     coordinator.handle_signal(signum=signal.SIGTERM)
@@ -79,7 +80,8 @@ def test_handle_signal_sets_event_and_starts_thread_once(monkeypatch, coordinato
 
 
 def test_wait_for_shutdown_joins_thread_and_second_signal_does_not_spawn_new_thread(
-    monkeypatch, coordinator,
+    monkeypatch,
+    coordinator,
 ):
     created_threads = []
 
@@ -89,7 +91,8 @@ def test_wait_for_shutdown_joins_thread_and_second_signal_does_not_spawn_new_thr
         return thread
 
     monkeypatch.setattr(
-        "systems.shutdown_coordinator.threading.Thread", fake_thread_factory,
+        "systems.shutdown_coordinator.threading.Thread",
+        fake_thread_factory,
     )
 
     coordinator.handle_signal(signum=signal.SIGINT)

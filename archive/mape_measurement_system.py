@@ -19,7 +19,8 @@ warnings.filterwarnings("ignore")
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -86,7 +87,8 @@ class MAPEMeasurementSystem:
                 try:
                     # trend_following_predictorを古いデータで実行
                     prediction_result = predictor.predict_stock(
-                        symbol, data=historical_data,
+                        symbol,
+                        data=historical_data,
                     )
 
                     # 価格予測（簡易版：現在価格からの変化率予測）

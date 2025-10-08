@@ -93,7 +93,8 @@ class MLStockPredictor:
         # ゼロ除算を防ぐ安全チェック
         bb_range = bb_upper - bb_lower
         features["bb_position"] = (data["Close"] - bb_lower) / bb_range.where(
-            bb_range != 0, 1,
+            bb_range != 0,
+            1,
         )
         features["bb_squeeze"] = bb_range / bb_middle.where(bb_middle != 0, 1)
         features["bb_breakout_up"] = (data["Close"] > bb_upper).astype(int)
@@ -202,7 +203,9 @@ class MLStockPredictor:
         return features
 
     def create_targets(
-        self, data: pd.DataFrame, prediction_days: int = 5,
+        self,
+        data: pd.DataFrame,
+        prediction_days: int = 5,
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """予測ターゲットを作成（分類と回帰の両方）"""
         targets_regression = pd.DataFrame(index=data.index)
@@ -249,9 +252,13 @@ class MLStockPredictor:
         return scores.fillna(50)
 
     def _process_symbol(
-        self, symbol: str,
+        self,
+        symbol: str,
     ) -> Tuple[
-        str, Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame],
+        str,
+        Optional[pd.DataFrame],
+        Optional[pd.DataFrame],
+        Optional[pd.DataFrame],
     ]:
         """Retrieve data, build features and targets for a single symbol."""
         try:
@@ -274,7 +281,9 @@ class MLStockPredictor:
         results: Dict[
             str,
             Tuple[
-                Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame],
+                Optional[pd.DataFrame],
+                Optional[pd.DataFrame],
+                Optional[pd.DataFrame],
             ],
         ],
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -305,12 +314,15 @@ class MLStockPredictor:
         return combined_features, combined_targets_reg, combined_targets_cls
 
     def _prepare_dataset_sequential(
-        self, symbols: List[str],
+        self,
+        symbols: List[str],
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         results: Dict[
             str,
             Tuple[
-                Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame],
+                Optional[pd.DataFrame],
+                Optional[pd.DataFrame],
+                Optional[pd.DataFrame],
             ],
         ] = {}
         for symbol in symbols:
@@ -320,12 +332,15 @@ class MLStockPredictor:
         return self._aggregate_results(symbols, results)
 
     def _prepare_dataset_parallel(
-        self, symbols: List[str],
+        self,
+        symbols: List[str],
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         results: Dict[
             str,
             Tuple[
-                Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame],
+                Optional[pd.DataFrame],
+                Optional[pd.DataFrame],
+                Optional[pd.DataFrame],
             ],
         ] = {}
 
@@ -394,7 +409,9 @@ class MLStockPredictor:
             return self._prepare_dataset_sequential(symbols)
 
     def train_model(
-        self, symbols: List[str], target_column: str = "recommendation_score",
+        self,
+        symbols: List[str],
+        target_column: str = "recommendation_score",
     ):
         """モデルを訓練する"""
         from config.settings import get_settings
@@ -541,7 +558,8 @@ class MLStockPredictor:
                     latest_features[feature_name] = 0
             # 特徴量順序を合わせる
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0,
+                columns=self.feature_names,
+                fill_value=0,
             )
             # スケーリング
             features_scaled = self.scaler.transform(latest_features)
@@ -580,7 +598,8 @@ class MLStockPredictor:
                     latest_features[feature_name] = 0
             # 特徴量順序を合わせる
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0,
+                columns=self.feature_names,
+                fill_value=0,
             )
             # スケーリング
             features_scaled = self.scaler.transform(latest_features)
@@ -589,7 +608,8 @@ class MLStockPredictor:
             # 現実的な範囲に制限（日数に応じて調整）
             max_return = 0.006 * days  # 1日あたり最大0.6%
             predicted_return = max(
-                -max_return, min(max_return, float(predicted_return)),
+                -max_return,
+                min(max_return, float(predicted_return)),
             )
             return predicted_return
         except Exception as e:
@@ -597,7 +617,8 @@ class MLStockPredictor:
             return 0.0
 
     def prepare_features_for_return_prediction(
-        self, data: pd.DataFrame,
+        self,
+        data: pd.DataFrame,
     ) -> pd.DataFrame:
         """リターン率予測用の特徴量準備"""
         features = self.prepare_features(data)
@@ -707,7 +728,11 @@ class HyperparameterOptimizer:
             }
             model = xgb.XGBRegressor(**params)
             scores = cross_val_score(
-                model, X, y, cv=cv_folds, scoring="neg_mean_squared_error",
+                model,
+                X,
+                y,
+                cv=cv_folds,
+                scoring="neg_mean_squared_error",
             )
             return -scores.mean()
 
@@ -719,8 +744,7 @@ class HyperparameterOptimizer:
         return study.best_params
 
     def optimize_lightgbm(self, X, y, cv_folds=5, n_trials=100):
-        """LightGBMパラメータ最適化
-        """
+        """LightGBMパラメータ最適化"""
         if not LIGHTGBM_AVAILABLE:
             logger.warning(
                 "LightGBM not available, skipping hyperparameter optimization",
@@ -745,7 +769,11 @@ class HyperparameterOptimizer:
             }
             model = lgb.LGBMRegressor(**params)
             scores = cross_val_score(
-                model, X, y, cv=cv_folds, scoring="neg_mean_squared_error",
+                model,
+                X,
+                y,
+                cv=cv_folds,
+                scoring="neg_mean_squared_error",
             )
             return -scores.mean()
 

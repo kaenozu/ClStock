@@ -125,9 +125,13 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
 
             confidence = evaluation.confidence
             # Blend volatility to avoid overconfident sizing when signal is small.
-            recent_vol = enriched["Close"].pct_change().rolling(self.long_window).std().iloc[-1]
+            recent_vol = (
+                enriched["Close"].pct_change().rolling(self.long_window).std().iloc[-1]
+            )
             if np.isfinite(recent_vol) and recent_vol > 0:
-                confidence *= float(np.clip(abs(predicted_change_rate) / (recent_vol * 2.0), 0.3, 1.2))
+                confidence *= float(
+                    np.clip(abs(predicted_change_rate) / (recent_vol * 2.0), 0.3, 1.2)
+                )
             confidence = float(np.clip(confidence, 0.05, 0.95))
 
             accuracy = float(evaluation.accuracy)
@@ -171,7 +175,10 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
             logger.warning("Failed to fetch history for %s: %s", symbol, exc)
             return None
 
-        if history is None or len(history) < self.long_window + self.evaluation_horizon + 5:
+        if (
+            history is None
+            or len(history) < self.long_window + self.evaluation_horizon + 5
+        ):
             return None
 
         return history.copy()
@@ -200,21 +207,35 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
         return pd.Series(signal_values, index=data.index, name="baseline_signal")
 
     def _evaluate_signal(
-        self, data: pd.DataFrame, signal_series: pd.Series,
+        self,
+        data: pd.DataFrame,
+        signal_series: pd.Series,
     ) -> SignalEvaluation:
         signal = signal_series.dropna().iloc[-self.evaluation_window :].copy()
         if signal.empty:
-            return SignalEvaluation(accuracy=0.0, sample_size=0, avg_positive_return=0.0, avg_negative_return=0.0)
+            return SignalEvaluation(
+                accuracy=0.0,
+                sample_size=0,
+                avg_positive_return=0.0,
+                avg_negative_return=0.0,
+            )
 
         forward_returns = (
-            data["Close"].pct_change(self.evaluation_horizon).shift(-self.evaluation_horizon)
+            data["Close"]
+            .pct_change(self.evaluation_horizon)
+            .shift(-self.evaluation_horizon)
         )
         aligned = signal.index.intersection(forward_returns.index)
         signal = signal.loc[aligned]
         returns = forward_returns.loc[aligned]
         mask = (~signal.isna()) & (~returns.isna())
         if mask.sum() == 0:
-            return SignalEvaluation(accuracy=0.0, sample_size=0, avg_positive_return=0.0, avg_negative_return=0.0)
+            return SignalEvaluation(
+                accuracy=0.0,
+                sample_size=0,
+                avg_positive_return=0.0,
+                avg_negative_return=0.0,
+            )
 
         signed_signal = np.sign(signal[mask])
         signed_returns = np.sign(returns[mask])
@@ -224,8 +245,12 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
 
         positive_mask = signed_signal > 0
         negative_mask = signed_signal < 0
-        avg_positive = float(returns[mask][positive_mask].mean()) if positive_mask.any() else 0.0
-        avg_negative = float(returns[mask][negative_mask].mean()) if negative_mask.any() else 0.0
+        avg_positive = (
+            float(returns[mask][positive_mask].mean()) if positive_mask.any() else 0.0
+        )
+        avg_negative = (
+            float(returns[mask][negative_mask].mean()) if negative_mask.any() else 0.0
+        )
 
         return SignalEvaluation(
             accuracy=float(accuracy),
@@ -263,14 +288,23 @@ class Precision87BreakthroughSystem(BaseStockPredictor):
 
 class MockMetaLearner:  # Backwards compatibility for modules still importing the symbol.
     def create_symbol_profile(self, symbol, data):  # pragma: no cover - legacy shim
-        logger.warning("MockMetaLearner is deprecated; real meta-learning has been removed.")
+        logger.warning(
+            "MockMetaLearner is deprecated; real meta-learning has been removed."
+        )
         return {"current_price": data["Close"].iloc[-1] if not data.empty else 0.0}
 
-    def adapt_model_parameters(self, symbol, profile, params):  # pragma: no cover - legacy shim
-        return {"adapted_prediction": params.get("prediction", 0.0), "adapted_confidence": 0.0}
+    def adapt_model_parameters(
+        self, symbol, profile, params
+    ):  # pragma: no cover - legacy shim
+        return {
+            "adapted_prediction": params.get("prediction", 0.0),
+            "adapted_confidence": 0.0,
+        }
 
 
 class MockDQNAgent:  # Backwards compatibility shim.
     def get_trading_signal(self, symbol, data):  # pragma: no cover - legacy shim
-        logger.warning("MockDQNAgent is deprecated; reinforcement learner removed in baseline model.")
+        logger.warning(
+            "MockDQNAgent is deprecated; reinforcement learner removed in baseline model."
+        )
         return {"signal_strength": 0.0, "confidence": 0.0}

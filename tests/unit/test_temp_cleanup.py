@@ -80,7 +80,8 @@ def test_cleanup_unnecessary_files_removes_non_whitelisted(cleanup_manager, tmp_
     (nested_dir / "nested.txt").write_text("nested")
 
     removed = cleanup_manager.cleanup_unnecessary_files(
-        str(base_dir), required_entries={"keep.txt", "subdir"},
+        str(base_dir),
+        required_entries={"keep.txt", "subdir"},
     )
 
     assert removed == [str(extra_file)]
@@ -93,7 +94,8 @@ def test_cleanup_unnecessary_files_handles_missing_directory(cleanup_manager, tm
     missing_dir = tmp_path / "does_not_exist"
 
     removed = cleanup_manager.cleanup_unnecessary_files(
-        str(missing_dir), required_entries={"keep.txt"},
+        str(missing_dir),
+        required_entries={"keep.txt"},
     )
 
     assert removed == []

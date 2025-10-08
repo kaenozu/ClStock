@@ -75,7 +75,8 @@ class MLStockPredictor(StockPredictor):
         # ゼロ除算を防ぐ安全チェック
         bb_range = bb_upper - bb_lower
         features["bb_position"] = (data["Close"] - bb_lower) / bb_range.where(
-            bb_range != 0, 1,
+            bb_range != 0,
+            1,
         )
         features["bb_squeeze"] = bb_range / bb_middle.where(bb_middle != 0, 1)
         features["bb_breakout_up"] = (data["Close"] > bb_upper).astype(int)
@@ -202,7 +203,9 @@ class MLStockPredictor(StockPredictor):
         return features
 
     def create_targets(
-        self, data: pd.DataFrame, prediction_days: int = 5,
+        self,
+        data: pd.DataFrame,
+        prediction_days: int = 5,
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """予測ターゲットを作成（分類と回帰の両方）"""
         targets_regression = pd.DataFrame(index=data.index)
@@ -260,7 +263,9 @@ class MLStockPredictor(StockPredictor):
         return scores.fillna(50)
 
     def prepare_dataset(
-        self, symbols: List[str], start_date: str = "2020-01-01",
+        self,
+        symbols: List[str],
+        start_date: str = "2020-01-01",
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """複数銘柄のデータセットを準備"""
         all_features = []
@@ -321,12 +326,18 @@ class MLStockPredictor(StockPredictor):
         if target.dtype == "float64":
             # Regression task
             self.model = xgb.XGBRegressor(
-                n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42,
+                n_estimators=100,
+                max_depth=6,
+                learning_rate=0.1,
+                random_state=42,
             )
         else:
             # Classification task
             self.model = xgb.XGBClassifier(
-                n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42,
+                n_estimators=100,
+                max_depth=6,
+                learning_rate=0.1,
+                random_state=42,
             )
 
         # Scale features
@@ -338,7 +349,9 @@ class MLStockPredictor(StockPredictor):
         self.feature_names = features.columns.tolist()
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Predict stock performance"""
         if not self.is_trained():
@@ -366,7 +379,8 @@ class MLStockPredictor(StockPredictor):
 
             # Reorder features to match training
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0,
+                columns=self.feature_names,
+                fill_value=0,
             )
 
             # Scale features
@@ -485,7 +499,9 @@ class EnsembleStockPredictor(EnsemblePredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Ensemble prediction"""
         if not self.is_trained():

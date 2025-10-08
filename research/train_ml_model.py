@@ -10,7 +10,8 @@ from utils.logger_config import setup_logger
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 

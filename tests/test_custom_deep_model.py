@@ -154,7 +154,10 @@ class TestCustomDeepModel(unittest.TestCase):
 
         # 訓練データとテストデータに分割
         X_train, X_test, y_train, y_test = train_test_split(
-            self.X_time_series, self.y_time_series, test_size=0.2, random_state=42,
+            self.X_time_series,
+            self.y_time_series,
+            test_size=0.2,
+            random_state=42,
         )
 
         # モデル訓練
@@ -181,7 +184,9 @@ class TestCustomDeepModel(unittest.TestCase):
 
         # データ統合
         integrated_features = integrator.integrate_data(
-            self.price_data, self.fundamental_data, self.sentiment_data,
+            self.price_data,
+            self.fundamental_data,
+            self.sentiment_data,
         )
 
         # 期待される形状の検証（価格データの特徴量数 + ファンダメンタルデータ数 + センチメントデータ数）
@@ -206,7 +211,8 @@ class TestCustomDeepModel(unittest.TestCase):
 
         # Multi-Head Temporal Attentionのテスト
         multi_head_attention = MultiHeadTemporalAttention(
-            num_heads=4, attention_units_per_head=16,
+            num_heads=4,
+            attention_units_per_head=16,
         )
         output_multi = multi_head_attention(input_tensor)
 
@@ -277,7 +283,8 @@ class TestCustomDeepModel(unittest.TestCase):
 
         # 時系列用Autoencoderモデルのテスト
         temporal_ssl_model = TemporalSelfSupervisedModel(
-            input_shape=(self.n_timesteps, 1), encoding_dim=16,
+            input_shape=(self.n_timesteps, 1),
+            encoding_dim=16,
         )
 
         # 訓練
@@ -323,13 +330,17 @@ class TestCustomDeepModel(unittest.TestCase):
         # マルチモーダル統合
         integrator = MultimodalIntegrator()
         integrated_data = integrator.integrate_data(
-            self.price_data, self.fundamental_data, self.sentiment_data,
+            self.price_data,
+            self.fundamental_data,
+            self.sentiment_data,
         )
 
         # 時系列データに変換（CNNモデル用）
         if len(integrated_data.shape) == 2:
             integrated_time_series = integrated_data.reshape(
-                integrated_data.shape[0], integrated_data.shape[1], 1,
+                integrated_data.shape[0],
+                integrated_data.shape[1],
+                1,
             )
 
         # 独自深層学習モデル
@@ -341,7 +352,10 @@ class TestCustomDeepModel(unittest.TestCase):
 
         # 訓練データとテストデータに分割
         X_train, X_test, y_train, y_test = train_test_split(
-            integrated_time_series, y_dummy, test_size=0.2, random_state=42,
+            integrated_time_series,
+            y_dummy,
+            test_size=0.2,
+            random_state=42,
         )
 
         # モデル訓練（短いエポック数でテスト）

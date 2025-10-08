@@ -13,7 +13,10 @@ class FakeProvider:
         self._data = {}
 
     def add_series(
-        self, symbol: str, data: pd.DataFrame, period: str | None = None,
+        self,
+        symbol: str,
+        data: pd.DataFrame,
+        period: str | None = None,
     ) -> None:
         key = (symbol, period)
         self._data[key] = data.copy()
@@ -35,7 +38,10 @@ def risk_manager():
 
 
 def _linear_close_series(
-    start: float, step: float, periods: int, start_date: datetime | None = None,
+    start: float,
+    step: float,
+    periods: int,
+    start_date: datetime | None = None,
 ):
     start_date = start_date or datetime(2024, 1, 1)
     index = pd.date_range(start_date, periods=periods, freq="D")
@@ -46,13 +52,22 @@ def _linear_close_series(
 class TestDynamicStopLoss:
     def test_calculate_dynamic_stop_loss_adjusts_factors(self, risk_manager):
         high_confidence = risk_manager.calculate_dynamic_stop_loss(
-            "AAA", 100.0, confidence=0.9, volatility=0.02,
+            "AAA",
+            100.0,
+            confidence=0.9,
+            volatility=0.02,
         )
         low_confidence = risk_manager.calculate_dynamic_stop_loss(
-            "AAA", 100.0, confidence=0.55, volatility=0.02,
+            "AAA",
+            100.0,
+            confidence=0.55,
+            volatility=0.02,
         )
         high_volatility = risk_manager.calculate_dynamic_stop_loss(
-            "AAA", 100.0, confidence=0.6, volatility=0.12,
+            "AAA",
+            100.0,
+            confidence=0.6,
+            volatility=0.12,
         )
 
         for result in (high_confidence, low_confidence, high_volatility):
@@ -93,7 +108,8 @@ class TestPortfolioRiskMetrics:
         assert result["total_portfolio_value"] > 0
 
     def test_calculate_portfolio_var_returns_zero_with_insufficient_data(
-        self, risk_manager,
+        self,
+        risk_manager,
     ):
         provider = risk_manager.data_provider
         provider.add_series("CCC", _linear_close_series(50, 1.0, 10))
@@ -142,13 +158,20 @@ class TestPortfolioRiskMetrics:
 
 class TestKellyAndDrawdown:
     def test_calculate_position_sizing_kelly_positive_only_when_edge_crossed(
-        self, risk_manager,
+        self,
+        risk_manager,
     ):
         positive = risk_manager.calculate_position_sizing_kelly(
-            win_probability=0.6, avg_win=2.0, avg_loss=1.0, current_capital=50_000,
+            win_probability=0.6,
+            avg_win=2.0,
+            avg_loss=1.0,
+            current_capital=50_000,
         )
         boundary = risk_manager.calculate_position_sizing_kelly(
-            win_probability=0.4, avg_win=1.5, avg_loss=1.0, current_capital=50_000,
+            win_probability=0.4,
+            avg_win=1.5,
+            avg_loss=1.0,
+            current_capital=50_000,
         )
 
         assert positive["kelly_fraction"] > 0
@@ -159,7 +182,8 @@ class TestKellyAndDrawdown:
         assert boundary["optimal_size"] == pytest.approx(0, abs=1e-6)
 
     def test_assess_maximum_drawdown_risk_levels_and_recommendations(
-        self, risk_manager,
+        self,
+        risk_manager,
     ):
         provider = risk_manager.data_provider
         provider.add_series("AAA", _linear_close_series(100, -10.0, 2), period="1d")
@@ -188,7 +212,9 @@ class TestKellyAndDrawdown:
 
 class TestComprehensiveRiskReport:
     def test_generate_comprehensive_risk_report_aggregates_metrics(
-        self, risk_manager, monkeypatch,
+        self,
+        risk_manager,
+        monkeypatch,
     ):
         monkeypatch.setattr(
             risk_manager,
@@ -235,7 +261,9 @@ class TestComprehensiveRiskReport:
         }.issubset(set(report["recommendations"]))
 
     def test_generate_comprehensive_risk_report_handles_zero_metrics(
-        self, risk_manager, monkeypatch,
+        self,
+        risk_manager,
+        monkeypatch,
     ):
         monkeypatch.setattr(
             risk_manager,

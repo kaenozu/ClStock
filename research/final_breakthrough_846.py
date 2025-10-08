@@ -115,7 +115,9 @@ class FinalBreakthrough846:
         return 100 - (100 / (1 + rs))
 
     def create_trend_target(
-        self, data: pd.DataFrame, prediction_days: int = 3,
+        self,
+        data: pd.DataFrame,
+        prediction_days: int = 3,
     ) -> pd.Series:
         """84.6%成功手法と完全同一のターゲット"""
         close = data["Close"]
@@ -302,7 +304,9 @@ class FinalBreakthrough846:
         return self._analyze_final_breakthrough(all_results, breakthrough_results)
 
     def _analyze_final_breakthrough(
-        self, all_results: List[Dict], breakthrough_results: List[Dict],
+        self,
+        all_results: List[Dict],
+        breakthrough_results: List[Dict],
     ) -> Dict:
         """最終突破結果の分析"""
         if not all_results:
@@ -328,7 +332,9 @@ class FinalBreakthrough846:
 
             print("\n84.6%突破達成銘柄:")
             for r in sorted(
-                breakthrough_results, key=lambda x: x["accuracy"], reverse=True,
+                breakthrough_results,
+                key=lambda x: x["accuracy"],
+                reverse=True,
             ):
                 hc_info = (
                     f" (高信頼度: {r['high_conf_accuracy']:.1%})"
@@ -380,9 +386,7 @@ class FinalBreakthrough846:
                     else (
                         "○○"
                         if result["accuracy"] >= 0.8
-                        else "○"
-                        if result["accuracy"] >= 0.75
-                        else ""
+                        else "○" if result["accuracy"] >= 0.75 else ""
                     )
                 )
             )

@@ -84,7 +84,9 @@ class TestAdvancedCacheManager:
     def test_initialization_custom_values(self):
         """Test AdvancedCacheManager initialization with custom values."""
         cache = AdvancedCacheManager(
-            max_cache_size=500, ttl_hours=12, cleanup_interval=900,
+            max_cache_size=500,
+            ttl_hours=12,
+            cleanup_interval=900,
         )
 
         assert cache.max_cache_size == 500
@@ -319,7 +321,9 @@ class TestAdvancedCacheManager:
 
         # Create a temporary file for testing
         with tempfile.NamedTemporaryFile(
-            mode="w+", delete=False, suffix=".json",
+            mode="w+",
+            delete=False,
+            suffix=".json",
         ) as tmp_file:
             temp_path = tmp_file.name
 

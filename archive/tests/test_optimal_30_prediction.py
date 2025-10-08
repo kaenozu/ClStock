@@ -35,12 +35,16 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
         self.assertEqual(len(symbols), 30, "銘柄数は30個である必要があります")
         self.assertIn("9984.T", symbols, "ソフトバンクGが含まれている必要があります")
         self.assertIn(
-            "4004.T", symbols, "化学セクター最高スコア銘柄が含まれている必要があります",
+            "4004.T",
+            symbols,
+            "化学セクター最高スコア銘柄が含まれている必要があります",
         )
 
         # 重複チェック
         self.assertEqual(
-            len(symbols), len(set(symbols)), "銘柄に重複があってはいけません",
+            len(symbols),
+            len(set(symbols)),
+            "銘柄に重複があってはいけません",
         )
 
     def test_prediction_score_valid_range(self):
@@ -164,7 +168,9 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
 
         # Assert
         self.assertIsInstance(
-            ranked, list, "ランキング結果はリストである必要があります",
+            ranked,
+            list,
+            "ランキング結果はリストである必要があります",
         )
         self.assertEqual(len(ranked), 3, "入力と同じ数の結果が返される必要があります")
 
@@ -172,7 +178,9 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
         score_0 = ranked[0]["change_rate"] * ranked[0]["confidence"]
         score_1 = ranked[1]["change_rate"] * ranked[1]["confidence"]
         self.assertGreaterEqual(
-            score_0, score_1, "ランキングは降順である必要があります",
+            score_0,
+            score_1,
+            "ランキングは降順である必要があります",
         )
 
     def test_error_handling_invalid_symbol(self):
@@ -209,7 +217,9 @@ class TestOptimal30PredictionTDD(unittest.TestCase):
         # Assert
         execution_time = end_time - start_time
         self.assertLess(
-            execution_time, 5.0, "1銘柄の予測は5秒以内に完了する必要があります",
+            execution_time,
+            5.0,
+            "1銘柄の予測は5秒以内に完了する必要があります",
         )
 
 

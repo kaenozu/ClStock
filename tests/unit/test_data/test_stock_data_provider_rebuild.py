@@ -88,7 +88,8 @@ def test_get_stock_data_uses_cache(history_frame: pd.DataFrame, ticker_factory) 
         return ticker_factory(symbol)
 
     with patch("data.stock_data.get_cache", return_value=cache), patch(
-        "data.stock_data.yf.Ticker", side_effect=_ticker_side_effect,
+        "data.stock_data.yf.Ticker",
+        side_effect=_ticker_side_effect,
     ):
         first = provider.get_stock_data("7203", "1mo")
         second = provider.get_stock_data("7203", "1mo")

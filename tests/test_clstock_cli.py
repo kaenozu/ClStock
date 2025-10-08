@@ -37,7 +37,9 @@ def test_service_start_failure_raises_click_exception(runner, monkeypatch):
     )
 
     result = runner.invoke(
-        clstock_cli.cli, ["service", "start", "demo"], standalone_mode=False,
+        clstock_cli.cli,
+        ["service", "start", "demo"],
+        standalone_mode=False,
     )
 
     assert result.exit_code == 1
@@ -53,7 +55,9 @@ def test_service_stop_failure_raises_click_exception(runner, monkeypatch):
     )
 
     result = runner.invoke(
-        clstock_cli.cli, ["service", "stop", "demo"], standalone_mode=False,
+        clstock_cli.cli,
+        ["service", "stop", "demo"],
+        standalone_mode=False,
     )
 
     assert result.exit_code == 1

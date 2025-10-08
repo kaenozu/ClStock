@@ -29,7 +29,8 @@ def _load_stock_data_module():
         sys.modules["joblib"] = joblib_stub
 
     spec = importlib.util.spec_from_file_location(
-        module_name, Path(__file__).resolve().parents[3] / "data" / "stock_data.py",
+        module_name,
+        Path(__file__).resolve().parents[3] / "data" / "stock_data.py",
     )
     module = importlib.util.module_from_spec(spec)
     loader = spec.loader
@@ -78,11 +79,17 @@ class TestStockDataProvider:
             index=pd.date_range("2024-01-01", periods=1),
         )
         with patch.object(
-            stock_data_module, "get_cache", return_value=_NullCache(),
+            stock_data_module,
+            "get_cache",
+            return_value=_NullCache(),
         ), patch.object(
-            provider, "_should_use_local_first", return_value=False,
+            provider,
+            "_should_use_local_first",
+            return_value=False,
         ), patch.object(
-            provider, "_load_first_available_csv", return_value=None,
+            provider,
+            "_load_first_available_csv",
+            return_value=None,
         ), patch.object(
             provider,
             "_download_via_yfinance",
@@ -97,13 +104,21 @@ class TestStockDataProvider:
         provider = StockDataProvider()
         empty_df = pd.DataFrame()
         with patch.object(
-            stock_data_module, "get_cache", return_value=_NullCache(),
+            stock_data_module,
+            "get_cache",
+            return_value=_NullCache(),
         ), patch.object(
-            provider, "_should_use_local_first", return_value=False,
+            provider,
+            "_should_use_local_first",
+            return_value=False,
         ), patch.object(
-            provider, "_load_first_available_csv", return_value=None,
+            provider,
+            "_load_first_available_csv",
+            return_value=None,
         ), patch.object(
-            provider, "_download_via_yfinance", return_value=(empty_df, None),
+            provider,
+            "_download_via_yfinance",
+            return_value=(empty_df, None),
         ):
             with pytest.raises(DataFetchError):
                 provider.get_stock_data("TEST_INVALID", "1mo")
@@ -115,14 +130,20 @@ class TestStockDataProvider:
             index=pd.date_range("2024-01-01", periods=1),
         )
         with patch.object(
-            stock_data_module, "get_cache", return_value=_NullCache(),
+            stock_data_module,
+            "get_cache",
+            return_value=_NullCache(),
         ), patch.object(
-            provider, "_should_use_local_first", return_value=True,
+            provider,
+            "_should_use_local_first",
+            return_value=True,
         ), patch.object(
             provider,
             "_load_first_available_csv",
             return_value=(dummy_df.copy(), "local"),
-        ), patch.object(provider, "_download_via_yfinance") as mock_download:
+        ), patch.object(
+            provider, "_download_via_yfinance"
+        ) as mock_download:
             data = provider.get_stock_data("TEST2", "1mo")
             assert not mock_download.called
             assert data["Symbol"].iloc[0] == "TEST2"
@@ -132,13 +153,21 @@ class TestStockDataProvider:
         provider = StockDataProvider()
         empty_df = pd.DataFrame()
         with patch.object(
-            stock_data_module, "get_cache", return_value=_NullCache(),
+            stock_data_module,
+            "get_cache",
+            return_value=_NullCache(),
         ), patch.object(
-            provider, "_should_use_local_first", return_value=False,
+            provider,
+            "_should_use_local_first",
+            return_value=False,
         ), patch.object(
-            provider, "_load_first_available_csv", return_value=None,
+            provider,
+            "_load_first_available_csv",
+            return_value=None,
         ), patch.object(
-            provider, "_download_via_yfinance", return_value=(empty_df, None),
+            provider,
+            "_download_via_yfinance",
+            return_value=(empty_df, None),
         ):
             with pytest.raises(DataFetchError):
                 provider.get_stock_data("TEST3", "1mo")
@@ -163,7 +192,8 @@ class TestStockDataProvider:
             assert metrics["symbol"] == "7203"
 
     def test_get_financial_metrics_returns_defaults_when_yfinance_unavailable(
-        self, monkeypatch,
+        self,
+        monkeypatch,
     ):
         provider = StockDataProvider()
         monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", False)
@@ -200,7 +230,9 @@ class TestStockDataProvider:
         provider = StockDataProvider()
         dummy_yf = types.SimpleNamespace(Ticker=lambda ticker: mock_yfinance)
         with patch.object(stock_data_module, "YFINANCE_AVAILABLE", True), patch.object(
-            stock_data_module, "yf", dummy_yf,
+            stock_data_module,
+            "yf",
+            dummy_yf,
         ):
             symbols = ["7203", "6758"]
             result = provider.get_multiple_stocks(symbols, "1mo")
@@ -209,7 +241,8 @@ class TestStockDataProvider:
             assert "6758" in result
 
     def test_get_dividend_data_returns_defaults_when_yfinance_unavailable(
-        self, monkeypatch,
+        self,
+        monkeypatch,
     ):
         provider = StockDataProvider()
         monkeypatch.setattr(stock_data_module, "YFINANCE_AVAILABLE", False)
@@ -282,7 +315,9 @@ class TestStockDataProvider:
             index=pd.date_range("2024-01-01", periods=1),
         )
         prepared = provider._prepare_history_frame(
-            base_df, "6758.to", actual_ticker=None,
+            base_df,
+            "6758.to",
+            actual_ticker=None,
         )
         assert (prepared["ActualTicker"] == "6758.TO").all()
 

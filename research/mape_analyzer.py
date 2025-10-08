@@ -234,7 +234,9 @@ class ImprovedPredictor:
             return 0.0
 
     def test_improved_prediction(
-        self, symbols: List[str], prediction_days: int = 2,
+        self,
+        symbols: List[str],
+        prediction_days: int = 2,
     ) -> Dict:
         """改善された予測システムのテスト"""
         print(f"\n改善された予測システム v2.0 テスト（{prediction_days}日予測）")
@@ -266,7 +268,8 @@ class ImprovedPredictor:
 
                     # 改善された予測
                     predicted_return = self._predict_with_data(
-                        historical_data, prediction_days,
+                        historical_data,
+                        prediction_days,
                     )
 
                     results["predictions"].append(predicted_return)

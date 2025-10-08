@@ -58,7 +58,9 @@ class MultiTimeframeIntegrator:
         }
 
     def _analyze_timeframe(
-        self, data: pd.DataFrame, timeframe: str,
+        self,
+        data: pd.DataFrame,
+        timeframe: str,
     ) -> Dict[str, float]:
         """特定タイムフレームの分析"""
         if data.empty or len(data) < 10:
@@ -94,7 +96,9 @@ class MultiTimeframeIntegrator:
         current_price = data["Close"].iloc[-1]
 
         # トレンド強度
-        if (short_ma > long_ma and current_price > short_ma) or (short_ma < long_ma and current_price < short_ma):
+        if (short_ma > long_ma and current_price > short_ma) or (
+            short_ma < long_ma and current_price < short_ma
+        ):
             trend_strength = (current_price - long_ma) / long_ma
             return min(100, max(-100, trend_strength * 100))
         return 0.0

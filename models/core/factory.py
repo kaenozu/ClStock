@@ -29,7 +29,9 @@ class PredictorFactory:
 
     @classmethod
     def register_predictor(
-        cls, model_type: ModelType, predictor_class: Type[StockPredictor],
+        cls,
+        model_type: ModelType,
+        predictor_class: Type[StockPredictor],
     ):
         """予測器クラスの登録"""
         cls._registered_predictors[model_type] = predictor_class
@@ -68,7 +70,8 @@ class PredictorFactory:
         # デフォルト設定の作成
         if config is None:
             config = ModelConfiguration(
-                model_type=model_type, prediction_mode=PredictionMode.BALANCED,
+                model_type=model_type,
+                prediction_mode=PredictionMode.BALANCED,
             )
         else:
             config.model_type = model_type
@@ -185,7 +188,8 @@ class PredictorFactory:
 
     @classmethod
     def get_predictor_class(
-        cls, model_type: ModelType,
+        cls,
+        model_type: ModelType,
     ) -> Optional[Type[StockPredictor]]:
         """モデルタイプに対応する予測器クラスの取得"""
         return cls._registered_predictors.get(model_type)
@@ -215,7 +219,8 @@ class PredictorFactory:
             self.register_predictor(ModelType.ENSEMBLE, RefactoredEnsemblePredictor)
             self.register_predictor(ModelType.HYBRID, RefactoredHybridPredictor)
             self.register_predictor(
-                ModelType.DEEP_LEARNING, RefactoredDeepLearningPredictor,
+                ModelType.DEEP_LEARNING,
+                RefactoredDeepLearningPredictor,
             )
 
             self.logger.info("Default predictors registered successfully")

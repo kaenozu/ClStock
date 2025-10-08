@@ -13,7 +13,9 @@ class ConfigDict(dict):
         super().__init__(**kwargs)
 
 
-def Field(default: Any = ..., **kwargs: Any) -> Any:  # noqa: ANN401 - mimic pydantic signature
+def Field(
+    default: Any = ..., **kwargs: Any
+) -> Any:  # noqa: ANN401 - mimic pydantic signature
     return default
 
 

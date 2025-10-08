@@ -241,7 +241,10 @@ class TestCacheablePredictor:
         data = pd.DataFrame({"close": [100]})
 
         result = PredictionResult(
-            prediction=75.0, confidence=0.8, timestamp=datetime.now(), metadata={},
+            prediction=75.0,
+            confidence=0.8,
+            timestamp=datetime.now(),
+            metadata={},
         )
 
         predictor.cache_prediction("AAPL", data, result)
@@ -264,7 +267,10 @@ class TestCacheablePredictor:
         data = pd.DataFrame({"close": [100]})
 
         result = PredictionResult(
-            prediction=75.0, confidence=0.8, timestamp=datetime.now(), metadata={},
+            prediction=75.0,
+            confidence=0.8,
+            timestamp=datetime.now(),
+            metadata={},
         )
 
         # No cache hit

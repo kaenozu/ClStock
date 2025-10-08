@@ -187,7 +187,10 @@ class TestMLStockPredictor:
     @patch("models.core.MLStockPredictor.load_model")
     @patch("models.core.MLStockPredictor.data_provider")
     def test_predict_with_training_data(
-        self, mock_data_provider, mock_load_model, sample_stock_data,
+        self,
+        mock_data_provider,
+        mock_load_model,
+        sample_stock_data,
     ):
         """Test predict with valid training and data."""
         predictor = MLStockPredictor()
@@ -220,7 +223,10 @@ class TestMLStockPredictor:
 
         with patch.object(predictor, "predict") as mock_predict:
             mock_predict.return_value = PredictionResult(
-                prediction=80.0, confidence=0.9, timestamp=datetime.now(), metadata={},
+                prediction=80.0,
+                confidence=0.9,
+                timestamp=datetime.now(),
+                metadata={},
             )
 
             score = predictor.predict_score("AAPL")
@@ -232,7 +238,10 @@ class TestMLStockPredictor:
 
         with patch.object(predictor, "predict") as mock_predict:
             mock_predict.return_value = PredictionResult(
-                prediction=0.05, confidence=0.9, timestamp=datetime.now(), metadata={},
+                prediction=0.05,
+                confidence=0.9,
+                timestamp=datetime.now(),
+                metadata={},
             )
 
             return_rate = predictor.predict_return_rate("AAPL", days=5)
@@ -311,12 +320,18 @@ class TestEnsembleStockPredictor:
 
         model1 = Mock()
         model1.predict.return_value = PredictionResult(
-            prediction=70.0, confidence=0.8, timestamp=datetime.now(), metadata={},
+            prediction=70.0,
+            confidence=0.8,
+            timestamp=datetime.now(),
+            metadata={},
         )
 
         model2 = Mock()
         model2.predict.return_value = PredictionResult(
-            prediction=80.0, confidence=0.9, timestamp=datetime.now(), metadata={},
+            prediction=80.0,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            metadata={},
         )
 
         ensemble.add_model(model1, 0.6)
@@ -342,7 +357,10 @@ class TestEnsembleStockPredictor:
 
         model2 = Mock()
         model2.predict.return_value = PredictionResult(
-            prediction=80.0, confidence=0.9, timestamp=datetime.now(), metadata={},
+            prediction=80.0,
+            confidence=0.9,
+            timestamp=datetime.now(),
+            metadata={},
         )
 
         ensemble.add_model(model1, 0.6)

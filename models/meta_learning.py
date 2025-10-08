@@ -22,7 +22,9 @@ class MetaLearningOptimizer:
         self.best_model_for_symbol: Dict[str, str] = {}
 
     def extract_meta_features(
-        self, symbol: str, data: pd.DataFrame,
+        self,
+        symbol: str,
+        data: pd.DataFrame,
     ) -> Dict[str, float]:
         """Extract meta features that describe symbol specific characteristics."""
         if data.empty:
@@ -34,7 +36,8 @@ class MetaLearningOptimizer:
             ),
             "price_volatility": float(data["Close"].std() / data["Close"].mean()),
             "price_trend": float(
-                (data["Close"].iloc[-1] - data["Close"].iloc[0]) / data["Close"].iloc[0],
+                (data["Close"].iloc[-1] - data["Close"].iloc[0])
+                / data["Close"].iloc[0],
             ),
             "price_skewness": float(data["Close"].skew()),
             "price_kurtosis": float(data["Close"].kurtosis()),
@@ -63,7 +66,10 @@ class MetaLearningOptimizer:
         return "xgboost"
 
     def update_model_performance(
-        self, symbol: str, model_name: str, performance: float,
+        self,
+        symbol: str,
+        model_name: str,
+        performance: float,
     ) -> None:
         """Record model performance statistics and update preferred model."""
         history = self.model_performance_history.setdefault(symbol, {})
@@ -77,7 +83,8 @@ class MetaLearningOptimizer:
         }
         if recent_performances:
             self.best_model_for_symbol[symbol] = max(
-                recent_performances, key=recent_performances.get,
+                recent_performances,
+                key=recent_performances.get,
             )
 
     def create_symbol_profile(self, symbol: str, data: pd.DataFrame) -> Dict[str, Any]:
@@ -91,9 +98,9 @@ class MetaLearningOptimizer:
                     "price_momentum": 0.0,
                     "seasonal_factor": 1.0,
                     "sector_strength": 0.5,
-                    "current_price": float(data["Close"].iloc[-1])
-                    if not data.empty
-                    else 100.0,
+                    "current_price": (
+                        float(data["Close"].iloc[-1]) if not data.empty else 100.0
+                    ),
                 }
             else:
                 close = data["Close"].astype(float)
@@ -189,7 +196,10 @@ class MetaLearningOptimizer:
             return fallback
 
     def adapt_model_parameters(
-        self, symbol: str, symbol_profile: Dict[str, Any], base_params: Dict[str, Any],
+        self,
+        symbol: str,
+        symbol_profile: Dict[str, Any],
+        base_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Adapt base model parameters based on the symbol profile."""
         try:
@@ -267,7 +277,8 @@ class MetaLearningOptimizer:
             fallback = base_params.copy()
             fallback["adapted_prediction"] = base_params.get("prediction", 50.0) + 1.0
             fallback["adapted_confidence"] = min(
-                base_params.get("confidence", 0.5) + 0.05, 0.9,
+                base_params.get("confidence", 0.5) + 0.05,
+                0.9,
             )
             return fallback
 

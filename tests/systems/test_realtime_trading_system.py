@@ -90,7 +90,8 @@ class DummyDataProvider:
     def get_realtime_data(self, symbol: str):
         self.realtime_calls.append(symbol)
         return pd.DataFrame(
-            {"Close": [self.realtime_close]}, index=[datetime(2024, 1, 1, 10, 0)],
+            {"Close": [self.realtime_close]},
+            index=[datetime(2024, 1, 1, 10, 0)],
         )
 
 
@@ -139,7 +140,10 @@ class TestRiskManager:
         manager.current_capital = 400_000
 
         result = manager.calculate_position_size(
-            symbol="BBB", signal=1, confidence=0.846, current_price=500.0,
+            symbol="BBB",
+            signal=1,
+            confidence=0.846,
+            current_price=500.0,
         )
 
         assert result["size"] > 0, "Expected additional position below exposure limit"
@@ -149,7 +153,10 @@ class TestRiskManager:
         manager.current_capital = 20_000
 
         result = manager.calculate_position_size(
-            symbol="CCC", signal=1, confidence=0.423, current_price=2_000.0,
+            symbol="CCC",
+            signal=1,
+            confidence=0.423,
+            current_price=2_000.0,
         )
 
         assert result == {"size": 0, "reason": "最小単位未満"}
@@ -173,7 +180,10 @@ class TestRealTimeTradingSystemProcessSymbol:
         history = make_history()
         data_provider = DummyDataProvider(history, realtime_close=550.0)
         pattern = DummyPatternDetector(
-            signal=1, confidence=0.9, reason="dummy", price=550.0,
+            signal=1,
+            confidence=0.9,
+            reason="dummy",
+            price=550.0,
         )
         executor = DummyOrderExecutor(status=order_status)
 

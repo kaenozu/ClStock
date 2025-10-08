@@ -23,7 +23,9 @@ def mean_squared_error(y_true, y_pred):  # pragma: no cover - lightweight implem
     return float(np.mean((y_t - y_p) ** 2))
 
 
-def mean_absolute_error(y_true, y_pred):  # pragma: no cover - lightweight implementation
+def mean_absolute_error(
+    y_true, y_pred
+):  # pragma: no cover - lightweight implementation
     y_t, y_p = _to_arrays(y_true, y_pred)
     return float(np.mean(np.abs(y_t - y_p)))
 
