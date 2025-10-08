@@ -351,14 +351,14 @@ class ParallelStockPredictor(StockPredictor):
                 accuracy=0.0,  # Placeholder
                 timestamp=datetime.now(),
                 symbol=symbol,
-                model_type=self.model_type,
+                model_type=self.config.model_type,
             )
             for symbol, score in results.items()
         ]
 
     def get_model_info(self) -> Dict[str, Any]:
         return {
-            "model_type": self.model_type,
+            "model_type": self.config.model_type.value,
             "n_jobs": self.n_jobs,
             "is_trained": self.is_trained(),
         }
@@ -530,7 +530,7 @@ class UltraHighPerformancePredictor(StockPredictor):
 
     def get_model_info(self) -> Dict[str, Any]:
         return {
-            "model_type": self.model_type,
+            "model_type": self.config.model_type.value,
             "base_predictor_type": getattr(
                 self.base_predictor, "model_type", "unknown"
             ),

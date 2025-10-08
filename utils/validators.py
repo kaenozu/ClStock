@@ -240,6 +240,23 @@ def validate_symbols_list(symbols: List[str], max_count: int = 100) -> List[str]
     return unique_symbols
 
 
+def validate_currency_code(currency: str) -> str:
+    """通貨コードの検証"""
+
+    if not currency:
+        raise ValidationError("Currency code cannot be empty")
+
+    normalized = str(currency).strip().upper()
+
+    if len(normalized) != 3:
+        raise ValidationError("Currency code must be exactly 3 characters")
+
+    if not normalized.isalpha():
+        raise ValidationError("Currency code must contain only letters")
+
+    return normalized
+
+
 def validate_portfolio_allocations(
     allocations: Mapping[str, Union[int, float]],
     *,

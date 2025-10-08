@@ -7,6 +7,7 @@ from utils.validators import (
     ValidationError,
     sanitize_string,
     validate_api_key,
+    validate_currency_code,
     validate_portfolio_allocations,
     validate_date_range,
     validate_email,
@@ -288,3 +289,30 @@ class TestDateRangeValidation:
         """期間が長すぎる"""
         with pytest.raises(ValidationError):
             validate_date_range("2010-01-01", "2025-01-01")  # 15年
+
+
+class TestCurrencyCodeValidation:
+    """通貨コード検証のテスト"""
+
+    def test_valid_currency_codes(self):
+        """有効な通貨コード"""
+        assert validate_currency_code("usd") == "USD"
+        assert validate_currency_code("JPY") == "JPY"
+        assert validate_currency_code(" eur ") == "EUR"
+
+    def test_invalid_currency_codes(self):
+        """無効な通貨コード"""
+        with pytest.raises(ValidationError):
+            validate_currency_code("")
+
+        with pytest.raises(ValidationError):
+            validate_currency_code("US")  # 桁数不足
+
+        with pytest.raises(ValidationError):
+            validate_currency_code("USDE")  # 桁数超過
+
+        with pytest.raises(ValidationError):
+            validate_currency_code("US1")  # 数字含む
+
+        with pytest.raises(ValidationError):
+            validate_currency_code("US-")  # 許可されていない文字
