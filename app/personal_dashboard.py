@@ -6,10 +6,10 @@
 import os
 import sqlite3
 import sys
+from pathlib import Path
 from datetime import datetime
 from typing import Any, Dict, List
 
-import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -26,9 +26,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 app = FastAPI(title="ClStock Personal Dashboard", version="1.0.0")
 
+BASE_DIR = Path(__file__).resolve().parent
+
 # テンプレートとスタティックファイル設定
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 
 # カスタムフィルター追加
@@ -690,5 +692,7 @@ if __name__ == "__main__":
     print("ClStock Personal Dashboard (Enhanced) starting...")
     print("Access your dashboard at: http://localhost:8001")
     print("Features: 89% Precision System, Portfolio Management, Watchlist, New APIs")
+
+    import uvicorn
 
     uvicorn.run(app, host="127.0.0.1", port=8001, reload=False)
