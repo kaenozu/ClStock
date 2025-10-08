@@ -16,7 +16,7 @@ from data.stock_data import StockDataProvider
 
 # プロジェクトインポート
 from ..base.interfaces import PredictionResult, StockPredictor
-from ..ensemble.ensemble_predictor import EnsembleStockPredictor
+from ..ensemble.ensemble_predictor import RefactoredEnsemblePredictor
 from ..precision.precision_87_system import Precision87BreakthroughSystem
 from .adaptive_optimizer import AdaptivePerformanceOptimizer
 from .intelligent_cache import IntelligentPredictionCache
@@ -163,7 +163,7 @@ class HybridStockPredictor(StockPredictor):
         """サブシステムの初期化"""
         try:
             # 拡張アンサンブルシステム（高速）
-            self.enhanced_system = EnsembleStockPredictor(self.data_provider)
+            self.enhanced_system = RefactoredEnsemblePredictor(data_provider=self.data_provider)
             self.logger.info("Enhanced ensemble system initialized")
         except Exception as e:
             self.logger.error(f"Enhanced system initialization failed: {e!s}")

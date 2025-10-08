@@ -242,6 +242,14 @@ class RefactoredEnsemblePredictor:
         data_provider: Optional[StockDataProvider] = None,
         model_path: Optional[Path] = None,
     ) -> None:
+        """
+        Initialize the RefactoredEnsemblePredictor.
+
+        Args:
+            config (Optional[ModelConfiguration]): Model configuration.
+            data_provider (Optional[StockDataProvider]): Data provider instance.
+            model_path (Optional[Path]): Path to the model file.
+        """
         self.config = config or ModelConfiguration(model_type=ModelType.ENSEMBLE)
         self._data_provider = data_provider
         self.model_path = model_path or self.DEFAULT_MODEL_PATH

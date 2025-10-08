@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pandas as pd
+import urllib.error
 from config.settings import get_settings
 from utils.cache import get_cache
 from utils.exceptions import BatchDataFetchError, DataFetchError
@@ -116,9 +117,9 @@ class StockDataProvider:
     ) -> pd.DataFrame:
         """Fetch historical OHLCV data for *symbol*."""
         if start is not None or end is not None:
-            cache_key = f"stock::{symbol}::start_{start}::end_{end}"
+            cache_key = f"stock_{symbol}_start_{start}_end_{end}".replace(":", "_")
         else:
-            cache_key = f"stock::{symbol}::{period}"
+            cache_key = f"stock_{symbol}_{period}".replace(":", "_")
         cache = get_cache()
         cached = cache.get(cache_key)
         if isinstance(cached, pd.DataFrame) and not cached.empty:
@@ -613,6 +614,17 @@ class StockDataProvider:
                         ticker,
                         attempt,
                         max_attempts,
+                    )
+                except urllib.error.URLError as exc:  # pragma: no cover - depends on yfinance
+                    last_error = exc
+                    attempt_messages.append(f"{ticker} attempt {attempt}: {exc}")
+                    logger.debug(
+                        "yfinance attempt %d/%d for %s via %s failed: %s",
+                        attempt,
+                        max_attempts,
+                        symbol,
+                        ticker,
+                        exc,
                     )
                 except Exception as exc:  # pragma: no cover - depends on yfinance
                     last_error = exc

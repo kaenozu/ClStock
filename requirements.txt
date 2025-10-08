@@ -4,8 +4,6 @@
 #
 #    pip-compile requirements.in
 #
-appdirs==1.4.4
-    # via yfinance
 bandit==1.8.6
     # via -r requirements.in
 beautifulsoup4==4.13.4
@@ -17,15 +15,18 @@ black==24.10.0
 blinker==1.9.0
     # via flask
 certifi==2025.7.14
-    # via requests
+    # via
+    #   curl-cffi
+    #   requests
 cffi==1.17.1
-    # via cryptography
+    # via curl-cffi
 charset-normalizer==3.4.2
     # via requests
 click==8.2.1
     # via
     #   black
     #   flask
+    #   mkdocs
 cloudpickle==3.1.1
     # via
     #   gym
@@ -35,12 +36,14 @@ colorama==0.4.6
     # via
     #   bandit
     #   click
+    #   griffe
+    #   mkdocs
     #   pytest
 contourpy==1.3.2
     # via matplotlib
 coverage[toml]==7.10.0
     # via pytest-cov
-cryptography==42.0.8
+curl-cffi==0.13.0
     # via yfinance
 cycler==0.12.1
     # via matplotlib
@@ -60,14 +63,16 @@ frozendict==2.4.6
     # via yfinance
 fsspec==2025.7.0
     # via torch
+ghp-import==2.1.0
+    # via mkdocs
+griffe==1.14.0
+    # via mkdocstrings-python
 gym==0.26.2
     # via -r requirements.in
 gym-notices==0.1.0
     # via gym
 gymnasium==1.2.1
     # via stable-baselines3
-html5lib==1.1
-    # via yfinance
 idna==3.10
     # via requests
 importlib-metadata==8.7.0
@@ -79,18 +84,27 @@ itsdangerous==2.2.0
 jinja2==3.1.6
     # via
     #   flask
+    #   mkdocs
+    #   mkdocstrings
     #   torch
 kiwisolver==1.4.8
     # via matplotlib
 lxml==6.0.0
+    # via -r requirements.in
+markdown==3.9
     # via
-    #   -r requirements.in
-    #   yfinance
+    #   mkdocs
+    #   mkdocs-autorefs
+    #   mkdocstrings
+    #   pymdown-extensions
 markdown-it-py==3.0.0
     # via rich
 markupsafe==3.0.2
     # via
     #   jinja2
+    #   mkdocs
+    #   mkdocs-autorefs
+    #   mkdocstrings
     #   werkzeug
 matplotlib==3.10.3
     # via
@@ -101,6 +115,26 @@ mccabe==0.7.0
     # via flake8
 mdurl==0.1.2
     # via markdown-it-py
+mergedeep==1.3.4
+    # via
+    #   mkdocs
+    #   mkdocs-get-deps
+mkdocs==1.6.1
+    # via
+    #   mkdocs-autorefs
+    #   mkdocstrings
+mkdocs-autorefs==1.4.3
+    # via
+    #   mkdocstrings
+    #   mkdocstrings-python
+mkdocs-get-deps==0.2.0
+    # via mkdocs
+mkdocstrings[python]==0.30.1
+    # via
+    #   -r requirements.in
+    #   mkdocstrings-python
+mkdocstrings-python==1.18.2
+    # via mkdocstrings
 mpmath==1.3.0
     # via sympy
 multitasking==0.0.12
@@ -130,6 +164,7 @@ packaging==25.0
     # via
     #   black
     #   matplotlib
+    #   mkdocs
     #   plotly
     #   pytest
 pandas==2.2.3
@@ -141,19 +176,27 @@ pandas==2.2.3
 pathspec==0.12.1
     # via
     #   black
+    #   mkdocs
     #   mypy
 pbr==6.1.1
     # via stevedore
+peewee==3.18.2
+    # via yfinance
 pillow==11.3.0
     # via matplotlib
 platformdirs==4.3.8
-    # via black
+    # via
+    #   black
+    #   mkdocs-get-deps
+    #   yfinance
 plotly==5.15.0
     # via
     #   -r requirements.in
     #   dash
 pluggy==1.6.0
     # via pytest
+protobuf==6.32.1
+    # via yfinance
 pycodestyle==2.14.0
     # via flake8
 pycparser==2.22
@@ -162,6 +205,8 @@ pyflakes==3.4.0
     # via flake8
 pygments==2.19.2
     # via rich
+pymdown-extensions==10.16.1
+    # via mkdocstrings
 pyparsing==3.2.3
     # via matplotlib
 pytest==8.3.1
@@ -172,6 +217,7 @@ pytest-cov==5.0.0
     # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via
+    #   ghp-import
     #   matplotlib
     #   pandas
 pytz==2025.2
@@ -179,7 +225,14 @@ pytz==2025.2
     #   pandas
     #   yfinance
 pyyaml==6.0.2
-    # via bandit
+    # via
+    #   bandit
+    #   mkdocs
+    #   mkdocs-get-deps
+    #   pymdown-extensions
+    #   pyyaml-env-tag
+pyyaml-env-tag==1.1
+    # via mkdocs
 requests==2.32.4
     # via
     #   -r requirements.in
@@ -192,9 +245,7 @@ rich==14.0.0
 seaborn==0.13.2
     # via -r requirements.in
 six==1.17.0
-    # via
-    #   html5lib
-    #   python-dateutil
+    # via python-dateutil
 soupsieve==2.7
     # via beautifulsoup4
 stable-baselines3==2.7.0
@@ -222,13 +273,15 @@ tzdata==2025.2
     # via pandas
 urllib3==2.5.0
     # via requests
-webencodings==0.5.1
-    # via html5lib
+watchdog==6.0.0
+    # via mkdocs
+websockets==15.0.1
+    # via yfinance
 werkzeug==2.3.8
     # via
     #   dash
     #   flask
-yfinance==0.2.18
+yfinance==0.2.66
     # via -r requirements.in
 zipp==3.23.0
     # via importlib-metadata
