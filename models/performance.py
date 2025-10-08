@@ -311,7 +311,14 @@ class ParallelStockPredictor(StockPredictor):
         }
         from models.core import PredictionResult
 
-        return PredictionResult(prediction_score, confidence, datetime.now(), metadata, accuracy=0.0, symbol=symbol)
+        return PredictionResult(
+            prediction_score,
+            confidence,
+            datetime.now(),
+            metadata,
+            accuracy=0.0,
+            symbol=symbol,
+        )
 
     def get_confidence(self) -> float:
         getter = getattr(self.ensemble_predictor, "get_confidence", None)
