@@ -102,7 +102,9 @@ class SystemMonitor:
         self._shutdown_event.clear()
 
         self.monitor_thread = threading.Thread(
-            target=self._monitoring_loop, args=(interval_seconds,), daemon=True,
+            target=self._monitoring_loop,
+            args=(interval_seconds,),
+            daemon=True,
         )
         self.monitor_thread.start()
 
@@ -379,7 +381,9 @@ class SystemMonitor:
 
         # CPU使用率順でソート
         sorted_processes = sorted(
-            latest_processes.values(), key=lambda x: x.cpu_percent, reverse=True,
+            latest_processes.values(),
+            key=lambda x: x.cpu_percent,
+            reverse=True,
         )
 
         for proc in sorted_processes[:20]:  # トップ20

@@ -139,7 +139,8 @@ class TestAPIAuthentication:
 
         invalid_api_key = "invalid_api_token"
         credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer", credentials=invalid_api_key,
+            scheme="Bearer",
+            credentials=invalid_api_key,
         )
 
         with caplog.at_level(logging.WARNING):
@@ -333,7 +334,8 @@ class TestAPIEndpointSecurity:
         # 有効な認証でのテスト
         headers = {"Authorization": f"Bearer {TEST_DEV_KEY}"}
         response = self.client.get(
-            "/secure/stock/7203/data?period=1mo", headers=headers,
+            "/secure/stock/7203/data?period=1mo",
+            headers=headers,
         )
 
         if response.status_code == 200:
@@ -343,7 +345,9 @@ class TestAPIEndpointSecurity:
     @patch("api.secure_endpoints.verify_token")
     @patch("api.secure_endpoints.StockDataProvider")
     def test_secure_endpoint_unknown_symbol_returns_404(
-        self, mock_provider, mock_verify,
+        self,
+        mock_provider,
+        mock_verify,
     ):
         """未登録銘柄を要求した際に404を返すことを確認"""
         from utils.exceptions import DataFetchError
@@ -352,7 +356,8 @@ class TestAPIEndpointSecurity:
 
         mock_provider_instance = Mock()
         mock_provider_instance.get_stock_data.side_effect = DataFetchError(
-            "UNKNOWN", "Symbol not found",
+            "UNKNOWN",
+            "Symbol not found",
         )
         mock_provider.return_value = mock_provider_instance
 
@@ -397,7 +402,8 @@ class TestAPIEndpointSecurity:
         import pandas as pd
 
         mock_df = pd.DataFrame(
-            mock_data, index=pd.date_range("2023-01-01", periods=100),
+            mock_data,
+            index=pd.date_range("2023-01-01", periods=100),
         )
 
         mock_provider_instance = Mock()
@@ -416,7 +422,9 @@ class TestAPIEndpointSecurity:
     @patch("api.secure_endpoints.verify_token")
     @patch("api.secure_endpoints.StockDataProvider")
     def test_admin_only_endpoint_data_fetch_error_returns_not_found(
-        self, mock_provider, mock_verify,
+        self,
+        mock_provider,
+        mock_verify,
     ):
         """データ取得エラー時に404が返ることを検証"""
         from utils.exceptions import DataFetchError
@@ -425,7 +433,8 @@ class TestAPIEndpointSecurity:
 
         mock_provider_instance = Mock()
         mock_provider_instance.get_stock_data.side_effect = DataFetchError(
-            "7203", "No data available",
+            "7203",
+            "No data available",
         )
         mock_provider.return_value = mock_provider_instance
 
@@ -520,7 +529,8 @@ class TestInputValidation:
         headers = {"Authorization": f"Bearer {TEST_DEV_KEY}"}
         # 無効な期間
         response = self.client.get(
-            "/secure/stock/7203/data?period=invalid_period", headers=headers,
+            "/secure/stock/7203/data?period=invalid_period",
+            headers=headers,
         )
         assert response.status_code == 400  # Bad Request
 
@@ -532,7 +542,8 @@ class TestInputValidation:
         headers = {"Authorization": f"Bearer {TEST_DEV_KEY}"}
         # SQLインジェクション試行
         response = self.client.get(
-            "/secure/stock/7203'; DROP TABLE stocks; --/data", headers=headers,
+            "/secure/stock/7203'; DROP TABLE stocks; --/data",
+            headers=headers,
         )
         assert response.status_code == 400  # Bad Request
 
@@ -544,6 +555,7 @@ class TestInputValidation:
         headers = {"Authorization": f"Bearer {TEST_DEV_KEY}"}
         # XSS試行
         response = self.client.get(
-            "/secure/stock/<script>alert('xss')</script>/data", headers=headers,
+            "/secure/stock/<script>alert('xss')</script>/data",
+            headers=headers,
         )
         assert response.status_code in {400, 404}  # Bad Request or route rejection

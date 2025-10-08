@@ -30,7 +30,9 @@ class TargetUniverse:
 
     def __post_init__(self) -> None:  # pragma: no cover - simple dataclass wiring
         object.__setattr__(
-            self, "_by_code", {symbol.code: symbol for symbol in self.symbols},
+            self,
+            "_by_code",
+            {symbol.code: symbol for symbol in self.symbols},
         )
 
     @property
@@ -45,7 +47,9 @@ class TargetUniverse:
         return defaults or self.base_codes
 
     def format_codes(
-        self, codes: Iterable[str], suffix: str | None = None,
+        self,
+        codes: Iterable[str],
+        suffix: str | None = None,
     ) -> List[str]:
         """Format the given codes with the desired suffix (``.T`` by default)."""
         suffix = self.default_suffix if suffix is None else suffix
@@ -60,7 +64,10 @@ class TargetUniverse:
         return self.format_codes(self.base_codes, suffix=suffix)
 
     def variants_for(
-        self, code: str, *, suffixes: Sequence[str] | None = None,
+        self,
+        code: str,
+        *,
+        suffixes: Sequence[str] | None = None,
     ) -> List[str]:
         """Return the base code and formatted variants for the requested symbol."""
         base = self.to_base(code)
@@ -120,7 +127,9 @@ _TARGET_SYMBOLS: Tuple[TargetSymbol, ...] = (
     TargetSymbol("6098", "Recruit Holdings Co", "リクルートホールディングス"),
     TargetSymbol("9613", "NTT Data Corp", "NTTデータ"),
     TargetSymbol(
-        "8316", "Sumitomo Mitsui Financial Group", "三井住友フィナンシャルグループ",
+        "8316",
+        "Sumitomo Mitsui Financial Group",
+        "三井住友フィナンシャルグループ",
     ),
     TargetSymbol("8411", "Mizuho Financial Group", "みずほフィナンシャルグループ"),
     TargetSymbol("8604", "Nomura Holdings", "野村ホールディングス"),

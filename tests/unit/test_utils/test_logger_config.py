@@ -73,7 +73,9 @@ class TestLoggerConfig:
 
         # Mock the file existence
         with patch.object(
-            centralized_logger.centralized_log, "exists", return_value=True,
+            centralized_logger.centralized_log,
+            "exists",
+            return_value=True,
         ):
             logs = centralized_logger.get_recent_logs(hours=1, service_filter="TEST")
             # Should return the log line
@@ -92,7 +94,9 @@ class TestLoggerConfig:
 
         # Mock the file existence
         with patch.object(
-            centralized_logger.centralized_log, "exists", return_value=True,
+            centralized_logger.centralized_log,
+            "exists",
+            return_value=True,
         ):
             analysis = centralized_logger.analyze_log_patterns()
 

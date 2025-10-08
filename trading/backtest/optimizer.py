@@ -75,7 +75,8 @@ class BacktestOptimizer:
             return {}
 
     def _generate_parameter_combinations(
-        self, parameter_ranges: Dict[str, List[float]],
+        self,
+        parameter_ranges: Dict[str, List[float]],
     ) -> List[Dict[str, float]]:
         import itertools
 
@@ -98,13 +99,16 @@ class BacktestOptimizer:
         test_config = replace(
             base_config,
             precision_threshold=params.get(
-                "precision_threshold", base_config.precision_threshold,
+                "precision_threshold",
+                base_config.precision_threshold,
             ),
             confidence_threshold=params.get(
-                "confidence_threshold", base_config.confidence_threshold,
+                "confidence_threshold",
+                base_config.confidence_threshold,
             ),
             max_position_size=params.get(
-                "max_position_size", base_config.max_position_size,
+                "max_position_size",
+                base_config.max_position_size,
             ),
             target_symbols=base_config.target_symbols,
         )

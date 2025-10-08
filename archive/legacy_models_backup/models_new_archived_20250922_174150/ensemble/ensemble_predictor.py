@@ -117,7 +117,10 @@ class EnsembleStockPredictor(StockPredictor):
         return valid_symbols
 
     def _safe_model_operation(
-        self, operation_name: str, operation_func, fallback_value=None,
+        self,
+        operation_name: str,
+        operation_func,
+        fallback_value=None,
     ):
         """モデル操作の安全な実行"""
         try:
@@ -187,19 +190,27 @@ class EnsembleStockPredictor(StockPredictor):
 
         # Random Forest
         rf_model = RandomForestRegressor(
-            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1,
+            n_estimators=100,
+            max_depth=10,
+            random_state=42,
+            n_jobs=-1,
         )
         models_to_add.append(("random_forest", rf_model, 0.2))
 
         # Gradient Boosting
         gb_model = GradientBoostingRegressor(
-            n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42,
+            n_estimators=100,
+            max_depth=6,
+            learning_rate=0.1,
+            random_state=42,
         )
         models_to_add.append(("gradient_boost", gb_model, 0.15))
 
         # Neural Network
         nn_model = MLPRegressor(
-            hidden_layer_sizes=(100, 50), max_iter=500, random_state=42,
+            hidden_layer_sizes=(100, 50),
+            max_iter=500,
+            random_state=42,
         )
         models_to_add.append(("neural_network", nn_model, 0.05))
 
@@ -208,7 +219,9 @@ class EnsembleStockPredictor(StockPredictor):
             self.add_model(name, model, weight=weight)
 
     def train_ensemble(
-        self, symbols: List[str], target_column: str = "recommendation_score",
+        self,
+        symbols: List[str],
+        target_column: str = "recommendation_score",
     ):
         """アンサンブルモデルを訓練"""
         from config.settings import get_settings
@@ -313,7 +326,8 @@ class EnsembleStockPredictor(StockPredictor):
                 self.weights[name] = inverse_scores[name] / total_inverse
 
     def _ensemble_predict_from_predictions(
-        self, model_predictions: Dict[str, np.ndarray],
+        self,
+        model_predictions: Dict[str, np.ndarray],
     ) -> np.ndarray:
         """複数モデルの予測を重み付き平均"""
         weighted_sum = np.zeros_like(list(model_predictions.values())[0])
@@ -396,22 +410,26 @@ class EnsembleStockPredictor(StockPredictor):
         except ValueError as e:
             self.logger.error(f"Data validation error for {symbol}: {e!s}")
             return self._fallback_prediction(
-                symbol, error=f"データ検証エラー: {e!s}",
+                symbol,
+                error=f"データ検証エラー: {e!s}",
             )
         except KeyError as e:
             self.logger.error(f"Missing data key for {symbol}: {e!s}")
             return self._fallback_prediction(
-                symbol, error=f"データキーエラー: {e!s}",
+                symbol,
+                error=f"データキーエラー: {e!s}",
             )
         except RuntimeError as e:
             self.logger.error(f"Model execution error for {symbol}: {e!s}")
             return self._fallback_prediction(
-                symbol, error=f"モデル実行エラー: {e!s}",
+                symbol,
+                error=f"モデル実行エラー: {e!s}",
             )
         except Exception as e:
             self.logger.error(f"Unexpected error in predict for {symbol}: {e!s}")
             return self._fallback_prediction(
-                symbol, error=f"予期しないエラー: {e!s}",
+                symbol,
+                error=f"予期しないエラー: {e!s}",
             )
 
     def _fallback_prediction(self, symbol: str, error: str = None) -> PredictionResult:
@@ -433,7 +451,8 @@ class EnsembleStockPredictor(StockPredictor):
                     prediction = self.NEUTRAL_PREDICTION_VALUE
 
                 confidence = min(
-                    self.MAX_CONFIDENCE_RATIO, abs(trend) * self.CONFIDENCE_MULTIPLIER,
+                    self.MAX_CONFIDENCE_RATIO,
+                    abs(trend) * self.CONFIDENCE_MULTIPLIER,
                 )
             else:
                 prediction = self.NEUTRAL_PREDICTION_VALUE
@@ -558,7 +577,8 @@ class EnsembleStockPredictor(StockPredictor):
 
             # マルチタイムフレーム統合分析
             timeframe_analysis = self.timeframe_integrator.integrate_predictions(
-                symbol, self.data_provider,
+                symbol,
+                self.data_provider,
             )
 
             # 基本の特徴量ベース予測
@@ -639,7 +659,8 @@ class EnsembleStockPredictor(StockPredictor):
 
             # 特徴量を訓練時と同じ順序に調整
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0,
+                columns=self.feature_names,
+                fill_value=0,
             )
 
             # スケーリング
@@ -669,7 +690,9 @@ class EnsembleStockPredictor(StockPredictor):
             return 50.0
 
     def _calculate_features_optimized(
-        self, symbol: str, data: pd.DataFrame,
+        self,
+        symbol: str,
+        data: pd.DataFrame,
     ) -> pd.DataFrame:
         """最適化された特徴量計算（キャッシュ対応）"""
         # キャッシュキー生成（データのハッシュベース）
@@ -685,7 +708,8 @@ class EnsembleStockPredictor(StockPredictor):
         try:
             # 並列特徴量計算システムを使用
             features = self.parallel_calculator._calculate_single_symbol_features(
-                symbol, self.data_provider,
+                symbol,
+                self.data_provider,
             )
 
             if not features.empty:

@@ -50,7 +50,9 @@ class SelfSupervisedModel:
             return np.zeros((encoded.shape[0], np.prod(self.input_shape)))
         return encoded @ self.components_
 
-    def train(self, X_train: np.ndarray, epochs: int = 100, batch_size: int = 32) -> Any:
+    def train(
+        self, X_train: np.ndarray, epochs: int = 100, batch_size: int = 32
+    ) -> Any:
         del epochs, batch_size
         X_train = self.preprocess_data(X_train)
         X_train_flat = X_train.reshape(X_train.shape[0], -1)
@@ -101,7 +103,9 @@ class TemporalSelfSupervisedModel:
     def _flatten(self, X: np.ndarray) -> np.ndarray:
         array = np.asarray(X, dtype=float)
         if array.ndim != 3:
-            raise ValueError("入力は (samples, timesteps, features) である必要があります。")
+            raise ValueError(
+                "入力は (samples, timesteps, features) である必要があります。"
+            )
         return array.reshape(array.shape[0], -1)
 
     def _encode(self, X: np.ndarray) -> np.ndarray:
@@ -114,7 +118,9 @@ class TemporalSelfSupervisedModel:
             return np.zeros((encoded.shape[0], np.prod(self.input_shape)))
         return encoded @ self.components_
 
-    def train(self, X_train: np.ndarray, epochs: int = 100, batch_size: int = 32) -> Any:
+    def train(
+        self, X_train: np.ndarray, epochs: int = 100, batch_size: int = 32
+    ) -> Any:
         del epochs, batch_size
         X_flat = self._flatten(X_train)
         X_scaled = self.scaler.fit_transform(X_flat)
@@ -137,4 +143,3 @@ class TemporalSelfSupervisedModel:
         X_scaled = self.scaler.transform(X_flat)
         features = self._encode(X_scaled)
         return features
-

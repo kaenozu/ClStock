@@ -63,4 +63,3 @@ class Explanation(np.ndarray):
         obj.data = data
         obj.feature_names = feature_names
         return obj
-

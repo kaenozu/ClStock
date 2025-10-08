@@ -103,7 +103,9 @@ class TestFullAutoInvestmentSystemInitialisation:
             "full_auto_system.MarketSentimentAnalyzer",
         ) as mock_sentiment, patch(
             "full_auto_system.StrategyGenerator",
-        ) as mock_strategy, patch("full_auto_system.RiskManager") as mock_risk:
+        ) as mock_strategy, patch(
+            "full_auto_system.RiskManager"
+        ) as mock_risk:
             from full_auto_system import FullAutoInvestmentSystem
 
             system = FullAutoInvestmentSystem()
@@ -120,7 +122,8 @@ class TestFullAutoInvestmentSystemInitialisation:
 
 class TestPortfolioOptimizationHelper:
     def test_optimizer_helper_returns_selected_stocks_structure(
-        self, sample_processed_data,
+        self,
+        sample_processed_data,
     ):
         class _DynamicModule(types.ModuleType):
             def __init__(self, name: str) -> None:
@@ -146,6 +149,7 @@ class TestPortfolioOptimizationHelper:
                 self.dok_matrix = _DummyCSRMatrix  # type: ignore[attr-defined]
                 self.issparse = _dummy_issparse  # type: ignore[attr-defined]
                 self.linalg = _DynamicModule("scipy.sparse.linalg")
+
                 class _DummyLinearOperator:
                     pass
 
@@ -283,11 +287,17 @@ class TestPortfolioOptimizationHelper:
             },
         )
 
-        with module_patch, predictor_patch, patch("full_auto_system.StockDataProvider"), patch(
+        with module_patch, predictor_patch, patch(
+            "full_auto_system.StockDataProvider"
+        ), patch(
             "full_auto_system.HybridStockPredictor",
-        ), patch("full_auto_system.MarketSentimentAnalyzer"), patch(
+        ), patch(
+            "full_auto_system.MarketSentimentAnalyzer"
+        ), patch(
             "full_auto_system.StrategyGenerator",
-        ), patch("full_auto_system.RiskManager"), patch(
+        ), patch(
+            "full_auto_system.RiskManager"
+        ), patch(
             "full_auto_system.PortfolioBacktester",
         ) as mock_backtester:
             from full_auto_system import FullAutoInvestmentSystem
@@ -432,14 +442,19 @@ class TestStrategyGeneratorAdapter:
         )
 
         adapter = StrategyGeneratorAdapter(
-            generator=mock_generator, signal_generator=mock_signal_generator,
+            generator=mock_generator,
+            signal_generator=mock_signal_generator,
         )
 
         sentiment = {"sentiment_score": 0.25}
         predictions = {"predicted_price": 110.0}
 
         result = adapter.generate_strategy(
-            "AAA", sample_processed_data["AAA"], predictions, risk_assessment, sentiment,
+            "AAA",
+            sample_processed_data["AAA"],
+            predictions,
+            risk_assessment,
+            sentiment,
         )
 
         mock_generator.generate_momentum_strategy.assert_called_once()

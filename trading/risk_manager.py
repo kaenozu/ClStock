@@ -72,7 +72,9 @@ class DemoRiskManager:
     """
 
     def __init__(
-        self, initial_capital: float = 1000000, risk_limits: Optional[RiskLimit] = None,
+        self,
+        initial_capital: float = 1000000,
+        risk_limits: Optional[RiskLimit] = None,
     ):
         """Args:
         initial_capital: 初期資本
@@ -109,7 +111,9 @@ class DemoRiskManager:
         """現在資本と保有記録を更新する (新規ポジション約定時)."""
         position_value = max(quantity * price, 0.0)
         self.current_capital = max(self.current_capital - position_value, 0.0)
-        position = self.positions.setdefault(symbol, {"quantity": 0, "market_value": 0.0})
+        position = self.positions.setdefault(
+            symbol, {"quantity": 0, "market_value": 0.0}
+        )
         position["quantity"] += quantity
         position["market_value"] += position_value
 
@@ -120,11 +124,12 @@ class DemoRiskManager:
         position = self.positions.get(symbol)
         if position:
             position["quantity"] -= quantity
-            position["market_value"] = max(position["market_value"] - position_value, 0.0)
+            position["market_value"] = max(
+                position["market_value"] - position_value, 0.0
+            )
             if position["quantity"] <= 0:
                 self.positions.pop(symbol, None)
         self.current_capital = max(self.current_capital, 0.0)
-
 
     def can_open_position(
         self,
@@ -250,7 +255,8 @@ class DemoRiskManager:
 
             # 上限制限
             max_position_ratio = self._calculate_dynamic_position_limit(
-                confidence, precision,
+                confidence,
+                precision,
             )
             position_ratio = min(abs(adjusted_kelly), max_position_ratio)
 
@@ -345,7 +351,9 @@ class DemoRiskManager:
             return 0.0
 
     def calculate_expected_shortfall(
-        self, positions: Dict[str, Dict[str, Any]], confidence_level: float = 0.95,
+        self,
+        positions: Dict[str, Dict[str, Any]],
+        confidence_level: float = 0.95,
     ) -> float:
         """期待ショートフォール（CVaR）計算
 
@@ -447,7 +455,9 @@ class DemoRiskManager:
             return False
 
     def update_risk_metrics(
-        self, current_positions: Dict[str, Dict[str, Any]], daily_pnl: float,
+        self,
+        current_positions: Dict[str, Dict[str, Any]],
+        daily_pnl: float,
     ):
         """リスクメトリクス更新
 
@@ -563,7 +573,9 @@ class DemoRiskManager:
         self.risk_alerts.clear()
 
     def _calculate_dynamic_position_limit(
-        self, confidence: float, precision: float,
+        self,
+        confidence: float,
+        precision: float,
     ) -> float:
         """動的ポジション制限計算"""
         base_limit = self.risk_limits.max_position_size

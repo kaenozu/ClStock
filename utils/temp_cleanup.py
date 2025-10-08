@@ -48,7 +48,10 @@ class TempFileCleanup:
         return temp_dir
 
     def _cleanup_path(
-        self, path: str, remove_func: Callable[[str], None], description: str,
+        self,
+        path: str,
+        remove_func: Callable[[str], None],
+        description: str,
     ) -> bool:
         """Clean up a path using the provided removal function"""
         try:
@@ -129,7 +132,9 @@ class TempFileCleanup:
             logger.error(f"Error during old files cleanup: {e}")
 
     def cleanup_unnecessary_files(
-        self, base_dir: str, required_entries: Iterable[str],
+        self,
+        base_dir: str,
+        required_entries: Iterable[str],
     ) -> List[str]:
         """Remove files or directories in base_dir that are not required."""
         if not os.path.isdir(base_dir):
@@ -154,7 +159,9 @@ class TempFileCleanup:
         removed.sort()
         if removed:
             logger.info(
-                "Removed %d unnecessary entries from %s", len(removed), base_dir,
+                "Removed %d unnecessary entries from %s",
+                len(removed),
+                base_dir,
             )
         else:
             logger.debug("No unnecessary entries found in %s", base_dir)
@@ -189,6 +196,56 @@ class TempFileCleanup:
             )
 
         return removed_count
+
+    def cleanup_empty_dirs(self, base_dir: str, recursive: bool = True) -> List[str]:
+        """Remove empty directories within ``base_dir``.
+
+        Args:
+            base_dir: Directory whose empty subdirectories should be removed.
+            recursive: When ``True`` remove empty directories recursively. When
+                ``False`` only direct children of ``base_dir`` are considered.
+
+        Returns:
+            A sorted list of removed directory paths.
+        """
+        if not os.path.isdir(base_dir):
+            logger.debug("Skipped empty-dir cleanup for non-existent path: %s", base_dir)
+            return []
+
+        removed: List[str] = []
+
+        if recursive:
+            for root, dirs, files in os.walk(base_dir, topdown=False):
+                if root == base_dir:
+                    continue
+
+                if files:
+                    continue
+
+                # ``dirs`` may contain directories removed earlier in the loop.
+                if any(os.path.exists(os.path.join(root, entry)) for entry in dirs):
+                    continue
+
+                if not os.listdir(root):
+                    if self.cleanup_dir(root):
+                        removed.append(root)
+        else:
+            for entry in os.listdir(base_dir):
+                full_path = os.path.join(base_dir, entry)
+                if os.path.isdir(full_path) and not os.listdir(full_path):
+                    if self.cleanup_dir(full_path):
+                        removed.append(full_path)
+
+        removed.sort()
+
+        if removed:
+            logger.info(
+                "Removed %d empty directories from %s", len(removed), base_dir,
+            )
+        else:
+            logger.debug("No empty directories found in %s", base_dir)
+
+        return removed
 
 
 # Global instance

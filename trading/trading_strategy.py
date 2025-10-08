@@ -118,8 +118,10 @@ class TradingStrategy:
             # 87%精度システムで予測実行
             prediction_kwargs = {}
             if as_of is not None:
-                prediction_kwargs = {"end": as_of.strftime("%Y-%m-%d") }
-            prediction_result = self.precision_system.predict_with_87_precision(symbol, **prediction_kwargs)
+                prediction_kwargs = {"end": as_of.strftime("%Y-%m-%d")}
+            prediction_result = self.precision_system.predict_with_87_precision(
+                symbol, **prediction_kwargs
+            )
 
             if "error" in prediction_result:
                 self.logger.warning(
@@ -158,7 +160,10 @@ class TradingStrategy:
 
             # シグナルタイプ決定
             signal_type = self._determine_signal_type(
-                expected_return, confidence, accuracy, market_conditions,
+                expected_return,
+                confidence,
+                accuracy,
+                market_conditions,
             )
 
             if signal_type == SignalType.HOLD:
@@ -178,12 +183,19 @@ class TradingStrategy:
 
             # ストップロス・利確価格計算
             stop_loss_price, take_profit_price = self._calculate_exit_prices(
-                current_price, predicted_price, signal_type, confidence,
+                current_price,
+                predicted_price,
+                signal_type,
+                confidence,
             )
 
             # 推論理由生成
             reasoning = self._generate_reasoning(
-                symbol, accuracy, confidence, expected_return, market_conditions,
+                symbol,
+                accuracy,
+                confidence,
+                expected_return,
+                market_conditions,
             )
 
             signal = TradingSignal(
@@ -199,7 +211,8 @@ class TradingStrategy:
                 stop_loss_price=stop_loss_price,
                 take_profit_price=take_profit_price,
                 precision_87_achieved=prediction_result.get(
-                    "precision_87_achieved", False,
+                    "precision_87_achieved",
+                    False,
                 ),
             )
 
@@ -215,16 +228,22 @@ class TradingStrategy:
             self.logger.error(f"シグナル生成エラー {symbol}: {e}")
             return None
 
-    def _analyze_market_conditions(self, symbol: str, as_of: Optional[datetime] = None) -> MarketConditions:
+    def _analyze_market_conditions(
+        self, symbol: str, as_of: Optional[datetime] = None
+    ) -> MarketConditions:
         """市場環境分析"""
         try:
             # 履歴データ取得
             if as_of is not None:
                 historical_data = self.data_provider.get_stock_data(
-                    symbol, start=(as_of - timedelta(days=120)).strftime("%Y-%m-%d"), end=as_of.strftime("%Y-%m-%d")
+                    symbol,
+                    start=(as_of - timedelta(days=120)).strftime("%Y-%m-%d"),
+                    end=as_of.strftime("%Y-%m-%d"),
                 )
             else:
-                historical_data = self.data_provider.get_stock_data(symbol, period="3mo")
+                historical_data = self.data_provider.get_stock_data(
+                    symbol, period="3mo"
+                )
 
             if len(historical_data) < 20:
                 # デフォルト値を返す
@@ -430,7 +449,9 @@ class TradingStrategy:
         return " | ".join(reasons)
 
     def calculate_trading_costs(
-        self, position_value: float, signal_type: SignalType,
+        self,
+        position_value: float,
+        signal_type: SignalType,
     ) -> Dict[str, float]:
         """取引コスト計算"""
         commission = position_value * self.commission_rate
@@ -448,7 +469,10 @@ class TradingStrategy:
         }
 
     def evaluate_signal_performance(
-        self, signal: TradingSignal, actual_price: float, days_elapsed: int,
+        self,
+        signal: TradingSignal,
+        actual_price: float,
+        days_elapsed: int,
     ) -> Dict[str, Any]:
         """シグナル性能評価"""
         if signal.signal_type == SignalType.BUY:

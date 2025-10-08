@@ -32,7 +32,9 @@ class DeepLearningPredictor:
         self.model_path.mkdir(exist_ok=True)
 
     def prepare_sequences(
-        self, data: pd.DataFrame, target_col: str = "Close",
+        self,
+        data: pd.DataFrame,
+        target_col: str = "Close",
     ) -> Tuple[np.ndarray, np.ndarray]:
         """時系列データをシーケンスに変換"""
         # 特徴量とターゲット分離
@@ -75,7 +77,9 @@ class DeepLearningPredictor:
             )
 
             model.compile(
-                optimizer=Adam(learning_rate=0.001), loss="mse", metrics=["mae"],
+                optimizer=Adam(learning_rate=0.001),
+                loss="mse",
+                metrics=["mae"],
             )
             return model
 
@@ -92,7 +96,9 @@ class DeepLearningPredictor:
             def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0):
                 # Multi-head self-attention
                 x = layers.MultiHeadAttention(
-                    key_dim=head_size, num_heads=num_heads, dropout=dropout,
+                    key_dim=head_size,
+                    num_heads=num_heads,
+                    dropout=dropout,
                 )(inputs, inputs)
                 x = layers.Dropout(dropout)(x)
                 x = layers.LayerNormalization(epsilon=1e-6)(x)
@@ -111,7 +117,11 @@ class DeepLearningPredictor:
             # Multi-layer transformer
             for _ in range(3):
                 x = transformer_encoder(
-                    x, head_size=64, num_heads=4, ff_dim=128, dropout=0.3,
+                    x,
+                    head_size=64,
+                    num_heads=4,
+                    ff_dim=128,
+                    dropout=0.3,
                 )
 
             x = layers.GlobalAveragePooling1D(data_format="channels_first")(x)
@@ -134,7 +144,10 @@ class DeepLearningPredictor:
 
         # シーケンス次元を平坦化するためのシンプルモデル
         return RandomForestRegressor(
-            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1,
+            n_estimators=100,
+            max_depth=10,
+            random_state=42,
+            n_jobs=-1,
         )
 
     def train_deep_model(self, symbols: List[str]):

@@ -268,7 +268,9 @@ class MockRealTimeProvider(RealTimeDataProvider):
                         ),
                         content=f"{company_name}に関する重要なニュースが発表されました。",
                         symbols=[symbol],
-                        sentiment=random.choice(["positive", "negative", "neutral"]),  # nosec B311
+                        sentiment=random.choice(
+                            ["positive", "negative", "neutral"]
+                        ),  # nosec B311
                         impact_score=random.uniform(0.3, 1.0),  # nosec B311
                     )
 
@@ -322,7 +324,10 @@ class MockRealTimeProvider(RealTimeDataProvider):
             asks.append((price, volume))
 
         return OrderBookData(
-            symbol=symbol, timestamp=datetime.now(), bids=bids, asks=asks,
+            symbol=symbol,
+            timestamp=datetime.now(),
+            bids=bids,
+            asks=asks,
         )
 
     def _create_mock_index_data(self, index: str) -> IndexData:
@@ -367,7 +372,9 @@ class MockRealTimeProvider(RealTimeDataProvider):
         """モック過去データ取得"""
         # シンプルなモックデータを生成
         dates = pd.date_range(
-            start=datetime.now() - timedelta(days=30), end=datetime.now(), freq="D",
+            start=datetime.now() - timedelta(days=30),
+            end=datetime.now(),
+            freq="D",
         )
 
         base_price = self.symbol_prices.get(symbol, 1000.0)

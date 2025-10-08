@@ -19,7 +19,10 @@ def calculate_rsi(prices: pd.Series, window: int = 14) -> pd.Series:
 
 
 def calculate_macd(
-    prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9,
+    prices: pd.Series,
+    fast: int = 12,
+    slow: int = 26,
+    signal: int = 9,
 ) -> pd.DataFrame:
     """MACD計算"""
     try:
@@ -44,7 +47,9 @@ def calculate_macd(
 
 
 def calculate_bollinger_bands(
-    prices: pd.Series, window: int = 20, std_dev: float = 2,
+    prices: pd.Series,
+    window: int = 20,
+    std_dev: float = 2,
 ) -> pd.DataFrame:
     """ボリンジャーバンド計算"""
     try:
@@ -80,12 +85,16 @@ def calculate_stochastic(
         return pd.DataFrame({"%K": k_percent, "%D": d_percent})
     except Exception:
         return pd.DataFrame(
-            {"%K": [50] * len(close), "%D": [50] * len(close)}, index=close.index,
+            {"%K": [50] * len(close), "%D": [50] * len(close)},
+            index=close.index,
         )
 
 
 def calculate_williams_r(
-    high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14,
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    period: int = 14,
 ) -> pd.Series:
     """ウィリアムズ%R計算"""
     try:
@@ -99,7 +108,10 @@ def calculate_williams_r(
 
 
 def calculate_atr(
-    high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14,
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    period: int = 14,
 ) -> pd.Series:
     """Average True Range計算"""
     try:

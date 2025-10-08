@@ -65,7 +65,10 @@ def deterministic_time(monkeypatch):
 
 
 def _prediction_namespace(
-    value: float, confidence: float, accuracy: float, symbol: str,
+    value: float,
+    confidence: float,
+    accuracy: float,
+    symbol: str,
 ):
     return SimpleNamespace(
         prediction=value,
@@ -101,7 +104,9 @@ def test_compare_prediction_systems_returns_metrics_and_symbols(deterministic_ti
     )
 
     comparison = ite.compare_prediction_systems(
-        precision_system, enhanced_system, test_symbols,
+        precision_system,
+        enhanced_system,
+        test_symbols,
     )
 
     assert comparison["symbols"] == test_symbols

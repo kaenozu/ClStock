@@ -29,7 +29,9 @@ class DeepLearningPredictor(StockPredictor):
         self.feature_columns: List[str] = []
 
     def prepare_sequences(
-        self, data: pd.DataFrame, target_col: str = "Close",
+        self,
+        data: pd.DataFrame,
+        target_col: str = "Close",
     ) -> Tuple[np.ndarray, np.ndarray]:
         """時系列データをシーケンスに変換"""
         # 特徴量とターゲット分離
@@ -72,7 +74,9 @@ class DeepLearningPredictor(StockPredictor):
             )
 
             model.compile(
-                optimizer=Adam(learning_rate=0.001), loss="mse", metrics=["mae"],
+                optimizer=Adam(learning_rate=0.001),
+                loss="mse",
+                metrics=["mae"],
             )
             return model
         except ImportError:
@@ -88,7 +92,9 @@ class DeepLearningPredictor(StockPredictor):
             def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0):
                 # Multi-head self-attention
                 x = layers.MultiHeadAttention(
-                    key_dim=head_size, num_heads=num_heads, dropout=dropout,
+                    key_dim=head_size,
+                    num_heads=num_heads,
+                    dropout=dropout,
                 )(inputs, inputs)
                 x = layers.Dropout(dropout)(x)
                 x = layers.LayerNormalization(epsilon=1e-6)(x)
@@ -107,7 +113,11 @@ class DeepLearningPredictor(StockPredictor):
             # Multi-layer transformer
             for _ in range(3):
                 x = transformer_encoder(
-                    x, head_size=64, num_heads=4, ff_dim=128, dropout=0.3,
+                    x,
+                    head_size=64,
+                    num_heads=4,
+                    ff_dim=128,
+                    dropout=0.3,
                 )
 
             x = layers.GlobalAveragePooling1D(data_format="channels_first")(x)
@@ -194,7 +204,9 @@ class DeepLearningPredictor(StockPredictor):
             self._is_trained = False
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Deep learning prediction"""
         if not self.is_trained():
@@ -258,7 +270,8 @@ class DeepLearningPredictor(StockPredictor):
                 self.model.save(model_path / f"deep_{self.deep_model_type}_model.h5")
 
             joblib.dump(
-                self.scaler, model_path / f"deep_{self.deep_model_type}_scaler.joblib",
+                self.scaler,
+                model_path / f"deep_{self.deep_model_type}_scaler.joblib",
             )
             joblib.dump(
                 self.feature_columns,
@@ -338,7 +351,9 @@ class DQNReinforcementLearner(StockPredictor):
         }
 
     def extract_market_state(
-        self, symbol: str, historical_data: pd.DataFrame,
+        self,
+        symbol: str,
+        historical_data: pd.DataFrame,
     ) -> np.ndarray:
         """市場状態特徴量抽出"""
         try:
@@ -442,7 +457,9 @@ class DQNReinforcementLearner(StockPredictor):
         logger.info("DQN training completed (simplified implementation)")
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """DQN prediction"""
         try:
@@ -484,7 +501,9 @@ class DQNReinforcementLearner(StockPredictor):
             )
 
     def get_trading_signal(
-        self, symbol: str, historical_data: pd.DataFrame,
+        self,
+        symbol: str,
+        historical_data: pd.DataFrame,
     ) -> Dict[str, Any]:
         """取引シグナル生成 - 87%精度向上版"""
         try:
@@ -512,12 +531,14 @@ class DQNReinforcementLearner(StockPredictor):
             # DQN信頼度の強化計算
             base_confidence = float(q_max)
             volatility_adjustment = min(
-                market_volatility * 2, 0.2,
+                market_volatility * 2,
+                0.2,
             )  # ボラティリティボーナス
             trend_adjustment = min(trend_strength * 0.3, 0.15)  # トレンド強度ボーナス
 
             enhanced_confidence = min(
-                base_confidence + volatility_adjustment + trend_adjustment, 0.95,
+                base_confidence + volatility_adjustment + trend_adjustment,
+                0.95,
             )
 
             # アクション別の追加調整

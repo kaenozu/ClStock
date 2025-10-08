@@ -92,7 +92,9 @@ class BinaryDirectionPredictor:
         return 100 - (100 / (1 + rs))
 
     def create_binary_target(
-        self, data: pd.DataFrame, prediction_days: int = 5,
+        self,
+        data: pd.DataFrame,
+        prediction_days: int = 5,
     ) -> pd.Series:
         """バイナリターゲット（上昇=1, 下降=0）"""
         close = data["Close"]
@@ -106,7 +108,10 @@ class BinaryDirectionPredictor:
         return target
 
     def filter_significant_periods(
-        self, features: pd.DataFrame, target: pd.Series, data: pd.DataFrame,
+        self,
+        features: pd.DataFrame,
+        target: pd.Series,
+        data: pd.DataFrame,
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """有意な期間のみをフィルタリング"""
         close = data["Close"]
@@ -127,7 +132,9 @@ class BinaryDirectionPredictor:
         return features[valid_periods], target[valid_periods]
 
     def train_binary_classifier(
-        self, X: pd.DataFrame, y: pd.Series,
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
     ) -> Tuple[Dict, Dict]:
         """バイナリ分類器の訓練"""
         models = {
@@ -140,10 +147,15 @@ class BinaryDirectionPredictor:
                 class_weight="balanced",
             ),
             "gradient_boosting": GradientBoostingClassifier(
-                n_estimators=100, max_depth=5, learning_rate=0.1, random_state=42,
+                n_estimators=100,
+                max_depth=5,
+                learning_rate=0.1,
+                random_state=42,
             ),
             "logistic": LogisticRegression(
-                random_state=42, max_iter=200, class_weight="balanced",
+                random_state=42,
+                max_iter=200,
+                class_weight="balanced",
             ),
         }
 
@@ -207,7 +219,9 @@ class BinaryDirectionPredictor:
 
                 # 有意期間のフィルタリング
                 X_filtered, y_filtered = self.filter_significant_periods(
-                    features, target, data,
+                    features,
+                    target,
+                    data,
                 )
 
                 # クリーニング
@@ -244,12 +258,14 @@ class BinaryDirectionPredictor:
 
                 # モデル訓練
                 model_scores, trained_models = self.train_binary_classifier(
-                    X_train, y_train,
+                    X_train,
+                    y_train,
                 )
 
                 # ベストモデル選択
                 best_model_name = max(
-                    model_scores.keys(), key=lambda x: model_scores[x]["accuracy"],
+                    model_scores.keys(),
+                    key=lambda x: model_scores[x]["accuracy"],
                 )
                 best_model = trained_models[best_model_name]
 

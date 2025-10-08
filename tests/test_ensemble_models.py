@@ -128,7 +128,8 @@ class TestEnsembleStockPredictor:
     def test_conservative_mode(self):
         """保守的モードのテスト"""
         config = ModelConfiguration(
-            model_type=ModelType.ENSEMBLE, prediction_mode=PredictionMode.CONSERVATIVE,
+            model_type=ModelType.ENSEMBLE,
+            prediction_mode=PredictionMode.CONSERVATIVE,
         )
         predictor = RefactoredEnsemblePredictor(config)
 
@@ -137,7 +138,8 @@ class TestEnsembleStockPredictor:
     def test_aggressive_mode(self):
         """積極的モードのテスト"""
         config = ModelConfiguration(
-            model_type=ModelType.ENSEMBLE, prediction_mode=PredictionMode.AGGRESSIVE,
+            model_type=ModelType.ENSEMBLE,
+            prediction_mode=PredictionMode.AGGRESSIVE,
         )
         predictor = RefactoredEnsemblePredictor(config)
 

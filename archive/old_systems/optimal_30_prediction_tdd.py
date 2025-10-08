@@ -154,7 +154,8 @@ class Optimal30PredictionTDD:
     def calculate_confidence(self, score: float) -> float:
         """信頼度を計算"""
         confidence = min(
-            MAX_CONFIDENCE, abs(score - NEUTRAL_SCORE) * CONFIDENCE_MULTIPLIER,
+            MAX_CONFIDENCE,
+            abs(score - NEUTRAL_SCORE) * CONFIDENCE_MULTIPLIER,
         )
         return confidence
 
@@ -174,7 +175,9 @@ class Optimal30PredictionTDD:
             return None
 
     def _create_prediction_result(
-        self, symbol: str, stock_data: pd.DataFrame,
+        self,
+        symbol: str,
+        stock_data: pd.DataFrame,
     ) -> Dict[str, Any]:
         """予測結果の作成"""
         prediction_score = self.predict_score(symbol)
@@ -245,7 +248,8 @@ class Optimal30PredictionTDD:
         if PRODUCTION_MODE and self.data_provider:
             try:
                 stock_data = self.data_provider.get_stock_data(
-                    symbol, DEFAULT_DATA_PERIOD,
+                    symbol,
+                    DEFAULT_DATA_PERIOD,
                 )
                 if stock_data is not None and not stock_data.empty:
                     return stock_data

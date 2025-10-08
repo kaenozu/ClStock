@@ -236,7 +236,10 @@ class BaseStockPredictor(StockPredictor):
         }
 
     def _create_fallback_result(
-        self, symbol: str, execution_time: float, error: str,
+        self,
+        symbol: str,
+        execution_time: float,
+        error: str,
     ) -> PredictionResult:
         """フォールバック結果作成"""
         return PredictionResult(

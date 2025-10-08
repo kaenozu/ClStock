@@ -17,7 +17,8 @@ def dummy_settings(tmp_path):
 def override_dependencies(monkeypatch, dummy_settings, fastapi_dependency_stubs):
     monkeypatch.setattr("app.personal_dashboard.get_settings", lambda: dummy_settings)
     monkeypatch.setattr(
-        "app.personal_dashboard.StockDataProvider", lambda: SimpleNamespace(),
+        "app.personal_dashboard.StockDataProvider",
+        lambda: SimpleNamespace(),
     )
 
 
@@ -29,7 +30,8 @@ def personal_dashboard(fastapi_dependency_stubs):
 
 
 def test_get_recent_predictions_accepts_days_parameter(
-    dummy_settings, personal_dashboard,
+    dummy_settings,
+    personal_dashboard,
 ):
     dashboard = personal_dashboard
 

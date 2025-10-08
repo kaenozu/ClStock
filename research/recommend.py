@@ -63,7 +63,10 @@ async def main():
         description="ClStock - 中期的な推奨銘柄予想システム",
     )
     parser.add_argument(
-        "--top", type=int, default=5, help="表示する推奨銘柄の上位N件 (デフォルト: 5)",
+        "--top",
+        type=int,
+        default=5,
+        help="表示する推奨銘柄の上位N件 (デフォルト: 5)",
     )
     parser.add_argument("--symbol", type=str, help="特定の銘柄コードの推奨情報を表示")
     parser.add_argument("--list", action="store_true", help="利用可能な銘柄一覧を表示")

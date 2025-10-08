@@ -210,7 +210,8 @@ class IntelligentPredictionCache:
         """自動クリーンアップスレッドを開始"""
         if self.auto_cleanup_enabled and self.cleanup_thread is None:
             self.cleanup_thread = threading.Thread(
-                target=self._cleanup_worker, daemon=True,
+                target=self._cleanup_worker,
+                daemon=True,
             )
             self.cleanup_thread.start()
             self.logger.info("Automatic cache cleanup thread started")
@@ -293,7 +294,10 @@ class IntelligentPredictionCache:
         return removed_count
 
     def get_cache_key(
-        self, symbol: str, mode: PredictionMode, data_hash: str = None,
+        self,
+        symbol: str,
+        mode: PredictionMode,
+        data_hash: str = None,
     ) -> str:
         """キャッシュキー生成"""
         if data_hash is None:
@@ -309,7 +313,9 @@ class IntelligentPredictionCache:
         return hashlib.sha256(hash_input.encode()).hexdigest()[:8]
 
     def get_cached_prediction(
-        self, symbol: str, mode: PredictionMode,
+        self,
+        symbol: str,
+        mode: PredictionMode,
     ) -> Optional[PredictionResult]:
         """キャッシュから予測結果取得"""
         cache_key = self.get_cache_key(symbol, mode)
@@ -338,7 +344,10 @@ class IntelligentPredictionCache:
         return None
 
     def cache_prediction(
-        self, symbol: str, mode: PredictionMode, result: PredictionResult,
+        self,
+        symbol: str,
+        mode: PredictionMode,
+        result: PredictionResult,
     ):
         """予測結果をキャッシュ"""
         cache_key = self.get_cache_key(symbol, mode)

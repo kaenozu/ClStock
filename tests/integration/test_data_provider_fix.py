@@ -43,7 +43,9 @@ def stub_yfinance(monkeypatch):
 
     monkeypatch.setattr(StockDataProvider, "_download_via_yfinance", _fake_download)
     monkeypatch.setattr(
-        StockDataProvider, "_should_use_local_first", lambda self, symbol: False,
+        StockDataProvider,
+        "_should_use_local_first",
+        lambda self, symbol: False,
     )
 
 

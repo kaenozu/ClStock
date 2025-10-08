@@ -4,7 +4,10 @@ from logging.handlers import RotatingFileHandler
 
 
 def setup_logging(
-    log_file="app.log", level=logging.INFO, max_bytes=10 * 1024 * 1024, backup_count=5,
+    log_file="app.log",
+    level=logging.INFO,
+    max_bytes=10 * 1024 * 1024,
+    backup_count=5,
 ):
     """アプリケーションのロギングを設定する。
 
@@ -42,7 +45,10 @@ def setup_logging(
 
     # ファイルハンドラの設定 (ローテーション機能付き)
     file_handler = RotatingFileHandler(
-        log_file, maxBytes=max_bytes, backupCount=backup_count, encoding="utf-8",
+        log_file,
+        maxBytes=max_bytes,
+        backupCount=backup_count,
+        encoding="utf-8",
     )
     file_handler.setLevel(level)
     file_handler.setFormatter(formatter)

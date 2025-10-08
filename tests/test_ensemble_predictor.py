@@ -12,10 +12,13 @@ from data.stock_data import StockDataProvider
 @pytest.fixture
 def mock_stock_data_provider():
     mock = MagicMock()
-    mock.get_stock_data.return_value = pd.DataFrame({
-        'Close': np.random.rand(100) * 100,
-        'Volume': np.random.randint(1000, 10000, 100)
-    }, index=pd.to_datetime(pd.date_range(start='2023-01-01', periods=100)))
+    mock.get_stock_data.return_value = pd.DataFrame(
+        {
+            "Close": np.random.rand(100) * 100,
+            "Volume": np.random.randint(1000, 10000, 100),
+        },
+        index=pd.to_datetime(pd.date_range(start="2023-01-01", periods=100)),
+    )
     return mock
 
 
@@ -33,19 +36,27 @@ class TestEnsembleStockPredictor:
     def test_train_ensemble(self, mock_stock_data_provider):
         """アンサンブルモデル訓練のテスト"""
         # Mock MLStockPredictor to avoid actual data fetching and complex training
-        with patch('models.ml_stock_predictor.MLStockPredictor') as MockMLPredictor:
+        with patch("models.ml_stock_predictor.MLStockPredictor") as MockMLPredictor:
             mock_ml_predictor_instance = MockMLPredictor.return_value
             mock_ml_predictor_instance.prepare_dataset.return_value = (
                 pd.DataFrame(np.random.rand(100, 10)),  # features
-                pd.DataFrame({'recommendation_score': np.random.rand(100)}),  # targets_reg
-                pd.DataFrame({'class_target': np.random.randint(0, 2, 100)})  # targets_cls
+                pd.DataFrame(
+                    {"recommendation_score": np.random.rand(100)}
+                ),  # targets_reg
+                pd.DataFrame(
+                    {"class_target": np.random.randint(0, 2, 100)}
+                ),  # targets_cls
             )
-            mock_ml_predictor_instance.prepare_features.return_value = pd.DataFrame(np.random.rand(1, 10))
+            mock_ml_predictor_instance.prepare_features.return_value = pd.DataFrame(
+                np.random.rand(1, 10)
+            )
 
             ensemble = EnsembleStockPredictor()
             ensemble.data_provider = mock_stock_data_provider  # Inject mock
             ensemble.prepare_ensemble_models()
-            ensemble.train_ensemble(symbols=["7203"], target_column="recommendation_score")
+            ensemble.train_ensemble(
+                symbols=["7203"], target_column="recommendation_score"
+            )
 
             assert ensemble.is_trained
             assert len(ensemble.models) > 0

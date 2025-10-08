@@ -72,20 +72,27 @@ class APIRouter:
         self.routes: List[_Route] = []
 
     def add_api_route(
-        self, path: str, endpoint: Callable[..., Any], methods: Optional[Iterable[str]] = None
+        self,
+        path: str,
+        endpoint: Callable[..., Any],
+        methods: Optional[Iterable[str]] = None,
     ) -> None:
         methods = tuple(m.upper() for m in (methods or ["GET"]))
         regex, params = _compile_path(path)
         self.routes.append(_Route(methods, path, endpoint, regex, params))
 
-    def get(self, path: str, **_: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    def get(
+        self, path: str, **_: Any
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             self.add_api_route(path, func, methods=["GET"])
             return func
 
         return decorator
 
-    def post(self, path: str, **_: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    def post(
+        self, path: str, **_: Any
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             self.add_api_route(path, func, methods=["POST"])
             return func
@@ -101,14 +108,21 @@ class FastAPI:
         self.routes.extend(router.routes)
 
     def add_api_route(
-        self, path: str, endpoint: Callable[..., Any], methods: Optional[Iterable[str]] = None
+        self,
+        path: str,
+        endpoint: Callable[..., Any],
+        methods: Optional[Iterable[str]] = None,
     ) -> None:
         router = APIRouter()
         router.add_api_route(path, endpoint, methods)
         self.include_router(router)
 
-    def middleware(self, _type: str) -> Callable[[Callable[..., Awaitable[Any]]], Callable[..., Awaitable[Any]]]:
-        def decorator(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    def middleware(
+        self, _type: str
+    ) -> Callable[[Callable[..., Awaitable[Any]]], Callable[..., Awaitable[Any]]]:
+        def decorator(
+            func: Callable[..., Awaitable[Any]]
+        ) -> Callable[..., Awaitable[Any]]:
             # ミドルウェアはテストでは使用しないため、そのまま返す
             return func
 
@@ -116,7 +130,12 @@ class FastAPI:
 
 
 class _JSONResponse:
-    def __init__(self, data: Any, status_code: int = 200, headers: Optional[Dict[str, str]] = None):
+    def __init__(
+        self,
+        data: Any,
+        status_code: int = 200,
+        headers: Optional[Dict[str, str]] = None,
+    ):
         self._data = data
         self.status_code = status_code
         self.headers: Dict[str, str] = headers or {}
@@ -132,7 +151,9 @@ class TestClient:
     def get(self, url: str, headers: Optional[Dict[str, str]] = None):
         return self._request("GET", url, headers=headers)
 
-    def post(self, url: str, json: Any = None, headers: Optional[Dict[str, str]] = None):
+    def post(
+        self, url: str, json: Any = None, headers: Optional[Dict[str, str]] = None
+    ):
         return self._request("POST", url, json=json, headers=headers)
 
     def _request(

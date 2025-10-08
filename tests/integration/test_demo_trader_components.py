@@ -45,7 +45,9 @@ def stub_stock_data_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
 
     models_new_precision_package = types.ModuleType("models_new.precision")
     precision_spec = ModuleSpec(
-        name="models_new.precision", loader=None, is_package=True,
+        name="models_new.precision",
+        loader=None,
+        is_package=True,
     )
     precision_spec.submodule_search_locations = []
     models_new_precision_package.__spec__ = precision_spec
@@ -67,10 +69,14 @@ def stub_stock_data_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
 
     monkeypatch.setitem(sys.modules, "models_new", models_new_module)
     monkeypatch.setitem(
-        sys.modules, "models_new.precision", models_new_precision_package,
+        sys.modules,
+        "models_new.precision",
+        models_new_precision_package,
     )
     monkeypatch.setitem(
-        sys.modules, "models_new.precision.precision_87_system", precision_module,
+        sys.modules,
+        "models_new.precision.precision_87_system",
+        precision_module,
     )
 
     models_new_module.precision = models_new_precision_package
@@ -84,7 +90,8 @@ def stub_stock_data_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     scipy_sparse_module = types.ModuleType("scipy.sparse")
 
     def _identity(
-        *args: object, **kwargs: object,
+        *args: object,
+        **kwargs: object,
     ) -> None:  # pragma: no cover - trivial stub
         return None
 

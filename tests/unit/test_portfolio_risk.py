@@ -19,7 +19,9 @@ def test_add_position_rejects_when_cash_insufficient():
 def test_risk_manager_register_updates_capital_and_positions():
     risk_manager = DemoRiskManager(initial_capital=1_000)
 
-    assert risk_manager.can_open_position("AAA", position_size=80.0, confidence=0.8, precision=87.0)
+    assert risk_manager.can_open_position(
+        "AAA", position_size=80.0, confidence=0.8, precision=87.0
+    )
 
     risk_manager.register_trade_open("AAA", quantity=4, price=100.0)
     assert math.isclose(risk_manager.current_capital, 600.0)

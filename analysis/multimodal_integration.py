@@ -120,7 +120,8 @@ class MultimodalIntegrator:
 
         # 欠損値を平均で埋める
         scaled_fundamentals = np.nan_to_num(
-            scaled_fundamentals, nan=np.nanmean(scaled_fundamentals),
+            scaled_fundamentals,
+            nan=np.nanmean(scaled_fundamentals),
         )
 
         return scaled_fundamentals
@@ -135,7 +136,8 @@ class MultimodalIntegrator:
 
         # 欠損値を中央値で埋める
         scaled_sentiment = np.nan_to_num(
-            scaled_sentiment, nan=np.nanmedian(scaled_sentiment),
+            scaled_sentiment,
+            nan=np.nanmedian(scaled_sentiment),
         )
 
         return scaled_sentiment

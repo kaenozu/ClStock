@@ -100,7 +100,9 @@ def start_demo_trading():
                     current_price = None
                     try:
                         current_data = data_provider.get_stock_data(
-                            symbol, start=trade_date_str, end=trade_date_str,
+                            symbol,
+                            start=trade_date_str,
+                            end=trade_date_str,
                         )
                         if not current_data.empty:
                             current_price = float(current_data["Close"].iloc[-1])
@@ -122,7 +124,8 @@ def start_demo_trading():
                     if achieved_87 and confidence > 0.7 and prediction < current_price:
                         # 高精度・高信頼度かつ予測より価格が高かった場合は、買いと解釈
                         position_size = min(
-                            100000, portfolio["cash"] * 0.1,
+                            100000,
+                            portfolio["cash"] * 0.1,
                         )  # 最大10万円または資金の10%
 
                         if (

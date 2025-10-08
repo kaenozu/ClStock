@@ -25,14 +25,13 @@ from full_auto_system import (
 
 
 class BacktestResult:
-    """バックテスト結果を格納するクラス
-    """
+    """バックテスト結果を格納するクラス"""
 
     def __init__(self):
         self.trades: List[Dict] = []  # 取引履歴
-        self.portfolio_values: List[
-            Tuple[datetime, float]
-        ] = []  # ポートフォリオの価値推移
+        self.portfolio_values: List[Tuple[datetime, float]] = (
+            []
+        )  # ポートフォリオの価値推移
         self.initial_capital: float = 0.0
         self.final_capital: float = 0.0
         self.total_return: float = 0.0
@@ -45,8 +44,7 @@ class BacktestResult:
 
 
 class BacktestEngine:
-    """バックテストエンジンクラス
-    """
+    """バックテストエンジンクラス"""
 
     def __init__(self, initial_capital: Optional[float] = None):
         settings = get_settings()
@@ -55,10 +53,12 @@ class BacktestEngine:
         )
         self.current_capital = self.initial_capital
         self.holdings: Dict[
-            str, int,
+            str,
+            int,
         ] = {}  # 株の保有数 {'000001': 100, '000002': 200, ...}
         self.stock_data_cache: Dict[
-            str, pd.DataFrame,
+            str,
+            pd.DataFrame,
         ] = {}  # 各銘柄の株価データキャッシュ
         self.transaction_history: List[Dict] = []
         self.portfolio_history: List[Tuple[datetime, float]] = []
@@ -76,7 +76,10 @@ class BacktestEngine:
         self.default_score_threshold = settings.backtest.default_score_threshold
 
     def load_stock_data(
-        self, symbol: str, start_date: str, end_date: str,
+        self,
+        symbol: str,
+        start_date: str,
+        end_date: str,
     ) -> pd.DataFrame:
         """指定された期間の株価データを読み込む
         start と end パラメータを使用して、正確な期間のデータを取得する
@@ -187,8 +190,7 @@ class BacktestEngine:
             )
 
     def calculate_portfolio_value(self, current_prices: Dict[str, float]) -> float:
-        """現在の株価に基づいてポートフォリオの価値を計算する
-        """
+        """現在の株価に基づいてポートフォリオの価値を計算する"""
         total_value = self.current_capital
         for symbol, quantity in self.holdings.items():
             if symbol in current_prices:
@@ -265,8 +267,7 @@ class BacktestEngine:
                             prev_day_data = self.stock_data_cache[symbol]
                             # current_dateより前のデータを取得
                             prev_data = prev_day_data[
-                                prev_day_data.index
-                                < current_date.strftime("%Y-%m-%d")
+                                prev_day_data.index < current_date.strftime("%Y-%m-%d")
                             ]
                             if not prev_data.empty:
                                 prev_price = prev_data["Close"].iloc[-1]
@@ -327,7 +328,9 @@ class BacktestEngine:
 
                                 # 2. リスク分析
                                 risk_analysis = self.risk_manager.analyze_risk(
-                                    symbol, data, predictions,
+                                    symbol,
+                                    data,
+                                    predictions,
                                 )
                                 # 3. 感情分析
                                 sentiment_result = (
@@ -346,10 +349,12 @@ class BacktestEngine:
                                     # 戦略に基づいてアクションを決定
                                     # 例: target_price が current_price より高い場合は BUY、低い場合は SELL
                                     entry_price = strategy.get(
-                                        "entry_price", current_price,
+                                        "entry_price",
+                                        current_price,
                                     )
                                     target_price = strategy.get(
-                                        "target_price", current_price,
+                                        "target_price",
+                                        current_price,
                                     )
                                     # 単純化: target_price が entry_price より高い場合は買い、低い場合は売り
                                     # また、現在価格がエントリ価格より低い場合に買いとかも考えられる
@@ -397,8 +402,7 @@ class BacktestEngine:
             current_date += pd.Timedelta(days=1)
 
     def calculate_metrics(self) -> BacktestResult:
-        """バックテスト結果の評価指標を計算する
-        """
+        """バックテスト結果の評価指標を計算する"""
         result = BacktestResult()
         result.initial_capital = self.initial_capital
         if self.portfolio_history:
@@ -484,7 +488,8 @@ class BacktestEngine:
                         buy_item = buy_deque[0]
 
                         matched_quantity = min(
-                            sell_item["quantity"], buy_item["quantity"],
+                            sell_item["quantity"],
+                            buy_item["quantity"],
                         )
                         # 注: 負の quantity にならないように、0 以下になった場合は pop する前に確認する
                         sell_item["quantity"] -= matched_quantity
@@ -513,8 +518,7 @@ class BacktestEngine:
         return result
 
     def plot_results(self, result: BacktestResult):
-        """バックテスト結果をプロットする
-        """
+        """バックテスト結果をプロットする"""
         if plt is None:
             print("matplotlib not available, skipping plot.")
             return
@@ -562,8 +566,7 @@ class BacktestEngine:
         plt.show()
 
     def generate_summary_report(self, result: BacktestResult):
-        """バックテスト結果の要約レポートを生成する
-        """
+        """バックテスト結果の要約レポートを生成する"""
         print("=" * 50)
         print("BACKTEST SUMMARY REPORT")
         print("=" * 50)
@@ -586,8 +589,7 @@ class BacktestEngine:
         period_start: str,
         period_end: str,
     ) -> BacktestResult:
-        """バックテストを実行して結果を返す
-        """
+        """バックテストを実行して結果を返す"""
         print(
             f"Starting backtest for symbols {symbols_to_trade} from {period_start} to {period_end}",
         )

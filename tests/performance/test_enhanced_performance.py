@@ -60,14 +60,17 @@ class _DummyPredictor:
         return SimpleNamespace(results=predictions, duration=duration)
 
     def _calculate_features_optimized(
-        self, symbol: str, data: pd.DataFrame,
+        self,
+        symbol: str,
+        data: pd.DataFrame,
     ) -> Dict[str, float]:
         self.feature_cache.add(1)
         return {"mean_close": float(data["Close"].mean())}
 
 
 def _single_prediction_metrics(
-    predictor: _DummyPredictor, symbols: List[str],
+    predictor: _DummyPredictor,
+    symbols: List[str],
 ) -> Dict[str, Any]:
     timings: List[float] = []
     for symbol in symbols:
@@ -84,7 +87,8 @@ def _single_prediction_metrics(
 
 
 def _batch_prediction_metrics(
-    predictor: _DummyPredictor, symbols: List[str],
+    predictor: _DummyPredictor,
+    symbols: List[str],
 ) -> Dict[str, Any]:
     outcome = predictor.predict_batch(symbols)
     duration = max(outcome.duration, 1e-6)
@@ -96,7 +100,8 @@ def _batch_prediction_metrics(
 
 
 def _cache_effectiveness_metrics(
-    predictor: _DummyPredictor, symbols: List[str],
+    predictor: _DummyPredictor,
+    symbols: List[str],
 ) -> Dict[str, Any]:
     predictor.prediction_cache = _DummyCache()
     for symbol in symbols:

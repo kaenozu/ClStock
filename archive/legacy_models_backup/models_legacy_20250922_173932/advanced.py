@@ -22,7 +22,8 @@ class AdvancedEnsemblePredictor(EnsemblePredictor):
         self.dynamic_weighting = True
 
     def calculate_dynamic_weights(
-        self, performance_history: Dict[str, List[float]],
+        self,
+        performance_history: Dict[str, List[float]],
     ) -> Dict[str, float]:
         """パフォーマンス履歴に基づく動的重み計算"""
         weights = {}
@@ -57,7 +58,9 @@ class AdvancedEnsemblePredictor(EnsemblePredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """Advanced ensemble prediction with dynamic weighting"""
         if not self.is_trained():
@@ -128,7 +131,9 @@ class AdvancedPrecisionBreakthrough87System(StockPredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """87%精度を目指す予測"""
         if not self.is_trained():
@@ -186,7 +191,9 @@ class Precision87BreakthroughSystem(StockPredictor):
         self._is_trained = True
 
     def predict(
-        self, symbol: str, data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame] = None,
     ) -> PredictionResult:
         """87%精度を目指すシンプル予測"""
         if not self.is_trained():

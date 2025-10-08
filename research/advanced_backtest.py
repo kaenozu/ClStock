@@ -45,7 +45,9 @@ class AdvancedBacktester:
         return smape
 
     def calculate_directional_accuracy(
-        self, actual_returns: np.ndarray, predicted_scores: np.ndarray,
+        self,
+        actual_returns: np.ndarray,
+        predicted_scores: np.ndarray,
     ) -> float:
         """方向性精度計算（上昇/下降予測の正確性）"""
         actual_direction = (actual_returns > 0).astype(int)
@@ -55,7 +57,9 @@ class AdvancedBacktester:
         return accuracy
 
     def calculate_sharpe_ratio(
-        self, returns: np.ndarray, risk_free_rate: float = 0.001,
+        self,
+        returns: np.ndarray,
+        risk_free_rate: float = 0.001,
     ) -> float:
         """シャープレシオ計算"""
         if np.std(returns) == 0:
@@ -93,7 +97,9 @@ class AdvancedBacktester:
         predictors = {
             "rule_based": StockPredictor(use_ml_model=False, use_ultra_mode=False),
             "ml_model": StockPredictor(
-                use_ml_model=True, ml_model_type="xgboost", use_ultra_mode=False,
+                use_ml_model=True,
+                ml_model_type="xgboost",
+                use_ultra_mode=False,
             ),
             "ultra_model": StockPredictor(use_ultra_mode=True),
         }
@@ -274,7 +280,9 @@ class AdvancedBacktester:
 
                 # 上位3銘柄選択
                 top_symbols = sorted(
-                    scores.keys(), key=lambda x: scores[x], reverse=True,
+                    scores.keys(),
+                    key=lambda x: scores[x],
+                    reverse=True,
                 )[:3]
 
                 # ポジションクリア
@@ -363,7 +371,9 @@ class AdvancedBacktester:
         return simulation_results
 
     def generate_performance_report(
-        self, backtest_results: Dict, simulation_results: Dict,
+        self,
+        backtest_results: Dict,
+        simulation_results: Dict,
     ):
         """性能レポート生成"""
         print("=" * 80)
@@ -462,7 +472,9 @@ def main():
     # 2. 投資シミュレーション
     print("\n投資シミュレーション実行中...")
     simulation_results = backtester.run_investment_simulation(
-        symbols=test_symbols, initial_capital=1000000, rebalance_frequency=30,
+        symbols=test_symbols,
+        initial_capital=1000000,
+        rebalance_frequency=30,
     )
 
     # 3. レポート生成

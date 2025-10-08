@@ -12,7 +12,9 @@ from typing import Any, Dict, List, Optional, Set
 
 
 def setup_logger(
-    name: str = None, level: int = logging.INFO, format_string: str = None,
+    name: str = None,
+    level: int = logging.INFO,
+    format_string: str = None,
 ) -> logging.Logger:
     """安全なログ設定
 
@@ -117,7 +119,9 @@ class CentralizedLogger:
                 self.log_files[service_name] = Path(log_file_path)
 
     def collect_service_logs(
-        self, service_name: str, max_lines: int = 100,
+        self,
+        service_name: str,
+        max_lines: int = 100,
     ) -> List[str]:
         """サービスのログ収集"""
         logs = []
@@ -144,7 +148,10 @@ class CentralizedLogger:
         return all_logs
 
     def write_centralized_log(
-        self, message: str, level: str = "INFO", service: str = "SYSTEM",
+        self,
+        message: str,
+        level: str = "INFO",
+        service: str = "SYSTEM",
     ):
         """集約ログへの書き込み"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -158,7 +165,9 @@ class CentralizedLogger:
             print(f"集約ログ書き込み失敗: {e}", file=sys.stderr)
 
     def get_recent_logs(
-        self, hours: int = 1, service_filter: Optional[str] = None,
+        self,
+        hours: int = 1,
+        service_filter: Optional[str] = None,
     ) -> List[str]:
         """最近のログ取得"""
         recent_logs = []
@@ -245,12 +254,14 @@ class CentralizedLogger:
                     cleaned_files.append(str(log_file))
             except Exception as e:
                 self.write_centralized_log(
-                    f"ログクリーンアップ失敗 {log_file}: {e}", "WARNING",
+                    f"ログクリーンアップ失敗 {log_file}: {e}",
+                    "WARNING",
                 )
 
         if cleaned_files:
             self.write_centralized_log(
-                f"古いログファイル削除: {len(cleaned_files)}件", "INFO",
+                f"古いログファイル削除: {len(cleaned_files)}件",
+                "INFO",
             )
 
         return cleaned_files

@@ -37,7 +37,8 @@ class RealTimeProviderFactory(ABC):
 
     @abstractmethod
     def create_quality_monitor(
-        self, config: RealTimeConfig,
+        self,
+        config: RealTimeConfig,
     ) -> RealTimeDataQualityMonitor:
         """データ品質監視を作成"""
 
@@ -57,7 +58,8 @@ class DefaultRealTimeFactory(RealTimeProviderFactory):
         )
 
     def create_quality_monitor(
-        self, config: RealTimeConfig,
+        self,
+        config: RealTimeConfig,
     ) -> RealTimeDataQualityMonitor:
         """データ品質監視を作成"""
         return RealTimeDataQualityMonitor()
@@ -77,7 +79,8 @@ class MockRealTimeFactory(RealTimeProviderFactory):
         return RealTimeCacheManager(max_cache_size=100, ttl_hours=1)
 
     def create_quality_monitor(
-        self, config: RealTimeConfig,
+        self,
+        config: RealTimeConfig,
     ) -> RealTimeDataQualityMonitor:
         """テスト用品質監視を作成"""
         return RealTimeDataQualityMonitor()
@@ -209,7 +212,8 @@ class RealTimeSystemManager:
             # キャッシュに保存
             if self.config.enable_real_time_caching:
                 self.cache_manager.cache_tick_data(
-                    tick_data, max_history=self.config.max_tick_history_per_symbol,
+                    tick_data,
+                    max_history=self.config.max_tick_history_per_symbol,
                 )
 
             # 統計更新
@@ -259,7 +263,9 @@ class RealTimeSystemManager:
             # キャッシュに保存
             cache_key = f"latest_index_{index_data.symbol}"
             self.cache_manager.set(
-                cache_key, index_data, ttl=self.config.tick_cache_ttl_seconds,
+                cache_key,
+                index_data,
+                ttl=self.config.tick_cache_ttl_seconds,
             )
 
             # 統計更新
@@ -328,7 +334,8 @@ class RealTimeSystemManager:
                 logger.error(f"Error in performance monitoring: {e}")
 
     async def _check_data_quality_alerts(
-        self, quality_metrics: Dict[str, float],
+        self,
+        quality_metrics: Dict[str, float],
     ) -> None:
         """データ品質アラートをチェック"""
         tick_quality = quality_metrics.get("tick_quality_rate", 1.0)
@@ -365,7 +372,10 @@ class RealTimeSystemManager:
         return self.cache_manager.calculate_market_metrics(symbol)
 
     async def subscribe_to_symbol(
-        self, symbol: str, include_ticks: bool = True, include_order_book: bool = True,
+        self,
+        symbol: str,
+        include_ticks: bool = True,
+        include_order_book: bool = True,
     ) -> bool:
         """新しい銘柄をサブスクリプション"""
         try:

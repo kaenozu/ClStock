@@ -35,8 +35,7 @@ router = APIRouter()
 def stock_recommendation_to_schema(
     stock_rec: StockRecommendation,
 ) -> StockRecommendationSchema:
-    """Convert StockRecommendation dataclass to StockRecommendationSchema pydantic model.
-    """
+    """Convert StockRecommendation dataclass to StockRecommendationSchema pydantic model."""
     # holding_period (str) -> holding_period_days (int) の変換 (例: "1～2か月" -> 平均して30+45=75日など)
     # 簡易的な変換ロジック (より正確な変換が必要な場合は修正)
     period_str = stock_rec.holding_period
@@ -155,10 +154,12 @@ async def get_recommendations(
 
 
 @router.get(
-    "/recommendation/{symbol}", response_model=StockRecommendationSchema,
+    "/recommendation/{symbol}",
+    response_model=StockRecommendationSchema,
 )  # response_model 追加
 async def get_single_recommendation(
-    symbol: str, credentials: HTTPAuthorizationCredentials = Depends(security),
+    symbol: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     """Get recommendation information for a specific symbol"""
     try:
@@ -180,20 +181,23 @@ async def get_single_recommendation(
         recommendation.rank = 1
         recommendation.symbol = validated_symbol
         recommendation.company_name = data_provider.jp_stock_codes.get(
-            base_symbol, recommendation.company_name,
+            base_symbol,
+            recommendation.company_name,
         )
 
         return stock_recommendation_to_schema(recommendation)  # 変換して返す
     except InvalidSymbolError:
         raise HTTPException(
-            status_code=404, detail=f"銘柄コード {symbol} が見つかりません",
+            status_code=404,
+            detail=f"銘柄コード {symbol} が見つかりません",
         )
     except PredictionError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         logger.error(f"推奨情報の取得中にエラーが発生しました: {e!s}")
         raise HTTPException(
-            status_code=500, detail=f"推奨情報の取得に失敗しました: {e!s}",
+            status_code=500,
+            detail=f"推奨情報の取得に失敗しました: {e!s}",
         )
 
 
@@ -209,7 +213,8 @@ async def get_available_stocks():
         }
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"銘柄一覧の取得に失敗しました: {e!s}",
+            status_code=500,
+            detail=f"銘柄一覧の取得に失敗しました: {e!s}",
         )
 
 
@@ -217,7 +222,8 @@ async def get_available_stocks():
 async def get_stock_data(
     symbol: str,
     period: str = Query(
-        "1y", description="期間 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)",
+        "1y",
+        description="期間 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)",
     ),
 ):
     try:
@@ -239,14 +245,16 @@ async def get_stock_data(
 
         if lookup_symbol is None:
             raise HTTPException(
-                status_code=404, detail=f"銘柄コード {symbol} が見つかりません",
+                status_code=404,
+                detail=f"銘柄コード {symbol} が見つかりません",
             )
 
         data = data_provider.get_stock_data(lookup_symbol, validated_period)
 
         if data.empty:
             raise HTTPException(
-                status_code=404, detail=f"銘柄 {symbol} のデータが見つかりません",
+                status_code=404,
+                detail=f"銘柄 {symbol} のデータが見つかりません",
             )
 
         technical_data = data_provider.calculate_technical_indicators(data)
@@ -331,5 +339,6 @@ async def get_stock_data(
         raise
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"株価データの取得に失敗しました: {e!s}",
+            status_code=500,
+            detail=f"株価データの取得に失敗しました: {e!s}",
         )

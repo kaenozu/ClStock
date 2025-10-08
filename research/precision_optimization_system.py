@@ -42,7 +42,8 @@ class PrecisionOptimizationSystem:
 
                 # 過去データでの検証
                 validation_result = self._validate_prediction_accuracy(
-                    symbol, prediction,
+                    symbol,
+                    prediction,
                 )
 
                 if validation_result is None:
@@ -99,7 +100,9 @@ class PrecisionOptimizationSystem:
             return None
 
     def _validate_trend_following_accuracy(
-        self, data: pd.DataFrame, symbol: str,
+        self,
+        data: pd.DataFrame,
+        symbol: str,
     ) -> Dict:
         """トレンドフォロー予測の検証"""
         close = data["Close"]
@@ -122,7 +125,8 @@ class PrecisionOptimizationSystem:
                     historical_data.iloc[-30:],
                 )
                 direction_pred = self.predictor._calculate_trend_direction(
-                    features, historical_data,
+                    features,
+                    historical_data,
                 )
 
                 if direction_pred["confidence"] < 0.5:
@@ -245,7 +249,9 @@ class PrecisionOptimizationSystem:
         if elite_all:
             print("\nエリート銘柄 (85%以上):")
             for r in sorted(
-                elite_all, key=lambda x: x["validation_accuracy"], reverse=True,
+                elite_all,
+                key=lambda x: x["validation_accuracy"],
+                reverse=True,
             ):
                 trend_mark = "🔥" if r["is_strong_trend"] else "📈"
                 print(
@@ -291,7 +297,10 @@ class PrecisionOptimizationSystem:
             for conf_th in confidence_thresholds:
                 for cons_days in consistency_days:
                     accuracy = self._test_parameter_combination(
-                        test_symbols, trend_th, conf_th, cons_days,
+                        test_symbols,
+                        trend_th,
+                        conf_th,
+                        cons_days,
                     )
 
                     if accuracy > best_accuracy:
@@ -311,7 +320,11 @@ class PrecisionOptimizationSystem:
         return best_params
 
     def _test_parameter_combination(
-        self, symbols: List[str], trend_th: float, conf_th: float, cons_days: int,
+        self,
+        symbols: List[str],
+        trend_th: float,
+        conf_th: float,
+        cons_days: int,
     ) -> float:
         """パラメータ組み合わせのテスト"""
         total_correct = 0

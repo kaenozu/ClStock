@@ -18,6 +18,6 @@ def test_trade_recorder_uses_home_directory_for_default_path(monkeypatch, tmp_pa
 
     expected = tmp_path / "gemini-desktop" / "ClStock" / "data" / "trading_records.db"
     assert Path(recorder.db_path) == expected
-    assert expected.parent.exists(), (
-        "Default database directory should be created automatically."
-    )
+    assert (
+        expected.parent.exists()
+    ), "Default database directory should be created automatically."

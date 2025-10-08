@@ -69,7 +69,10 @@ class AsyncStockDataProvider:
 
             try:
                 trusted_data, actual_ticker = await self._fetch_trusted_source_async(
-                    sync_provider, symbol, ticker_candidates, period,
+                    sync_provider,
+                    symbol,
+                    ticker_candidates,
+                    period,
                 )
             except DataFetchError:
                 raise
@@ -78,7 +81,9 @@ class AsyncStockDataProvider:
 
             if trusted_data is not None and not trusted_data.empty:
                 prepared = sync_provider._prepare_history_frame(
-                    trusted_data, symbol, actual_ticker,
+                    trusted_data,
+                    symbol,
+                    actual_ticker,
                 )
                 cache.set(cache_key, prepared, ttl=1800)
                 return prepared
@@ -112,7 +117,9 @@ class AsyncStockDataProvider:
             raise DataFetchError(symbol, "Unexpected error during data fetch", str(e))
 
     async def _fetch_with_yfinance_async(
-        self, ticker: str, period: str,
+        self,
+        ticker: str,
+        period: str,
     ) -> pd.DataFrame:
         """Fetch data using yfinance with async wrapper"""
         # yfinance is not async by nature, so we'll run it in a thread pool
@@ -142,7 +149,10 @@ class AsyncStockDataProvider:
 
                 # スレッドプールで実行
                 data = await loop.run_in_executor(
-                    None, fetch_data_with_retry, ticker, period,
+                    None,
+                    fetch_data_with_retry,
+                    ticker,
+                    period,
                 )
 
                 # データ構造を確認
@@ -222,7 +232,11 @@ class AsyncStockDataProvider:
         if config is None:
             if sync_provider._should_use_local_first(symbol):
                 return await self._fetch_from_local_async(
-                    sync_provider, symbol, period, start_ts, end_ts,
+                    sync_provider,
+                    symbol,
+                    period,
+                    start_ts,
+                    end_ts,
                 )
             return pd.DataFrame(), None
 
@@ -230,7 +244,11 @@ class AsyncStockDataProvider:
 
         if provider_name == "local_csv":
             return await self._fetch_from_local_async(
-                sync_provider, symbol, period, start_ts, end_ts,
+                sync_provider,
+                symbol,
+                period,
+                start_ts,
+                end_ts,
             )
 
         if provider_name == "http_api":
@@ -247,7 +265,11 @@ class AsyncStockDataProvider:
 
         if provider_name == "hybrid":
             local_data, actual = await self._fetch_from_local_async(
-                sync_provider, symbol, period, start_ts, end_ts,
+                sync_provider,
+                symbol,
+                period,
+                start_ts,
+                end_ts,
             )
             if not local_data.empty:
                 return local_data, actual
@@ -264,7 +286,11 @@ class AsyncStockDataProvider:
 
         if sync_provider._should_use_local_first(symbol):
             return await self._fetch_from_local_async(
-                sync_provider, symbol, period, start_ts, end_ts,
+                sync_provider,
+                symbol,
+                period,
+                start_ts,
+                end_ts,
             )
         return pd.DataFrame(), None
 
@@ -311,7 +337,9 @@ class AsyncStockDataProvider:
         )
 
     async def get_multiple_stocks(
-        self, symbols: List[str], period: str = "1y",
+        self,
+        symbols: List[str],
+        period: str = "1y",
     ) -> Dict[str, pd.DataFrame]:
         """Asynchronously fetch data for multiple stocks"""
         result: Dict[str, pd.DataFrame] = {}
@@ -337,7 +365,9 @@ class AsyncStockDataProvider:
         return result
 
     async def _fetch_single_stock_async(
-        self, symbol: str, period: str,
+        self,
+        symbol: str,
+        period: str,
     ) -> Optional[pd.DataFrame]:
         """Fetch data for a single stock asynchronously"""
         try:
@@ -350,7 +380,8 @@ class AsyncStockDataProvider:
             return None
 
     async def calculate_technical_indicators_async(
-        self, data: pd.DataFrame,
+        self,
+        data: pd.DataFrame,
     ) -> pd.DataFrame:
         """Asynchronously calculate technical indicators"""
         from utils.cache import get_cache

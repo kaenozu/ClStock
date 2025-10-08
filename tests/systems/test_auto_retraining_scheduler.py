@@ -57,7 +57,8 @@ def dummy_settings(monkeypatch):
 
 
 def test_detect_performance_decline_requires_minimum_history(
-    monkeypatch, dummy_settings,
+    monkeypatch,
+    dummy_settings,
 ):
     monitor = auto_module.ModelPerformanceMonitor()
 
@@ -116,19 +117,23 @@ def test_detect_performance_decline_triggers_candidate(monkeypatch, dummy_settin
 def test_data_drift_detector_identifies_significant_shift(monkeypatch):
     baseline_dates = pd.date_range("2023-01-01", periods=40, freq="D")
     baseline_close = pd.Series(
-        100 + 0.5 * np.sin(np.linspace(0, 6, 40)), index=baseline_dates,
+        100 + 0.5 * np.sin(np.linspace(0, 6, 40)),
+        index=baseline_dates,
     )
     baseline_volume = pd.Series(
-        100 + 2 * np.sin(np.linspace(0, 6, 40)), index=baseline_dates,
+        100 + 2 * np.sin(np.linspace(0, 6, 40)),
+        index=baseline_dates,
     )
     baseline_df = pd.DataFrame({"Close": baseline_close, "Volume": baseline_volume})
 
     current_dates = pd.date_range("2023-03-01", periods=40, freq="D")
     current_close = pd.Series(
-        100 + 3 * np.sin(np.linspace(0, 6, 40)), index=current_dates,
+        100 + 3 * np.sin(np.linspace(0, 6, 40)),
+        index=current_dates,
     )
     current_volume = pd.Series(
-        160 + 2 * np.sin(np.linspace(0, 6, 40)), index=current_dates,
+        160 + 2 * np.sin(np.linspace(0, 6, 40)),
+        index=current_dates,
     )
     current_df = pd.DataFrame({"Close": current_close, "Volume": current_volume})
 
@@ -206,7 +211,8 @@ def test_merge_candidates_combines_and_limits(monkeypatch, dummy_settings):
 
 
 def test_execute_retraining_uses_concurrency_limit_and_backup(
-    monkeypatch, dummy_settings,
+    monkeypatch,
+    dummy_settings,
 ):
     scheduler = auto_module.AutoRetrainingScheduler()
     scheduler.retraining_config.update(
@@ -278,7 +284,8 @@ def test_manual_retrain_delegates_to_execute(monkeypatch, dummy_settings):
 
 
 def test_retraining_orchestrator_initialization_establishes_baselines(
-    monkeypatch, dummy_settings,
+    monkeypatch,
+    dummy_settings,
 ):
     orchestrator = auto_module.RetrainingOrchestrator()
     baseline_mock = MagicMock()

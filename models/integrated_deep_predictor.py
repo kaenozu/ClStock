@@ -34,7 +34,8 @@ class IntegratedDeepPredictor:
 
         # 各コンポーネントの初期化
         self.custom_model = CustomDeepPredictor(
-            input_shape=input_shape, learning_rate=learning_rate,
+            input_shape=input_shape,
+            learning_rate=learning_rate,
         )
         self.multimodal_integrator = MultimodalIntegrator()
         self.adaptive_attention = AdaptiveTemporalAttention(attention_units)
@@ -68,7 +69,9 @@ class IntegratedDeepPredictor:
 
         """
         integrated_features = self.multimodal_integrator.integrate_data(
-            price_data, fundamentals_data, sentiment_data,
+            price_data,
+            fundamentals_data,
+            sentiment_data,
         )
         return integrated_features
 
@@ -137,7 +140,8 @@ class IntegratedDeepPredictor:
                     X_train.reshape(X_train.shape[0], -1),  # 元の特徴量
                     self_supervised_features,  # 自己教師あり特徴量
                     np.expand_dims(attended_features, axis=1).repeat(
-                        X_train.shape[0], axis=0,
+                        X_train.shape[0],
+                        axis=0,
                     ),  # アテンション特徴量
                 ],
                 axis=1,
@@ -194,7 +198,8 @@ class IntegratedDeepPredictor:
                     X.reshape(X.shape[0], -1),
                     self_supervised_features,
                     np.expand_dims(attended_features, axis=1).repeat(
-                        X.shape[0], axis=0,
+                        X.shape[0],
+                        axis=0,
                     ),
                 ],
                 axis=1,
@@ -238,7 +243,9 @@ class IntegratedDeepPredictor:
             raise e
 
     def setup_interpretability(
-        self, X_train: np.ndarray, feature_names: Optional[List[str]] = None,
+        self,
+        X_train: np.ndarray,
+        feature_names: Optional[List[str]] = None,
     ):
         """解釈性分析のセットアップ
 
@@ -256,7 +263,9 @@ class IntegratedDeepPredictor:
 
     @monitor_resources
     def explain_prediction(
-        self, X_sample: np.ndarray, sample_index: int = 0,
+        self,
+        X_sample: np.ndarray,
+        sample_index: int = 0,
     ) -> np.ndarray:
         """予測の解釈
 
@@ -281,7 +290,10 @@ class IntegratedDeepPredictor:
             raise e
 
     def optimize_trading_strategy(
-        self, symbol: str, period: str = "1y", timesteps: int = 10000,
+        self,
+        symbol: str,
+        period: str = "1y",
+        timesteps: int = 10000,
     ):
         """強化学習による取引戦略の最適化
 

@@ -307,7 +307,9 @@ class ChartGenerator:
             )
 
             fig.update_layout(
-                title="センチメント分析ダッシュボード", height=600, showlegend=False,
+                title="センチメント分析ダッシュボード",
+                height=600,
+                showlegend=False,
             )
 
             return fig.to_html(include_plotlyjs="cdn")
@@ -459,9 +461,7 @@ class DashboardGenerator:
 
         except Exception as e:
             self.logger.error(f"Dashboard generation failed: {e!s}")
-            return (
-                f"<html><body><h1>ダッシュボード生成エラー: {e!s}</h1></body></html>"
-            )
+            return f"<html><body><h1>ダッシュボード生成エラー: {e!s}</h1></body></html>"
 
     def _generate_prediction_summary(self, data: VisualizationData) -> str:
         """予測サマリー生成"""
@@ -600,7 +600,8 @@ class PredictionDashboard:
                     ],
                 ),
                 dbc.Row(
-                    [dbc.Col([html.Div(id="performance-metrics")])], className="mt-4",
+                    [dbc.Col([html.Div(id="performance-metrics")])],
+                    className="mt-4",
                 ),
                 # 自動更新用
                 dcc.Interval(
@@ -729,18 +730,27 @@ class PredictionDashboard:
                     )
                 )
 
-        fig.update_layout(title=f"{data.symbol} 予測チャート", xaxis_title="日時", yaxis_title="価格")
+        fig.update_layout(
+            title=f"{data.symbol} 予測チャート", xaxis_title="日時", yaxis_title="価格"
+        )
         return fig
 
     def _build_sentiment_figure(self, sentiment_data: Dict[str, Any]) -> go.Figure:
         if not sentiment_data:
-            return self._build_sentiment_error_figure("センチメントデータが利用できません")
+            return self._build_sentiment_error_figure(
+                "センチメントデータが利用できません"
+            )
 
         if not PLOTLY_AVAILABLE:
             fig = go.Figure()
             fig.update_layout(title="センチメントデータ")
             fig.add_annotation(
-                text="Plotlyが利用できません", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False
+                text="Plotlyが利用できません",
+                x=0.5,
+                y=0.5,
+                xref="paper",
+                yref="paper",
+                showarrow=False,
             )
             return fig
 
@@ -777,7 +787,9 @@ class PredictionDashboard:
 
     def _build_metrics_component(self, metrics: Dict[str, Any]) -> Any:
         if not metrics:
-            return self._build_alert("パフォーマンス指標を取得できませんでした", color="warning")
+            return self._build_alert(
+                "パフォーマンス指標を取得できませんでした", color="warning"
+            )
 
         items = []
         for key, value in metrics.items():
@@ -845,7 +857,9 @@ class PredictionDashboard:
         return self.dashboard_generator.generate_static_dashboard(visualization_data)
 
     def save_dashboard(
-        self, visualization_data: VisualizationData, output_path: str = "dashboard.html",
+        self,
+        visualization_data: VisualizationData,
+        output_path: str = "dashboard.html",
     ):
         """ダッシュボード保存"""
         try:
@@ -862,7 +876,10 @@ class PredictionDashboard:
             return False
 
     def run_web_server(
-        self, host: str = "127.0.0.1", port: int = 8050, debug: bool = False,
+        self,
+        host: str = "127.0.0.1",
+        port: int = 8050,
+        debug: bool = False,
     ):
         """Webサーバー起動"""
         if not self.app:

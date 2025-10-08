@@ -58,7 +58,9 @@ class PortfolioBacktester:
 
         aligned = pd.concat(returns, axis=1, join="inner")
         if aligned.empty:
-            raise ValueError("No overlapping price history to compute portfolio returns")
+            raise ValueError(
+                "No overlapping price history to compute portfolio returns"
+            )
 
         aligned = aligned.sort_index()
         portfolio_returns = aligned.mean(axis=1)
@@ -73,7 +75,7 @@ class PortfolioBacktester:
         avg_return = float(portfolio_returns.mean())
         sharpe_ratio = 0.0
         if volatility > 0:
-            sharpe_ratio = (avg_return / volatility) * (252 ** 0.5)
+            sharpe_ratio = (avg_return / volatility) * (252**0.5)
 
         return {
             "symbols": used_symbols,

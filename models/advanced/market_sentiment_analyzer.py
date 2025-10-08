@@ -118,7 +118,8 @@ class SocialMediaAnalyzer:
         self.bearish_expressions = ["📉", "sell", "売り", "short", "損切り", "暴落"]
 
     def analyze_social_sentiment(
-        self, social_posts: List[Dict[str, Any]],
+        self,
+        social_posts: List[Dict[str, Any]],
     ) -> Tuple[float, float]:
         """ソーシャルメディアセンチメント分析"""
         if not social_posts:
@@ -156,7 +157,8 @@ class SocialMediaAnalyzer:
         # 重み付き平均
         if sum(engagement_weights) > 0:
             weighted_sentiment = np.average(
-                sentiment_scores, weights=engagement_weights,
+                sentiment_scores,
+                weights=engagement_weights,
             )
             # エンゲージメントボリューム指標
             volume_indicator = np.log1p(sum(engagement_weights)) / 10
@@ -208,7 +210,8 @@ class TechnicalSentimentAnalyzer:
             # ボラティリティセンチメント（低ボラティリティ = ポジティブ）
             volatility = price_data["Close"].pct_change().std()
             volatility_sentiment = 1.0 - min(
-                volatility * 10, 1.0,
+                volatility * 10,
+                1.0,
             )  # 高ボラティリティはネガティブ
 
             # 出来高センチメント
@@ -351,7 +354,9 @@ class MarketSentimentAnalyzer:
         return sentiment_data
 
     def _calculate_sentiment_momentum(
-        self, symbol: str, current_sentiment: float,
+        self,
+        symbol: str,
+        current_sentiment: float,
     ) -> float:
         """センチメントモメンタム計算"""
         if (
@@ -553,7 +558,10 @@ class MarketSentimentAnalyzer:
         return report
 
     def _generate_recommendation(
-        self, latest: SentimentData, trend: Dict[str, Any], anomaly: Dict[str, Any],
+        self,
+        latest: SentimentData,
+        trend: Dict[str, Any],
+        anomaly: Dict[str, Any],
     ) -> str:
         """推奨事項生成"""
         score = latest.sentiment_score

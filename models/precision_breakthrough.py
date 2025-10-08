@@ -40,7 +40,8 @@ class Precision87BreakthroughSystem:
 
             base_prediction = self._get_base_846_prediction(symbol, historical_data)
             symbol_profile = self.meta_learner.create_symbol_profile(
-                symbol, historical_data,
+                symbol,
+                historical_data,
             )
             base_params = {
                 "learning_rate": 0.01,
@@ -49,11 +50,16 @@ class Precision87BreakthroughSystem:
                 "confidence": base_prediction["confidence"],
             }
             meta_adaptation = self.meta_learner.adapt_model_parameters(
-                symbol, symbol_profile, base_params,
+                symbol,
+                symbol_profile,
+                base_params,
             )
             dqn_signal = self.dqn_agent.get_trading_signal(symbol, historical_data)
             final_prediction = self._integrate_87_predictions(
-                base_prediction, meta_adaptation, dqn_signal, symbol_profile,
+                base_prediction,
+                meta_adaptation,
+                dqn_signal,
+                symbol_profile,
             )
             tuned_prediction = self._apply_87_precision_tuning(final_prediction, symbol)
             self.logger.info(
@@ -65,7 +71,9 @@ class Precision87BreakthroughSystem:
             return self._default_prediction(symbol, str(exc))
 
     def _get_base_846_prediction(
-        self, symbol: str, data: pd.DataFrame,
+        self,
+        symbol: str,
+        data: pd.DataFrame,
     ) -> Dict[str, float]:
         try:
             close = data["Close"]
@@ -139,7 +147,8 @@ class Precision87BreakthroughSystem:
             }
 
     def _optimize_weights_for_87_precision(
-        self, components: Dict[str, Dict[str, float]],
+        self,
+        components: Dict[str, Dict[str, float]],
     ):
         weights = self.ensemble_weights.copy()
         try:
@@ -175,7 +184,8 @@ class Precision87BreakthroughSystem:
                 },
                 "meta_learning": {
                     "score": meta_adapt.get(
-                        "adapted_prediction", base_pred["prediction"],
+                        "adapted_prediction",
+                        base_pred["prediction"],
                     ),
                     "confidence": meta_adapt.get("adaptation_confidence", 0.7),
                 },
@@ -241,13 +251,16 @@ class Precision87BreakthroughSystem:
             }
 
     def _apply_87_precision_tuning(
-        self, prediction: Dict[str, Any], symbol: str,
+        self,
+        prediction: Dict[str, Any],
+        symbol: str,
     ) -> Dict[str, Any]:
         try:
             score = prediction["integrated_score"]
             confidence = prediction["integrated_confidence"]
             predicted_price = prediction.get(
-                "predicted_price", prediction.get("current_price", 100.0),
+                "predicted_price",
+                prediction.get("current_price", 100.0),
             )
             current_price = prediction.get("current_price", 100.0)
             predicted_change_rate = prediction.get("predicted_change_rate", 0.0)

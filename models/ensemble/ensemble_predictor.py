@@ -155,7 +155,9 @@ class EnsemblePredictor(StockPredictor):
         path = Path(file_path)
         if not path.exists():
             self.logger.error(
-                "%s: Model file not found at %s", self.model_name, file_path,
+                "%s: Model file not found at %s",
+                self.model_name,
+                file_path,
             )
             raise FileNotFoundError(f"Model file not found at {file_path}")
 
@@ -416,7 +418,9 @@ class RefactoredEnsemblePredictor:
 
         if not isinstance(data, pd.DataFrame):
             self.logger.error(
-                "%s: Data provider returned invalid payload type %s", self.__class__.__name__, type(data)
+                "%s: Data provider returned invalid payload type %s",
+                self.__class__.__name__,
+                type(data),
             )
             raise TypeError("Stock data provider must return a pandas DataFrame")
 
@@ -435,7 +439,8 @@ class RefactoredEnsemblePredictor:
                 raise ValueError("No data available")
 
         features = self._safe_model_operation(
-            "calculate_features", lambda: self._calculate_features(data),
+            "calculate_features",
+            lambda: self._calculate_features(data),
         )
         if not features:
             return self._fallback_prediction(symbol, data, start)
@@ -535,7 +540,8 @@ class RefactoredEnsemblePredictor:
                 if isinstance(result, np.ndarray):
                     return float(result.flatten()[0])
                 if isinstance(result, Sequence) and not isinstance(
-                    result, (str, bytes),
+                    result,
+                    (str, bytes),
                 ):
                     return float(result[0])
                 return float(result)

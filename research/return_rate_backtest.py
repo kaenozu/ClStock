@@ -48,7 +48,9 @@ class ReturnRateBacktester:
         return smape
 
     def calculate_directional_accuracy(
-        self, actual: np.ndarray, predicted: np.ndarray,
+        self,
+        actual: np.ndarray,
+        predicted: np.ndarray,
     ) -> float:
         """方向性精度計算（上昇/下降の予測精度）"""
         actual_direction = np.sign(actual)
@@ -105,7 +107,9 @@ class ReturnRateBacktester:
 
                     # 実際のリターン取得
                     actual_return = self._get_actual_return(
-                        symbol, current_date, self.prediction_days,
+                        symbol,
+                        current_date,
+                        self.prediction_days,
                     )
 
                     if actual_return is not None:
@@ -148,7 +152,8 @@ class ReturnRateBacktester:
 
             # 開始日に最も近いデータを見つける
             start_price_idx = data.index.get_indexer(
-                [start_date_utc], method="nearest",
+                [start_date_utc],
+                method="nearest",
             )[0]
 
             # 終了日のインデックス計算
@@ -301,7 +306,9 @@ def main():
 
     # バックテスト実行
     results = backtester.walk_forward_backtest(
-        symbols=test_symbols, start_date="2023-06-01", end_date="2023-12-01",
+        symbols=test_symbols,
+        start_date="2023-06-01",
+        end_date="2023-12-01",
     )
 
     # 結果分析

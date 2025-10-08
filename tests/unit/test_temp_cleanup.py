@@ -80,7 +80,8 @@ def test_cleanup_unnecessary_files_removes_non_whitelisted(cleanup_manager, tmp_
     (nested_dir / "nested.txt").write_text("nested")
 
     removed = cleanup_manager.cleanup_unnecessary_files(
-        str(base_dir), required_entries={"keep.txt", "subdir"},
+        str(base_dir),
+        required_entries={"keep.txt", "subdir"},
     )
 
     assert removed == [str(extra_file)]
@@ -93,7 +94,70 @@ def test_cleanup_unnecessary_files_handles_missing_directory(cleanup_manager, tm
     missing_dir = tmp_path / "does_not_exist"
 
     removed = cleanup_manager.cleanup_unnecessary_files(
-        str(missing_dir), required_entries={"keep.txt"},
+        str(missing_dir),
+        required_entries={"keep.txt"},
     )
 
     assert removed == []
+
+
+def test_cleanup_empty_dirs_removes_nested_empty_directories(cleanup_manager, tmp_path):
+    base_dir = tmp_path / "artifacts"
+    base_dir.mkdir()
+
+    empty_leaf = base_dir / "empty_leaf"
+    empty_leaf.mkdir()
+
+    non_empty = base_dir / "non_empty"
+    non_empty.mkdir()
+    (non_empty / "data.txt").write_text("content")
+
+    parent_with_empty = base_dir / "parent_with_empty"
+    parent_with_empty.mkdir()
+    (parent_with_empty / "child_empty").mkdir()
+
+    parent_with_file = base_dir / "parent_with_file"
+    parent_with_file.mkdir()
+    (parent_with_file / "child").mkdir()
+    (parent_with_file / "child" / "data.txt").write_text("value")
+
+    removed = cleanup_manager.cleanup_empty_dirs(str(base_dir))
+
+    expected_removed = sorted(
+        {
+            str(empty_leaf),
+            str(parent_with_empty / "child_empty"),
+            str(parent_with_empty),
+        },
+    )
+
+    assert removed == expected_removed
+    assert not empty_leaf.exists()
+    assert not (parent_with_empty / "child_empty").exists()
+    assert not parent_with_empty.exists()
+    assert non_empty.exists()
+    assert parent_with_file.exists()
+    assert (parent_with_file / "child").exists()
+
+
+def test_cleanup_empty_dirs_non_recursive_only_removes_shallow_dirs(
+    cleanup_manager, tmp_path,
+):
+    base_dir = tmp_path / "artifacts"
+    base_dir.mkdir()
+
+    shallow_empty = base_dir / "empty"
+    shallow_empty.mkdir()
+
+    nested_parent = base_dir / "nested"
+    nested_parent.mkdir()
+    (nested_parent / "child_empty").mkdir()
+
+    removed = cleanup_manager.cleanup_empty_dirs(
+        str(base_dir), recursive=False,
+    )
+
+    assert removed == [str(shallow_empty)]
+    assert not shallow_empty.exists()
+    assert nested_parent.exists()
+    assert (nested_parent / "child_empty").exists()

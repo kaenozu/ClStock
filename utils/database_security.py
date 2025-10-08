@@ -75,7 +75,9 @@ class SecureDatabase:
             return [dict(row)] if row else []
 
     def execute_safe_update(
-        self, query: str, params: Optional[Union[tuple, dict]] = None,
+        self,
+        query: str,
+        params: Optional[Union[tuple, dict]] = None,
     ) -> int:
         """安全な更新クエリの実行
 
@@ -154,7 +156,9 @@ class SecureDatabase:
             logger.warning("Query may contain string literals - use parameters instead")
 
     def get_stock_data_safe(
-        self, symbol: str, limit: int = 1000,
+        self,
+        symbol: str,
+        limit: int = 1000,
     ) -> List[Dict[str, Any]]:
         """安全な株価データ取得
 

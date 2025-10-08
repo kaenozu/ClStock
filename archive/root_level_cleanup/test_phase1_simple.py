@@ -112,7 +112,10 @@ def test_prediction_modes():
 
         # ファイル読み込みで次世代モード確認
         hybrid_file = os.path.join(
-            os.path.dirname(__file__), "models_new", "hybrid", "hybrid_predictor.py",
+            os.path.dirname(__file__),
+            "models_new",
+            "hybrid",
+            "hybrid_predictor.py",
         )
 
         if os.path.exists(hybrid_file):
@@ -140,7 +143,10 @@ def test_prediction_modes():
 
         # 学習型最適化確認
         adaptive_file = os.path.join(
-            os.path.dirname(__file__), "models_new", "hybrid", "adaptive_optimizer.py",
+            os.path.dirname(__file__),
+            "models_new",
+            "hybrid",
+            "adaptive_optimizer.py",
         )
         if os.path.exists(adaptive_file):
             print("   [OK] 学習型最適化システムファイル確認")

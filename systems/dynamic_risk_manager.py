@@ -30,7 +30,11 @@ class AdvancedRiskManager:
         self.risk_metrics = {}
 
     def calculate_dynamic_stop_loss(
-        self, symbol: str, entry_price: float, confidence: float, volatility: float,
+        self,
+        symbol: str,
+        entry_price: float,
+        confidence: float,
+        volatility: float,
     ) -> dict:
         """動的ストップロス計算"""
         # 基本損切り率（設定から）
@@ -411,7 +415,10 @@ class AdvancedRiskManager:
             "correlation_analysis": correlation_result,
             "drawdown_analysis": drawdown_result,
             "recommendations": self._generate_risk_recommendations(
-                overall_risk_score, var_result, correlation_result, drawdown_result,
+                overall_risk_score,
+                var_result,
+                correlation_result,
+                drawdown_result,
             ),
         }
 
@@ -647,10 +654,14 @@ class TestAdvancedRiskManager:
         ]
 
         for i, (win_prob, avg_win, avg_loss, should_be_positive) in enumerate(
-            test_cases, 1,
+            test_cases,
+            1,
         ):
             result = manager.calculate_position_sizing_kelly(
-                win_prob, avg_win, avg_loss, 1000000,
+                win_prob,
+                avg_win,
+                avg_loss,
+                1000000,
             )
 
             kelly_fraction = result["kelly_fraction"]

@@ -103,7 +103,11 @@ class DemoPortfolioManager:
         self.logger = logging.getLogger(__name__)
 
     def add_position(
-        self, symbol: str, quantity: int, price: float, position_type: SignalType,
+        self,
+        symbol: str,
+        quantity: int,
+        price: float,
+        position_type: SignalType,
     ) -> bool:
         """ポジション追加
 
@@ -120,9 +124,10 @@ class DemoPortfolioManager:
         try:
             position_value = quantity * price
             if position_value > self.current_cash:
-                self.logger.warning("現金残高不足のためポジション追加をキャンセル: %s", symbol)
+                self.logger.warning(
+                    "現金残高不足のためポジション追加をキャンセル: %s", symbol
+                )
                 return False
-
 
             # 既存ポジションがある場合は平均化
             if symbol in self.positions:
@@ -270,7 +275,8 @@ class DemoPortfolioManager:
 
             # 集中リスク（最大ポジション比率）
             max_position_weight = max(
-                [pos.weight for pos in self.positions.values()], default=0.0,
+                [pos.weight for pos in self.positions.values()],
+                default=0.0,
             )
 
             # セクター集中度
@@ -533,7 +539,8 @@ class DemoPortfolioManager:
             # ベンチマークデータ取得
             if self.benchmark_data is None:
                 self.benchmark_data = self.data_provider.get_stock_data(
-                    self.benchmark_symbol, period="1y",
+                    self.benchmark_symbol,
+                    period="1y",
                 )
 
             if self.benchmark_data is None:

@@ -86,7 +86,10 @@ class ParallelFeatureCalculator:
         return min(optimal, memory_limited_workers)
 
     def calculate_features_parallel(
-        self, symbols: List[str], data_provider, batch_processing: bool = True,
+        self,
+        symbols: List[str],
+        data_provider,
+        batch_processing: bool = True,
     ) -> pd.DataFrame:
         """複数銘柄の特徴量を並列計算
 
@@ -128,7 +131,9 @@ class ParallelFeatureCalculator:
             )
 
     def _calculate_features_standard(
-        self, symbols: List[str], data_provider,
+        self,
+        symbols: List[str],
+        data_provider,
     ) -> pd.DataFrame:
         """標準並列処理による特徴量計算
 
@@ -142,7 +147,8 @@ class ParallelFeatureCalculator:
         """
         # 並列処理関数の準備
         calculate_single = partial(
-            self._calculate_single_symbol_features, data_provider=data_provider,
+            self._calculate_single_symbol_features,
+            data_provider=data_provider,
         )
 
         # 結果格納
@@ -204,7 +210,9 @@ class ParallelFeatureCalculator:
             return pd.DataFrame()
 
     def _calculate_features_batch(
-        self, symbols: List[str], data_provider,
+        self,
+        symbols: List[str],
+        data_provider,
     ) -> pd.DataFrame:
         """バッチ処理による特徴量計算（大量データ用）
 
@@ -229,7 +237,8 @@ class ParallelFeatureCalculator:
 
             # バッチ処理実行
             batch_features = self._calculate_features_standard(
-                batch_symbols, data_provider,
+                batch_symbols,
+                data_provider,
             )
 
             if not batch_features.empty:
@@ -251,7 +260,9 @@ class ParallelFeatureCalculator:
             return pd.DataFrame()
 
     def _calculate_single_symbol_features(
-        self, symbol: str, data_provider,
+        self,
+        symbol: str,
+        data_provider,
     ) -> Optional[pd.DataFrame]:
         """単一銘柄の特徴量計算（並列処理用）
 
@@ -328,7 +339,9 @@ class ParallelFeatureCalculator:
 
             # ボリンジャーバンド
             bb_upper, bb_lower = self._calculate_bollinger_bands_fast(
-                data["Close"], 20, 2,
+                data["Close"],
+                20,
+                2,
             )
             features["bb_upper"] = bb_upper
             features["bb_lower"] = bb_lower
@@ -439,7 +452,10 @@ class ParallelFeatureCalculator:
             return zero_series, zero_series
 
     def _calculate_bollinger_bands_fast(
-        self, prices: pd.Series, period: int = 20, std_dev: int = 2,
+        self,
+        prices: pd.Series,
+        period: int = 20,
+        std_dev: int = 2,
     ):
         """高速ボリンジャーバンド計算（ベクトル化）
 

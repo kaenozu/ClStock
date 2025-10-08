@@ -86,7 +86,6 @@ class DataCache:
 
         logger.info("DataCache shutdown completed")
 
-
     @staticmethod
     def _sanitize_cache_key(cache_key: str) -> str:
         """Sanitize cache key for filesystem use (Windows-safe)."""
@@ -192,7 +191,8 @@ class DataCache:
                     if len(current_files) >= self.max_size:
                         # LRU (Least Recently Used) で削除
                         oldest_file = min(
-                            current_files, key=lambda f: f.stat().st_mtime,
+                            current_files,
+                            key=lambda f: f.stat().st_mtime,
                         )
                         oldest_file.unlink()
                         logger.debug(f"Removed oldest cache entry: {oldest_file.name}")
@@ -324,8 +324,7 @@ def cached(ttl: Optional[int] = None, cache_instance: Optional[DataCache] = None
 
 
 def cache_dataframe(ttl: int = 1800):  # 30分
-    """DataFrameのキャッシュ用デコレータ
-    """
+    """DataFrameのキャッシュ用デコレータ"""
     return cached(ttl=ttl)
 
 

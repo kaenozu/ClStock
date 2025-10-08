@@ -306,7 +306,9 @@ class InvestmentAdvisorCUI:
         return base_score * confidence_multiplier
 
     def display_recommendations(
-        self, recommendations: List[Dict], show_details: bool = False,
+        self,
+        recommendations: List[Dict],
+        show_details: bool = False,
     ):
         """推奨結果表示"""
         print("\n" + "=" * 80)
@@ -350,7 +352,10 @@ class InvestmentAdvisorCUI:
             print("-" * 40)
 
     def _create_fallback_prediction(
-        self, symbol: str, period_type: str, error: str = None,
+        self,
+        symbol: str,
+        period_type: str,
+        error: str = None,
     ) -> Dict[str, Any]:
         """フォールバック予測"""
         return {
@@ -373,7 +378,11 @@ def main():
     parser = argparse.ArgumentParser(description="ClStock投資アドバイザー CUI版")
     parser.add_argument("--symbol", "-s", type=str, help="特定銘柄分析 (例: 7203.T)")
     parser.add_argument(
-        "--top", "-t", type=int, default=5, help="上位N銘柄表示 (デフォルト: 5)",
+        "--top",
+        "-t",
+        type=int,
+        default=5,
+        help="上位N銘柄表示 (デフォルト: 5)",
     )
     parser.add_argument("--details", "-d", action="store_true", help="詳細表示")
     # 閾値設定用の引数を追加

@@ -44,7 +44,8 @@ class YahooNewsSource(NewsSource):
         self.base_url = "https://query1.finance.yahoo.com/v1/finance/search"
 
     @retry(
-        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
     )
     def fetch_news(self, symbol: str, days: int = 7) -> List[Dict[str, Any]]:
         """Yahoo Financeからニュース取得"""
@@ -87,7 +88,8 @@ class YahooNewsSource(NewsSource):
                                     "source": "Yahoo Finance",
                                     "url": news_item.get("link", ""),
                                     "relevance": self._calculate_relevance(
-                                        news_item.get("title", ""), symbol,
+                                        news_item.get("title", ""),
+                                        symbol,
                                     ),
                                 },
                             )
@@ -141,7 +143,8 @@ class JapanNewsSource(NewsSource):
         ]
 
     @retry(
-        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
     )
     def fetch_news(self, symbol: str, days: int = 7) -> List[Dict[str, Any]]:
         """日本語ニュース取得"""
@@ -186,7 +189,8 @@ class JapanNewsSource(NewsSource):
             raise e  # retryのために再スロー
 
     @retry(
-        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
     )
     def _fetch_from_google_news(self, query: str, days: int) -> List[Dict[str, Any]]:
         """Google NewsのRSSから取得"""
@@ -222,7 +226,8 @@ class JapanNewsSource(NewsSource):
                                 "source": "Google News",
                                 "url": entry.link,
                                 "relevance": self._calculate_relevance_jp(
-                                    entry.title, query,
+                                    entry.title,
+                                    query,
                                 ),
                             },
                         )
@@ -243,7 +248,8 @@ class JapanNewsSource(NewsSource):
             raise e  # retryのために再スロー
 
     @retry(
-        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
     )
     def _fetch_from_yahoo_jp(self, query: str, days: int) -> List[Dict[str, Any]]:
         """Yahoo Finance JapanのRSSから取得"""
@@ -277,7 +283,8 @@ class JapanNewsSource(NewsSource):
                                     "source": "Yahoo Finance Japan",
                                     "url": entry.link,
                                     "relevance": self._calculate_relevance_jp(
-                                        entry.title, query,
+                                        entry.title,
+                                        query,
                                     ),
                                 },
                             )
@@ -327,7 +334,8 @@ class JapanNewsSource(NewsSource):
         return min(relevance_score, 1.0)
 
     def _remove_duplicates(
-        self, news_list: List[Dict[str, Any]],
+        self,
+        news_list: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """重複ニュースを除去"""
         seen_titles = set()
@@ -461,7 +469,8 @@ class MarketSentimentAnalyzer:
         return all_news
 
     def _deduplicate_news(
-        self, news_list: List[Dict[str, Any]],
+        self,
+        news_list: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """ニュース重複除去"""
         seen_titles = set()
@@ -523,7 +532,8 @@ class MarketSentimentAnalyzer:
             # 加重平均でセンチメントスコア計算
             if relevance_weights and sum(relevance_weights) > 0:
                 weighted_sentiment = np.average(
-                    sentiment_scores, weights=relevance_weights,
+                    sentiment_scores,
+                    weights=relevance_weights,
                 )
             else:
                 weighted_sentiment = np.mean(sentiment_scores)
@@ -549,7 +559,9 @@ class MarketSentimentAnalyzer:
                 "confidence": min(0.9, sentiment_strength + 0.1),
                 "analyzed_news": analyzed_news[:10],  # 最新10件
                 "summary": self._generate_sentiment_summary(
-                    sentiment_direction, sentiment_strength, len(news_list),
+                    sentiment_direction,
+                    sentiment_strength,
+                    len(news_list),
                 ),
             }
 
@@ -580,7 +592,10 @@ class MarketSentimentAnalyzer:
         }
 
     def _generate_sentiment_summary(
-        self, direction: str, strength: float, news_count: int,
+        self,
+        direction: str,
+        strength: float,
+        news_count: int,
     ) -> str:
         """センチメントサマリー生成"""
         strength_desc = (
@@ -631,7 +646,8 @@ class MarketSentimentAnalyzer:
                 if sentiment_score > 0.2:  # ポジティブセンチメント
                     final_signal = 1
                     signal_strength = min(
-                        1.0, integrated_confidence + abs(sentiment_adjustment),
+                        1.0,
+                        integrated_confidence + abs(sentiment_adjustment),
                     )
                 elif sentiment_score < -0.3:  # 強いネガティブセンチメント
                     final_signal = 0  # シグナル取り消し
@@ -645,7 +661,8 @@ class MarketSentimentAnalyzer:
                 if sentiment_score < -0.2:  # ネガティブセンチメント
                     final_signal = -1
                     signal_strength = min(
-                        1.0, integrated_confidence + abs(sentiment_adjustment),
+                        1.0,
+                        integrated_confidence + abs(sentiment_adjustment),
                     )
                 elif sentiment_score > 0.3:  # 強いポジティブセンチメント
                     final_signal = 0  # シグナル取り消し
@@ -696,7 +713,10 @@ class MarketSentimentAnalyzer:
             }
 
     def _generate_recommendation(
-        self, signal: int, confidence: float, sentiment: str,
+        self,
+        signal: int,
+        confidence: float,
+        sentiment: str,
     ) -> str:
         """推奨アクション生成"""
         if signal == 1 and confidence > 0.7:

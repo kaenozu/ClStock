@@ -1,4 +1,5 @@
 """強化学習による取引戦略の最適化"""
+
 from __future__ import annotations
 
 import logging
@@ -34,7 +35,10 @@ class TradingEnv(gym.Env):
 
         # 観測空間: 株価、残高、保有株式数、純資産など
         self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(len(data.columns) + 4,), dtype=np.float32,
+            low=-np.inf,
+            high=np.inf,
+            shape=(len(data.columns) + 4,),
+            dtype=np.float32,
         )
 
         # 利益記録用
@@ -132,6 +136,7 @@ class TradingCallback(BaseCallback):
         # 各ステップで実行する処理
         return True
 
+
 @runtime_checkable
 class MarketDataProviderProtocol(Protocol):
     """強化学習システムが利用する市場データプロバイダーのプロトコル。"""
@@ -190,21 +195,31 @@ class ReinforcementTradingSystem:
         stock_data = self.data_provider.get_stock_data(symbol, period)
 
         if not isinstance(stock_data, pd.DataFrame):
-            raise ValueError("data_provider.get_stock_data は pandas.DataFrame を返却する必要があります。")
+            raise ValueError(
+                "data_provider.get_stock_data は pandas.DataFrame を返却する必要があります。"
+            )
 
         if not isinstance(stock_data.index, pd.DatetimeIndex):
-            raise ValueError("株価データのインデックスは pandas.DatetimeIndex でなければなりません。")
+            raise ValueError(
+                "株価データのインデックスは pandas.DatetimeIndex でなければなりません。"
+            )
 
-        missing_columns = [col for col in self.REQUIRED_COLUMNS if col not in stock_data.columns]
+        missing_columns = [
+            col for col in self.REQUIRED_COLUMNS if col not in stock_data.columns
+        ]
         if missing_columns:
-            raise ValueError(f"株価データに必須カラムが不足しています: {', '.join(missing_columns)}")
+            raise ValueError(
+                f"株価データに必須カラムが不足しています: {', '.join(missing_columns)}"
+            )
 
         if not stock_data.index.is_monotonic_increasing:
             stock_data = stock_data.sort_index()
 
         return stock_data
-        
-    def train_model(self, symbol: str, period: str = "1y", timesteps: int = 10000) -> None:
+
+    def train_model(
+        self, symbol: str, period: str = "1y", timesteps: int = 10000
+    ) -> None:
         """モデルの訓練"""
         # 取引環境の作成
         stock_data = self.prepare_data(symbol, period)

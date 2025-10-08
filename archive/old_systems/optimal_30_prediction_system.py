@@ -152,7 +152,10 @@ class Optimal30PredictionSystem:
         return self.predictor.ultra_predict(symbol)
 
     def _create_prediction_result(
-        self, symbol: str, stock_data: pd.DataFrame, prediction_score: float,
+        self,
+        symbol: str,
+        stock_data: pd.DataFrame,
+        prediction_score: float,
     ) -> Dict[str, Any]:
         """予測結果の作成"""
         current_price = stock_data["Close"].iloc[-1]
@@ -217,7 +220,9 @@ class Optimal30PredictionSystem:
         print(SUBSECTION_LINE)
 
         bullish_sorted = sorted(
-            bullish_predictions, key=lambda x: x["change_rate"], reverse=True,
+            bullish_predictions,
+            key=lambda x: x["change_rate"],
+            reverse=True,
         )
         for i, pred in enumerate(bullish_sorted[:10], 1):
             print(
@@ -262,7 +267,9 @@ class Optimal30PredictionSystem:
         print("-" * 40)
 
         top_5 = sorted(
-            predictions, key=lambda x: x["change_rate"] * x["confidence"], reverse=True,
+            predictions,
+            key=lambda x: x["change_rate"] * x["confidence"],
+            reverse=True,
         )[:5]
         for i, pred in enumerate(top_5, 1):
             score = pred["change_rate"] * pred["confidence"] / 100
@@ -293,7 +300,9 @@ class Optimal30PredictionSystem:
             return None
 
     def _run_multi_period_prediction(
-        self, symbol: str, stock_data: pd.DataFrame,
+        self,
+        symbol: str,
+        stock_data: pd.DataFrame,
     ) -> Dict:
         """複数期間での予測"""
         periods = [1, 3, 5, 10]

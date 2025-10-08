@@ -252,7 +252,9 @@ class AdvancedInterpretability:
         for method, shap_values in shap_values_dict.items():
             plt.figure(figsize=(10, 6))
             self.interpretability.plot_feature_importance(
-                shap_values, X_sample, show=False,
+                shap_values,
+                X_sample,
+                show=False,
             )
             plt.title(f"Feature Importance by {method.upper()} Method")
             plt.show()

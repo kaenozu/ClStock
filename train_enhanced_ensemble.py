@@ -15,7 +15,8 @@ import numpy as np
 
 # ロギング設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,8 @@ def run_enhanced_ensemble_training() -> Dict[str, Any]:
 
         try:
             predictor.train_ensemble(
-                training_symbols, target_column="recommendation_score",
+                training_symbols,
+                target_column="recommendation_score",
             )
             training_time = time.time() - start_time
 
@@ -240,7 +242,8 @@ def evaluate_trained_model() -> Dict[str, Any]:
 
 
 def display_final_results(
-    training_results: Dict[str, Any], evaluation_results: Dict[str, Any],
+    training_results: Dict[str, Any],
+    evaluation_results: Dict[str, Any],
 ):
     """最終結果の表示"""
     print("\n" + "=" * 80)

@@ -22,7 +22,8 @@ from models.ml_stock_predictor import MLStockPredictor
 
 @pytest.mark.parametrize("symbols", [["AAA", "BBB", "CCC"]])
 def test_prepare_dataset_parallel_matches_sequential_and_submits_tasks(
-    monkeypatch, symbols,
+    monkeypatch,
+    symbols,
 ):
     predictor = MLStockPredictor()
 

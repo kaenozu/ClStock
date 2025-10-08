@@ -230,11 +230,16 @@ class OptimizedInvestmentSystem:
                     # 買いシグナル
                     if current_signal == 1 and symbol not in self.positions:
                         shares = self.calculate_optimal_position_size(
-                            symbol, current_price,
+                            symbol,
+                            current_price,
                         )
                         if shares > 0:
                             success = self.execute_trade(
-                                symbol, "BUY", shares, current_price, current_date,
+                                symbol,
+                                "BUY",
+                                shares,
+                                current_price,
+                                current_date,
                             )
                             if success:
                                 trade_count += 1
@@ -261,7 +266,11 @@ class OptimizedInvestmentSystem:
                             shares = position["shares"]
                             profit = (current_price - position["avg_price"]) * shares
                             success = self.execute_trade(
-                                symbol, "SELL", shares, current_price, current_date,
+                                symbol,
+                                "SELL",
+                                shares,
+                                current_price,
+                                current_date,
                             )
                             if success:
                                 trade_count += 1

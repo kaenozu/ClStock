@@ -66,7 +66,9 @@ class VolatilityAnalyzer:
         self.logger = logging.getLogger(__name__)
 
     def calculate_historical_volatility(
-        self, price_data: pd.Series, window: int = 30,
+        self,
+        price_data: pd.Series,
+        window: int = 30,
     ) -> float:
         """ヒストリカルボラティリティ計算"""
         try:
@@ -140,7 +142,9 @@ class VaRCalculator:
             return 0.05  # デフォルト5%
 
     def calculate_historical_var(
-        self, returns: pd.Series, confidence_level: float = 0.95,
+        self,
+        returns: pd.Series,
+        confidence_level: float = 0.95,
     ) -> float:
         """ヒストリカルVaR計算"""
         try:
@@ -157,7 +161,9 @@ class VaRCalculator:
             return 0.05
 
     def calculate_conditional_var(
-        self, returns: pd.Series, confidence_level: float = 0.95,
+        self,
+        returns: pd.Series,
+        confidence_level: float = 0.95,
     ) -> float:
         """条件付きVaR（CVaR/Expected Shortfall）計算"""
         try:
@@ -183,7 +189,9 @@ class CorrelationAnalyzer:
         self.logger = logging.getLogger(__name__)
 
     def calculate_rolling_correlation(
-        self, price_data: Dict[str, pd.Series], window: int = 60,
+        self,
+        price_data: Dict[str, pd.Series],
+        window: int = 60,
     ) -> pd.DataFrame:
         """ローリング相関計算"""
         try:
@@ -200,7 +208,9 @@ class CorrelationAnalyzer:
             return pd.DataFrame()
 
     def detect_correlation_clusters(
-        self, correlation_matrix: pd.DataFrame, threshold: float = 0.7,
+        self,
+        correlation_matrix: pd.DataFrame,
+        threshold: float = 0.7,
     ) -> Dict[str, List[str]]:
         """相関クラスター検出"""
         try:
@@ -399,7 +409,9 @@ class RiskManager:
         self.logger.info("RiskManager initialized")
 
     def analyze_portfolio_risk(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
+        self,
+        portfolio_data: Dict[str, Any],
+        price_data: Dict[str, pd.DataFrame],
     ) -> PortfolioRisk:
         """ポートフォリオリスク分析"""
         try:
@@ -428,7 +440,8 @@ class RiskManager:
 
             # 5. 相関リスク
             correlation_risk = self._analyze_correlation_risk(
-                portfolio_data, price_data,
+                portfolio_data,
+                price_data,
             )
             risk_metrics["correlation_risk"] = correlation_risk
             risk_scores.append(self._risk_level_to_score(correlation_risk.risk_level))
@@ -450,7 +463,8 @@ class RiskManager:
 
             # 推奨事項生成
             recommendations = self._generate_risk_recommendations(
-                risk_metrics, total_risk_score,
+                risk_metrics,
+                total_risk_score,
             )
 
             # 安全なポジションサイズ計算
@@ -476,13 +490,16 @@ class RiskManager:
             return self._create_default_portfolio_risk()
 
     def _analyze_market_risk(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
+        self,
+        portfolio_data: Dict[str, Any],
+        price_data: Dict[str, pd.DataFrame],
     ) -> RiskMetric:
         """市場リスク分析"""
         try:
             # ポートフォリオリターン計算
             portfolio_returns = self._calculate_portfolio_returns(
-                portfolio_data, price_data,
+                portfolio_data,
+                price_data,
             )
 
             if len(portfolio_returns) < 30:
@@ -498,7 +515,8 @@ class RiskManager:
 
             # 95% VaR計算
             var_95 = self.var_calculator.calculate_historical_var(
-                portfolio_returns, 0.95,
+                portfolio_returns,
+                0.95,
             )
 
             # リスクレベル判定
@@ -534,7 +552,9 @@ class RiskManager:
             )
 
     def _analyze_liquidity_risk(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
+        self,
+        portfolio_data: Dict[str, Any],
+        price_data: Dict[str, pd.DataFrame],
     ) -> RiskMetric:
         """流動性リスク分析"""
         try:
@@ -635,7 +655,9 @@ class RiskManager:
             )
 
     def _analyze_volatility_risk(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
+        self,
+        portfolio_data: Dict[str, Any],
+        price_data: Dict[str, pd.DataFrame],
     ) -> RiskMetric:
         """ボラティリティリスク分析"""
         try:
@@ -686,7 +708,9 @@ class RiskManager:
             )
 
     def _analyze_correlation_risk(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
+        self,
+        portfolio_data: Dict[str, Any],
+        price_data: Dict[str, pd.DataFrame],
     ) -> RiskMetric:
         """相関リスク分析"""
         try:
@@ -722,7 +746,8 @@ class RiskManager:
 
             # 相関行列計算
             corr_matrix = self.correlation_analyzer.calculate_rolling_correlation(
-                price_series, 60,
+                price_series,
+                60,
             )
 
             if corr_matrix.empty:
@@ -768,7 +793,9 @@ class RiskManager:
             )
 
     def _calculate_portfolio_returns(
-        self, portfolio_data: Dict[str, Any], price_data: Dict[str, pd.DataFrame],
+        self,
+        portfolio_data: Dict[str, Any],
+        price_data: Dict[str, pd.DataFrame],
     ) -> pd.Series:
         """ポートフォリオリターン計算"""
         try:
@@ -790,7 +817,8 @@ class RiskManager:
                         portfolio_returns = weighted_returns
                     else:
                         portfolio_returns = portfolio_returns.add(
-                            weighted_returns, fill_value=0,
+                            weighted_returns,
+                            fill_value=0,
                         )
 
             return portfolio_returns if portfolio_returns is not None else pd.Series()
@@ -820,7 +848,9 @@ class RiskManager:
         return RiskLevel.LOW
 
     def _generate_risk_recommendations(
-        self, risk_metrics: Dict[str, RiskMetric], total_risk_score: float,
+        self,
+        risk_metrics: Dict[str, RiskMetric],
+        total_risk_score: float,
     ) -> List[str]:
         """リスク推奨事項生成"""
         recommendations = []

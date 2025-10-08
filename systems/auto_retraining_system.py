@@ -157,7 +157,8 @@ class ModelPerformanceMonitor:
                     {
                         "symbol": symbol,
                         "priority": self._calculate_retraining_priority(
-                            symbol, decline_info,
+                            symbol,
+                            decline_info,
                         ),
                         **decline_info,
                     },
@@ -168,7 +169,9 @@ class ModelPerformanceMonitor:
         return candidates
 
     def _calculate_retraining_priority(
-        self, symbol: str, decline_info: Dict[str, Any],
+        self,
+        symbol: str,
+        decline_info: Dict[str, Any],
     ) -> float:
         """再学習優先度を計算"""
         accuracy_factor = max(0, 1.0 - decline_info.get("recent_accuracy", 0.5))
@@ -202,7 +205,8 @@ class DataDriftDetector:
                 "avg_volume": self._to_float(data["Volume"].mean(skipna=True)),
                 "price_trend": self._calculate_price_trend(data["Close"]),
                 "volume_trend": self._calculate_ratio_change(
-                    baseline_volume, latest_volume,
+                    baseline_volume,
+                    latest_volume,
                 ),
             }
 
@@ -234,10 +238,12 @@ class DataDriftDetector:
 
             # ドリフト率を計算
             volatility_drift = self._safe_relative_change(
-                baseline.get("volatility", 0.0), current_stats["volatility"],
+                baseline.get("volatility", 0.0),
+                current_stats["volatility"],
             )
             volume_drift = self._safe_relative_change(
-                baseline.get("avg_volume", 0.0), current_stats["avg_volume"],
+                baseline.get("avg_volume", 0.0),
+                current_stats["avg_volume"],
             )
 
             # ドリフト判定（30%以上の変化）
@@ -346,7 +352,8 @@ class AutoRetrainingScheduler:
 
         self.is_running = True
         self.scheduler_thread = threading.Thread(
-            target=self._scheduler_loop, daemon=True,
+            target=self._scheduler_loop,
+            daemon=True,
         )
         self.scheduler_thread.start()
         logger.info("自動再学習スケジューラー開始")
@@ -407,7 +414,9 @@ class AutoRetrainingScheduler:
         return drift_candidates
 
     def _merge_candidates(
-        self, performance_candidates: List[Dict], drift_candidates: List[Dict],
+        self,
+        performance_candidates: List[Dict],
+        drift_candidates: List[Dict],
     ) -> List[Dict]:
         """候補リストを統合"""
         all_candidates = {}
@@ -428,7 +437,9 @@ class AutoRetrainingScheduler:
 
         # 優先度順にソート
         sorted_candidates = sorted(
-            all_candidates.values(), key=lambda x: x["priority"], reverse=True,
+            all_candidates.values(),
+            key=lambda x: x["priority"],
+            reverse=True,
         )
 
         # 最大同時再学習数に制限
@@ -441,7 +452,8 @@ class AutoRetrainingScheduler:
 
         # 並列実行
         max_workers = min(
-            len(candidates), self.retraining_config["max_concurrent_retraining"],
+            len(candidates),
+            self.retraining_config["max_concurrent_retraining"],
         )
 
         if max_workers <= 0:
@@ -481,7 +493,8 @@ class AutoRetrainingScheduler:
 
             # 新しいモデルを訓練
             training_result = self.stock_predictor.train_symbol_model(
-                symbol, self.retraining_config["retraining_data_period"],
+                symbol,
+                self.retraining_config["retraining_data_period"],
             )
 
             new_accuracy = training_result["accuracy"]
@@ -525,7 +538,9 @@ class AutoRetrainingScheduler:
             logger.warning(f"バックアップエラー {symbol}: {e}")
 
     def manual_retrain(
-        self, symbols: List[str], reason: str = "manual",
+        self,
+        symbols: List[str],
+        reason: str = "manual",
     ) -> Dict[str, Any]:
         """手動再学習"""
         logger.info(f"手動再学習開始: {symbols}")

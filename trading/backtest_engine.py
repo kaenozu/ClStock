@@ -122,7 +122,9 @@ class BacktestEngine:
         self.logger = logging.getLogger(__name__)
 
     def run_backtest(
-        self, symbols: Optional[List[str]] = None, parallel: bool = True,
+        self,
+        symbols: Optional[List[str]] = None,
+        parallel: bool = True,
     ) -> BacktestResult:
         """バックテスト実行
 
@@ -145,7 +147,10 @@ class BacktestEngine:
             self.logger.info(f"対象銘柄数: {len(target_symbols)}")
 
             runner = BacktestRunner(
-                self.config, self.trading_strategy, self.data_provider, self.logger,
+                self.config,
+                self.trading_strategy,
+                self.data_provider,
+                self.logger,
             )
             result = runner.run_backtest(target_symbols)
 
@@ -157,7 +162,10 @@ class BacktestEngine:
             return self._empty_backtest_result()
 
     def run_walk_forward_analysis(
-        self, training_months: int = 6, testing_months: int = 1, step_months: int = 1,
+        self,
+        training_months: int = 6,
+        testing_months: int = 1,
+        step_months: int = 1,
     ) -> WalkForwardResult:
         """ウォークフォワード分析
 
@@ -385,7 +393,8 @@ class BacktestEngine:
         )
 
     def _calculate_combined_performance(
-        self, period_results: List[BacktestResult],
+        self,
+        period_results: List[BacktestResult],
     ) -> PerformanceMetrics:
         """統合パフォーマンス計算"""
         if not period_results:
@@ -446,16 +455,23 @@ class BacktestEngine:
                 [r.precision_87_success_rate for r in period_results],
             ),
             best_trade=max(
-                [max(r.daily_returns) if r.daily_returns else 0 for r in period_results],
+                [
+                    max(r.daily_returns) if r.daily_returns else 0
+                    for r in period_results
+                ],
             ),
             worst_trade=min(
-                [min(r.daily_returns) if r.daily_returns else 0 for r in period_results],
+                [
+                    min(r.daily_returns) if r.daily_returns else 0
+                    for r in period_results
+                ],
             ),
             average_holding_period=1.0,  # 簡略化
         )
 
     def _calculate_stability_metrics(
-        self, period_results: List[BacktestResult],
+        self,
+        period_results: List[BacktestResult],
     ) -> Dict[str, float]:
         """安定性メトリクス計算"""
         if not period_results:
@@ -473,7 +489,8 @@ class BacktestEngine:
         }
 
     def _analyze_performance_degradation(
-        self, period_results: List[BacktestResult],
+        self,
+        period_results: List[BacktestResult],
     ) -> Dict[str, float]:
         """パフォーマンス劣化分析"""
         if len(period_results) < 2:

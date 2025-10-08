@@ -62,7 +62,8 @@ def monitor(monkeypatch):
         return thread
 
     monkeypatch.setattr(
-        "monitoring.system_monitor.threading.Thread", dummy_thread_factory,
+        "monitoring.system_monitor.threading.Thread",
+        dummy_thread_factory,
     )
     monitor._shutdown_event = DummyEvent()
     monitor._thread_factory_calls = dummy_thread_factory_calls
@@ -101,7 +102,8 @@ def test_monitoring_loop_collects_metrics_and_processes(monkeypatch, monitor):
 
     def fake_net_io_counters():
         return SimpleNamespace(
-            bytes_sent=100 * 1024 * 1024, bytes_recv=200 * 1024 * 1024,
+            bytes_sent=100 * 1024 * 1024,
+            bytes_recv=200 * 1024 * 1024,
         )
 
     def fake_pids():
@@ -115,7 +117,8 @@ def test_monitoring_loop_collects_metrics_and_processes(monkeypatch, monitor):
                 "cpu_percent": cpu,
                 "memory_percent": memory,
                 "memory_info": SimpleNamespace(
-                    rss=50 * 1024 * 1024, vms=100 * 1024 * 1024,
+                    rss=50 * 1024 * 1024,
+                    vms=100 * 1024 * 1024,
                 ),
                 "status": "running",
                 "create_time": datetime.now().timestamp() - 3600,
@@ -130,18 +133,22 @@ def test_monitoring_loop_collects_metrics_and_processes(monkeypatch, monitor):
         yield DummyProcess(2, "proc2", 25.0, 0.5)
 
     monkeypatch.setattr(
-        "monitoring.system_monitor.psutil.cpu_percent", fake_cpu_percent,
+        "monitoring.system_monitor.psutil.cpu_percent",
+        fake_cpu_percent,
     )
     monkeypatch.setattr(
-        "monitoring.system_monitor.psutil.virtual_memory", fake_virtual_memory,
+        "monitoring.system_monitor.psutil.virtual_memory",
+        fake_virtual_memory,
     )
     monkeypatch.setattr("monitoring.system_monitor.psutil.disk_usage", fake_disk_usage)
     monkeypatch.setattr(
-        "monitoring.system_monitor.psutil.net_io_counters", fake_net_io_counters,
+        "monitoring.system_monitor.psutil.net_io_counters",
+        fake_net_io_counters,
     )
     monkeypatch.setattr("monitoring.system_monitor.psutil.pids", fake_pids)
     monkeypatch.setattr(
-        "monitoring.system_monitor.psutil.process_iter", fake_process_iter,
+        "monitoring.system_monitor.psutil.process_iter",
+        fake_process_iter,
     )
 
     monitor.monitoring_active = True
@@ -195,7 +202,8 @@ def test_collect_process_metrics_handles_failures(monkeypatch, monitor):
                 "cpu_percent": 5.0,
                 "memory_percent": 0.5,
                 "memory_info": SimpleNamespace(
-                    rss=10 * 1024 * 1024, vms=20 * 1024 * 1024,
+                    rss=10 * 1024 * 1024,
+                    vms=20 * 1024 * 1024,
                 ),
                 "status": "sleeping",
                 "create_time": datetime.now().timestamp(),
@@ -220,7 +228,8 @@ def test_collect_process_metrics_handles_failures(monkeypatch, monitor):
         raise RuntimeError("process failure")
 
     monkeypatch.setattr(
-        "monitoring.system_monitor.psutil.process_iter", fake_process_iter,
+        "monitoring.system_monitor.psutil.process_iter",
+        fake_process_iter,
     )
 
     monitor._collect_process_metrics()

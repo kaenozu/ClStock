@@ -33,7 +33,8 @@ router = APIRouter(prefix="/secure", tags=["secure"])
 async def get_stock_data(
     symbol: str,
     period: str = Query(
-        "1y", description="期間 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y)",
+        "1y",
+        description="期間 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y)",
     ),
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
@@ -54,7 +55,8 @@ async def get_stock_data(
 
         if data.empty:
             raise HTTPException(
-                status_code=404, detail=f"No data found for symbol: {symbol}",
+                status_code=404,
+                detail=f"No data found for symbol: {symbol}",
             )
 
         # レスポンス作成
@@ -80,7 +82,8 @@ async def get_stock_data(
 
     except ValidationError as e:
         log_validation_error(
-            e, {"endpoint": "/secure/stock/data", "symbol": symbol, "period": period},
+            e,
+            {"endpoint": "/secure/stock/data", "symbol": symbol, "period": period},
         )
         raise HTTPException(status_code=400, detail=str(e))
     except DataFetchError as e:
@@ -98,8 +101,7 @@ async def get_batch_stock_data(
     symbols_data: Dict[str, Any] = Body(...),
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """複数銘柄の一括データ取得（セキュア版）
-    """
+    """複数銘柄の一括データ取得（セキュア版）"""
     try:
         # 認証検証
         user_info = verify_token(credentials.credentials)
@@ -160,10 +162,10 @@ async def get_batch_stock_data(
 
 @router.get("/analysis/{symbol}")
 async def get_stock_analysis(
-    symbol: str, credentials: HTTPAuthorizationCredentials = Depends(security),
+    symbol: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """株式分析エンドポイント（管理者専用）
-    """
+    """株式分析エンドポイント（管理者専用）"""
     try:
         # 認証検証
         user_info = verify_token(credentials.credentials)
@@ -181,7 +183,8 @@ async def get_stock_analysis(
 
         if data.empty:
             raise HTTPException(
-                status_code=404, detail=f"No data found for symbol: {symbol}",
+                status_code=404,
+                detail=f"No data found for symbol: {symbol}",
             )
 
         # テクニカル指標を計算
@@ -235,8 +238,7 @@ async def get_stock_analysis(
 
 @router.get("/health")
 async def health_check():
-    """ヘルスチェックエンドポイント（認証不要）
-    """
+    """ヘルスチェックエンドポイント（認証不要）"""
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
