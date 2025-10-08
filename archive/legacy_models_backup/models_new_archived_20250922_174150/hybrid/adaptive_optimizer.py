@@ -67,7 +67,9 @@ class UsagePatternAnalyzer:
         )
 
     def _analyze_frequent_symbols(
-        self, history: List[Dict], top_n: int = 10,
+        self,
+        history: List[Dict],
+        top_n: int = 10,
     ) -> List[str]:
         """頻繁使用銘柄分析"""
         symbol_counts = Counter([h["symbol"] for h in history])
@@ -111,7 +113,8 @@ class UsagePatternAnalyzer:
         return "off_hours"
 
     def _analyze_mode_performance(
-        self, history: List[Dict],
+        self,
+        history: List[Dict],
     ) -> Dict[str, Dict[str, float]]:
         """モード別パフォーマンス分析"""
         mode_stats = defaultdict(list)
@@ -292,7 +295,9 @@ class OptimizationEngine:
         self.optimization_history = []
 
     def generate_optimizations(
-        self, usage_pattern: UsagePattern, performance_trends: Dict[str, Any],
+        self,
+        usage_pattern: UsagePattern,
+        performance_trends: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
         """最適化提案生成"""
         optimizations = []
@@ -382,7 +387,8 @@ class AdaptivePerformanceOptimizer:
 
         # 最適化提案生成
         optimizations = self.optimization_engine.generate_optimizations(
-            usage_pattern, performance_trends,
+            usage_pattern,
+            performance_trends,
         )
 
         # 最適化適用
@@ -409,7 +415,8 @@ class AdaptivePerformanceOptimizer:
         return optimization_report
 
     def _apply_optimizations(
-        self, optimizations: List[Dict[str, Any]],
+        self,
+        optimizations: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """最適化適用"""
         applied = []
@@ -490,7 +497,10 @@ class AdaptivePerformanceOptimizer:
         return True
 
     def record_performance_metrics(
-        self, prediction_time: float, confidence: float, cache_hit: bool = False,
+        self,
+        prediction_time: float,
+        confidence: float,
+        cache_hit: bool = False,
     ):
         """パフォーマンスメトリクス記録"""
         metrics = {

@@ -185,7 +185,8 @@ class PerformanceMetricsService:
         return float(max_drawdown * 100)
 
     def _calculate_consecutive_streaks(
-        self, profits: List[Optional[float]],
+        self,
+        profits: List[Optional[float]],
     ) -> Tuple[int, int]:
         if not profits:
             return 0, 0

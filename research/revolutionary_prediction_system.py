@@ -353,7 +353,8 @@ class RevolutionaryPredictionSystem:
         return {"direction_bias": 0.5, "uncertainty": 1.0}
 
     def _probability_convergence_prediction(
-        self, data: pd.DataFrame,
+        self,
+        data: pd.DataFrame,
     ) -> Dict[str, float]:
         """確率収束予測（複数タイムフレームの収束点検出）"""
         if data.empty:
@@ -458,7 +459,9 @@ class RevolutionaryPredictionSystem:
         }
 
     def _calculate_fear_greed_index(
-        self, returns: pd.Series, volume: pd.Series,
+        self,
+        returns: pd.Series,
+        volume: pd.Series,
     ) -> Dict[str, float]:
         """恐怖・貪欲指数計算"""
         try:
@@ -501,7 +504,9 @@ class RevolutionaryPredictionSystem:
             return {"direction": 0.5, "confidence": 0.0, "level": 0.5}
 
     def _analyze_crowd_behavior(
-        self, close: pd.Series, volume: pd.Series,
+        self,
+        close: pd.Series,
+        volume: pd.Series,
     ) -> Dict[str, float]:
         """群集行動分析"""
         try:
@@ -802,7 +807,9 @@ class RevolutionaryPredictionSystem:
         return self._analyze_revolutionary_results(all_results, revolutionary_results)
 
     def _validate_revolutionary_prediction(
-        self, symbol: str, prediction: Dict,
+        self,
+        symbol: str,
+        prediction: Dict,
     ) -> Optional[Dict]:
         """革命的予測の検証"""
         try:
@@ -847,7 +854,9 @@ class RevolutionaryPredictionSystem:
             return None
 
     def _analyze_revolutionary_results(
-        self, all_results: List[Dict], revolutionary_results: List[Dict],
+        self,
+        all_results: List[Dict],
+        revolutionary_results: List[Dict],
     ) -> Dict:
         """革命的結果分析"""
         if not all_results:

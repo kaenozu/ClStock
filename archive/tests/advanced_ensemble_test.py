@@ -22,7 +22,8 @@ warnings.filterwarnings("ignore")
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -333,7 +334,8 @@ class AdvancedEnsembleTestSystem:
             return {"status": "error", "error": str(e)}
 
     def _generate_performance_summary(
-        self, test_results: Dict[str, Any],
+        self,
+        test_results: Dict[str, Any],
     ) -> Dict[str, Any]:
         """総合パフォーマンス評価"""
         logger.info("\n" + "=" * 60)
@@ -408,7 +410,8 @@ class AdvancedEnsembleTestSystem:
                 "grade": grade,
                 "target_achieved": projected_accuracy >= 85.0,  # 85%目標
                 "recommendation": self._generate_recommendations(
-                    scores, projected_accuracy,
+                    scores,
+                    projected_accuracy,
                 ),
             }
 
@@ -435,7 +438,9 @@ class AdvancedEnsembleTestSystem:
             return {"status": "error", "error": str(e)}
 
     def _generate_recommendations(
-        self, scores: Dict[str, float], projected_accuracy: float,
+        self,
+        scores: Dict[str, float],
+        projected_accuracy: float,
     ) -> List[str]:
         """改善推奨事項生成"""
         recommendations = []

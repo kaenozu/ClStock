@@ -125,7 +125,8 @@ else:
 if not hasattr(torch_module, "tensor"):
     torch_module.tensor = lambda *args, **kwargs: None
     torch_module.no_grad = types.SimpleNamespace(
-        __enter__=lambda self: None, __exit__=lambda self, exc_type, exc, tb: False,
+        __enter__=lambda self: None,
+        __exit__=lambda self, exc_type, exc, tb: False,
     )
 
 torch_cuda = types.ModuleType("torch.cuda")

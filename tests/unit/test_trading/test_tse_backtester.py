@@ -11,7 +11,9 @@ class StubProvider:
 
     def get_multiple_stocks(self, symbols, period="1y"):
         self.calls.append((tuple(symbols), period))
-        return {symbol: self.frames[symbol] for symbol in symbols if symbol in self.frames}
+        return {
+            symbol: self.frames[symbol] for symbol in symbols if symbol in self.frames
+        }
 
 
 @pytest.fixture
@@ -41,7 +43,9 @@ def test_backtest_portfolio_computes_metrics(sample_frames):
 
 
 def test_backtest_portfolio_requires_prices(sample_frames):
-    empty_provider = StubProvider({symbol: df.iloc[:1] for symbol, df in sample_frames.items()})
+    empty_provider = StubProvider(
+        {symbol: df.iloc[:1] for symbol, df in sample_frames.items()}
+    )
     backtester = PortfolioBacktester(empty_provider)
 
     with pytest.raises(ValueError):

@@ -31,7 +31,8 @@ from trading.tse.optimizer import PortfolioOptimizer
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -248,7 +249,10 @@ class StrategyGeneratorAdapter:
         for strategy in self._collect_strategies(symbol, price_data):
             try:
                 signals = self._signal_generator.generate_signals(
-                    symbol, price_data, strategy, sentiment_payload,
+                    symbol,
+                    price_data,
+                    strategy,
+                    sentiment_payload,
                 )
             except Exception:
                 self.logger.debug(
@@ -356,7 +360,8 @@ class FullAutoInvestmentSystem:
             return None
 
     def _build_stock_profiles(
-        self, processed_data: Dict[str, pd.DataFrame],
+        self,
+        processed_data: Dict[str, pd.DataFrame],
     ) -> List[StockProfile]:
         profiles: List[StockProfile] = []
 
@@ -412,14 +417,17 @@ class FullAutoInvestmentSystem:
                 )
             except Exception:
                 self.logger.debug(
-                    "Failed to build stock profile for %s", symbol, exc_info=True,
+                    "Failed to build stock profile for %s",
+                    symbol,
+                    exc_info=True,
                 )
                 continue
 
         return profiles
 
     def _optimize_portfolio(
-        self, processed_data: Dict[str, pd.DataFrame],
+        self,
+        processed_data: Dict[str, pd.DataFrame],
     ) -> Dict[str, List[StockProfile]]:
         profiles = self._build_stock_profiles(processed_data)
 
@@ -459,11 +467,13 @@ class FullAutoInvestmentSystem:
             try:
                 if hasattr(self.optimizer, "optimize_portfolio"):
                     selected_profiles = self.optimizer.optimize_portfolio(
-                        profiles, target_size=size,
+                        profiles,
+                        target_size=size,
                     )
                 elif hasattr(self.optimizer, "optimize"):
                     selected_profiles = self.optimizer.optimize(
-                        profiles, target_size=size,
+                        profiles,
+                        target_size=size,
                     )  # type: ignore[attr-defined]
                 else:
                     raise AttributeError(
@@ -494,7 +504,8 @@ class FullAutoInvestmentSystem:
                 }
             except Exception:
                 logger.exception(
-                    "ポートフォリオ最適化処理中にエラーが発生しました (size=%s)", size,
+                    "ポートフォリオ最適化処理中にエラーが発生しました (size=%s)",
+                    size,
                 )
 
         # 最適な結果を選択（最も高いリターンを持つ結果）
@@ -656,7 +667,8 @@ class FullAutoInvestmentSystem:
                             for symbol in available_selected_stocks:
                                 try:
                                     recommendation = await self._analyze_single_stock(
-                                        symbol, processed_data.get(symbol),
+                                        symbol,
+                                        processed_data.get(symbol),
                                     )
                                     if recommendation:
                                         recommendations.append(recommendation)
@@ -696,7 +708,9 @@ class FullAutoInvestmentSystem:
             return []
 
     async def _analyze_single_stock(
-        self, symbol: str, data: Optional[pd.DataFrame],
+        self,
+        symbol: str,
+        data: Optional[pd.DataFrame],
     ) -> Optional[AutoRecommendation]:
         """個別銘柄分析"""
         try:
@@ -728,18 +742,24 @@ class FullAutoInvestmentSystem:
 
             # 4. 戦略生成
             strategy = self.strategy_generator.generate_strategy(
-                symbol, data, predictions, risk_analysis, sentiment_result,
+                symbol,
+                data,
+                predictions,
+                risk_analysis,
+                sentiment_result,
             )
 
             # 5. 推奨情報構築
             if strategy:  # trading_strategy -> strategy
                 entry_price = strategy.get(
-                    "entry_price", float(current_price),
+                    "entry_price",
+                    float(current_price),
                 )  # 'entry_price' は strategy から取得する
                 # stop_loss_pct などは、strategy の中にあるか、デフォルト値を使う
                 stop_loss_pct = strategy.get("stop_loss_pct", 0.05)
                 take_profit_pct = strategy.get(
-                    "take_profit_pct", strategy.get("expected_return", 0.0),
+                    "take_profit_pct",
+                    strategy.get("expected_return", 0.0),
                 )
 
                 # stop_loss を計算
@@ -754,10 +774,12 @@ class FullAutoInvestmentSystem:
                     "stop_loss": stop_loss,
                     "expected_return": expected_return_pct,
                     "confidence_score": strategy.get(
-                        "confidence_score", 0.0,
+                        "confidence_score",
+                        0.0,
                     ),  # strategy から confidence_score を取得
                     "sentiment_score": sentiment_result.get(
-                        "sentiment_score", 0.0,
+                        "sentiment_score",
+                        0.0,
                     ),  # sentiment_result から取得
                     "predicted_price": predicted_price,
                     "take_profit_pct": take_profit_pct,
@@ -780,7 +802,9 @@ class FullAutoInvestmentSystem:
                             risk_score = getattr(raw_risk, "total_risk_score", None)
                     if risk_score is None:
                         risk_score = getattr(
-                            risk_analysis_for_payload, "total_risk_score", 0.5,
+                            risk_analysis_for_payload,
+                            "total_risk_score",
+                            0.5,
                         )
                 else:
                     risk_score = 0.5
@@ -808,7 +832,9 @@ class FullAutoInvestmentSystem:
                 risk_level_value = "unknown"
                 if risk_analysis_for_payload is not None:
                     risk_level_attr = getattr(
-                        risk_analysis_for_payload, "risk_level", None,
+                        risk_analysis_for_payload,
+                        "risk_level",
+                        None,
                     )
                     if risk_level_attr is not None:
                         risk_level_value = getattr(risk_level_attr, "value", "unknown")
@@ -949,11 +975,14 @@ class FullAutoInvestmentSystem:
         self.logger.info("Calling generate_colab_data_retrieval_script.")
         try:
             generated_script = generate_colab_data_retrieval_script(
-                missing_symbols=failed_symbols, period="1y", output_dir=".",
+                missing_symbols=failed_symbols,
+                period="1y",
+                output_dir=".",
             )
         except Exception as exc:
             self.logger.error(
-                "generate_colab_data_retrieval_script failed", exc_info=True,
+                "generate_colab_data_retrieval_script failed",
+                exc_info=True,
             )
             print(
                 f"[ERROR] Failed to generate Google Colab data retrieval script: {exc}",
@@ -978,12 +1007,17 @@ class FullAutoInvestmentSystem:
         script_file_path = script_output_dir / "colab_data_fetcher.py"
         try:
             with open(
-                script_file_path, "w", encoding="utf-8-sig", errors="strict",
+                script_file_path,
+                "w",
+                encoding="utf-8-sig",
+                errors="strict",
             ) as handle:
                 handle.write(generated_script)
         except UnicodeEncodeError as exc:
             self.logger.error(
-                "UnicodeEncodeError while writing %s", script_file_path, exc_info=True,
+                "UnicodeEncodeError while writing %s",
+                script_file_path,
+                exc_info=True,
             )
             print(
                 f"[ERROR] Unicode encoding error while writing {script_file_path}: {exc}",
@@ -991,13 +1025,16 @@ class FullAutoInvestmentSystem:
             return
         except Exception as exc:
             self.logger.error(
-                "Unexpected error while writing %s", script_file_path, exc_info=True,
+                "Unexpected error while writing %s",
+                script_file_path,
+                exc_info=True,
             )
             print(f"[ERROR] Unexpected error while writing {script_file_path}: {exc}")
             return
 
         self.logger.info(
-            "Saved Google Colab data retrieval script to %s", script_file_path,
+            "Saved Google Colab data retrieval script to %s",
+            script_file_path,
         )
         print(f"[INFO] Saved Google Colab data retrieval script to {script_file_path}")
 

@@ -67,15 +67,23 @@ class EnsembleStockPredictor:
         )
         # Random Forest
         rf_model = RandomForestRegressor(
-            n_estimators=100, max_depth=10, random_state=42, n_jobs=-1,
+            n_estimators=100,
+            max_depth=10,
+            random_state=42,
+            n_jobs=-1,
         )
         # Gradient Boosting
         gb_model = GradientBoostingRegressor(
-            n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42,
+            n_estimators=100,
+            max_depth=6,
+            learning_rate=0.1,
+            random_state=42,
         )
         # Neural Network
         nn_model = MLPRegressor(
-            hidden_layer_sizes=(100, 50), max_iter=500, random_state=42,
+            hidden_layer_sizes=(100, 50),
+            max_iter=500,
+            random_state=42,
         )
         # アンサンブルに追加（重み付け）
         self.add_model("xgboost", xgb_model, weight=0.3)
@@ -85,7 +93,9 @@ class EnsembleStockPredictor:
         self.add_model("neural_network", nn_model, weight=0.05)
 
     def train_ensemble(
-        self, symbols: List[str], target_column: str = "recommendation_score",
+        self,
+        symbols: List[str],
+        target_column: str = "recommendation_score",
     ):
         """アンサンブルモデルを訓練"""
         from config.settings import get_settings
@@ -164,7 +174,8 @@ class EnsembleStockPredictor:
                 self.weights[name] = inverse_scores[name] / total_inverse
 
     def _ensemble_predict_from_predictions(
-        self, model_predictions: Dict[str, np.ndarray],
+        self,
+        model_predictions: Dict[str, np.ndarray],
     ) -> np.ndarray:
         """複数モデルの予測を重み付き平均"""
         weighted_sum = np.zeros_like(list(model_predictions.values())[0])
@@ -194,7 +205,8 @@ class EnsembleStockPredictor:
             latest_features = features.iloc[-1:].copy()
             # 特徴量を訓練時と同じ順序に調整
             latest_features = latest_features.reindex(
-                columns=self.feature_names, fill_value=0,
+                columns=self.feature_names,
+                fill_value=0,
             )
             # スケーリング
             features_scaled = self.scaler.transform(latest_features)
@@ -308,10 +320,12 @@ class AdvancedEnsemblePredictor:
                 "f012345678901234567890123456789012345678"  # 特定のコミットハッシュ
             )
             self.tokenizer = BertTokenizer.from_pretrained(
-                model_name, revision=revision,
+                model_name,
+                revision=revision,
             )  # nosec B615
             self.bert_model = BertForSequenceClassification.from_pretrained(
-                model_name, revision=revision,
+                model_name,
+                revision=revision,
             )  # nosec B615
             self.logger.info("BERT センチメント分析器初期化完了")
         except ImportError:
@@ -514,7 +528,8 @@ class AdvancedEnsemblePredictor:
             for model_name, pred in predictions.items():
                 if pred is not None and model_name in adjusted_weights:
                     weight = adjusted_weights[model_name] * confidences.get(
-                        model_name, 0.5,
+                        model_name,
+                        0.5,
                     )
                     ensemble_score += pred * weight
                     total_weight += weight
@@ -524,7 +539,8 @@ class AdvancedEnsemblePredictor:
                 ensemble_score = 50.0  # デフォルト
             # 信頼度算出
             ensemble_confidence = min(
-                total_weight / sum(adjusted_weights.values()), 1.0,
+                total_weight / sum(adjusted_weights.values()),
+                1.0,
             )
             return {
                 "ensemble_prediction": ensemble_score,
@@ -559,7 +575,8 @@ class AdvancedEnsemblePredictor:
             return {"prediction": 50.0, "confidence": 0.0}
 
     def _adjust_weights_dynamically(
-        self, confidences: Dict[str, float],
+        self,
+        confidences: Dict[str, float],
     ) -> Dict[str, float]:
         """信頼度ベース動的重み調整"""
         adjusted_weights = {}

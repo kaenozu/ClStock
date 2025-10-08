@@ -11,7 +11,10 @@ class _StubLearner:
         self.calls = []
 
     def add_prediction_feedback(
-        self, prediction: float, actual: float, symbol: str,
+        self,
+        prediction: float,
+        actual: float,
+        symbol: str,
     ) -> None:
         self.calls.append((prediction, actual, symbol))
 

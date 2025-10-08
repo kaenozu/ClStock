@@ -22,7 +22,9 @@ class AdvancedCacheManager:
         }
 
     def get_cached_features(
-        self, symbol: str, data_hash: str,
+        self,
+        symbol: str,
+        data_hash: str,
     ) -> Optional[pd.DataFrame]:
         """特徴量キャッシュから取得"""
         cache_key = f"{symbol}_{data_hash}"
@@ -88,7 +90,11 @@ class RedisCache:
             import redis
 
             self.redis_client = redis.Redis(
-                host=host, port=port, db=db, decode_responses=True, socket_timeout=5,
+                host=host,
+                port=port,
+                db=db,
+                decode_responses=True,
+                socket_timeout=5,
             )
             # 接続テスト
             self.redis_client.ping()

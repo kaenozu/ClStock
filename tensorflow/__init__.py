@@ -104,4 +104,3 @@ def shape(x):  # pragma: no cover - 単純スタブ
 
 def squeeze(x, axis=None):  # pragma: no cover - 単純スタブ
     return np.squeeze(np.asarray(x, dtype=float), axis=axis)
-

@@ -18,7 +18,11 @@ def test_calculate_keltner_channels_values():
     close = pd.Series([9.5, 10.5, 11.5, 12.5])
 
     channels = calculate_keltner_channels(
-        high=high, low=low, close=close, window=2, multiplier=1.5,
+        high=high,
+        low=low,
+        close=close,
+        window=2,
+        multiplier=1.5,
     )
 
     expected_middle = pd.Series([9.5, 10.0555556, 10.7962964, 11.7098766])

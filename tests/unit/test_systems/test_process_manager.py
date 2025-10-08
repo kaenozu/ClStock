@@ -199,7 +199,8 @@ class TestProcessManager:
 
         # Register a new service
         service_info = ProcessInfo(
-            name="test_service", command="python test_service.py",
+            name="test_service",
+            command="python test_service.py",
         )
 
         pm.register_service(service_info)
@@ -256,14 +257,14 @@ class TestProcessManager:
 
         for service in pm.list_services():
             command_parts = shlex.split(service.command)
-            assert len(command_parts) >= 2, (
-                f"Command for {service.name} must include script path"
-            )
+            assert (
+                len(command_parts) >= 2
+            ), f"Command for {service.name} must include script path"
 
             script_path = Path(service.working_dir) / command_parts[1]
-            assert script_path.exists(), (
-                f"Script for {service.name} not found: {script_path}"
-            )
+            assert (
+                script_path.exists()
+            ), f"Script for {service.name} not found: {script_path}"
 
     def test_graceful_shutdown_uses_supported_executor_signature(self):
         """Ensure graceful shutdown only passes supported args to executor.shutdown."""

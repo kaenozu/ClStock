@@ -81,7 +81,8 @@ sys.modules["pandas"] = pandas_stub
 
 MODULE_PATH = os.path.join(PROJECT_ROOT, "data", "async_stock_data.py")
 MODULE_SPEC = importlib.util.spec_from_file_location(
-    "data.async_stock_data", MODULE_PATH,
+    "data.async_stock_data",
+    MODULE_PATH,
 )
 async_stock_data = importlib.util.module_from_spec(MODULE_SPEC)
 MODULE_SPEC.loader.exec_module(async_stock_data)
@@ -129,7 +130,8 @@ def isolated_cache(monkeypatch):
 
 
 def test_fetch_with_yfinance_async_awaits_sleep_before_success(
-    monkeypatch, sample_dataframe,
+    monkeypatch,
+    sample_dataframe,
 ):
     provider = AsyncStockDataProvider()
     sleep_calls = []
@@ -150,7 +152,8 @@ def test_fetch_with_yfinance_async_awaits_sleep_before_success(
 
 
 def test_fetch_with_yfinance_async_uses_async_sleep_on_retry(
-    monkeypatch, sample_dataframe,
+    monkeypatch,
+    sample_dataframe,
 ):
     provider = AsyncStockDataProvider()
     sleep_calls = []
@@ -258,7 +261,8 @@ async def test_get_stock_data_uses_local_before_yfinance(monkeypatch, sample_dat
 
 @pytest.mark.asyncio
 async def test_get_stock_data_attempts_http_before_yfinance(
-    monkeypatch, sample_dataframe,
+    monkeypatch,
+    sample_dataframe,
 ):
     provider = AsyncStockDataProvider()
     empty = pandas_stub.DataFrame()

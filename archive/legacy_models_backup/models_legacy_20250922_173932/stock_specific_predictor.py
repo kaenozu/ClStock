@@ -32,7 +32,9 @@ class StockSpecificPredictor:
         self.symbol_performance: Dict[str, Dict[str, float]] = {}
 
     def analyze_symbol_characteristics(
-        self, symbol: str, data: pd.DataFrame,
+        self,
+        symbol: str,
+        data: pd.DataFrame,
     ) -> Dict[str, Any]:
         """銘柄固有の特性を分析"""
         try:
@@ -264,7 +266,11 @@ class StockSpecificPredictor:
         return df
 
     def _calculate_atr(
-        self, high: pd.Series, low: pd.Series, close: pd.Series, window: int,
+        self,
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        window: int,
     ) -> pd.Series:
         """ATR計算"""
         tr1 = high - low
@@ -282,7 +288,9 @@ class StockSpecificPredictor:
         return 100 - (100 / (1 + rs))
 
     def train_symbol_model(
-        self, symbol: str, lookback_period: str = "2y",
+        self,
+        symbol: str,
+        lookback_period: str = "2y",
     ) -> Dict[str, Any]:
         """個別銘柄モデルを訓練"""
         try:
@@ -324,7 +332,9 @@ class StockSpecificPredictor:
             models_to_try = {
                 "logistic": LogisticRegression(random_state=42, max_iter=1000),
                 "random_forest": RandomForestClassifier(
-                    n_estimators=100, random_state=42, max_depth=10,
+                    n_estimators=100,
+                    random_state=42,
+                    max_depth=10,
                 ),
             }
 
@@ -365,7 +375,8 @@ class StockSpecificPredictor:
                 "accuracy": best_score,
                 "trained_date": datetime.now(),
                 "symbol_characteristics": self.analyze_symbol_characteristics(
-                    symbol, data,
+                    symbol,
+                    data,
                 ),
             }
 
@@ -386,7 +397,9 @@ class StockSpecificPredictor:
             raise ModelTrainingError(f"StockSpecific_{symbol}", str(e))
 
     def predict_symbol(
-        self, symbol: str, current_data: Optional[pd.DataFrame] = None,
+        self,
+        symbol: str,
+        current_data: Optional[pd.DataFrame] = None,
     ) -> Dict[str, Any]:
         """個別銘柄予測実行"""
         try:
@@ -435,7 +448,8 @@ class StockSpecificPredictor:
             raise PredictionError(symbol, "StockSpecific", str(e))
 
     def batch_train_all_symbols(
-        self, symbols: Optional[List[str]] = None,
+        self,
+        symbols: Optional[List[str]] = None,
     ) -> Dict[str, Dict[str, Any]]:
         """全銘柄の一括訓練"""
         if symbols is None:

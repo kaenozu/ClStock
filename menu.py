@@ -34,7 +34,9 @@ def clear_screen():
 
     try:
         if os.name == "nt":
-            subprocess.run(["cmd", "/c", "cls"], check=True, shell=False)  # nosec B603, B607
+            subprocess.run(
+                ["cmd", "/c", "cls"], check=True, shell=False
+            )  # nosec B603, B607
         else:
             subprocess.run(["clear"], check=True, shell=False)  # nosec B603, B607
     except subprocess.CalledProcessError:
@@ -319,7 +321,8 @@ def run_demo_trading():
 
         result = subprocess.run(
             ["python", "demo_start.py"],
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,  # nosec B603, B607
         )
         print(result.stdout)
@@ -342,7 +345,8 @@ def run_tse_optimization():
 
         result = subprocess.run(
             ["python", "tse_4000_optimizer.py"],
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,  # nosec B603, B607
         )
         print(result.stdout)
@@ -365,7 +369,8 @@ def run_investment_advisor():
 
         result = subprocess.run(
             ["python", "investment_advisor_cui.py"],
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,  # nosec B603, B607
         )
         print(result.stdout)
@@ -398,7 +403,8 @@ def performance_monitor():
 
         result = subprocess.run(
             ["python", "selective_system.py"],
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,  # nosec B603, B607
         )
         print(result.stdout)
@@ -446,7 +452,8 @@ def run_system_test():
 
         result = subprocess.run(
             ["python", "-m", "pytest", "tests/", "-v"],
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,  # nosec B603, B607
         )
         print(result.stdout)

@@ -108,7 +108,9 @@ class ProcessManager:
         self.service_registry = service_registry or ServiceRegistry()
         self.monitoring_loop = monitoring_loop or MonitoringLoop(self.service_registry)
         self.shutdown_coordinator = shutdown_coordinator or ShutdownCoordinator(
-            self, self.service_registry, self.monitoring_loop,
+            self,
+            self.service_registry,
+            self.monitoring_loop,
         )
 
         if (
@@ -225,7 +227,8 @@ class ProcessManager:
     @_shutdown_event.setter
     def _shutdown_event(self, value) -> None:  # type: ignore[override]
         if hasattr(self, "monitoring_loop") and hasattr(
-            self.monitoring_loop, "shutdown_event",
+            self.monitoring_loop,
+            "shutdown_event",
         ):
             self.monitoring_loop._shutdown_event = value  # type: ignore[attr-defined]
         else:
@@ -386,7 +389,10 @@ class ProcessManager:
             reader = OutputReader(
                 stream,
                 log_callback=lambda line: log_func(
-                    "[%s][%s] %s", process_info.name, stream_name, line,
+                    "[%s][%s] %s",
+                    process_info.name,
+                    stream_name,
+                    line,
                 ),
                 log_prefix=process_info.name,
                 pipe_name=stream_name,
@@ -395,10 +401,14 @@ class ProcessManager:
             return reader
 
         process_info.stdout_thread = _create_reader(
-            process.stdout, logger.info, "stdout",
+            process.stdout,
+            logger.info,
+            "stdout",
         )
         process_info.stderr_thread = _create_reader(
-            process.stderr, logger.warning, "stderr",
+            process.stderr,
+            logger.warning,
+            "stderr",
         )
 
     def stop_service(self, name: str, force: bool = False) -> bool:
@@ -425,7 +435,8 @@ class ProcessManager:
         self._shutdown_event.clear()
         self.monitoring_active = True
         self.monitor_thread = threading.Thread(
-            target=self._monitor_processes, daemon=True,
+            target=self._monitor_processes,
+            daemon=True,
         )
         self.monitor_thread.start()
         logger.info("プロセス監視開始")
@@ -587,7 +598,9 @@ class ProcessManager:
             logger.error(f"ヘルスチェックエラー {process_info.name}: {e}")
 
     def start_multiple_services(
-        self, names: Iterable[str], max_parallel: int = 3,
+        self,
+        names: Iterable[str],
+        max_parallel: int = 3,
     ) -> Dict[str, bool]:
         return self.service_registry.start_multiple_services(names, max_parallel)
 
@@ -640,7 +653,9 @@ class ProcessManager:
 
     def shutdown(self, force: bool = False) -> None:
         self.shutdown_coordinator.shutdown(
-            self.service_registry, self.monitoring_loop, force=force,
+            self.service_registry,
+            self.monitoring_loop,
+            force=force,
         )
 
     # ------------------------------------------------------------------
@@ -662,7 +677,9 @@ class ProcessManager:
         }
 
     def execute_safe_command(
-        self, command: Sequence[str], timeout: int = 30,
+        self,
+        command: Sequence[str],
+        timeout: int = 30,
     ) -> tuple[bool, str, str]:
         argv = list(command)
         if not self._validate_command(argv):
@@ -671,7 +688,8 @@ class ProcessManager:
         try:
             result = subprocess.run(
                 argv,
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=timeout,
                 shell=False,

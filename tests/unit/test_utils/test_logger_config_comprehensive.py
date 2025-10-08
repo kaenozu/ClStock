@@ -270,7 +270,9 @@ class TestLoggerConfigurationComprehensive:
         try:
             for i in range(3):
                 with tempfile.NamedTemporaryFile(
-                    suffix=".log", delete=False, dir=cl.log_dir,
+                    suffix=".log",
+                    delete=False,
+                    dir=cl.log_dir,
                 ) as tmp_file:
                     temp_files.append(tmp_file.name)
 

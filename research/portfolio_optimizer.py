@@ -87,7 +87,10 @@ class PortfolioOptimizer:
         return correlation_matrix
 
     def optimize_portfolio_weights(
-        self, expected_returns, covariance_matrix, risk_free_rate=0.001,
+        self,
+        expected_returns,
+        covariance_matrix,
+        risk_free_rate=0.001,
     ):
         """シャープレシオ最大化によるポートフォリオ最適化"""
         n_assets = len(expected_returns)
@@ -174,7 +177,8 @@ class PortfolioOptimizer:
 
         # ポートフォリオ最適化
         optimal_weights = self.optimize_portfolio_weights(
-            expected_returns, covariance_matrix.values,
+            expected_returns,
+            covariance_matrix.values,
         )
 
         # 最適ポートフォリオの詳細
@@ -198,7 +202,9 @@ class PortfolioOptimizer:
         # ポートフォリオ全体のパフォーマンス計算
         portfolio_return = np.sum(expected_returns * optimal_weights)
         portfolio_volatility = np.sqrt(
-            np.dot(optimal_weights.T, np.dot(covariance_matrix.values, optimal_weights)),
+            np.dot(
+                optimal_weights.T, np.dot(covariance_matrix.values, optimal_weights)
+            ),
         )
         portfolio_sharpe = portfolio_return / portfolio_volatility
 

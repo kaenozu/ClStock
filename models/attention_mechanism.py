@@ -20,7 +20,9 @@ class TemporalAttention:
     def __call__(self, inputs: np.ndarray) -> np.ndarray:
         data = np.asarray(inputs, dtype=float)
         if data.ndim != 3:
-            raise ValueError("inputs は (batch, time, features) 形式である必要があります。")
+            raise ValueError(
+                "inputs は (batch, time, features) 形式である必要があります。"
+            )
 
         batch, time_steps, features = data.shape
         if time_steps == 0:
@@ -48,6 +50,7 @@ class MultiHeadTemporalAttention:
         self.attention_layers: List[TemporalAttention] = [
             TemporalAttention(attention_units_per_head) for _ in range(num_heads)
         ]
+
     def __call__(self, inputs: np.ndarray) -> np.ndarray:
         head_outputs = [layer(inputs) for layer in self.attention_layers]
         return np.concatenate(head_outputs, axis=-1)
@@ -94,7 +97,8 @@ class AdaptiveTemporalAttention:
 
         if self._projection is None:
             scale = 1.0 / max(combined.shape[-1], 1)
-            self._projection = np.full((combined.shape[-1], self.attention_units), scale)
+            self._projection = np.full(
+                (combined.shape[-1], self.attention_units), scale
+            )
 
         return combined @ self._projection
-

@@ -99,7 +99,8 @@ class GPUResourceManager:
                 self.logger.error(f"Failed to initialize GPU {gpu_id}: {e!s}")
 
     def get_optimal_gpu_distribution(
-        self, total_workload: int,
+        self,
+        total_workload: int,
     ) -> List[Tuple[int, int]]:
         """最適GPU分散計算"""
         if self.gpu_count == 0:
@@ -170,7 +171,9 @@ class GPUWorkerPool:
             self.device = torch.device("cpu")
 
     async def process_chunk(
-        self, symbols: List[str], predict_callback,
+        self,
+        symbols: List[str],
+        predict_callback,
     ) -> GPUWorkerResult:
         """チャンク処理"""
         start_time = time.time()
@@ -207,7 +210,9 @@ class GPUWorkerPool:
             )
 
     async def _parallel_predict_on_gpu(
-        self, symbols: List[str], predict_callback,
+        self,
+        symbols: List[str],
+        predict_callback,
     ) -> List[PredictionResult]:
         """GPU並列予測"""
         batch_size = min(len(symbols), 32)  # バッチサイズ制限
@@ -216,7 +221,8 @@ class GPUWorkerPool:
         for i in range(0, len(symbols), batch_size):
             batch_symbols = symbols[i : i + batch_size]
             batch_results = await self._gpu_batch_predict(
-                batch_symbols, predict_callback,
+                batch_symbols,
+                predict_callback,
             )
             results.extend(batch_results)
 
@@ -227,7 +233,9 @@ class GPUWorkerPool:
         return results
 
     async def _gpu_batch_predict(
-        self, batch_symbols: List[str], predict_callback,
+        self,
+        batch_symbols: List[str],
+        predict_callback,
     ) -> List[PredictionResult]:
         """GPUバッチ予測"""
         if not callable(predict_callback):
@@ -366,7 +374,8 @@ class MultiGPUParallelPredictor:
                 # GPU使用率更新
                 utilization = worker_result.processing_time / (time.time() - start_time)
                 self.resource_manager.update_gpu_utilization(
-                    worker_result.gpu_id, utilization,
+                    worker_result.gpu_id,
+                    utilization,
                 )
 
             # 統計更新
@@ -392,7 +401,9 @@ class MultiGPUParallelPredictor:
             return []
 
     async def predict_streaming_batch(
-        self, symbols: List[str], batch_size: int = 100,
+        self,
+        symbols: List[str],
+        batch_size: int = 100,
     ) -> List[PredictionResult]:
         """ストリーミングバッチ予測"""
         results = []
@@ -527,7 +538,8 @@ class RealTimeLearningSystem:
         self.logger.info("RealTimeLearningSystem initialized")
 
     async def process_real_time_data(
-        self, market_data: Dict[str, Any],
+        self,
+        market_data: Dict[str, Any],
     ) -> Dict[str, Any]:
         """リアルタイムデータ処理"""
         try:
@@ -658,7 +670,9 @@ class RealTimeLearningSystem:
         return 0.8
 
     async def _update_models_incrementally(
-        self, X: np.ndarray, y: np.ndarray,
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
     ) -> Dict[str, Any]:
         """モデルのインクリメンタル更新"""
         # 実際の実装では、各モデル（XGBoost、LightGBM等）を部分的に更新
@@ -703,7 +717,8 @@ class RealTimeLearningSystem:
         else:
             # 変化が小さい場合、ゆるやかに減衰
             self.adaptive_learning_rate = max(
-                self.min_learning_rate, self.adaptive_learning_rate * 0.999,
+                self.min_learning_rate,
+                self.adaptive_learning_rate * 0.999,
             )
 
     def _update_learning_stats(self, old_accuracy: float, new_accuracy: float):

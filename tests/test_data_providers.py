@@ -19,7 +19,8 @@ def _load_real_stock_data_module():
         return sys.modules[module_name]
 
     spec = importlib.util.spec_from_file_location(
-        module_name, Path(__file__).resolve().parent.parent / "data" / "stock_data.py",
+        module_name,
+        Path(__file__).resolve().parent.parent / "data" / "stock_data.py",
     )
     module = importlib.util.module_from_spec(spec)
     loader = spec.loader
@@ -198,7 +199,9 @@ class TestStockDataProvider:
         assert result is not None
 
     def test_trusted_market_data_used_when_yfinance_unavailable(
-        self, tmp_path, monkeypatch,
+        self,
+        tmp_path,
+        monkeypatch,
     ):
         """設定された信頼できるデータソースが利用されることを検証する"""
         if MarketDataConfig is None:

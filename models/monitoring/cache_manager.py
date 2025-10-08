@@ -67,7 +67,9 @@ class AdvancedCacheManager(CacheProvider):
 
         try:
             self.cleanup_thread = threading.Thread(
-                target=self._cleanup_worker, daemon=True, name="CacheCleanupWorker",
+                target=self._cleanup_worker,
+                daemon=True,
+                name="CacheCleanupWorker",
             )
             self.cleanup_thread.start()
             logger.info(
@@ -183,7 +185,9 @@ class AdvancedCacheManager(CacheProvider):
         self._update_cache_stats()
 
     def get_cached_features(
-        self, symbol: str, data_hash: str,
+        self,
+        symbol: str,
+        data_hash: str,
     ) -> Optional[pd.DataFrame]:
         """特徴量キャッシュから取得"""
         cache_key = f"features_{symbol}_{data_hash}"
@@ -413,7 +417,8 @@ class RealTimeCacheManager(AdvancedCacheManager):
         """リアルタイムキャッシュ用自動クリーンアップスレッドを開始"""
         if self.auto_cleanup_enabled:
             realtime_cleanup_thread = threading.Thread(
-                target=self._realtime_cleanup_worker, daemon=True,
+                target=self._realtime_cleanup_worker,
+                daemon=True,
             )
             realtime_cleanup_thread.start()
             logger.info("Automatic realtime cache cleanup thread started")
@@ -493,7 +498,9 @@ class RealTimeCacheManager(AdvancedCacheManager):
         self.set(latest_key, tick_data, ttl=300)
 
     def cache_order_book_data(
-        self, order_book_data, max_history: Optional[int] = None,
+        self,
+        order_book_data,
+        max_history: Optional[int] = None,
     ) -> None:
         """板情報データを時系列キャッシュに保存"""
         from models.base.interfaces import OrderBookData

@@ -15,7 +15,8 @@ import numpy as np
 
 # ロギング設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -88,12 +89,16 @@ def run_comprehensive_comparison() -> Dict[str, Any]:
 
         # 両システムでの予測比較
         comparison_results = compare_prediction_systems(
-            precision_system, enhanced_system, test_symbols,
+            precision_system,
+            enhanced_system,
+            test_symbols,
         )
 
         # パフォーマンス比較
         performance_results = compare_system_performance(
-            precision_system, enhanced_system, test_symbols,
+            precision_system,
+            enhanced_system,
+            test_symbols,
         )
 
         # 機能比較
@@ -112,7 +117,9 @@ def run_comprehensive_comparison() -> Dict[str, Any]:
 
 
 def compare_prediction_systems(
-    precision_system, enhanced_system, test_symbols: List[str],
+    precision_system,
+    enhanced_system,
+    test_symbols: List[str],
 ) -> Dict[str, Any]:
     """予測システムの比較"""
     print("3. 予測精度・品質比較")
@@ -180,14 +187,16 @@ def compare_prediction_systems(
     # 比較メトリクス計算
     if results["precision_87_results"] and results["enhanced_results"]:
         results["comparison_metrics"] = calculate_comparison_metrics(
-            results["precision_87_results"], results["enhanced_results"],
+            results["precision_87_results"],
+            results["enhanced_results"],
         )
 
     return results
 
 
 def calculate_comparison_metrics(
-    precision_results: List[Dict], enhanced_results: List[Dict],
+    precision_results: List[Dict],
+    enhanced_results: List[Dict],
 ) -> Dict[str, Any]:
     """比較メトリクスの計算"""
     metrics = {}
@@ -238,7 +247,9 @@ def calculate_comparison_metrics(
 
 
 def compare_system_performance(
-    precision_system, enhanced_system, test_symbols: List[str],
+    precision_system,
+    enhanced_system,
+    test_symbols: List[str],
 ) -> Dict[str, Any]:
     """システムパフォーマンスの比較"""
     print("4. システムパフォーマンス比較")
@@ -285,13 +296,17 @@ def compare_system_performance(
         # 拡張システムのキャッシュ情報
         if enhanced_system:
             cache_info = {}
-            if hasattr(enhanced_system, 'feature_cache'):
+            if hasattr(enhanced_system, "feature_cache"):
                 cache_info["feature_cache_size"] = enhanced_system.feature_cache.size()
-            if hasattr(enhanced_system, 'prediction_cache'):
-                cache_info["prediction_cache_size"] = enhanced_system.prediction_cache.size()
-            if hasattr(enhanced_system, 'parallel_calculator'):
+            if hasattr(enhanced_system, "prediction_cache"):
+                cache_info["prediction_cache_size"] = (
+                    enhanced_system.prediction_cache.size()
+                )
+            if hasattr(enhanced_system, "parallel_calculator"):
                 cache_info["parallel_workers"] = getattr(
-                    enhanced_system.parallel_calculator, "n_jobs", 1,
+                    enhanced_system.parallel_calculator,
+                    "n_jobs",
+                    1,
                 )
             performance_data["memory_efficiency"]["enhanced"] = cache_info
 

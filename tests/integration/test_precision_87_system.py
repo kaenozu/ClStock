@@ -21,7 +21,8 @@ warnings.filterwarnings("ignore")
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = setup_logger(__name__)
 
@@ -84,7 +85,8 @@ class Precision87TestSystem:
                     "accuracy": final_accuracy,
                     "precision_87_achieved": achieved_87,
                     "component_breakdown": prediction_result.get(
-                        "component_breakdown", {},
+                        "component_breakdown",
+                        {},
                     ),
                     "tuning_details": prediction_result.get("tuning_applied", {}),
                     "status": "success",
@@ -140,7 +142,9 @@ class Precision87TestSystem:
             "accuracy_improvement": average_accuracy - 84.6,
             "individual_results": test_results,
             "system_performance": self._evaluate_system_performance(
-                average_accuracy, precision_87_rate, successful_predictions,
+                average_accuracy,
+                precision_87_rate,
+                successful_predictions,
             ),
         }
 
@@ -150,13 +154,17 @@ class Precision87TestSystem:
         return summary
 
     def _evaluate_system_performance(
-        self, avg_accuracy: float, precision_rate: float, success_count: int,
+        self,
+        avg_accuracy: float,
+        precision_rate: float,
+        success_count: int,
     ) -> Dict[str, Any]:
         """システム性能評価"""
         try:
             # 性能スコア計算
             accuracy_score = min(
-                (avg_accuracy - 84.6) / 2.4 * 100, 100,
+                (avg_accuracy - 84.6) / 2.4 * 100,
+                100,
             )  # 84.6→87.0で100点
             precision_score = precision_rate * 100
             reliability_score = (success_count / len(self.test_symbols)) * 100
@@ -191,7 +199,9 @@ class Precision87TestSystem:
                 "achievement": achievement,
                 "target_87_achieved": precision_rate >= 0.6,  # 60%以上で目標達成
                 "recommendation": self._generate_recommendations(
-                    avg_accuracy, precision_rate, overall_score,
+                    avg_accuracy,
+                    precision_rate,
+                    overall_score,
                 ),
             }
 
@@ -205,7 +215,10 @@ class Precision87TestSystem:
             }
 
     def _generate_recommendations(
-        self, accuracy: float, precision_rate: float, score: float,
+        self,
+        accuracy: float,
+        precision_rate: float,
+        score: float,
     ) -> List[str]:
         """改善推奨事項生成"""
         recommendations = []

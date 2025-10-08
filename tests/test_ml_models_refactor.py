@@ -73,17 +73,20 @@ def test_advanced_precision_prediction_uses_factories(monkeypatch):
             return {"prediction_score": 61.0, "confidence": 0.65}
 
     monkeypatch.setattr(
-        "models.advanced_precision.create_dqn_agent", lambda logger: DummyDQN(),
+        "models.advanced_precision.create_dqn_agent",
+        lambda logger: DummyDQN(),
     )
     monkeypatch.setattr(
         "models.advanced_precision.create_multimodal_analyzer",
         lambda logger: DummyMultiModal(),
     )
     monkeypatch.setattr(
-        "models.advanced_precision.create_meta_learning_optimizer", lambda: DummyMeta(),
+        "models.advanced_precision.create_meta_learning_optimizer",
+        lambda: DummyMeta(),
     )
     monkeypatch.setattr(
-        "models.advanced_precision.create_advanced_ensemble", lambda: DummyEnsemble(),
+        "models.advanced_precision.create_advanced_ensemble",
+        lambda: DummyEnsemble(),
     )
     monkeypatch.setattr(
         "models.advanced_precision.create_market_transformer",
@@ -99,7 +102,8 @@ def test_advanced_precision_prediction_uses_factories(monkeypatch):
         return 77.0
 
     monkeypatch.setattr(
-        "models.advanced_precision.create_market_state", fake_create_market_state,
+        "models.advanced_precision.create_market_state",
+        fake_create_market_state,
     )
     monkeypatch.setattr(
         "models.advanced_precision.convert_action_to_score",

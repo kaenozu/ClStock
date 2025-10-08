@@ -13,7 +13,8 @@ if False:  # pragma: no cover - typing helper
 
 
 def generate_backtest_charts(
-    result: BacktestResult, logger: Optional[object] = None,
+    result: BacktestResult,
+    logger: Optional[object] = None,
 ) -> Dict[str, str]:
     """Create base64-encoded charts summarising the backtest."""
     charts: Dict[str, str] = {}

@@ -14,7 +14,6 @@ class ValidationError(Exception):
     """検証エラー"""
 
 
-
 def validate_stock_symbol(symbol: str) -> str:
     """株式銘柄コードの検証
 
@@ -312,12 +311,14 @@ def validate_portfolio_allocations(
         )
 
     return {
-        symbol: weight / total_weight for symbol, weight in normalized_allocations.items()
+        symbol: weight / total_weight
+        for symbol, weight in normalized_allocations.items()
     }
 
 
 def validate_date_range(
-    start_date: Optional[str] = None, end_date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
 ) -> tuple:
     """日付範囲の検証
 

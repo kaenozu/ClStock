@@ -227,7 +227,8 @@ class Enhanced846System:
                 high_conf_mask = np.max(y_proba, axis=1) > 0.75
                 if high_conf_mask.sum() > 0:
                     high_conf_acc = accuracy_score(
-                        y_test[high_conf_mask], y_pred[high_conf_mask],
+                        y_test[high_conf_mask],
+                        y_pred[high_conf_mask],
                     )
                 else:
                     high_conf_acc = 0
@@ -283,16 +284,16 @@ class Enhanced846System:
 
         # トップ結果
         sorted_results = sorted(
-            results.items(), key=lambda x: x[1]["accuracy"], reverse=True,
+            results.items(),
+            key=lambda x: x[1]["accuracy"],
+            reverse=True,
         )
         print("\nトップ5結果:")
         for i, (symbol, result) in enumerate(sorted_results[:5], 1):
             status = (
                 "🚀 BREAKTHROUGH"
                 if result["accuracy"] > 0.846
-                else "⭐ TARGET"
-                if result["accuracy"] >= 0.846
-                else "○ GOOD"
+                else "⭐ TARGET" if result["accuracy"] >= 0.846 else "○ GOOD"
             )
             print(f"  {i}. {symbol}: {result['accuracy']:.1%} {status}")
 

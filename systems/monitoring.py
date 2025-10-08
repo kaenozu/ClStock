@@ -178,7 +178,8 @@ class MonitoringLoop:
                                 memory_mb,
                             )
                             self.service_registry.stop_service(
-                                process_info.name, force=True,
+                                process_info.name,
+                                force=True,
                             )
 
                     if cpu_percent > process_info.max_cpu_percent:

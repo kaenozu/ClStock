@@ -137,10 +137,12 @@ def test_stop_service_with_timeout(manager, monkeypatch):
     process_info.process = popen
     process_info.status = ProcessStatus.RUNNING
     process_info.stdout_thread = types.SimpleNamespace(
-        stop=lambda: None, join=lambda timeout=None: None,
+        stop=lambda: None,
+        join=lambda timeout=None: None,
     )
     process_info.stderr_thread = types.SimpleNamespace(
-        stop=lambda: None, join=lambda timeout=None: None,
+        stop=lambda: None,
+        join=lambda timeout=None: None,
     )
 
     assert manager.stop_service("dashboard") is True
@@ -174,7 +176,8 @@ def test_execute_safe_command(monkeypatch):
         ),
     )
     success, stdout, stderr = manager.execute_safe_command(
-        ["python", "script.py"], timeout=1,
+        ["python", "script.py"],
+        timeout=1,
     )
     assert success is False
     assert stderr == "コマンドタイムアウト"

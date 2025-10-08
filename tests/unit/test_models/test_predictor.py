@@ -75,9 +75,12 @@ class TestStockPredictor:
 
         # データプロバイダーをモック
         with patch.object(
-            predictor.data_provider, "get_stock_data", return_value=mock_stock_data,
+            predictor.data_provider,
+            "get_stock_data",
+            return_value=mock_stock_data,
         ), patch.object(
-            predictor.data_provider, "calculate_technical_indicators",
+            predictor.data_provider,
+            "calculate_technical_indicators",
         ) as mock_calc:
             # 技術指標付きデータを返すようにモック設定
             enriched_data = mock_stock_data.copy()
@@ -97,7 +100,9 @@ class TestStockPredictor:
         predictor = StockPredictor()
 
         with patch.object(
-            predictor.data_provider, "get_stock_data", return_value=pd.DataFrame(),
+            predictor.data_provider,
+            "get_stock_data",
+            return_value=pd.DataFrame(),
         ):
             score = predictor.calculate_score("INVALID")
             assert score == 0
@@ -114,14 +119,20 @@ class TestStockPredictor:
         enriched_data["RSI"] = 55.0
 
         with patch.object(
-            predictor.data_provider, "get_stock_data", return_value=mock_stock_data,
+            predictor.data_provider,
+            "get_stock_data",
+            return_value=mock_stock_data,
         ), patch.object(
             predictor.data_provider,
             "calculate_technical_indicators",
             return_value=enriched_data,
         ), patch.object(
-            predictor.data_provider, "get_financial_metrics", return_value={},
-        ), patch.object(predictor, "calculate_score", return_value=85.0):
+            predictor.data_provider,
+            "get_financial_metrics",
+            return_value={},
+        ), patch.object(
+            predictor, "calculate_score", return_value=85.0
+        ):
             recommendation = predictor.generate_recommendation("7203")
 
             assert isinstance(recommendation, StockRecommendation)
@@ -147,14 +158,20 @@ class TestStockPredictor:
 
         for score in test_scores:
             with patch.object(
-                predictor.data_provider, "get_stock_data", return_value=mock_stock_data,
+                predictor.data_provider,
+                "get_stock_data",
+                return_value=mock_stock_data,
             ), patch.object(
                 predictor.data_provider,
                 "calculate_technical_indicators",
                 return_value=enriched_data,
             ), patch.object(
-                predictor.data_provider, "get_financial_metrics", return_value={},
-            ), patch.object(predictor, "calculate_score", return_value=score):
+                predictor.data_provider,
+                "get_financial_metrics",
+                return_value={},
+            ), patch.object(
+                predictor, "calculate_score", return_value=score
+            ):
                 recommendation = predictor.generate_recommendation("7203")
 
                 if score >= 80:
@@ -260,7 +277,9 @@ class TestStockPredictor:
         test_data["Volume"] = [1000000] * len(test_data)
 
         with patch.object(
-            predictor.data_provider, "get_stock_data", return_value=test_data,
+            predictor.data_provider,
+            "get_stock_data",
+            return_value=test_data,
         ), patch.object(
             predictor.data_provider,
             "calculate_technical_indicators",

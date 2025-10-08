@@ -59,7 +59,9 @@ class BacktestRunner:
         self.daily_returns: List[float] = []
 
         self.holding_horizon: int = getattr(
-            self.trading_strategy.precision_system, "evaluation_horizon", 5,
+            self.trading_strategy.precision_system,
+            "evaluation_horizon",
+            5,
         )
 
     # ------------------------------------------------------------------
@@ -110,7 +112,9 @@ class BacktestRunner:
 
                     # Use available cash for sizing; prevents leverage until risk layer is rebuilt.
                     current_capital = max(self.cash, 0.0)
-                    signal = self._generate_signal(symbol, current_capital, current_date)
+                    signal = self._generate_signal(
+                        symbol, current_capital, current_date
+                    )
 
                     if signal is not None:
                         self._maybe_close_on_signal(symbol, price, current_date, signal)
@@ -121,7 +125,9 @@ class BacktestRunner:
                 self.portfolio_values.append((current_date, portfolio_value))
 
                 if previous_portfolio_value > 0:
-                    daily_return = (portfolio_value - previous_portfolio_value) / previous_portfolio_value
+                    daily_return = (
+                        portfolio_value - previous_portfolio_value
+                    ) / previous_portfolio_value
                 else:
                     daily_return = 0.0
                 self.daily_returns.append(daily_return)
@@ -150,7 +156,9 @@ class BacktestRunner:
     # ------------------------------------------------------------------
     def _load_historical_data(self, symbols: List[str]) -> None:
         lookback_days = getattr(
-            self.trading_strategy.precision_system, "evaluation_window", 160,
+            self.trading_strategy.precision_system,
+            "evaluation_window",
+            160,
         )
         buffer_days = max(lookback_days * 2, 360)
         extended_start = self.config.start_date - timedelta(days=buffer_days)
@@ -158,7 +166,9 @@ class BacktestRunner:
         for symbol in symbols:
             try:
                 data = self.data_provider.get_stock_data(
-                    symbol, start_date=extended_start, end_date=self.config.end_date,
+                    symbol,
+                    start_date=extended_start,
+                    end_date=self.config.end_date,
                 )
                 if data is None or data.empty:
                     self.logger.warning("履歴データが取得できませんでした: %s", symbol)
@@ -169,7 +179,9 @@ class BacktestRunner:
             except Exception as exc:  # pragma: no cover - defensive logging
                 self.logger.error("履歴データ取得エラー %s: %s", symbol, exc)
 
-    def _build_price_cache(self, symbols: List[str], date: datetime) -> Dict[str, float]:
+    def _build_price_cache(
+        self, symbols: List[str], date: datetime
+    ) -> Dict[str, float]:
         prices: Dict[str, float] = {}
         for symbol in symbols:
             price = self._get_price(symbol, date)
@@ -200,7 +212,10 @@ class BacktestRunner:
         return float(value)
 
     def _generate_signal(
-        self, symbol: str, current_capital: float, as_of: datetime,
+        self,
+        symbol: str,
+        current_capital: float,
+        as_of: datetime,
     ) -> Optional[TradingSignal]:
         try:
             return self.trading_strategy.generate_trading_signal(
@@ -213,7 +228,10 @@ class BacktestRunner:
             return None
 
     def _should_force_close(
-        self, position: PositionRecord, price: float, as_of: datetime,
+        self,
+        position: PositionRecord,
+        price: float,
+        as_of: datetime,
     ) -> Optional[str]:
         if position.direction != SignalType.BUY:
             return None
@@ -227,18 +245,30 @@ class BacktestRunner:
         return None
 
     def _maybe_close_on_signal(
-        self, symbol: str, price: float, as_of: datetime, signal: TradingSignal,
+        self,
+        symbol: str,
+        price: float,
+        as_of: datetime,
+        signal: TradingSignal,
     ) -> None:
         position = self.positions.get(symbol)
         if position is None:
             return
-        if signal.signal_type in {SignalType.SELL, SignalType.STOP_LOSS, SignalType.TAKE_PROFIT}:
+        if signal.signal_type in {
+            SignalType.SELL,
+            SignalType.STOP_LOSS,
+            SignalType.TAKE_PROFIT,
+        }:
             self._close_position(symbol, price, as_of, "signal_reverse")
         elif signal.expected_return <= 0:
             self._close_position(symbol, price, as_of, "negative_expectation")
 
     def _maybe_open_position(
-        self, symbol: str, price: float, as_of: datetime, signal: TradingSignal,
+        self,
+        symbol: str,
+        price: float,
+        as_of: datetime,
+        signal: TradingSignal,
     ) -> None:
         if signal.signal_type != SignalType.BUY:
             return
@@ -259,7 +289,8 @@ class BacktestRunner:
 
         position_value = quantity * price
         trading_costs = self.trading_strategy.calculate_trading_costs(
-            position_value, SignalType.BUY,
+            position_value,
+            SignalType.BUY,
         )
         total_required = position_value + trading_costs["total_cost"]
         if total_required > self.cash:
@@ -268,7 +299,8 @@ class BacktestRunner:
                 return
             position_value = quantity * price
             trading_costs = self.trading_strategy.calculate_trading_costs(
-                position_value, SignalType.BUY,
+                position_value,
+                SignalType.BUY,
             )
             total_required = position_value + trading_costs["total_cost"]
             if total_required > self.cash:
@@ -309,7 +341,11 @@ class BacktestRunner:
         self.trade_log.append(trade_entry)
 
     def _close_position(
-        self, symbol: str, price: float, as_of: datetime, reason: str,
+        self,
+        symbol: str,
+        price: float,
+        as_of: datetime,
+        reason: str,
     ) -> None:
         position = self.positions.get(symbol)
         if position is None:
@@ -318,7 +354,8 @@ class BacktestRunner:
         quantity = position.quantity
         gross_proceeds = quantity * price
         trading_costs = self.trading_strategy.calculate_trading_costs(
-            gross_proceeds, SignalType.SELL,
+            gross_proceeds,
+            SignalType.SELL,
         )
         net_proceeds = gross_proceeds - trading_costs["total_cost"]
         profit_loss = net_proceeds - position.entry_cost
@@ -377,8 +414,14 @@ class BacktestRunner:
         if positions_closed:
             final_value = self.cash
             self.portfolio_values.append((latest_time, final_value))
-            prior_value = self.portfolio_values[-2][1] if len(self.portfolio_values) > 1 else self.config.initial_capital
-            daily_return = (final_value - prior_value) / prior_value if prior_value > 0 else 0.0
+            prior_value = (
+                self.portfolio_values[-2][1]
+                if len(self.portfolio_values) > 1
+                else self.config.initial_capital
+            )
+            daily_return = (
+                (final_value - prior_value) / prior_value if prior_value > 0 else 0.0
+            )
             self.daily_returns.append(daily_return)
 
     # ------------------------------------------------------------------
@@ -391,45 +434,77 @@ class BacktestRunner:
 
             initial_value = self.config.initial_capital
             final_value = self.portfolio_values[-1][1]
-            total_return = (final_value - initial_value) / initial_value if initial_value > 0 else 0.0
+            total_return = (
+                (final_value - initial_value) / initial_value
+                if initial_value > 0
+                else 0.0
+            )
 
             days = (self.config.end_date - self.config.start_date).days or 1
-            annualized_return = (1 + total_return) ** (252 / days) - 1 if total_return != -1 else -1
+            annualized_return = (
+                (1 + total_return) ** (252 / days) - 1 if total_return != -1 else -1
+            )
 
             daily_returns = self.daily_returns
             volatility = np.std(daily_returns) * np.sqrt(252) if daily_returns else 0.0
             sharpe_ratio = annualized_return / volatility if volatility > 0 else 0.0
 
             downside_returns = [r for r in daily_returns if r < 0]
-            downside_volatility = np.std(downside_returns) * np.sqrt(252) if downside_returns else 0.0
-            sortino_ratio = annualized_return / downside_volatility if downside_volatility > 0 else 0.0
+            downside_volatility = (
+                np.std(downside_returns) * np.sqrt(252) if downside_returns else 0.0
+            )
+            sortino_ratio = (
+                annualized_return / downside_volatility
+                if downside_volatility > 0
+                else 0.0
+            )
 
             max_drawdown = self._calculate_max_drawdown(self.portfolio_values)
-            calmar_ratio = annualized_return / max_drawdown if max_drawdown > 0 else float("inf")
+            calmar_ratio = (
+                annualized_return / max_drawdown if max_drawdown > 0 else float("inf")
+            )
 
             total_trades = len(self.completed_trades)
-            winning_trades = len([t for t in self.completed_trades if t["profit_loss"] > 0])
-            win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0.0
+            winning_trades = len(
+                [t for t in self.completed_trades if t["profit_loss"] > 0]
+            )
+            win_rate = (
+                (winning_trades / total_trades * 100) if total_trades > 0 else 0.0
+            )
 
-            profits = [t["profit_loss"] for t in self.completed_trades if t["profit_loss"] > 0]
-            losses = [-t["profit_loss"] for t in self.completed_trades if t["profit_loss"] < 0]
+            profits = [
+                t["profit_loss"] for t in self.completed_trades if t["profit_loss"] > 0
+            ]
+            losses = [
+                -t["profit_loss"] for t in self.completed_trades if t["profit_loss"] < 0
+            ]
             total_profits = sum(profits)
             total_losses = sum(losses)
-            profit_factor = (total_profits / total_losses) if total_losses > 0 else float("inf")
+            profit_factor = (
+                (total_profits / total_losses) if total_losses > 0 else float("inf")
+            )
 
-            precision_trades = [t for t in self.completed_trades if t["precision_87_achieved"]]
+            precision_trades = [
+                t for t in self.completed_trades if t["precision_87_achieved"]
+            ]
             precision_87_trades = len(precision_trades)
             precision_87_success_rate = (
-                len([t for t in precision_trades if t["profit_loss"] > 0]) / precision_87_trades * 100
-                if precision_87_trades > 0 else 0.0
+                len([t for t in precision_trades if t["profit_loss"] > 0])
+                / precision_87_trades
+                * 100
+                if precision_87_trades > 0
+                else 0.0
             )
 
             var_95 = np.percentile(daily_returns, 5) if daily_returns else 0.0
             tail_returns = [r for r in daily_returns if r <= var_95]
-            expected_shortfall = float(np.mean(tail_returns)) if tail_returns else float(var_95)
+            expected_shortfall = (
+                float(np.mean(tail_returns)) if tail_returns else float(var_95)
+            )
 
             total_costs = sum(
-                trade.get("trading_costs", {}).get("total_cost", 0.0) for trade in self.trade_log
+                trade.get("trading_costs", {}).get("total_cost", 0.0)
+                for trade in self.trade_log
             )
             total_tax = total_profits * self.config.tax_rate
 
@@ -477,7 +552,8 @@ class BacktestRunner:
             return self._empty_backtest_result()
 
     def _calculate_max_drawdown(
-        self, portfolio_values: List[Tuple[datetime, float]],
+        self,
+        portfolio_values: List[Tuple[datetime, float]],
     ) -> float:
         if not portfolio_values:
             return 0.0

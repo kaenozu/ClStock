@@ -93,7 +93,9 @@ class _SimpleSequentialModel:
         predictions = self._regressor.predict(X)
         return predictions.reshape(-1, 1)
 
-    def evaluate(self, X: np.ndarray, y: np.ndarray, verbose: int = 0) -> Tuple[float, float, float]:
+    def evaluate(
+        self, X: np.ndarray, y: np.ndarray, verbose: int = 0
+    ) -> Tuple[float, float, float]:
         del verbose
         return self._regressor.evaluate(X, y)
 
@@ -121,7 +123,13 @@ class CustomDeepPredictor:
         return processed.reshape(processed.shape[0], -1)
 
     def train(
-        self, X_train, y_train, X_val=None, y_val=None, epochs=100, batch_size=32,
+        self,
+        X_train,
+        y_train,
+        X_val=None,
+        y_val=None,
+        epochs=100,
+        batch_size=32,
     ):
         """モデル訓練"""
         X_train_flat = self._flatten_features(X_train)

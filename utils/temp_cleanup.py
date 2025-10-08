@@ -48,7 +48,10 @@ class TempFileCleanup:
         return temp_dir
 
     def _cleanup_path(
-        self, path: str, remove_func: Callable[[str], None], description: str,
+        self,
+        path: str,
+        remove_func: Callable[[str], None],
+        description: str,
     ) -> bool:
         """Clean up a path using the provided removal function"""
         try:
@@ -129,7 +132,9 @@ class TempFileCleanup:
             logger.error(f"Error during old files cleanup: {e}")
 
     def cleanup_unnecessary_files(
-        self, base_dir: str, required_entries: Iterable[str],
+        self,
+        base_dir: str,
+        required_entries: Iterable[str],
     ) -> List[str]:
         """Remove files or directories in base_dir that are not required."""
         if not os.path.isdir(base_dir):
@@ -154,7 +159,9 @@ class TempFileCleanup:
         removed.sort()
         if removed:
             logger.info(
-                "Removed %d unnecessary entries from %s", len(removed), base_dir,
+                "Removed %d unnecessary entries from %s",
+                len(removed),
+                base_dir,
             )
         else:
             logger.debug("No unnecessary entries found in %s", base_dir)

@@ -105,7 +105,9 @@ class PerformanceTracker:
     """
 
     def __init__(
-        self, initial_capital: float = 1000000, benchmark_symbol: str = "^N225",
+        self,
+        initial_capital: float = 1000000,
+        benchmark_symbol: str = "^N225",
     ):
         """Args:
         initial_capital: 初期資本
@@ -226,7 +228,9 @@ class PerformanceTracker:
             return False
 
     def get_period_performance(
-        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
+        self,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
     ) -> PeriodPerformance:
         """期間パフォーマンス取得
 
@@ -241,7 +245,8 @@ class PerformanceTracker:
         try:
             # 期間フィルタリング
             filtered_performance = self._filter_performance_by_date(
-                start_date, end_date,
+                start_date,
+                end_date,
             )
 
             if not filtered_performance:
@@ -297,7 +302,8 @@ class PerformanceTracker:
 
             # ベンチマーク関連
             beta, alpha, correlation, r_squared = self._calculate_beta_alpha(
-                returns, benchmark_returns,
+                returns,
+                benchmark_returns,
             )
 
             # 情報レシオ
@@ -313,7 +319,8 @@ class PerformanceTracker:
 
             # アップ・ダウンキャプチャー
             up_capture, down_capture = self._calculate_capture_ratios(
-                returns, benchmark_returns,
+                returns,
+                benchmark_returns,
             )
 
             return PeriodPerformance(
@@ -343,7 +350,9 @@ class PerformanceTracker:
             return self._empty_period_performance()
 
     def get_benchmark_comparison(
-        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
+        self,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
     ) -> BenchmarkComparison:
         """ベンチマーク比較分析
 
@@ -357,7 +366,8 @@ class PerformanceTracker:
         """
         try:
             filtered_performance = self._filter_performance_by_date(
-                start_date, end_date,
+                start_date,
+                end_date,
             )
 
             if not filtered_performance:
@@ -379,7 +389,8 @@ class PerformanceTracker:
                 else 0.0
             )
             beta, alpha, _, r_squared = self._calculate_beta_alpha(
-                portfolio_returns, benchmark_returns,
+                portfolio_returns,
+                benchmark_returns,
             )
 
             # トラッキングエラー
@@ -461,9 +472,9 @@ class PerformanceTracker:
                     )
 
                     monthly_data[month_key]["total_return"] = monthly_return
-                    monthly_data[month_key]["benchmark_return"] = (
-                        benchmark_monthly_return
-                    )
+                    monthly_data[month_key][
+                        "benchmark_return"
+                    ] = benchmark_monthly_return
                     monthly_data[month_key]["excess_return"] = (
                         monthly_return - benchmark_monthly_return
                     )
@@ -522,7 +533,8 @@ class PerformanceTracker:
 
             # 最大ドローダウンと期間
             max_drawdown = max(
-                [p.drawdown for p in self.daily_performance], default=0.0,
+                [p.drawdown for p in self.daily_performance],
+                default=0.0,
             )
             max_drawdown_duration = self._calculate_max_drawdown_duration()
 
@@ -656,7 +668,8 @@ class PerformanceTracker:
         try:
             if self.benchmark_data is None or len(self.benchmark_data) == 0:
                 self.benchmark_data = self.data_provider.get_stock_data(
-                    self.benchmark_symbol, period="1y",
+                    self.benchmark_symbol,
+                    period="1y",
                 )
         except Exception as e:
             self.logger.error(f"ベンチマークデータ更新エラー: {e}")
@@ -699,7 +712,9 @@ class PerformanceTracker:
         return np.std(recent_returns) * np.sqrt(252)
 
     def _calculate_beta_alpha(
-        self, portfolio_returns: List[float], benchmark_returns: List[float],
+        self,
+        portfolio_returns: List[float],
+        benchmark_returns: List[float],
     ) -> Tuple[float, float, float, float]:
         """ベータ・アルファ計算"""
         try:
@@ -711,7 +726,8 @@ class PerformanceTracker:
 
             # 線形回帰
             slope, intercept, r_value, p_value, std_err = stats.linregress(
-                benchmark_returns, portfolio_returns,
+                benchmark_returns,
+                portfolio_returns,
             )
 
             beta = slope
@@ -726,7 +742,9 @@ class PerformanceTracker:
             return 0.0, 0.0, 0.0, 0.0
 
     def _calculate_capture_ratios(
-        self, portfolio_returns: List[float], benchmark_returns: List[float],
+        self,
+        portfolio_returns: List[float],
+        benchmark_returns: List[float],
     ) -> Tuple[float, float]:
         """アップ・ダウンキャプチャー計算"""
         try:
@@ -771,7 +789,9 @@ class PerformanceTracker:
             return 0.0, 0.0
 
     def _calculate_market_performance(
-        self, portfolio_returns: List[float], benchmark_returns: List[float],
+        self,
+        portfolio_returns: List[float],
+        benchmark_returns: List[float],
     ) -> Tuple[float, float]:
         """上昇・下落市場でのパフォーマンス"""
         try:
@@ -815,7 +835,9 @@ class PerformanceTracker:
         return max_duration
 
     def _filter_performance_by_date(
-        self, start_date: Optional[datetime], end_date: Optional[datetime],
+        self,
+        start_date: Optional[datetime],
+        end_date: Optional[datetime],
     ) -> List[DailyPerformance]:
         """日付でパフォーマンスフィルタリング"""
         filtered = self.daily_performance

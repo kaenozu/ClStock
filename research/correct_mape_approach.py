@@ -139,7 +139,9 @@ class CorrectMAPEPredictor:
         return features
 
     def create_target_variable(
-        self, data: pd.DataFrame, prediction_days: int = 7,
+        self,
+        data: pd.DataFrame,
+        prediction_days: int = 7,
     ) -> pd.Series:
         """目標変数作成（中期リターン予測）"""
         # 7日後の累積リターン率
@@ -228,10 +230,16 @@ class CorrectMAPEPredictor:
         # モデル定義
         models = {
             "random_forest": RandomForestRegressor(
-                n_estimators=200, max_depth=10, random_state=42, n_jobs=-1,
+                n_estimators=200,
+                max_depth=10,
+                random_state=42,
+                n_jobs=-1,
             ),
             "gradient_boosting": GradientBoostingRegressor(
-                n_estimators=200, learning_rate=0.1, max_depth=6, random_state=42,
+                n_estimators=200,
+                learning_rate=0.1,
+                max_depth=6,
+                random_state=42,
             ),
             "ridge": Ridge(alpha=1.0),
             "linear": LinearRegression(),

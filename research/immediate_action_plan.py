@@ -49,7 +49,10 @@ class VaRRiskManager:
         }
 
     def monte_carlo_var(
-        self, returns: np.ndarray, portfolio_value: float, simulations: int = 10000,
+        self,
+        returns: np.ndarray,
+        portfolio_value: float,
+        simulations: int = 10000,
     ) -> dict:
         """モンテカルロVaR計算"""
         mean_return = np.mean(returns)
@@ -87,7 +90,10 @@ class DynamicPositionSizer:
         self.max_portfolio_risk = max_portfolio_risk
 
     def kelly_criterion(
-        self, win_rate: float, avg_win: float, avg_loss: float,
+        self,
+        win_rate: float,
+        avg_win: float,
+        avg_loss: float,
     ) -> float:
         """ケリー基準によるポジションサイズ計算"""
         if avg_loss == 0:
@@ -100,7 +106,10 @@ class DynamicPositionSizer:
         return max(0, min(kelly_fraction * 0.25, 0.2))
 
     def volatility_adjusted_size(
-        self, target_vol: float, stock_vol: float, base_position: float,
+        self,
+        target_vol: float,
+        stock_vol: float,
+        base_position: float,
     ) -> float:
         """ボラティリティ調整ポジションサイズ"""
         if stock_vol == 0:
@@ -157,7 +166,10 @@ class EnhancedStopLoss:
         return stop_loss
 
     def trailing_stop(
-        self, current_price: float, highest_price: float, trail_percent: float = 0.05,
+        self,
+        current_price: float,
+        highest_price: float,
+        trail_percent: float = 0.05,
     ) -> float:
         """トレーリングストップ"""
         return highest_price * (1 - trail_percent)
@@ -231,7 +243,9 @@ def demonstrate_risk_management():
     base_position = 0.1
 
     vol_adjusted = position_sizer.volatility_adjusted_size(
-        target_vol, stock_vol, base_position,
+        target_vol,
+        stock_vol,
+        base_position,
     )
     print(f"ボラティリティ調整後: {vol_adjusted:.2%}")
 

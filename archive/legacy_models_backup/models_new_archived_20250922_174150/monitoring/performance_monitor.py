@@ -118,7 +118,9 @@ class ModelPerformanceMonitor(PerformanceMonitor):
 
         # 推奨事項生成
         recommendations = self._generate_recommendations(
-            avg_metrics, rmse_trend, accuracy_trend,
+            avg_metrics,
+            rmse_trend,
+            accuracy_trend,
         )
 
         return {
@@ -292,7 +294,10 @@ class ModelPerformanceMonitor(PerformanceMonitor):
         return "D"
 
     def _generate_recommendations(
-        self, metrics: Dict[str, float], rmse_trend: str, accuracy_trend: str,
+        self,
+        metrics: Dict[str, float],
+        rmse_trend: str,
+        accuracy_trend: str,
     ) -> List[str]:
         """推奨事項生成"""
         recommendations = []

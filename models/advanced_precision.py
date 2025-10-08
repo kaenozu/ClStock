@@ -73,29 +73,34 @@ class AdvancedPrecisionBreakthrough87System:
 
             if self.multimodal_analyzer:
                 multimodal_result = self.multimodal_analyzer.predict_multimodal(
-                    price_data, volume_data,
+                    price_data,
+                    volume_data,
                 )
                 predictions["multimodal"] = multimodal_result["prediction_score"]
                 confidences["multimodal"] = multimodal_result["confidence"]
 
             if self.meta_optimizer and "trend_following" in predictions:
                 meta_result = self.meta_optimizer.meta_predict(
-                    symbol, predictions["trend_following"],
+                    symbol,
+                    predictions["trend_following"],
                 )
                 predictions["meta"] = meta_result["adjusted_prediction"]
                 confidences["meta"] = base_result["confidence"] + meta_result.get(
-                    "confidence_boost", 0.0,
+                    "confidence_boost",
+                    0.0,
                 )
 
             if self.market_transformer:
                 transformer_result = self.market_transformer.transformer_predict(
-                    price_data, volume_data,
+                    price_data,
+                    volume_data,
                 )
                 predictions["transformer"] = transformer_result["prediction_score"]
                 confidences["transformer"] = transformer_result["confidence"]
 
             ensemble_result = self.advanced_ensemble.ensemble_predict(
-                predictions, confidences,
+                predictions,
+                confidences,
             )
             final_prediction = self._apply_87_percent_correction(
                 ensemble_result["ensemble_prediction"],
@@ -113,7 +118,8 @@ class AdvancedPrecisionBreakthrough87System:
                 "accuracy_improvement": final_prediction["prediction"]
                 - self.current_accuracy,
                 "model_contributions": analyze_model_contributions(
-                    predictions, confidences,
+                    predictions,
+                    confidences,
                 ),
             }
             self.logger.info(
@@ -153,7 +159,8 @@ class AdvancedPrecisionBreakthrough87System:
             return {"error": str(exc), "total_symbols": len(symbols)}
 
     def _get_market_data(
-        self, symbol: str,
+        self,
+        symbol: str,
     ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         try:
             import yfinance as yf  # type: ignore
@@ -170,7 +177,9 @@ class AdvancedPrecisionBreakthrough87System:
             return None, None
 
     def _get_base_prediction(
-        self, symbol: str, price_data: np.ndarray,
+        self,
+        symbol: str,
+        price_data: np.ndarray,
     ) -> Dict[str, float]:
         try:
             if len(price_data) >= 50:
@@ -189,7 +198,10 @@ class AdvancedPrecisionBreakthrough87System:
             return {"prediction": 50.0, "confidence": 0.0}
 
     def _apply_87_percent_correction(
-        self, prediction: float, confidence: float, symbol: str,
+        self,
+        prediction: float,
+        confidence: float,
+        symbol: str,
     ) -> Dict[str, float]:
         try:
             correction_factor = 1.03

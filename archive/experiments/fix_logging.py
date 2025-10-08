@@ -28,7 +28,8 @@ def fix_logging_in_file(file_path: Path):
             # logger = setup_logger(__name__) を置換／追加
             if "logger = setup_logger(__name__)" in content:
                 content = content.replace(
-                    "logger = setup_logger(__name__)", "logger = setup_logger(__name__)",
+                    "logger = setup_logger(__name__)",
+                    "logger = setup_logger(__name__)",
                 )
             else:
                 # logger が定義されていない場合は追加

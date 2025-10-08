@@ -147,12 +147,15 @@ def test_register_and_create_custom_predictor():
     factory.register_predictor(ModelType.PARALLEL, DummyPredictor)
 
     config = ModelConfiguration(
-        model_type=ModelType.PARALLEL, prediction_mode=PredictionMode.AGGRESSIVE,
+        model_type=ModelType.PARALLEL,
+        prediction_mode=PredictionMode.AGGRESSIVE,
     )
     provider = StockDataProvider()
 
     predictor = factory.create_predictor(
-        ModelType.PARALLEL, config=config, data_provider=provider,
+        ModelType.PARALLEL,
+        config=config,
+        data_provider=provider,
     )
 
     result = predictor.predict("7203")

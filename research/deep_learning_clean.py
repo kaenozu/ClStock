@@ -41,7 +41,9 @@ class DeepLearningBreakthrough:
         self.scaler = MinMaxScaler(feature_range=(0, 1))
 
     def prepare_deep_learning_data(
-        self, data: pd.DataFrame, sequence_length: int = 20,
+        self,
+        data: pd.DataFrame,
+        sequence_length: int = 20,
     ) -> Tuple:
         """深層学習用データ準備"""
         # 84.6%成功手法のトレンド条件を適用
@@ -132,7 +134,9 @@ class DeepLearningBreakthrough:
         return (macd - signal) / prices
 
     def _calculate_bollinger_position(
-        self, prices: pd.Series, window: int = 20,
+        self,
+        prices: pd.Series,
+        window: int = 20,
     ) -> pd.Series:
         """ボリンジャーバンド位置"""
         sma = prices.rolling(window).mean()
@@ -142,7 +146,10 @@ class DeepLearningBreakthrough:
         return (prices - lower) / (upper - lower)
 
     def _create_sequences(
-        self, features: pd.DataFrame, target: pd.Series, sequence_length: int,
+        self,
+        features: pd.DataFrame,
+        target: pd.Series,
+        sequence_length: int,
     ) -> Tuple:
         """時系列シーケンス作成"""
         X, y = [], []
@@ -223,7 +230,8 @@ class DeepLearningBreakthrough:
 
                 # 深層学習用データ準備
                 X, y, feature_names = self.prepare_deep_learning_data(
-                    data, sequence_length=15,
+                    data,
+                    sequence_length=15,
                 )
 
                 if len(X) < 30:
@@ -342,7 +350,9 @@ class DeepLearningBreakthrough:
         return self._analyze_deep_learning_results(all_results, breakthrough_results)
 
     def _analyze_deep_learning_results(
-        self, all_results: List[Dict], breakthrough_results: List[Dict],
+        self,
+        all_results: List[Dict],
+        breakthrough_results: List[Dict],
     ) -> Dict:
         """深層学習結果の分析"""
         if not all_results:
@@ -368,7 +378,9 @@ class DeepLearningBreakthrough:
 
             print("\n*** 84.6%突破達成銘柄:")
             for r in sorted(
-                breakthrough_results, key=lambda x: x["best_accuracy"], reverse=True,
+                breakthrough_results,
+                key=lambda x: x["best_accuracy"],
+                reverse=True,
             ):
                 print(f"  {r['symbol']}: {r['best_accuracy']:.1%} ({r['best_model']})")
 
@@ -404,7 +416,9 @@ class DeepLearningBreakthrough:
 
         # トップ結果
         top_results = sorted(
-            all_results, key=lambda x: x["best_accuracy"], reverse=True,
+            all_results,
+            key=lambda x: x["best_accuracy"],
+            reverse=True,
         )[:8]
         print("\n深層学習トップ8:")
         for i, result in enumerate(top_results, 1):

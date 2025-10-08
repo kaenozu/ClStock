@@ -118,7 +118,9 @@ class TrendFollowingPredictor:
         return 100 - (100 / (1 + rs))
 
     def create_trend_target(
-        self, data: pd.DataFrame, prediction_days: int = 3,
+        self,
+        data: pd.DataFrame,
+        prediction_days: int = 3,
     ) -> pd.Series:
         """トレンド継続予測ターゲット"""
         close = data["Close"]

@@ -15,7 +15,8 @@ import numpy as np
 
 # ロギング設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,8 @@ def run_hybrid_system_tests() -> Dict[str, Any]:
 
         # ハイブリッドシステム初期化
         hybrid_system = HybridStockPredictor(
-            data_provider=data_provider, default_mode=PredictionMode.AUTO,
+            data_provider=data_provider,
+            default_mode=PredictionMode.AUTO,
         )
 
         print("   [OK] ハイブリッドシステム初期化完了")
@@ -95,13 +97,15 @@ def run_hybrid_system_tests() -> Dict[str, Any]:
         # パフォーマンステスト
         print("\n3. パフォーマンステスト")
         test_results["performance_tests"] = test_hybrid_performance(
-            hybrid_system, test_symbols,
+            hybrid_system,
+            test_symbols,
         )
 
         # 統合機能テスト
         print("\n4. 統合機能テスト")
         test_results["integration_tests"] = test_integration_features(
-            hybrid_system, test_symbols,
+            hybrid_system,
+            test_symbols,
         )
 
         test_results["success"] = True

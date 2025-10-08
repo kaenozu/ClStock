@@ -47,7 +47,8 @@ class TestSecureDatabase:
         # データ挿入
         query = "INSERT INTO stocks (symbol, name, sector) VALUES (?, ?, ?)"
         result = self.db.execute_safe_update(
-            query, ("TEST", "Test Company", "Technology"),
+            query,
+            ("TEST", "Test Company", "Technology"),
         )
         assert result == 1
 

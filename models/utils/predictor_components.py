@@ -28,7 +28,10 @@ def create_dqn_agent(logger: logging.Logger) -> Any:
 
     class DQNNetwork(nn.Module):  # type: ignore[misc]
         def __init__(
-            self, state_size: int = 50, action_size: int = 3, hidden_size: int = 256,
+            self,
+            state_size: int = 50,
+            action_size: int = 3,
+            hidden_size: int = 256,
         ):
             super().__init__()
             self.fc1 = nn.Linear(state_size, hidden_size)
@@ -59,7 +62,8 @@ def create_dqn_agent(logger: logging.Logger) -> Any:
             self.q_network = DQNNetwork()
             self.target_network = DQNNetwork()
             self.optimizer = optim.Adam(
-                self.q_network.parameters(), lr=self.learning_rate,
+                self.q_network.parameters(),
+                lr=self.learning_rate,
             )
 
         def remember(self, state, action, reward, next_state, done):
@@ -219,7 +223,8 @@ def create_multimodal_analyzer(logger: logging.Logger) -> Any:
                     chart_features = self.extract_chart_features(chart_image)
                     numerical_features = self.extract_numerical_features(price_data)
                     fused_features = self.fuse_features(
-                        chart_features, numerical_features,
+                        chart_features,
+                        numerical_features,
                     )
                     prediction_score = np.mean(fused_features) * 100
                     confidence = min(np.std(fused_features) * 2, 1.0)
@@ -310,7 +315,8 @@ class MetaLearningOptimizerAdapter:
     def meta_predict(self, symbol: str, base_prediction: float):
         try:
             symbol_adaptation = self.symbol_adaptations.get(
-                symbol, {"adaptation_strength": 0.0},
+                symbol,
+                {"adaptation_strength": 0.0},
             )
             sector_adaptation = self.get_sector_adaptation(symbol)
             adaptation_strength = symbol_adaptation.get("adaptation_strength", 0.0)
@@ -378,7 +384,9 @@ class AdvancedEnsembleAdapter:
             return self.base_weights
 
     def ensemble_predict(
-        self, predictions: Dict[str, float], confidences: Dict[str, float],
+        self,
+        predictions: Dict[str, float],
+        confidences: Dict[str, float],
     ):
         try:
             weights = self.update_weights_dynamically(confidences)
@@ -484,7 +492,9 @@ def create_market_transformer() -> MarketTransformerAdapter:
 
 
 def create_market_state(
-    price_data: np.ndarray, volume_data: Optional[np.ndarray], state_size: int = 50,
+    price_data: np.ndarray,
+    volume_data: Optional[np.ndarray],
+    state_size: int = 50,
 ) -> np.ndarray:
     try:
         if len(price_data) < state_size:
@@ -506,7 +516,8 @@ def convert_action_to_score(action: int) -> float:
 
 
 def analyze_model_contributions(
-    predictions: Dict[str, float], confidences: Dict[str, float],
+    predictions: Dict[str, float],
+    confidences: Dict[str, float],
 ) -> Dict[str, Any]:
     try:
         contributions: Dict[str, Dict[str, float]] = {}
@@ -528,7 +539,8 @@ def analyze_model_contributions(
 
 
 def return_fallback_prediction(
-    symbol: str, error: Optional[str] = None,
+    symbol: str,
+    error: Optional[str] = None,
 ) -> Dict[str, Any]:
     return {
         "symbol": symbol,

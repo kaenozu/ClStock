@@ -135,7 +135,10 @@ class AdvancedDirectionalPredictor:
         return 100 - (100 / (1 + rs))
 
     def create_directional_target(
-        self, data: pd.DataFrame, prediction_days: int = 5, threshold: float = 0.01,
+        self,
+        data: pd.DataFrame,
+        prediction_days: int = 5,
+        threshold: float = 0.01,
     ) -> pd.Series:
         """方向性ターゲット（上昇/下降/中立）"""
         close = data["Close"]
@@ -151,7 +154,9 @@ class AdvancedDirectionalPredictor:
         return target
 
     def train_ensemble_classifier(
-        self, X: pd.DataFrame, y: pd.Series,
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
     ) -> Tuple[Dict, Dict]:
         """アンサンブル分類器の訓練"""
         models = {
@@ -164,10 +169,15 @@ class AdvancedDirectionalPredictor:
                 class_weight="balanced",
             ),
             "gradient_boosting": GradientBoostingClassifier(
-                n_estimators=150, max_depth=6, learning_rate=0.1, random_state=42,
+                n_estimators=150,
+                max_depth=6,
+                learning_rate=0.1,
+                random_state=42,
             ),
             "logistic": LogisticRegression(
-                random_state=42, max_iter=300, class_weight="balanced",
+                random_state=42,
+                max_iter=300,
+                class_weight="balanced",
             ),
         }
 
@@ -244,7 +254,9 @@ class AdvancedDirectionalPredictor:
                 # 特徴量とターゲット
                 features = self.create_directional_features(data)
                 target = self.create_directional_target(
-                    data, prediction_days=5, threshold=0.015,
+                    data,
+                    prediction_days=5,
+                    threshold=0.015,
                 )
 
                 # クリーニング
@@ -272,12 +284,14 @@ class AdvancedDirectionalPredictor:
 
                 # モデル訓練
                 model_scores, trained_models = self.train_ensemble_classifier(
-                    X_train, y_train,
+                    X_train,
+                    y_train,
                 )
 
                 # ベストモデル選択
                 best_model_name = max(
-                    model_scores.keys(), key=lambda x: model_scores[x]["accuracy"],
+                    model_scores.keys(),
+                    key=lambda x: model_scores[x]["accuracy"],
                 )
                 best_model = trained_models[best_model_name]
 

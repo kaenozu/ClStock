@@ -27,7 +27,8 @@ from models.advanced.trading_strategy_generator import (
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -250,7 +251,8 @@ class Phase3IntegrationTester:
 
             # 取引シグナル生成
             signals = strategy_generator.generate_trading_signals(
-                symbol=test_symbol, price_data=price_data,
+                symbol=test_symbol,
+                price_data=price_data,
             )
 
             # パフォーマンス取得
@@ -308,7 +310,8 @@ class Phase3IntegrationTester:
 
             # ポートフォリオリスク分析
             portfolio_risk = risk_manager.analyze_portfolio_risk(
-                portfolio_data, price_data,
+                portfolio_data,
+                price_data,
             )
 
             # リスクサマリー取得
@@ -359,7 +362,8 @@ class Phase3IntegrationTester:
 
             # 3. 戦略生成（センチメント考慮）
             strategies = strategy_generator.generate_comprehensive_strategy(
-                test_symbol, price_data,
+                test_symbol,
+                price_data,
             )
             signals = strategy_generator.generate_trading_signals(
                 test_symbol,
@@ -372,7 +376,8 @@ class Phase3IntegrationTester:
             # 4. リスク分析
             portfolio_data = {"positions": {test_symbol: 200000}, "total_value": 200000}
             risk_analysis = risk_manager.analyze_portfolio_risk(
-                portfolio_data, {test_symbol: price_data},
+                portfolio_data,
+                {test_symbol: price_data},
             )
 
             # 5. 統合ダッシュボード

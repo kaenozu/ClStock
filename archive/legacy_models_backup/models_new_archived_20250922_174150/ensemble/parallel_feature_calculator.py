@@ -18,7 +18,9 @@ class ParallelFeatureCalculator:
         self.logger = logging.getLogger(__name__)
 
     def calculate_features_parallel(
-        self, symbols: List[str], data_provider,
+        self,
+        symbols: List[str],
+        data_provider,
     ) -> pd.DataFrame:
         """複数銘柄の特徴量を並列計算"""
         self.logger.info(
@@ -27,7 +29,8 @@ class ParallelFeatureCalculator:
 
         # 並列処理関数の準備
         calculate_single = partial(
-            self._calculate_single_symbol_features, data_provider=data_provider,
+            self._calculate_single_symbol_features,
+            data_provider=data_provider,
         )
 
         # 特徴量データを格納
@@ -69,7 +72,9 @@ class ParallelFeatureCalculator:
         return combined_features
 
     def _calculate_single_symbol_features(
-        self, symbol: str, data_provider,
+        self,
+        symbol: str,
+        data_provider,
     ) -> pd.DataFrame:
         """単一銘柄の特徴量計算（並列処理用）"""
         try:
@@ -175,7 +180,10 @@ class ParallelFeatureCalculator:
         return macd_line, signal_line
 
     def _calculate_bollinger_bands_fast(
-        self, prices: pd.Series, period: int = 20, std_dev: int = 2,
+        self,
+        prices: pd.Series,
+        period: int = 20,
+        std_dev: int = 2,
     ):
         """高速ボリンジャーバンド計算（ベクトル化）"""
         ma = prices.rolling(window=period).mean()

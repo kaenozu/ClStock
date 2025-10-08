@@ -58,7 +58,9 @@ class CircularBuffer:
             self.buffer.append(item)
 
     async def get_latest(
-        self, symbol: str, count: int = 100,
+        self,
+        symbol: str,
+        count: int = 100,
     ) -> List[StreamingDataPoint]:
         """最新データ取得"""
         async with self.lock:
@@ -66,7 +68,10 @@ class CircularBuffer:
             return symbol_data[-count:] if len(symbol_data) >= count else symbol_data
 
     async def get_range(
-        self, symbol: str, start_time: datetime, end_time: datetime,
+        self,
+        symbol: str,
+        start_time: datetime,
+        end_time: datetime,
     ) -> List[StreamingDataPoint]:
         """時間範囲データ取得"""
         async with self.lock:
@@ -164,7 +169,8 @@ class WebSocketManager:
             await asyncio.sleep(0.01)  # 10ms間隔
 
     def set_data_callback(
-        self, callback: Callable[[StreamingDataPoint], Awaitable[None]],
+        self,
+        callback: Callable[[StreamingDataPoint], Awaitable[None]],
     ):
         """データコールバック設定"""
         self.data_callback = callback
@@ -185,7 +191,9 @@ class UltraFastPredictor:
         self.prediction_cache_ttl = 1  # 予測キャッシュ有効期間（秒）
 
     async def predict_ultra_fast(
-        self, symbol: str, latest_data: List[StreamingDataPoint],
+        self,
+        symbol: str,
+        latest_data: List[StreamingDataPoint],
     ) -> PredictionResult:
         """超高速予測実行"""
         start_time = time.perf_counter()
@@ -239,7 +247,8 @@ class UltraFastPredictor:
             return self._create_fallback_result(symbol, str(e))
 
     async def _calculate_ultra_fast_features(
-        self, data: List[StreamingDataPoint],
+        self,
+        data: List[StreamingDataPoint],
     ) -> Dict[str, float]:
         """超高速特徴量計算"""
         if not data:
@@ -288,7 +297,9 @@ class UltraFastPredictor:
         return max(prediction, 0.01)  # 最小値制限
 
     def _calculate_fast_confidence(
-        self, features: Dict[str, float], data: List[StreamingDataPoint],
+        self,
+        features: Dict[str, float],
+        data: List[StreamingDataPoint],
     ) -> float:
         """高速信頼度計算"""
         # データ量ベースの基本信頼度
@@ -325,7 +336,8 @@ class UltraFastPredictor:
         if len(self.prediction_cache) > 1000:
             # 古いエントリを削除
             oldest_symbol = min(
-                self.prediction_cache.keys(), key=lambda k: self.prediction_cache[k][1],
+                self.prediction_cache.keys(),
+                key=lambda k: self.prediction_cache[k][1],
             )
             del self.prediction_cache[oldest_symbol]
 
@@ -373,7 +385,9 @@ class UltraFastStreamingPredictor:
         self.logger.info("UltraFastStreamingPredictor initialized")
 
     async def start_streaming(
-        self, symbols: List[str], endpoint: str = "mock://market_data",
+        self,
+        symbols: List[str],
+        endpoint: str = "mock://market_data",
     ):
         """ストリーミング開始"""
         self.logger.info(f"Starting ultra-fast streaming for {len(symbols)} symbols")
@@ -400,7 +414,8 @@ class UltraFastStreamingPredictor:
 
             # 超高速予測実行
             result = await self.ultra_fast_predictor.predict_ultra_fast(
-                symbol, latest_data,
+                symbol,
+                latest_data,
             )
 
             # 統計更新
@@ -422,7 +437,8 @@ class UltraFastStreamingPredictor:
             return self._create_error_result(symbol, str(e))
 
     async def predict_batch_streaming(
-        self, symbols: List[str],
+        self,
+        symbols: List[str],
     ) -> List[PredictionResult]:
         """バッチストリーミング予測"""
         # 並列実行でさらなる高速化

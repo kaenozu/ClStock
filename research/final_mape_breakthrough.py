@@ -36,7 +36,8 @@ class FinalMAPEBreakthrough:
 
             # 予測幅を極限まで小さく
             max_prediction = min(
-                0.002, recent_vol * 0.1,
+                0.002,
+                recent_vol * 0.1,
             )  # 0.2%または極小ボラティリティ
 
             # 平均回帰ベース
@@ -164,7 +165,8 @@ class FinalMAPEBreakthrough:
 
                         # 予測（method_funcは現在の実装では使用せず、過去データベースで実装）
                         predicted_return = self._predict_with_historical_data(
-                            historical_data, method_name,
+                            historical_data,
+                            method_name,
                         )
 
                         predictions.append(predicted_return)
@@ -254,7 +256,8 @@ class FinalMAPEBreakthrough:
                 )
                 zero = 0.0
                 return np.average(
-                    [conservative, reversal, zero], weights=[0.3, 0.2, 0.5],
+                    [conservative, reversal, zero],
+                    weights=[0.3, 0.2, 0.5],
                 )
 
             return 0.0

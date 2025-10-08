@@ -19,7 +19,8 @@ class TestMenuIntegration:
     def test_optimization_history_menu_exit(self):
         """Selecting option 0 exits without invoking other handlers."""
         with patch("menu.clear_screen"), patch(
-            "builtins.input", return_value="0",
+            "builtins.input",
+            return_value="0",
         ) as mock_input:
             with patch("menu.show_history_list") as mock_show, patch(
                 "menu.rollback_to_record",
@@ -44,7 +45,8 @@ class TestMenuIntegration:
     def test_optimization_history_menu_rollback_flow(self):
         """Selecting option 2 requests record id and calls rollback."""
         with patch("menu.clear_screen"), patch(
-            "builtins.input", side_effect=["2", "target-record"],
+            "builtins.input",
+            side_effect=["2", "target-record"],
         ):
             with patch("menu.rollback_to_record") as mock_rollback, patch(
                 "menu.show_history_list",
@@ -61,7 +63,8 @@ class TestMenuIntegration:
         stub_module = SimpleNamespace(OptimizationHistoryManager=lambda: manager)
 
         with patch("builtins.input", return_value=""), patch.dict(
-            sys.modules, {"systems.optimization_history": stub_module},
+            sys.modules,
+            {"systems.optimization_history": stub_module},
         ):
             show_history_list()
 
@@ -75,7 +78,8 @@ class TestMenuIntegration:
         stub_module = SimpleNamespace(OptimizationHistoryManager=lambda: manager)
 
         with patch("builtins.input", return_value=""), patch.dict(
-            sys.modules, {"systems.optimization_history": stub_module},
+            sys.modules,
+            {"systems.optimization_history": stub_module},
         ):
             rollback_to_record("record-1")
 
@@ -88,7 +92,8 @@ class TestMenuWorkflow:
     def test_complete_workflow_simulation(self):
         """Simulate showing history followed by a rollback and exit."""
         with patch("menu.clear_screen"), patch(
-            "builtins.input", side_effect=["1", "2", "target", "0"],
+            "builtins.input",
+            side_effect=["1", "2", "target", "0"],
         ) as mock_input:
             with patch("menu.show_history_list") as mock_show, patch(
                 "menu.rollback_to_record",
