@@ -340,6 +340,27 @@ class ParallelStockPredictor(StockPredictor):
                 other_trained = False
         return bool(self._is_trained and other_trained)
 
+    def predict_batch(self, symbols: List[str]) -> List[PredictionResult]:
+        results = self.predict_multiple_stocks_parallel(symbols)
+        return [
+            PredictionResult(
+                prediction=score,
+                confidence=self.get_confidence(),
+                accuracy=0.0,  # Placeholder
+                timestamp=datetime.now(),
+                symbol=symbol,
+                model_type=self.model_type,
+            )
+            for symbol, score in results.items()
+        ]
+
+    def get_model_info(self) -> Dict[str, Any]:
+        return {
+            "model_type": self.model_type,
+            "n_jobs": self.n_jobs,
+            "is_trained": self.is_trained(),
+        }
+
 
 class UltraHighPerformancePredictor(StockPredictor):
     """High-level predictor with caching conveniences for tests."""
@@ -499,3 +520,17 @@ class UltraHighPerformancePredictor(StockPredictor):
             except Exception:
                 return 0.5
         return 0.5
+
+    def predict_batch(self, symbols: List[str]) -> List[PredictionResult]:
+        results = self.predict_multiple(symbols)
+        return list(results.values())
+
+    def get_model_info(self) -> Dict[str, Any]:
+        return {
+            "model_type": self.model_type,
+            "base_predictor_type": getattr(
+                self.base_predictor, "model_type", "unknown"
+            ),
+            "parallel_jobs": self.parallel_jobs,
+            "is_trained": self.is_trained(),
+        }
