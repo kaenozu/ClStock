@@ -190,6 +190,56 @@ class TempFileCleanup:
 
         return removed_count
 
+    def cleanup_empty_dirs(self, base_dir: str, recursive: bool = True) -> List[str]:
+        """Remove empty directories within ``base_dir``.
+
+        Args:
+            base_dir: Directory whose empty subdirectories should be removed.
+            recursive: When ``True`` remove empty directories recursively. When
+                ``False`` only direct children of ``base_dir`` are considered.
+
+        Returns:
+            A sorted list of removed directory paths.
+        """
+        if not os.path.isdir(base_dir):
+            logger.debug("Skipped empty-dir cleanup for non-existent path: %s", base_dir)
+            return []
+
+        removed: List[str] = []
+
+        if recursive:
+            for root, dirs, files in os.walk(base_dir, topdown=False):
+                if root == base_dir:
+                    continue
+
+                if files:
+                    continue
+
+                # ``dirs`` may contain directories removed earlier in the loop.
+                if any(os.path.exists(os.path.join(root, entry)) for entry in dirs):
+                    continue
+
+                if not os.listdir(root):
+                    if self.cleanup_dir(root):
+                        removed.append(root)
+        else:
+            for entry in os.listdir(base_dir):
+                full_path = os.path.join(base_dir, entry)
+                if os.path.isdir(full_path) and not os.listdir(full_path):
+                    if self.cleanup_dir(full_path):
+                        removed.append(full_path)
+
+        removed.sort()
+
+        if removed:
+            logger.info(
+                "Removed %d empty directories from %s", len(removed), base_dir,
+            )
+        else:
+            logger.debug("No empty directories found in %s", base_dir)
+
+        return removed
+
 
 # Global instance
 temp_cleanup = TempFileCleanup()
