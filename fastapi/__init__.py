@@ -99,13 +99,38 @@ class APIRouter:
 
         return decorator
 
-
 class FastAPI:
-    def __init__(self) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.routes: List[_Route] = []
 
     def include_router(self, router: APIRouter) -> None:
         self.routes.extend(router.routes)
+
+    def mount(self, path: str, app: Any, name: Optional[str] = None) -> None:
+        prefix = path.rstrip("/") or path
+
+        def static_handler(filename: str) -> Any:
+            return app.get_response(filename)
+
+        self.add_api_route(f"{prefix}/{{filename}}", static_handler, methods=["GET"])
+
+    def get(
+        self, path: str, **_: Any
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+            self.add_api_route(path, func, methods=["GET"])
+            return func
+
+        return decorator
+
+    def post(
+        self, path: str, **_: Any
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+            self.add_api_route(path, func, methods=["POST"])
+            return func
+
+        return decorator
 
     def add_api_route(
         self,
