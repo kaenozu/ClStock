@@ -120,6 +120,45 @@ def validate_numeric_range(
     return num_value
 
 
+def _to_int(value: Union[str, int, float], field_name: str) -> int:
+    """整数に変換する内部ヘルパー"""
+
+    try:
+        int_value = int(value)
+    except (ValueError, TypeError):
+        raise ValidationError(f"{field_name} must be an integer") from None
+
+    return int_value
+
+
+def validate_pagination_params(
+    page: Union[str, int, float],
+    per_page: Union[str, int, float],
+    *,
+    max_per_page: int = 100,
+) -> tuple[int, int]:
+    """ページネーションパラメータの検証"""
+
+    if max_per_page <= 0:
+        raise ValidationError("max_per_page must be greater than zero")
+
+    page_value = _to_int(page, "page")
+    per_page_value = _to_int(per_page, "per_page")
+
+    if page_value < 1:
+        raise ValidationError("page must be greater than or equal to 1")
+
+    if per_page_value < 1:
+        raise ValidationError("per_page must be greater than or equal to 1")
+
+    if per_page_value > max_per_page:
+        raise ValidationError(
+            f"per_page must be less than or equal to {max_per_page}"
+        )
+
+    return page_value, per_page_value
+
+
 def validate_email(email: str) -> str:
     """メールアドレスの検証
 
