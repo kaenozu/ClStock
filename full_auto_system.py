@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import json
 import logging
+import random
 import os
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
@@ -336,7 +337,7 @@ class StrategyGeneratorAdapter:
 class FullAutoInvestmentSystem:
     """完全自動投資推奨システム"""
 
-    def __init__(self, max_symbols: Optional[int] = None):
+    def __init__(self, max_symbols: Optional[int] = None, *, enable_diagnostics: bool = True, diagnostic_sample: Optional[int] = None):
         self.data_provider = StockDataProvider()
         self.predictor = HybridPredictorAdapter()
         self.optimizer = PortfolioOptimizer()
@@ -348,6 +349,8 @@ class FullAutoInvestmentSystem:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.max_symbols = self._resolve_max_symbols(max_symbols)
         self.settings = get_settings()
+        self.enable_diagnostics = enable_diagnostics
+        self.diagnostic_sample_override = diagnostic_sample
         self.diagnostic_sample_limit = self._resolve_diagnostic_sample_limit()
         self.diagnostic_history: List[DiagnosticSummary] = []
 
@@ -378,6 +381,10 @@ class FullAutoInvestmentSystem:
             return None
 
     def _resolve_diagnostic_sample_limit(self) -> int:
+        if self.diagnostic_sample_override is not None:
+            if self.diagnostic_sample_override > 0:
+                return self.diagnostic_sample_override
+            self.logger.warning("diagnostic_sample must be positive; ignoring override %s", self.diagnostic_sample_override)
         env_value = os.getenv("CLSTOCK_DIAGNOSTIC_SAMPLE")
         if env_value:
             try:
@@ -883,6 +890,8 @@ class FullAutoInvestmentSystem:
             return None
 
     def _run_automated_diagnostics(self, processed_data: Dict[str, pd.DataFrame]) -> List[DiagnosticSummary]:
+        if not self.enable_diagnostics:
+            return []
         available_symbols = [
             symbol for symbol, data in processed_data.items() if data is not None and not data.empty
         ]
@@ -890,7 +899,7 @@ class FullAutoInvestmentSystem:
             return []
 
         sample_size = min(self.diagnostic_sample_limit, len(available_symbols))
-        symbols = available_symbols[:sample_size]
+        symbols = random.sample(available_symbols, sample_size) if sample_size < len(available_symbols) else available_symbols
         print("[診断] 自動バックテスト & シグナル検証を実行します...")
         diagnostics: List[DiagnosticSummary] = []
 
@@ -1223,6 +1232,17 @@ def build_cli_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Force yfinance downloads even if local CSV data exists.",
     )
+    parser.add_argument(
+        "--disable-diagnostics",
+        action="store_true",
+        help="Skip automated diagnostics (faster but less oversight).",
+    )
+    parser.add_argument(
+        "--diagnostic-sample",
+        type=int,
+        default=None,
+        help="Number of symbols to sample for automated diagnostics.",
+    )
     return parser
 
 
@@ -1238,13 +1258,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.max_tickers is not None and args.max_tickers <= 0:
         parser.error("--max-tickers must be a positive integer.")
 
+    if args.diagnostic_sample is not None and args.diagnostic_sample <= 0:
+        parser.error("--diagnostic-sample must be a positive integer.")
+
+    if args.disable_diagnostics and args.diagnostic_sample:
+        parser.error("--diagnostic-sample cannot be used when diagnostics are disabled.")
+
     if args.prefer_local_data:
         os.environ["CLSTOCK_PREFER_LOCAL_DATA"] = "1"
     elif args.skip_local_data:
         os.environ["CLSTOCK_PREFER_LOCAL_DATA"] = "0"
 
     try:
-        asyncio.run(run_full_auto(max_symbols=args.max_tickers))
+        asyncio.run(
+            run_full_auto(
+                max_symbols=args.max_tickers,
+                enable_diagnostics=not args.disable_diagnostics,
+                diagnostic_sample=args.diagnostic_sample,
+            ),
+        )
     except KeyboardInterrupt:
         print("[INFO] Full auto run interrupted by user.")
         return 130
@@ -1252,9 +1284,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     return 0
 
 
-async def run_full_auto(max_symbols: Optional[int] = None) -> List[AutoRecommendation]:
+async def run_full_auto(
+    max_symbols: Optional[int] = None,
+    *,
+    enable_diagnostics: bool = True,
+    diagnostic_sample: Optional[int] = None,
+) -> List[AutoRecommendation]:
     """Convenience coroutine to execute the full auto investment analysis."""
-    system = FullAutoInvestmentSystem(max_symbols=max_symbols)
+    system = FullAutoInvestmentSystem(max_symbols=max_symbols, enable_diagnostics=enable_diagnostics, diagnostic_sample=diagnostic_sample)
     return await system.run_full_auto_analysis()
 
 
