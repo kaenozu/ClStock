@@ -9,8 +9,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 from data.stock_data import StockDataProvider
-from models.core import StockPredictor
-from models.core import PredictionResult
+from models.core import PredictionResult, StockPredictor
+from models.core.interfaces import ModelConfiguration, ModelType
 
 DEFAULT_FALLBACK_SCORE = 50.0
 
@@ -200,7 +200,8 @@ class ParallelStockPredictor(StockPredictor):
         ensemble_predictor: StockPredictor,
         n_jobs: Optional[int] = None,
     ) -> None:
-        super().__init__(model_type="parallel")
+        config = ModelConfiguration(model_type=ModelType.PARALLEL)
+        super().__init__(config)
         self.ensemble_predictor = ensemble_predictor
         self.n_jobs = n_jobs or max(os.cpu_count() or 1, 1)
         self.batch_cache: Dict[str, float] = {}
@@ -372,7 +373,8 @@ class UltraHighPerformancePredictor(StockPredictor):
         data_provider: Optional[StockDataProvider] = None,
         parallel_jobs: Optional[int] = None,
     ) -> None:
-        super().__init__(model_type="ultra_performance")
+        config = ModelConfiguration(model_type=ModelType.HYBRID)
+        super().__init__(config)
         self.base_predictor = base_predictor
         self.cache_manager = cache_manager
         if data_provider is not None:
