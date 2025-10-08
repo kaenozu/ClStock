@@ -9,8 +9,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import pandas as pd
 from data.stock_data import StockDataProvider
-from models.core import StockPredictor
-from models.core import PredictionResult
+from models.core import PredictionResult, StockPredictor
+from models.core.interfaces import ModelConfiguration, ModelType
 
 DEFAULT_FALLBACK_SCORE = 50.0
 
@@ -200,7 +200,8 @@ class ParallelStockPredictor(StockPredictor):
         ensemble_predictor: StockPredictor,
         n_jobs: Optional[int] = None,
     ) -> None:
-        super().__init__(model_type="parallel")
+        config = ModelConfiguration(model_type=ModelType.PARALLEL)
+        super().__init__(config)
         self.ensemble_predictor = ensemble_predictor
         self.n_jobs = n_jobs or max(os.cpu_count() or 1, 1)
         self.batch_cache: Dict[str, float] = {}
@@ -311,7 +312,14 @@ class ParallelStockPredictor(StockPredictor):
         }
         from models.core import PredictionResult
 
-        return PredictionResult(prediction_score, confidence, datetime.now(), metadata, accuracy=0.0, symbol=symbol)
+        return PredictionResult(
+            prediction_score,
+            confidence,
+            datetime.now(),
+            metadata,
+            accuracy=0.0,
+            symbol=symbol,
+        )
 
     def get_confidence(self) -> float:
         getter = getattr(self.ensemble_predictor, "get_confidence", None)
@@ -333,6 +341,27 @@ class ParallelStockPredictor(StockPredictor):
                 other_trained = False
         return bool(self._is_trained and other_trained)
 
+    def predict_batch(self, symbols: List[str]) -> List[PredictionResult]:
+        results = self.predict_multiple_stocks_parallel(symbols)
+        return [
+            PredictionResult(
+                prediction=score,
+                confidence=self.get_confidence(),
+                accuracy=0.0,  # Placeholder
+                timestamp=datetime.now(),
+                symbol=symbol,
+                model_type=self.config.model_type,
+            )
+            for symbol, score in results.items()
+        ]
+
+    def get_model_info(self) -> Dict[str, Any]:
+        return {
+            "model_type": self.config.model_type.value,
+            "n_jobs": self.n_jobs,
+            "is_trained": self.is_trained(),
+        }
+
 
 class UltraHighPerformancePredictor(StockPredictor):
     """High-level predictor with caching conveniences for tests."""
@@ -344,7 +373,8 @@ class UltraHighPerformancePredictor(StockPredictor):
         data_provider: Optional[StockDataProvider] = None,
         parallel_jobs: Optional[int] = None,
     ) -> None:
-        super().__init__(model_type="ultra_performance")
+        config = ModelConfiguration(model_type=ModelType.HYBRID)
+        super().__init__(config)
         self.base_predictor = base_predictor
         self.cache_manager = cache_manager
         if data_provider is not None:
@@ -492,3 +522,17 @@ class UltraHighPerformancePredictor(StockPredictor):
             except Exception:
                 return 0.5
         return 0.5
+
+    def predict_batch(self, symbols: List[str]) -> List[PredictionResult]:
+        results = self.predict_multiple(symbols)
+        return list(results.values())
+
+    def get_model_info(self) -> Dict[str, Any]:
+        return {
+            "model_type": self.config.model_type.value,
+            "base_predictor_type": getattr(
+                self.base_predictor, "model_type", "unknown"
+            ),
+            "parallel_jobs": self.parallel_jobs,
+            "is_trained": self.is_trained(),
+        }
