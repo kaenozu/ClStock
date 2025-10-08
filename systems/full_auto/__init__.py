@@ -16,6 +16,7 @@ __all__ = [
     "run_full_auto",
     "build_cli_parser",
     "main",
+    "DataRetrievalScriptService",
 ]
 
 
@@ -30,6 +31,7 @@ _ADAPTER_EXPORTS = {
 
 _SYSTEM_EXPORTS = {"FullAutoInvestmentSystem", "run_full_auto"}
 _CLI_EXPORTS = {"build_cli_parser", "main"}
+_SCRIPT_SERVICE_EXPORTS = {"DataRetrievalScriptService"}
 
 
 def __getattr__(name: str) -> Any:
@@ -42,8 +44,11 @@ def __getattr__(name: str) -> Any:
     if name in _CLI_EXPORTS:
         module = importlib.import_module(".cli", __name__)
         return getattr(module, name)
+    if name in _SCRIPT_SERVICE_EXPORTS:
+        module = importlib.import_module(".script_service", __name__)
+        return getattr(module, name)
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals().keys()) | _ADAPTER_EXPORTS | _SYSTEM_EXPORTS | _CLI_EXPORTS)
+    return sorted(set(globals().keys()) | _ADAPTER_EXPORTS | _SYSTEM_EXPORTS | _CLI_EXPORTS | _SCRIPT_SERVICE_EXPORTS)
