@@ -8,7 +8,7 @@ from typing import Dict, List
 
 from .cache import RedisCache
 from .deep_learning import DeepLearningPredictor
-from .ensemble_predictor import EnsembleStockPredictor, ParallelStockPredictor
+from .ensemble_predictor import RefactoredEnsemblePredictor, ParallelStockPredictor
 from .meta_learning import MetaLearningOptimizer
 from .ml_stock_predictor import ModelPerformanceMonitor
 from .sentiment import SentimentAnalyzer
@@ -20,7 +20,7 @@ class UltraHighPerformancePredictor:
     """Integrated ultra high performance prediction system."""
 
     def __init__(self) -> None:
-        self.ensemble_predictor = EnsembleStockPredictor()
+        self.ensemble_predictor = RefactoredEnsemblePredictor()
         self.deep_lstm = DeepLearningPredictor("lstm")
         self.deep_transformer = DeepLearningPredictor("transformer")
         self.sentiment_analyzer = SentimentAnalyzer()

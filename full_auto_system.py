@@ -1,11 +1,13 @@
 import argparse
 import asyncio
+import json
 import logging
+import random
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 from analysis.sentiment_analyzer import MarketSentimentAnalyzer
@@ -26,13 +28,15 @@ from models.advanced.trading_strategy_generator import (
 from models.base.interfaces import PredictionResult
 from models.hybrid.hybrid_predictor import HybridStockPredictor
 from trading.tse import PortfolioBacktester
+from trading.backtest import BacktestRunner
+from trading.backtest_engine import BacktestConfig
+from trading.trading_strategy import TradingStrategy
 from trading.tse.analysis import StockProfile
 from trading.tse.optimizer import PortfolioOptimizer
 
 # ログ設定
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -76,6 +80,22 @@ class RiskAssessment:
     max_safe_position_size: float
     recommendations: List[str]
     raw: Optional[PortfolioRisk] = None
+
+
+@dataclass
+class DiagnosticSummary:
+    """Quick evaluation bundle for automated diagnostics."""
+
+    symbol: str
+    accuracy: Optional[float]
+    sample_size: int
+    avg_positive_return: float
+    avg_negative_return: float
+    backtest_total_return: Optional[float]
+    backtest_sharpe: Optional[float]
+    backtest_max_drawdown: Optional[float]
+    parameter_sweep: List[Dict[str, float]]
+    generated_at: datetime
 
 
 class HybridPredictorAdapter:
@@ -249,10 +269,7 @@ class StrategyGeneratorAdapter:
         for strategy in self._collect_strategies(symbol, price_data):
             try:
                 signals = self._signal_generator.generate_signals(
-                    symbol,
-                    price_data,
-                    strategy,
-                    sentiment_payload,
+                    symbol, price_data, strategy, sentiment_payload,
                 )
             except Exception:
                 self.logger.debug(
@@ -320,7 +337,7 @@ class StrategyGeneratorAdapter:
 class FullAutoInvestmentSystem:
     """完全自動投資推奨システム"""
 
-    def __init__(self, max_symbols: Optional[int] = None):
+    def __init__(self, max_symbols: Optional[int] = None, *, enable_diagnostics: bool = True, diagnostic_sample: Optional[int] = None):
         self.data_provider = StockDataProvider()
         self.predictor = HybridPredictorAdapter()
         self.optimizer = PortfolioOptimizer()
@@ -332,6 +349,10 @@ class FullAutoInvestmentSystem:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.max_symbols = self._resolve_max_symbols(max_symbols)
         self.settings = get_settings()
+        self.enable_diagnostics = enable_diagnostics
+        self.diagnostic_sample_override = diagnostic_sample
+        self.diagnostic_sample_limit = self._resolve_diagnostic_sample_limit()
+        self.diagnostic_history: List[DiagnosticSummary] = []
 
     def _resolve_max_symbols(self, max_symbols: Optional[int]) -> Optional[int]:
         if max_symbols is not None:
@@ -359,9 +380,35 @@ class FullAutoInvestmentSystem:
             )
             return None
 
+    def _resolve_diagnostic_sample_limit(self) -> int:
+        if self.diagnostic_sample_override is not None:
+            if self.diagnostic_sample_override > 0:
+                return self.diagnostic_sample_override
+            self.logger.warning("diagnostic_sample must be positive; ignoring override %s", self.diagnostic_sample_override)
+        env_value = os.getenv("CLSTOCK_DIAGNOSTIC_SAMPLE")
+        if env_value:
+            try:
+                parsed = int(env_value)
+                if parsed > 0:
+                    return parsed
+                self.logger.warning(
+                    "CLSTOCK_DIAGNOSTIC_SAMPLE must be positive; ignoring value '%s'.",
+                    env_value,
+                )
+            except ValueError:
+                self.logger.warning(
+                    "CLSTOCK_DIAGNOSTIC_SAMPLE is not an integer ('%s'); ignoring.",
+                    env_value,
+                )
+        auto_cfg = getattr(self.settings, "auto", None)
+        candidate = getattr(auto_cfg, "diagnostic_sample", None) if auto_cfg else None
+        if isinstance(candidate, int) and candidate > 0:
+            return candidate
+        return 5
+
+
     def _build_stock_profiles(
-        self,
-        processed_data: Dict[str, pd.DataFrame],
+        self, processed_data: Dict[str, pd.DataFrame],
     ) -> List[StockProfile]:
         profiles: List[StockProfile] = []
 
@@ -417,17 +464,14 @@ class FullAutoInvestmentSystem:
                 )
             except Exception:
                 self.logger.debug(
-                    "Failed to build stock profile for %s",
-                    symbol,
-                    exc_info=True,
+                    "Failed to build stock profile for %s", symbol, exc_info=True,
                 )
                 continue
 
         return profiles
 
     def _optimize_portfolio(
-        self,
-        processed_data: Dict[str, pd.DataFrame],
+        self, processed_data: Dict[str, pd.DataFrame],
     ) -> Dict[str, List[StockProfile]]:
         profiles = self._build_stock_profiles(processed_data)
 
@@ -467,13 +511,11 @@ class FullAutoInvestmentSystem:
             try:
                 if hasattr(self.optimizer, "optimize_portfolio"):
                     selected_profiles = self.optimizer.optimize_portfolio(
-                        profiles,
-                        target_size=size,
+                        profiles, target_size=size,
                     )
                 elif hasattr(self.optimizer, "optimize"):
                     selected_profiles = self.optimizer.optimize(
-                        profiles,
-                        target_size=size,
+                        profiles, target_size=size,
                     )  # type: ignore[attr-defined]
                 else:
                     raise AttributeError(
@@ -504,8 +546,7 @@ class FullAutoInvestmentSystem:
                 }
             except Exception:
                 logger.exception(
-                    "ポートフォリオ最適化処理中にエラーが発生しました (size=%s)",
-                    size,
+                    "ポートフォリオ最適化処理中にエラーが発生しました (size=%s)", size,
                 )
 
         # 最適な結果を選択（最も高いリターンを持つ結果）
@@ -622,6 +663,10 @@ class FullAutoInvestmentSystem:
             )
 
             # 3. ポートフォリオ最適化
+            print(f"[進捗] 処理済み銘柄: {len(processed_data)}件, 失敗: {failed_count}件")
+
+            diagnostics = self._run_automated_diagnostics(processed_data)
+
             print("[ステップ 3/4] (75%) - ポートフォリオ最適化を実行中...")
             print("=" * 60)
             try:
@@ -667,8 +712,7 @@ class FullAutoInvestmentSystem:
                             for symbol in available_selected_stocks:
                                 try:
                                     recommendation = await self._analyze_single_stock(
-                                        symbol,
-                                        processed_data.get(symbol),
+                                        symbol, processed_data.get(symbol),
                                     )
                                     if recommendation:
                                         recommendations.append(recommendation)
@@ -708,9 +752,7 @@ class FullAutoInvestmentSystem:
             return []
 
     async def _analyze_single_stock(
-        self,
-        symbol: str,
-        data: Optional[pd.DataFrame],
+        self, symbol: str, data: Optional[pd.DataFrame],
     ) -> Optional[AutoRecommendation]:
         """個別銘柄分析"""
         try:
@@ -742,24 +784,18 @@ class FullAutoInvestmentSystem:
 
             # 4. 戦略生成
             strategy = self.strategy_generator.generate_strategy(
-                symbol,
-                data,
-                predictions,
-                risk_analysis,
-                sentiment_result,
+                symbol, data, predictions, risk_analysis, sentiment_result,
             )
 
             # 5. 推奨情報構築
             if strategy:  # trading_strategy -> strategy
                 entry_price = strategy.get(
-                    "entry_price",
-                    float(current_price),
+                    "entry_price", float(current_price),
                 )  # 'entry_price' は strategy から取得する
                 # stop_loss_pct などは、strategy の中にあるか、デフォルト値を使う
                 stop_loss_pct = strategy.get("stop_loss_pct", 0.05)
                 take_profit_pct = strategy.get(
-                    "take_profit_pct",
-                    strategy.get("expected_return", 0.0),
+                    "take_profit_pct", strategy.get("expected_return", 0.0),
                 )
 
                 # stop_loss を計算
@@ -774,12 +810,10 @@ class FullAutoInvestmentSystem:
                     "stop_loss": stop_loss,
                     "expected_return": expected_return_pct,
                     "confidence_score": strategy.get(
-                        "confidence_score",
-                        0.0,
+                        "confidence_score", 0.0,
                     ),  # strategy から confidence_score を取得
                     "sentiment_score": sentiment_result.get(
-                        "sentiment_score",
-                        0.0,
+                        "sentiment_score", 0.0,
                     ),  # sentiment_result から取得
                     "predicted_price": predicted_price,
                     "take_profit_pct": take_profit_pct,
@@ -802,9 +836,7 @@ class FullAutoInvestmentSystem:
                             risk_score = getattr(raw_risk, "total_risk_score", None)
                     if risk_score is None:
                         risk_score = getattr(
-                            risk_analysis_for_payload,
-                            "total_risk_score",
-                            0.5,
+                            risk_analysis_for_payload, "total_risk_score", 0.5,
                         )
                 else:
                     risk_score = 0.5
@@ -832,9 +864,7 @@ class FullAutoInvestmentSystem:
                 risk_level_value = "unknown"
                 if risk_analysis_for_payload is not None:
                     risk_level_attr = getattr(
-                        risk_analysis_for_payload,
-                        "risk_level",
-                        None,
+                        risk_analysis_for_payload, "risk_level", None,
                     )
                     if risk_level_attr is not None:
                         risk_level_value = getattr(risk_level_attr, "value", "unknown")
@@ -858,6 +888,160 @@ class FullAutoInvestmentSystem:
         except Exception as e:
             logger.error(f"{symbol} 分析中にエラー発生: {e}")
             return None
+
+    def _run_automated_diagnostics(self, processed_data: Dict[str, pd.DataFrame]) -> List[DiagnosticSummary]:
+        if not self.enable_diagnostics:
+            return []
+        available_symbols = [
+            symbol for symbol, data in processed_data.items() if data is not None and not data.empty
+        ]
+        if not available_symbols:
+            return []
+
+        sample_size = min(self.diagnostic_sample_limit, len(available_symbols))
+        symbols = random.sample(available_symbols, sample_size) if sample_size < len(available_symbols) else available_symbols
+        print("[診断] 自動バックテスト & シグナル検証を実行します...")
+        diagnostics: List[DiagnosticSummary] = []
+
+        for symbol in symbols:
+            try:
+                diag = self._diagnose_symbol(symbol, processed_data.get(symbol))
+                if diag:
+                    diagnostics.append(diag)
+            except Exception:
+                self.logger.exception("診断処理でエラーが発生しました: %s", symbol)
+
+        if diagnostics:
+            self._persist_diagnostics(diagnostics)
+            self._print_diagnostics_summary(diagnostics)
+            self.diagnostic_history.extend(diagnostics)
+        else:
+            print("[診断] 有効な診断結果が得られませんでした。")
+
+        return diagnostics
+
+    def _diagnose_symbol(self, symbol: str, price_data: Optional[pd.DataFrame]) -> Optional[DiagnosticSummary]:
+        if price_data is None or price_data.empty:
+            return None
+
+        accuracy = None
+        sample_size = 0
+        avg_up = 0.0
+        avg_down = 0.0
+        try:
+            prediction_payload = self.predictor.predict(symbol, price_data)
+        except Exception:
+            prediction_payload = {}
+            self.logger.debug("Predictor failed during diagnostics for %s", symbol, exc_info=True)
+
+        if isinstance(prediction_payload, dict):
+            accuracy = prediction_payload.get("accuracy")
+            metadata = prediction_payload.get("metadata", {})
+            if accuracy is None and isinstance(metadata, dict):
+                accuracy = metadata.get("final_accuracy")
+            evaluation = metadata.get("evaluation", {}) if isinstance(metadata, dict) else {}
+            sample_size = int(evaluation.get("sample_size", 0) or evaluation.get("samples", 0) or 0)
+            avg_up = float(evaluation.get("avg_positive_return", 0.0))
+            avg_down = float(evaluation.get("avg_negative_return", 0.0))
+        else:
+            evaluation = {}
+
+        backtest_summary, sweeps = self._run_quick_backtest(symbol)
+
+        return DiagnosticSummary(
+            symbol=symbol,
+            accuracy=accuracy,
+            sample_size=sample_size,
+            avg_positive_return=avg_up,
+            avg_negative_return=avg_down,
+            backtest_total_return=backtest_summary.get("total_return") if backtest_summary else None,
+            backtest_sharpe=backtest_summary.get("sharpe_ratio") if backtest_summary else None,
+            backtest_max_drawdown=backtest_summary.get("max_drawdown") if backtest_summary else None,
+            parameter_sweep=sweeps,
+            generated_at=datetime.now(),
+        )
+
+    def _run_quick_backtest(self, symbol: str) -> Tuple[Optional[Dict[str, float]], List[Dict[str, float]]]:
+        try:
+            end_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
+            start_date = end_date - timedelta(days=90)
+            sweeps: List[Dict[str, float]] = []
+            best_summary: Optional[Dict[str, float]] = None
+
+            for threshold in (80.0, 85.0, 90.0):
+                config = BacktestConfig(
+                    start_date=start_date,
+                    end_date=end_date,
+                    initial_capital=1_000_000,
+                    precision_threshold=threshold,
+                    target_symbols=[symbol],
+                )
+                strategy = TradingStrategy(
+                    initial_capital=config.initial_capital,
+                    precision_threshold=threshold,
+                )
+                strategy.confidence_threshold = max(0.5, getattr(strategy, "confidence_threshold", 0.7))
+                runner = BacktestRunner(config, strategy, self.data_provider)
+                result = runner.run_backtest([symbol])
+                sweep_entry = {
+                    "precision_threshold": threshold,
+                    "total_return": float(result.total_return),
+                    "sharpe_ratio": float(result.sharpe_ratio),
+                    "max_drawdown": float(result.max_drawdown),
+                }
+                sweeps.append(sweep_entry)
+                if best_summary is None or sweep_entry["total_return"] > best_summary.get("total_return", -float("inf")):
+                    best_summary = sweep_entry.copy()
+
+            return best_summary, sweeps
+        except Exception:
+            self.logger.debug("Quick backtest failed for %s", symbol, exc_info=True)
+            return None, []
+
+    def _persist_diagnostics(self, diagnostics: List[DiagnosticSummary]) -> None:
+        try:
+            diag_dir = Path("data") / "diagnostics"
+            diag_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            payload = []
+            for diag in diagnostics:
+                diag_dict = asdict(diag)
+                diag_dict["generated_at"] = diag.generated_at.isoformat()
+                payload.append(diag_dict)
+            file_path = diag_dir / f"auto_diagnostics_{timestamp}.json"
+            with open(file_path, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, ensure_ascii=False, indent=2)
+            self.logger.info("Saved diagnostics report to %s", file_path)
+        except Exception:
+            self.logger.exception("Failed to persist diagnostics report")
+
+    def _print_diagnostics_summary(self, diagnostics: List[DiagnosticSummary]) -> None:
+        print("
+[診断] サマリ")
+        for diag in diagnostics:
+            accuracy_str = f"{diag.accuracy:.1f}%" if diag.accuracy is not None else "N/A"
+            return_str = (
+                f"{diag.backtest_total_return:.1%}"
+                if diag.backtest_total_return is not None
+                else "N/A"
+            )
+            print(
+                f"  - {diag.symbol}: 命中率 {accuracy_str} (n={diag.sample_size}), バックテスト総リターン {return_str}"
+            )
+        valid_accuracies = [diag.accuracy for diag in diagnostics if diag.accuracy is not None]
+        if valid_accuracies:
+            avg_acc = sum(valid_accuracies) / len(valid_accuracies)
+            print(f"  平均命中率: {avg_acc:.1f}%")
+        valid_returns = [
+            diag.backtest_total_return
+            for diag in diagnostics
+            if diag.backtest_total_return is not None
+        ]
+        if valid_returns:
+            avg_ret = sum(valid_returns) / len(valid_returns)
+            print(f"  平均バックテスト総リターン: {avg_ret:.1%}")
+
+
 
     def _perform_portfolio_risk_analysis(
         self,
@@ -975,14 +1159,11 @@ class FullAutoInvestmentSystem:
         self.logger.info("Calling generate_colab_data_retrieval_script.")
         try:
             generated_script = generate_colab_data_retrieval_script(
-                missing_symbols=failed_symbols,
-                period="1y",
-                output_dir=".",
+                missing_symbols=failed_symbols, period="1y", output_dir=".",
             )
         except Exception as exc:
             self.logger.error(
-                "generate_colab_data_retrieval_script failed",
-                exc_info=True,
+                "generate_colab_data_retrieval_script failed", exc_info=True,
             )
             print(
                 f"[ERROR] Failed to generate Google Colab data retrieval script: {exc}",
@@ -1007,17 +1188,12 @@ class FullAutoInvestmentSystem:
         script_file_path = script_output_dir / "colab_data_fetcher.py"
         try:
             with open(
-                script_file_path,
-                "w",
-                encoding="utf-8-sig",
-                errors="strict",
+                script_file_path, "w", encoding="utf-8-sig", errors="strict",
             ) as handle:
                 handle.write(generated_script)
         except UnicodeEncodeError as exc:
             self.logger.error(
-                "UnicodeEncodeError while writing %s",
-                script_file_path,
-                exc_info=True,
+                "UnicodeEncodeError while writing %s", script_file_path, exc_info=True,
             )
             print(
                 f"[ERROR] Unicode encoding error while writing {script_file_path}: {exc}",
@@ -1025,16 +1201,13 @@ class FullAutoInvestmentSystem:
             return
         except Exception as exc:
             self.logger.error(
-                "Unexpected error while writing %s",
-                script_file_path,
-                exc_info=True,
+                "Unexpected error while writing %s", script_file_path, exc_info=True,
             )
             print(f"[ERROR] Unexpected error while writing {script_file_path}: {exc}")
             return
 
         self.logger.info(
-            "Saved Google Colab data retrieval script to %s",
-            script_file_path,
+            "Saved Google Colab data retrieval script to %s", script_file_path,
         )
         print(f"[INFO] Saved Google Colab data retrieval script to {script_file_path}")
 
@@ -1059,6 +1232,17 @@ def build_cli_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Force yfinance downloads even if local CSV data exists.",
     )
+    parser.add_argument(
+        "--disable-diagnostics",
+        action="store_true",
+        help="Skip automated diagnostics (faster but less oversight).",
+    )
+    parser.add_argument(
+        "--diagnostic-sample",
+        type=int,
+        default=None,
+        help="Number of symbols to sample for automated diagnostics.",
+    )
     return parser
 
 
@@ -1074,13 +1258,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.max_tickers is not None and args.max_tickers <= 0:
         parser.error("--max-tickers must be a positive integer.")
 
+    if args.diagnostic_sample is not None and args.diagnostic_sample <= 0:
+        parser.error("--diagnostic-sample must be a positive integer.")
+
+    if args.disable_diagnostics and args.diagnostic_sample:
+        parser.error("--diagnostic-sample cannot be used when diagnostics are disabled.")
+
     if args.prefer_local_data:
         os.environ["CLSTOCK_PREFER_LOCAL_DATA"] = "1"
     elif args.skip_local_data:
         os.environ["CLSTOCK_PREFER_LOCAL_DATA"] = "0"
 
     try:
-        asyncio.run(run_full_auto(max_symbols=args.max_tickers))
+        asyncio.run(
+            run_full_auto(
+                max_symbols=args.max_tickers,
+                enable_diagnostics=not args.disable_diagnostics,
+                diagnostic_sample=args.diagnostic_sample,
+            ),
+        )
     except KeyboardInterrupt:
         print("[INFO] Full auto run interrupted by user.")
         return 130
@@ -1088,9 +1284,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     return 0
 
 
-async def run_full_auto(max_symbols: Optional[int] = None) -> List[AutoRecommendation]:
+async def run_full_auto(
+    max_symbols: Optional[int] = None,
+    *,
+    enable_diagnostics: bool = True,
+    diagnostic_sample: Optional[int] = None,
+) -> List[AutoRecommendation]:
     """Convenience coroutine to execute the full auto investment analysis."""
-    system = FullAutoInvestmentSystem(max_symbols=max_symbols)
+    system = FullAutoInvestmentSystem(max_symbols=max_symbols, enable_diagnostics=enable_diagnostics, diagnostic_sample=diagnostic_sample)
     return await system.run_full_auto_analysis()
 
 

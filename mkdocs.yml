@@ -63,3 +63,26 @@ markdown_extensions:
       alternate_style: true
   - toc:
       permalink: true
+
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            docstring_section_style: list
+            members_order: source
+            show_root_heading: true
+            show_root_full_path: false
+            show_object_full_path: false
+            show_category_heading: true
+            show_signature_annotations: true
+            separate_signature: true
+            line_length: 60
+            merge_init_into_class: true
+            docstring_options:
+              ignore_init_summary: false
+            signature_crossrefs: true
+            show_source: true
+            show_bases: true
+            show_submodules: false

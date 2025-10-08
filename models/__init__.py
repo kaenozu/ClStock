@@ -215,7 +215,7 @@ _EXPORT_MAP: Dict[str, Tuple[str, str]] = {
 }
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     if name not in _EXPORT_MAP:
         raise AttributeError(f"module 'models' has no attribute {name!r}")
 
@@ -226,5 +226,5 @@ def __getattr__(name: str):
     return value
 
 
-def __dir__():
+def __dir__() -> List[str]:
     return sorted(__all__)
