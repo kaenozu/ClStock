@@ -4,7 +4,6 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -12,7 +11,6 @@ from analysis.sentiment_analyzer import MarketSentimentAnalyzer
 from archive.old_systems.medium_term_prediction import MediumTermPredictionSystem
 from config.settings import get_settings
 from data.stock_data import StockDataProvider
-from data_retrieval_script_generator import generate_colab_data_retrieval_script
 from models.advanced.risk_management_framework import (
     PortfolioRisk,
     RiskLevel,
@@ -317,10 +315,17 @@ class StrategyGeneratorAdapter:
         return strategies
 
 
+from systems.full_auto.script_service import DataRetrievalScriptService
+
+
 class FullAutoInvestmentSystem:
     """完全自動投資推奨システム"""
 
-    def __init__(self, max_symbols: Optional[int] = None):
+    def __init__(
+        self,
+        max_symbols: Optional[int] = None,
+        script_service: Optional[DataRetrievalScriptService] = None,
+    ):
         self.data_provider = StockDataProvider()
         self.predictor = HybridPredictorAdapter()
         self.optimizer = PortfolioOptimizer()
@@ -332,6 +337,10 @@ class FullAutoInvestmentSystem:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.max_symbols = self._resolve_max_symbols(max_symbols)
         self.settings = get_settings()
+        self.script_service = script_service or DataRetrievalScriptService(
+            logger=self.logger,
+            printer=print,
+        )
 
     def _resolve_max_symbols(self, max_symbols: Optional[int]) -> Optional[int]:
         if max_symbols is not None:
@@ -949,94 +958,7 @@ class FullAutoInvestmentSystem:
     def _generate_data_retrieval_script(self):
         """Generate a Google Colab helper script for symbols that failed to download."""
         failed_symbols = list(self.failed_symbols or [])
-        self.logger.info(
-            "Starting _generate_data_retrieval_script. failed_symbols: %s",
-            failed_symbols,
-        )
-        print(
-            f"[INFO] _generate_data_retrieval_script called. failed_symbols: {failed_symbols}",
-        )
-
-        if not failed_symbols:
-            self.logger.info("No failed symbols detected; skipping script generation.")
-            print(
-                "[INFO] No failed symbols detected. Skipping Google Colab script generation.",
-            )
-            return
-
-        script_output_dir = Path("data") / "retrieval_scripts"
-        script_output_dir.mkdir(parents=True, exist_ok=True)
-        self.logger.info("Script output directory prepared: %s", script_output_dir)
-        print(f"[INFO] Script output directory: {script_output_dir}")
-
-        for index, symbol in enumerate(failed_symbols):
-            self.logger.debug("Failed symbol #%d: %s", index, symbol)
-
-        self.logger.info("Calling generate_colab_data_retrieval_script.")
-        try:
-            generated_script = generate_colab_data_retrieval_script(
-                missing_symbols=failed_symbols,
-                period="1y",
-                output_dir=".",
-            )
-        except Exception as exc:
-            self.logger.error(
-                "generate_colab_data_retrieval_script failed",
-                exc_info=True,
-            )
-            print(
-                f"[ERROR] Failed to generate Google Colab data retrieval script: {exc}",
-            )
-            return
-
-        if not generated_script or not generated_script.strip():
-            self.logger.warning("Generated script is empty.")
-            print(
-                "[WARNING] Generated data retrieval script is empty. Nothing will be written.",
-            )
-            return
-
-        script_length = len(generated_script)
-        self.logger.info("Generated script length: %d characters", script_length)
-        if script_length <= 200:
-            self.logger.debug("Generated script contents: %s", generated_script)
-        else:
-            self.logger.debug("Generated script head: %s", generated_script[:200])
-            self.logger.debug("Generated script tail: %s", generated_script[-200:])
-
-        script_file_path = script_output_dir / "colab_data_fetcher.py"
-        try:
-            with open(
-                script_file_path,
-                "w",
-                encoding="utf-8-sig",
-                errors="strict",
-            ) as handle:
-                handle.write(generated_script)
-        except UnicodeEncodeError as exc:
-            self.logger.error(
-                "UnicodeEncodeError while writing %s",
-                script_file_path,
-                exc_info=True,
-            )
-            print(
-                f"[ERROR] Unicode encoding error while writing {script_file_path}: {exc}",
-            )
-            return
-        except Exception as exc:
-            self.logger.error(
-                "Unexpected error while writing %s",
-                script_file_path,
-                exc_info=True,
-            )
-            print(f"[ERROR] Unexpected error while writing {script_file_path}: {exc}")
-            return
-
-        self.logger.info(
-            "Saved Google Colab data retrieval script to %s",
-            script_file_path,
-        )
-        print(f"[INFO] Saved Google Colab data retrieval script to {script_file_path}")
+        self.script_service.generate(failed_symbols)
 
 
 def build_cli_parser() -> argparse.ArgumentParser:
